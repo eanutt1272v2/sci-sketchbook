@@ -16,7 +16,7 @@ The Lenia 2D automaton studio (currently under development). This project includ
 3D Mandelbulb fractal rendered using GLSL shaders. This project is marked as outdated, as it has been discontinued.
 
 ### Eigen
-This project is a hydrogen electron atomic orbital simulation and visualisation tool, and includes a manager, solver, renderer, and a GUI. It uses 6th degree polynomial colour maps (sourced from matplotlib and seaborn python libraries) for a visual representation.
+A fast numerical visualiser of the time-independent Schrödinger equation for a single-electron system. It computes the probability density ∣ψn,l,m​(r,θ,ϕ)∣2 of the Hydrogen atom by evaluating the product of the radial wavefunctions (utilising Generalized Laguerre polynomials) and the angular components (Real Spherical Harmonics derived from Associated Legendre polynomials)
 
 ### GLSL Shader Exploration 01
 A general project dedicated to exploring the capabilities of GLSL shaders within the p5.js environment. Original shader code by Xor and ported to the p5.js environment
