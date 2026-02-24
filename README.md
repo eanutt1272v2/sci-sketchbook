@@ -1,22 +1,22 @@
 # p5.js Sketch Library
 
-This repository contains a collection of p5.js sketches, organized into individual project folders. Each project explores different concepts, from fluid simulations and cellular automata to GLSL shaders and fractal visualizations.
+This repository contains a collection of primarily computational p5.js sketch files and resources, organised into individual project folders.
 
 ## Projects
 
-Here's an overview of the projects included in this library:
+Below is a brief overview of the projects included in the library:
 
 ### Fluvia Lite
-A stripped-down version of the main Fluvia project, offering a lighter fluid simulation experience. It includes basic p5.js sketch, HTML, and CSS files.
+A stripped-down, minimal version of the main Fluvia project. It includes basic p5.js sketch, HTML, and CSS files.
 
 ### Lenia2D Studio (DEV)
-A development version of a Lenia 2D automaton studio. This project delves into complex cellular automata simulations, featuring a graphical user interface (GUI), various rendering options, and an animal library for different automaton configurations.
+The Lenia 2D automaton studio (currently under development). This project includes a generalised cellular automata engine capabale of FFT discretised 'continuous' cellular automata and traditional discrete models. It features a graphical user interface (GUI) powered by the Tweakpane library, some rendering options, and an animal library for different automaton configurations (animals.json).
 
 ### Mandelbulb GLSL Shader (Outdated)
-An exploration of Mandelbulb fractals rendered using GLSL shaders. This project is marked as outdated, indicating it might not be actively maintained or may use older techniques.
+3D Mandelbulb fractal rendered using GLSL shaders. This project is marked as outdated, as it has been discontinued.
 
 ### Eigen
-This project appears to be a simulation or visualization tool, featuring a manager, solver, renderer, and a GUI. It utilizes color maps for visual representation, suggesting a focus on data visualization or abstract simulations.
+This project is a hydrogen electron atomic orbital simulation and visualization tool, which includes a manager, solver, renderer, and a GUI. It uses 6th degree colour maps (sourced from matplotlib and seaborn puthon libraries) for a visual representation.
 
 ### GLSL Shader Exploration 01
 A general project dedicated to exploring the capabilities of GLSL shaders within the p5.js environment. It serves as a foundational example for implementing custom visual effects.
@@ -24,10 +24,6 @@ A general project dedicated to exploring the capabilities of GLSL shaders within
 ### Fluvia
 The main Fluvia project, a comprehensive fluid simulation. It incorporates advanced features such as terrain generation, a dedicated solver, camera controls, a robust renderer, an analyser, media handling, a GUI, and complex GLSL shaders for realistic visual effects.
 
-## How to Run a Sketch
+## Running Sketches
 
-To run any of these p5.js sketches, navigate to the respective project folder and open the `index.html` file in a web browser. Ensure that all associated `.js`, `.css`, and shader files are in the same directory or correctly linked within the `index.html`.
-
-## Contribution
-
-This repository is maintained by Manus AI.
+To run any of these p5.js sketches, navigate to the respective project folder and open the `index.html` file in a web browser. Make sure that all related `.js`, `.css`, and shader files are in the same directory or correctly linked together within the `index.html`.
