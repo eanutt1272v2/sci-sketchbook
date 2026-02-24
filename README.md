@@ -19,7 +19,7 @@ The Lenia 2D automaton studio (currently under development). This project includ
 A fast numerical visualiser of the time-independent Schrödinger equation for a single-electron system. It computes the probability density ∣ψn,l,m​(r,θ,ϕ)∣2 of the Hydrogen atom by evaluating the product of the radial wavefunctions (utilising Generalized Laguerre polynomials) and the angular components (Real Spherical Harmonics derived from Associated Legendre polynomials)
 
 ### GLSL Shader Exploration 01
-A general project dedicated to exploring the capabilities of GLSL shaders within the p5.js environment. Original shader code by Xor and ported to the p5.js environment
+A general project dedicated to exploring the capabilities of GLSL shaders within the p5.js environment. Original shader code by Xor and ported to the p5.js environment.
 
 ### Fluvia
 Fluvia is a fast web-based geomorphological simulation. It utilises a Lagrangian particle-based solver in which water droplets traverse a dual-layer heightmap of bedrock and sediment. As a result of simulating momentum-based transport, deposition, and evaporation physics, it generates realistic fluvial features like drainage basins, meandering rivers, and alluvial fans. Algorithm by Nick McDonald: https://www.nickmcd.me/2023/12/12/meandering-rivers-in-particle-based-hydraulic-erosion-simulations
