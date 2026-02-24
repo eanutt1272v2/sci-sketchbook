@@ -13,7 +13,7 @@ A stripped-down, minimal version of the main Fluvia project. It includes basic p
 The Lenia 2D automaton studio (currently under development). This project includes a generalised cellular automata engine capabale of FFT discretised 'continuous' cellular automata and traditional discrete models. It features a graphical user interface (GUI) powered by the Tweakpane library, some rendering options, and an animal library for different automaton configurations (animals.json).
 
 ### Mandelbulb GLSL Shader (Outdated)
-3D Mandelbulb fractal rendered using GLSL shaders. This project is marked as outdated, as it has been discontinued.
+A high-performance GLSL Shader Raymarcher for the 3D Mandelbulb fractal. This project is marked as outdated, as it has been discontinued.
 
 ### Eigen
 A fast numerical visualiser of the time-independent Schrödinger equation for a single-electron system. It computes the probability density ∣ψn,l,m​(r,θ,ϕ)∣2 of the Hydrogen atom by evaluating the product of the radial wavefunctions (utilising Generalized Laguerre polynomials) and the angular components (Real Spherical Harmonics derived from Associated Legendre polynomials)
