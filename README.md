@@ -8,3 +8,4 @@ To run any of these p5.js sketches, navigate to the respective project folder an
 
 ## License
 
+Distributed under the MIT License. See LICENSE for more information.
