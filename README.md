@@ -16,13 +16,13 @@ The Lenia 2D automaton studio (currently under development). This project includ
 3D Mandelbulb fractal rendered using GLSL shaders. This project is marked as outdated, as it has been discontinued.
 
 ### Eigen
-This project is a hydrogen electron atomic orbital simulation and visualization tool, which includes a manager, solver, renderer, and a GUI. It uses 6th degree colour maps (sourced from matplotlib and seaborn puthon libraries) for a visual representation.
+This project is a hydrogen electron atomic orbital simulation and visualisation tool, and includes a manager, solver, renderer, and a GUI. It uses 6th degree polynomial colour maps (sourced from matplotlib and seaborn python libraries) for a visual representation.
 
 ### GLSL Shader Exploration 01
-A general project dedicated to exploring the capabilities of GLSL shaders within the p5.js environment. It serves as a foundational example for implementing custom visual effects.
+A general project dedicated to exploring the capabilities of GLSL shaders within the p5.js environment. Original shader code by Xor and ported to the p5.js environment
 
 ### Fluvia
-The main Fluvia project, a comprehensive fluid simulation. It incorporates advanced features such as terrain generation, a dedicated solver, camera controls, a robust renderer, an analyser, media handling, a GUI, and complex GLSL shaders for realistic visual effects.
+Fluvia is a fast web-based geomorphological simulation. It utilises a Lagrangian particle-based solver in which water droplets traverse a dual-layer heightmap of bedrock and sediment. As a result of simulating momentum-based transport, deposition, and evaporation physics, it generates realistic fluvial features like drainage basins, meandering rivers, and alluvial fans. Algorithm by Nick McDonald: https://www.nickmcd.me/2023/12/12/meandering-rivers-in-particle-based-hydraulic-erosion-simulations
 
 ## Running Sketches
 
