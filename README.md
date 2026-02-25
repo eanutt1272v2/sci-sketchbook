@@ -21,7 +21,7 @@ To execute any of the p5.js sketches, follow these steps:
 1.  **Navigate**: Locate the specific project folder for the desired sketch within this repository.
 2.  **Open**: Open the `index.html` file in your preferred web browser.
 
-**Important Notes:**:
+**Important Notes:**
 *   Ensure that all dependent files, including `.js`, `.css`, shader (`.glsl`), and data (`.json`) files, are either located in the same directory as `index.html` or are correctly linked within the `index.html` and `sketch.js` files.
 *   For optimal performance and to avoid potential browser security restrictions (e.g., related to loading local files), it is recommended to run p5.js sketches using a local web server. Simple options include Python's `http.server` (`python3 -m http.server`) or Node.js's `serve` package (`npx serve`).
 
@@ -35,7 +35,7 @@ Once Processing is installed, proceed as follows:
 2.  **Open**: Open the primary `.pde` sketch file using the Processing IDE.
 3.  **Execute**: Click the "Run" button (a triangular play icon) within the Processing IDE to compile and run the sketch.
 
-**Important Notes:**:
+**Important Notes:**
 *   Verify that any associated data files, libraries, or external assets are correctly placed within the sketch folder or linked as specified by the Processing sketch.
 *   If a sketch utilises external libraries, ensure they are installed in your Processing environment (Sketch > Import Library > Add Library...).
 
