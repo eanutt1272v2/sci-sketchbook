@@ -27,7 +27,7 @@ To execute any of the p5.js sketches, follow these steps:
 
 ### Processing Sketches
 
-To run any of the Processing sketches, you will need the **Processing Development Environment (PDE)** installed on your computer. The latest version can be downloaded from the [official Processing Website](https://processing.org/).
+To run any of the Processing sketches, you will need the **Processing Development Environment (PDE)** installed on your computer. The latest version can be downloaded from the [official Processing Website](https://processing.org/download).
 
 Once Processing is installed, proceed as follows:
 
