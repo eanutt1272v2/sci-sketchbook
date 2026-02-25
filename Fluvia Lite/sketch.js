@@ -1,16 +1,13 @@
-/*
-INFORMATION:
-- Fluvia Lite (Stripped Down)
-- Derived from an older version of the main Fluvia Branch
-
-NOTE:
-- This version will not be updated in the forseeable future
-*/
+/**
+ * @file Fluvia Lite
+ * @description A stripped-down derivative of an older Fluvia branch.
+ * @deprecated This version is no longer maintained and will not be updated.
+ */
 
 p5.displayFriendlyErrors = false;
 let terrain, solver, renderer;
 
-const params = {
+const params = {  
   dropletsPerFrame: 256,
   maxAge: 500,
   minVolume: 0.01,
@@ -344,7 +341,7 @@ class Renderer {
       const normal = terrain.getSurfaceNormal(i % size, (i / size) | 0);
       const diffuse = Math.max(0, normal.x * lX + normal.y * lY + normal.z * lZ);
       const sky = normal.y * 0.5 + 0.5;
-
+      
       const shR = diffuse + (skyColour.r / 255) * sky * 0.15;
       const shG = diffuse + (skyColour.g / 255) * sky * 0.15;
       const shB = diffuse + (skyColour.b / 255) * sky * 0.15;
