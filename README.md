@@ -6,7 +6,7 @@ This repository contains a collection of primarily computational p5.js and Proce
 
 ### p5.js Sketches
 
-To run any of the p5.js sketches, navigate to the respective project folder and open the `index.html` file in a web browser. Make sure that all related `.js`, `.css`, shader (`glsl`), and `json` (if applicable) files are in the same directory or correctly linked together within the `index.html` and `sketch.js` files.
+To run any of the p5.js sketches, navigate to the respective project folder and open the `index.html` file in a web browser. Make sure that all related `.js`, `.css`, shader (`.glsl`), and `.json` (if applicable) files are in the same directory or correctly linked together within the `index.html` and `sketch.js` files.
 
 ## License
 
