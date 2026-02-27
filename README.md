@@ -1,6 +1,6 @@
 # p5.js and Processing Sketch Library
 
-This repository is a curated collection of p5.js and Processing sketch files and associated resources. Each sketch is organised into its own dedicated project folder.
+This repository is a library of p5.js and Processing sketch files and associated resources. Each sketch is organised into its own dedicated project folder.
 
 ## Repository Structure
 
@@ -18,22 +18,22 @@ The repository is structured with individual directories for each p5.js or Proce
 
 To execute any of the p5.js sketches, follow these steps:
 
-1.  **Navigate**: Locate the specific project folder for the desired sketch within this repository.
-2.  **Open**: Open the `index.html` file in your preferred web browser.
+1.  Locate the specific project folder for the desired sketch within this repository.
+2.  Open the `index.html` file in your preferred web browser.
 
 **Important Notes:**
-*   Ensure that all dependent files, including `.js`, `.css`, shader (`.glsl`), and data (`.json`) files, are either located in the same directory as `index.html` or are correctly linked within the `index.html` and `sketch.js` files.
+*   Make sure that all dependent files, including `.js`, `.css`, shader (`.glsl`), and data (`.json`) files, are either located in the same directory as `index.html` or are correctly linked within the `index.html` and `sketch.js` files.
 *   For optimal performance and to avoid potential browser security restrictions (e.g., related to loading local files), it is recommended to run p5.js sketches using a local web server. Simple options include Python's `http.server` (`python3 -m http.server`) or Node.js's `serve` package (`npx serve`).
 
 ### Processing Sketches
 
-To run any of the Processing sketches, you will need the **Processing Development Environment (PDE)** installed on your computer. The latest version can be downloaded from the [official Processing Website](https://processing.org/download).
+To run any of the Processing sketches, you will need the **Processing Development Environment** installed on your computer. The latest version can be downloaded from the [official Processing Website](https://processing.org/download).
 
 Once Processing is installed, proceed as follows:
 
-1.  **Navigate**: Go to the respective project folder for the Processing sketch.
-2.  **Open**: Open the primary `.pde` sketch file using the Processing IDE.
-3.  **Execute**: Click the "Run" button (a triangular play icon) within the Processing IDE to compile and run the sketch.
+1.  Go to the respective project folder for the Processing sketch.
+2.  Open the primary `.pde` sketch file using the Processing IDE.
+3.  Click the "Run" button (a triangular play icon) within the Processing IDE to compile and run the sketch.
 
 **Important Notes:**
 *   Verify that any associated data files, libraries, or external assets are correctly placed within the sketch folder or linked as specified by the Processing sketch.
