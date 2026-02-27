@@ -1,0 +1,14 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #202020;
+  color: #ffffff;
+}
+
+canvas {
+  display: block;
+}
+
+.tp-dfwv {
+  width: 320px !important;
+}
