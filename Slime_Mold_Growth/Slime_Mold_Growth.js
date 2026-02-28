@@ -1,3 +1,9 @@
+
+/**
+ * @file Slime_Mold_Growth.js
+ * @author @eanutt1272.v2
+ * @version 1.0.0
+ */
 /*
 Name: Slime Molds (Physarum)
 Url: https://youtu.be/VyXxSNcgDtg

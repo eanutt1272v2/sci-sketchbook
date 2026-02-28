@@ -1,3 +1,9 @@
+
+/**
+ * @file sketch.js
+ * @author @eanutt1272.v2
+ * @version 1.0.0
+ */
 let grid = [];
 let wanderers = [];
 let stuckWanderers = [];

@@ -1,3 +1,7 @@
+
+// @file Lorenz_Attractor.pde
+// @author @eanutt1272.v2
+// @version 1.0.0
 float x = 0.01;
 float y = 0;
 float z = 0;

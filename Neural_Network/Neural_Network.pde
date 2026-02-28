@@ -1,3 +1,7 @@
+
+// @file Neural_Network.pde
+// @author @eanutt1272.v2
+// @version 1.0.0
 // --- GLOBAL VARIABLES & UI PARAMETERS ---
 NeuralNetwork nn;  //neural network
 // grid parameters

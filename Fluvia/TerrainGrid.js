@@ -1,3 +1,9 @@
+
+/**
+ * @file TerrainGrid.js
+ * @author @eanutt1272.v2
+ * @version 1.0.0
+ */
 class TerrainGrid {
   constructor(size, params) {
     this.size = size;

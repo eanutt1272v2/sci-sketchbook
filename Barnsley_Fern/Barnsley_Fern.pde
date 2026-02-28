@@ -1,3 +1,7 @@
+
+// @file Barnsley_Fern.pde
+// @author @eanutt1272.v2
+// @version 1.0.0
 float x, y;
 float value1 = 0;
 float value2 = 0;

@@ -1,3 +1,9 @@
+
+/**
+ * @file sketch.js
+ * @author @eanutt1272.v2
+ * @version 3.6
+ */
 const SOFTWARE_VERSION = "3.6";
 
 let terrainGrid, dataManager, erosionEngine, renderer, gui;
