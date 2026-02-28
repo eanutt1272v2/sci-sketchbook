@@ -1,3 +1,7 @@
+
+// @file Burning_Ship_Fractal.pde
+// @author @eanutt1272.v2
+// @version 1.0.0
 int maxIterations = 128;
 float aspectRatio = (screenWidth / screenHeight);
 float minVal = -1;

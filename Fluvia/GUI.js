@@ -1,3 +1,9 @@
+
+/**
+ * @file GUI.js
+ * @author @eanutt1272.v2
+ * @version 1.0.0
+ */
 class GUI {
   constructor(params, statistics, dataManager, renderer, softwareVersion, callbacks) {
     this.params = params;

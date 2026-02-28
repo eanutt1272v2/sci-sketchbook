@@ -1,3 +1,9 @@
+
+/**
+ * @file ErosionEngine.js
+ * @author @eanutt1272.v2
+ * @version 1.0.0
+ */
 class ErosionEngine {
   constructor(grid, params) {
     this.grid = grid;

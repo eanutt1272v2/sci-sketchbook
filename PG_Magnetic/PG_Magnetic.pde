@@ -1,3 +1,7 @@
+
+// @file PG_Magnetic.pde
+// @author @eanutt1272.v2
+// @version 1.0.0
 boolean androidMode = false;
 boolean viewColored = true;
 boolean viewVectors = true;

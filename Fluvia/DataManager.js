@@ -1,3 +1,9 @@
+
+/**
+ * @file DataManager.js
+ * @author @eanutt1272.v2
+ * @version 1.0.0
+ */
 class DataManager {
   constructor(grid, params, statistics, softwareVersion) {
     this.grid = grid;
