@@ -4,7 +4,6 @@
  * @version 1.3.0
  */
 
-// Configuration
 int maxIterations = 256;
 double zoom = 1.0;
 double offsetX = -0.45; 
@@ -31,7 +30,7 @@ void setup() {
   
   zoomInButton = new Button(width - 100, height - 200, 64, 64, "+");
   zoomOutButton = new Button(width - 100, height - 100, 64, 64, "-");
-  mapDropdown = new Dropdown(20, 205, 150, 30, mapNames); // Adjusted Y position slightly
+  mapDropdown = new Dropdown(20, 205, 150, 30, mapNames);
 }
 
 void draw() {
@@ -134,8 +133,7 @@ void drawUI() {
   colorMode(RGB, 255); 
   
   fill(0, 180);
-  noStroke();
-  rect(10, 10, 380, 240);
+  rect(10, 10, 380, 235);
   
   fill(255);
   textSize(20);
