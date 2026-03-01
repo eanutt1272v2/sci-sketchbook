@@ -14,6 +14,16 @@ const hiddenFiles = [
     '.git'
 ];
 
+const sendForbidden = (res, message) => {
+    res.status(403).send(`
+        <body style="background:#1a1a1a;color:#ff5555;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;">
+            <h1 style="border-bottom:1px solid #333;padding-bottom:10px;">403 | Forbidden</h1>
+            <p style="color:#888;">${message}</p>
+            <a href="/" style="color:#ccc;text-decoration:none;border:1px solid #444;padding:5px 15px;border-radius:3px;">Return to Root</a>
+        </body>
+    `);
+};
+
 function formatBytes(bytes) {
     if (bytes === -1) return '--';
     if (bytes === 0) return '0 B';
@@ -92,7 +102,7 @@ app.get(/^(.*)$/, (req, res) => {
 
     if (isRestricted) {
         console.error(`[SECURITY] Blocked access attempt to: ${relativePath}`);
-        return res.status(403).send("403 Forbidden: Access to hidden files is restricted.");
+        return sendForbidden(res, "Access to system or hidden files is restricted.");
     }
 
     try {
