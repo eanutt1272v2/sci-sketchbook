@@ -1,7 +1,7 @@
-
 // @file Cellular_Division.pde
 // @author @eanutt1272.v2
-// @version 1.0.0
+// @version 1.4.1
+
 int NUM_PARTICLES = 6750;
 int GRID_SIZE = 30;
 float TRAIL_ALPHA = 50;
@@ -64,7 +64,7 @@ void draw() {
       for (int i = 0; i < cols; i++) {
          for (int j = 0; j < rows; j++) {
             grid[i][j].clear();
-         }
+         }e", width - 30, height - 
       }
       
       for (Particle p : particles) {
@@ -109,16 +109,13 @@ void draw() {
       text("MAGENTA particles are matured spores", width - 30, 90);
       text("BLUE particles are cell membrane", width - 30, 120);
       text("YELLOW particles are cell nuclei", width - 30, 150);
-      //text("This particle simulation framework replicates the entire cell cycle of a virtual cell, including interphase, mitosis, and cytokinesis. These natural phases within the model occur organically without being explicitly hardcoded. Instead, these specific phases arise from the interaction of simple parameters governing the behaviors of particles, " +
-      //"thus giving birth to these emergent 'protocell organisms.' An expansive, multidimensional space of potential organisms is probable due to the model's parametrization. In summary, the concept described by the explanation of this ecosystem is ultimately emergence: the process of coming into existence or prominence. Within this context, " +
-      //"one may refer to this phenomenon as 'abiogenesis.' (the process by which living organisms evolve from inanimate or dead matter).", width - 310, 180, 300, 1000);
       
       textSize(12);
       textAlign(RIGHT);
       
-      text("Cellular Division v1.4 | Download, Updates & Information: https://www.github.com/notzen3264/Cellular_Division", width - 30, height - 60);
+      text("Cellular Division v1.4.1 Processing (Legacy)", width - 30, height - 60);
       
-      text("Blackwell Labs | Software by @notzen3264 (223184 CAMVC)", width - 30, height - 30);
+      text("By @eanutt1272.v2", width - 30, height - 30);
       
       drawGraph();
    } catch (Exception e) {
