@@ -2,7 +2,17 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const app = express();
-const PORT = 80;
+const PORT = process.env.PORT || 8080;
+
+const hiddenFiles = [
+    'node_modules',
+    'server.js',
+    'package.json',
+    'package-lock.json',
+    '.gitignore',
+    '.env',
+    '.git'
+];
 
 function formatBytes(bytes) {
     if (bytes === -1) return '--';
@@ -13,11 +23,9 @@ function formatBytes(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-
 function getDetailedType(item, ext) {
     if (item.isDirectory()) return 'Folder';
     if (!ext) return 'File';
-    
     const e = ext.toLowerCase();
     const types = {
         '.jpg': 'JPEG Image', '.jpeg': 'JPEG Image', '.png': 'PNG Image', '.gif': 'GIF Image',
@@ -68,7 +76,6 @@ function getDetailedType(item, ext) {
         '.ttf': 'TrueType Font', '.otf': 'OpenType Font', '.woff': 'Web Font', '.woff2': 'Web Font 2.0',
         '.eot': 'Embedded OpenType'
     };
-
     return types[e] || e.slice(1).toUpperCase();
 }
 
@@ -78,13 +85,22 @@ app.get(/^(.*)$/, (req, res) => {
 
     if (!absolutePath.startsWith(__dirname)) return res.status(403).send("Forbidden");
 
+    const pathParts = relativePath.split('/').filter(p => p);
+    const isRestricted = pathParts.some(part =>
+        part.startsWith('.') || hiddenFiles.includes(part.toLowerCase())
+    );
+
+    if (isRestricted) {
+        console.warn(`[SECURITY] Blocked access attempt to: ${relativePath}`);
+        return res.status(403).send("403 Forbidden: Access to hidden files is restricted.");
+    }
+
     try {
         if (!fs.existsSync(absolutePath)) return res.status(404).send("Not Found");
         const stats = fs.statSync(absolutePath);
 
         if (stats.isDirectory()) {
             const items = fs.readdirSync(absolutePath, { withFileTypes: true });
-            const pathParts = relativePath.split('/').filter(p => p);
 
             let breadcrumbHtml = `<a href="/">root</a>`;
             let currentLink = '';
@@ -93,35 +109,36 @@ app.get(/^(.*)$/, (req, res) => {
                 breadcrumbHtml += ` / <a href="${currentLink}">${part}</a>`;
             });
 
-            const rows = items.filter(i => !i.name.startsWith('.')).map(item => {
-                const s = fs.statSync(path.join(absolutePath, item.name));
-                const ext = path.extname(item.name);
-                const detailedType = getDetailedType(item, ext);
-                const link = path.join(relativePath, item.name);
-                
-                const isNew = (Date.now() - s.mtime.getTime()) < 86400000;
+            const rows = items
+                .filter(item => !item.name.startsWith('.') && !hiddenFiles.includes(item.name.toLowerCase()))
+                .map(item => {
+                    const s = fs.statSync(path.join(absolutePath, item.name));
+                    const ext = path.extname(item.name);
+                    const detailedType = getDetailedType(item, ext);
+                    const link = path.join(relativePath, item.name);
+                    const isNew = (Date.now() - s.mtime.getTime()) < 86400000;
 
-                return `
-                    <tr data-name="${item.name.toLowerCase()}" data-size="${s.size}" 
-                        data-mtime="${s.mtime.getTime()}" data-atime="${s.atime.getTime()}" 
-                        data-ctime="${s.birthtime.getTime()}" data-type="${detailedType}">
-                        <td class="col-name">${item.isDirectory() ? '📂' : '📄'} <a href="${link}${item.isDirectory() ? '/' : ''}">${item.name}</a></td>
-                        <td class="col-size mono">${item.isDirectory() ? (items.length + ' items') : formatBytes(s.size)}</td>
-                        <td class="col-kind">${item.isDirectory() ? 'Folder' : 'File'}</td>
-                        <td class="col-modified mono">${s.mtime.toISOString().split('T')[0]}</td>
-                        <td class="col-accessed mono">${s.atime.toISOString().split('T')[0]}</td>
-                        <td class="col-created mono">${s.birthtime.toISOString().split('T')[0]}</td>
-                        <td class="col-recency">${isNew ? '⭐' : ''}</td>
-                        <td class="col-detailed-type">${detailedType}</td>
-                    </tr>`;
-            }).join('');
+                    return `
+                        <tr data-name="${item.name.toLowerCase()}" data-size="${s.size}" 
+                            data-mtime="${s.mtime.getTime()}" data-atime="${s.atime.getTime()}" 
+                            data-ctime="${s.birthtime.getTime()}" data-type="${detailedType}">
+                            <td class="col-name">${item.isDirectory() ? '📂' : '📄'} <a href="${link}${item.isDirectory() ? '/' : ''}">${item.name}</a></td>
+                            <td class="col-size mono">${item.isDirectory() ? (items.length + ' items') : formatBytes(s.size)}</td>
+                            <td class="col-kind">${item.isDirectory() ? 'Folder' : 'File'}</td>
+                            <td class="col-modified mono">${s.mtime.toISOString().split('T')[0]}</td>
+                            <td class="col-accessed mono">${s.atime.toISOString().split('T')[0]}</td>
+                            <td class="col-created mono">${s.birthtime.toISOString().split('T')[0]}</td>
+                            <td class="col-recency">${isNew ? '⭐' : ''}</td>
+                            <td class="col-detailed-type">${detailedType}</td>
+                        </tr>`;
+                }).join('');
 
             res.send(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Glacier Node.js Fileserver</title>
+    <title>Glacier - ${relativePath}</title>
     <style>
         :root { --bg: #1a1a1a; --text: #cccccc; --border: #333333; --hover: #2a2a2a; --row-alt: #1f1f1f; --subtle: #888888; }
         body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; font-size: 11px; }
@@ -143,11 +160,9 @@ app.get(/^(.*)$/, (req, res) => {
         tr:hover td { background: var(--hover); }
         a { color: var(--text); text-decoration: none; }
         .mono { font-family: ui-monospace, monospace; color: var(--subtle); }
-        
         .col-name { width: 30%; } .col-size { width: 85px; } .col-kind { width: 60px; }
         .col-modified { width: 90px; } .col-accessed { width: 90px; } .col-created { width: 90px; }
         .col-recency { width: 50px; text-align: center; } .col-detailed-type { width: 130px; }
-        
         .hidden { display: none !important; }
     </style>
 </head>
@@ -199,12 +214,10 @@ app.get(/^(.*)$/, (req, res) => {
             const rows = Array.from(list.children);
             const dir = list.dataset.order === 'asc' ? -1 : 1;
             list.dataset.order = dir === 1 ? 'asc' : 'desc';
-
             headers.forEach((h, i) => {
                 const icon = h.querySelector('.sort-icon');
                 if(icon) icon.innerText = i === idx ? (dir === 1 ? ' ▲' : ' ▼') : '';
             });
-
             const sorted = rows.sort((a, b) => {
                 let vA, vB;
                 if (idx === 1) [vA, vB] = [parseInt(a.dataset.size), parseInt(b.dataset.size)];
@@ -227,12 +240,6 @@ app.get(/^(.*)$/, (req, res) => {
                 const colClass = cb.dataset.col;
                 document.querySelectorAll('.' + colClass).forEach(el => el.classList.toggle('hidden', !cb.checked));
             };
-        });
-
-        // Initialize state for hidden columns
-        document.querySelectorAll('#settingsDropdown input').forEach(cb => {
-            const colClass = cb.dataset.col;
-            document.querySelectorAll('.' + colClass).forEach(el => el.classList.toggle('hidden', !cb.checked));
         });
 
         document.onclick = () => document.getElementById('settingsDropdown').classList.remove('show');
