@@ -91,7 +91,7 @@ app.get(/^(.*)$/, (req, res) => {
     );
 
     if (isRestricted) {
-        console.warn(`[SECURITY] Blocked access attempt to: ${relativePath}`);
+        console.error(`[SECURITY] Blocked access attempt to: ${relativePath}`);
         return res.status(403).send("403 Forbidden: Access to hidden files is restricted.");
     }
 
