@@ -1,0 +1,28 @@
+{
+  "name": "sci-sketchbook",
+  "version": "1.0.0",
+  "description": "This repository is a library of p5.js and Processing sketch files and associated resources. Each sketch is organised into its own dedicated project folder.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eanutt1272v2/sci-sketchbook.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/eanutt1272v2/sci-sketchbook/issues"
+  },
+  "homepage": "https://github.com/eanutt1272v2/sci-sketchbook#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
