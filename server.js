@@ -20,14 +20,12 @@ function getDetailedType(item, ext) {
     
     const e = ext.toLowerCase();
     const types = {
-        // --- IMAGES ---
         '.jpg': 'JPEG Image', '.jpeg': 'JPEG Image', '.png': 'PNG Image', '.gif': 'GIF Image',
         '.svg': 'SVG Vector', '.webp': 'WebP Image', '.ico': 'Icon Resource', '.bmp': 'Bitmap Image',
         '.tiff': 'TIFF Image', '.tif': 'TIFF Image', '.psd': 'Adobe Photoshop', '.ai': 'Adobe Illustrator',
         '.raw': 'RAW Image', '.cr2': 'Canon RAW', '.nef': 'Nikon RAW', '.heic': 'High Efficiency Image',
         '.eps': 'Encapsulated PostScript', '.indd': 'Adobe InDesign',
 
-        // --- DOCUMENTS & OFFICE ---
         '.pdf': 'PDF Document', '.doc': 'Word Document', '.docx': 'Word Document', '.dotx': 'Word Template',
         '.txt': 'Plain Text', '.md': 'Markdown Document', '.rtf': 'Rich Text', '.csv': 'CSV Data',
         '.xls': 'Excel Spreadsheet', '.xlsx': 'Excel Spreadsheet', '.xlsm': 'Excel Macro-Enabled',
@@ -35,7 +33,6 @@ function getDetailedType(item, ext) {
         '.odt': 'OpenDocument Text', '.ods': 'OpenDocument Spreadsheet', '.odp': 'OpenDocument Presentation',
         '.pages': 'Apple Pages', '.numbers': 'Apple Numbers', '.key': 'Apple Keynote', '.epub': 'E-Book',
 
-        // --- PROGRAMMING & WEB ---
         '.js': 'JavaScript Source', '.mjs': 'ES Module JS', '.ts': 'TypeScript Source', '.tsx': 'React TypeScript',
         '.jsx': 'React JavaScript', '.html': 'HTML Document', '.htm': 'HTML Document', '.css': 'CSS Stylesheet',
         '.scss': 'Sass Stylesheet', '.less': 'Less Stylesheet', '.json': 'JSON Data', '.jsonl': 'JSON Lines',
@@ -48,32 +45,26 @@ function getDetailedType(item, ext) {
         '.dockerfile': 'Docker Configuration', '.makefile': 'Make Build Script', '.ini': 'Configuration File',
         '.env': 'Environment Variables', '.toml': 'TOML Config', '.vbs': 'VBScript',
 
-        // --- AUDIO ---
         '.mp3': 'MP3 Audio', '.wav': 'WAV Audio', '.flac': 'FLAC Audio', '.ogg': 'Ogg Vorbis Audio',
         '.m4a': 'MPEG-4 Audio', '.aac': 'AAC Audio', '.wma': 'Windows Media Audio', '.mid': 'MIDI Audio',
         '.midi': 'MIDI Audio', '.aif': 'AIFF Audio', '.opus': 'Opus Audio',
 
-        // --- VIDEO ---
         '.mp4': 'MP4 Video', '.mkv': 'Matroska Video', '.mov': 'QuickTime Video', '.avi': 'AVI Video',
         '.wmv': 'Windows Media Video', '.flv': 'Flash Video', '.webm': 'WebM Video', '.m4v': 'M4V Video',
         '.mpeg': 'MPEG Video', '.mpg': 'MPEG Video', '.3gp': '3GP Mobile Video',
 
-        // --- ARCHIVES ---
         '.zip': 'ZIP Archive', '.rar': 'RAR Archive', '.tar': 'Tarball Archive', '.gz': 'Gzip Compressed',
         '.7z': '7-Zip Archive', '.bz2': 'Bzip2 Compressed', '.xz': 'XZ Compressed', '.iso': 'Disc Image',
         '.pkg': 'macOS Installer Package', '.deb': 'Debian Package', '.rpm': 'RedHat Package',
 
-        // --- EXECUTABLES & SYSTEM ---
         '.exe': 'Windows Executable', '.msi': 'Windows Installer', '.bin': 'Binary File', '.dll': 'Dynamic Link Library',
         '.so': 'Shared Object', '.dmg': 'Apple Disk Image', '.app': 'macOS Application', '.sys': 'System File',
         '.cur': 'Windows Cursor', '.lnk': 'Windows Shortcut', '.reg': 'Windows Registry File',
 
-        // --- 3D & CAD ---
         '.obj': '3D Object', '.stl': 'Stereolithography 3D', '.fbx': 'Filmbox 3D', '.blend': 'Blender Project',
         '.dae': 'Collada 3D', '.gltf': 'GL Transmission Format', '.glb': 'Binary glTF', '.step': 'STEP 3D Model',
         '.dwg': 'AutoCAD Drawing', '.dxf': 'Drawing Exchange Format',
 
-        // --- FONTS ---
         '.ttf': 'TrueType Font', '.otf': 'OpenType Font', '.woff': 'Web Font', '.woff2': 'Web Font 2.0',
         '.eot': 'Embedded OpenType'
     };
@@ -108,8 +99,7 @@ app.get(/^(.*)$/, (req, res) => {
                 const detailedType = getDetailedType(item, ext);
                 const link = path.join(relativePath, item.name);
                 
-                // Logic for Recency stars or indicators
-                const isNew = (Date.now() - s.mtime.getTime()) < 86400000; // Last 24 hours
+                const isNew = (Date.now() - s.mtime.getTime()) < 86400000;
 
                 return `
                     <tr data-name="${item.name.toLowerCase()}" data-size="${s.size}" 
