@@ -1,47 +1,44 @@
-# p5.js Sketch Library
+# p5.js and Processing Sketch Library
 
-A collection of computational sketches and visual experiments, primarily built with p5.js and Processing. This library explores various topics including fluid dynamics, cellular automata, quantum mechanics, and fractal rendering.
+This repository is a library of p5.js and Processing sketch files and associated resources. Each sketch is organised into its own dedicated project folder.
 
-## Projects
+## Repository Structure
 
-### Fluvia
-A fast web-based geomorphological simulation. It utilizes a Lagrangian particle-based solver where water droplets traverse a dual-layer heightmap of bedrock and sediment. By simulating momentum-based transport, deposition, and physics, it generates realistic fluvial features like drainage basins, meandering rivers, and alluvial fans.
+The repository is structured with individual directories for each p5.js or Processing project. Within each project folder, you will typically find:
 
-### Lenia_2D_Studio
-A generalized cellular automata engine capable of FFT-discretized 'continuous' cellular automata and traditional discrete models. It features a graphical user interface (GUI) powered by the Tweakpane library, various rendering options, and an animal library for different automaton configurations.
+*   `index.html` (for p5.js sketches): The entry point for web-based sketches.
+*   `sketch.js` (for p5.js sketches): The main JavaScript file containing the p5.js code.
+*   `.pde` files (for Processing sketches): The main Processing sketch file or other required source files.
+*   `.glsl` files: For sketches utilising GLSL shaders.
+*   `.json` files: For sketches that load external data.
 
-### Eigen
-A fast numerical visualizer of the time-independent Schrödinger equation for a single-electron system. It computes the probability density of the Hydrogen atom by evaluating the product of radial wavefunctions and angular components (Real Spherical Harmonics).
+## Up and Running
 
-### Micro_Lab
-A particle simulation software that demonstrates complex emergent behavior and forms life-like structures. This repository includes both the original Processing version and its p5.js counterparts.
+### p5.js Sketches
 
-### Cellular_Division
-A simulation of life-like structures emerging from a simple motion law. By balancing individual turning angles (Alpha) against interaction (Beta), particles self-organize into "cells" and complex ecosystems.
+To execute any of the p5.js sketches, follow these steps:
 
-### GLSL_Shader_Exploration_01
-A project dedicated to exploring the capabilities of GLSL shaders within the p5.js environment. It features a high-performance ray-marching shader ported to p5.js.
+1.  Locate the specific project folder for the desired sketch within this repository.
+2.  Open the `index.html` file in your preferred web browser.
 
-### Additional Experiments
-- **Mandel_Bulber**: 3D Mandelbulb fractal explorer.
-- **Slime_Mold_Growth**: Simulation of Physarum polycephalum behavior.
-- **Neural_Network**: Basic neural network implementation in Processing.
-- **Sierpinski_Triangle**: Recursive fractal generation.
-- **Lorenz_Attractor**: Visualization of the classic chaotic system.
+**Important Notes:**
+*   Make sure that all dependent files, including `.js`, `.css`, shader (`.glsl`), and data (`.json`) files, are either located in the same directory as `index.html` or are correctly linked within the `index.html` and `sketch.js` files.
+*   For optimal performance and to avoid potential browser security restrictions (e.g., related to loading local files), it is recommended to run p5.js sketches using a local web server. Simple options include Python's `http.server` (`python3 -m http.server`) or Node.js's `serve` package (`npx serve`).
 
-## Running Sketches
+### Processing Sketches
 
-To run any of these sketches:
-1. Navigate to the respective project folder.
-2. For p5.js projects, open the `index.html` file in a modern web browser.
-3. For Processing projects, open the `.pde` files in the Processing IDE.
+To run any of the Processing sketches, you will need the **Processing Development Environment** installed on your computer. The latest version can be downloaded from the [official Processing Website](https://processing.org/download).
 
-## Technologies Used
+Once Processing is installed, proceed as follows:
 
-- **p5.js**: A JavaScript library for creative coding.
-- **Processing**: A flexible software sketchbook and language for learning how to code within the context of visual arts.
-- **GLSL**: OpenGL Shading Language for high-performance graphics.
-- **Tweakpane**: A compact GUI library for fine-tuning parameters.
+1.  Go to the respective project folder for the Processing sketch.
+2.  Open the primary `.pde` sketch file using the Processing IDE.
+3.  Click the "Run" button (a triangular play icon) within the Processing IDE to compile and run the sketch.
 
----
-*Maintained by @eanutt1272.v2*
+**Important Notes:**
+*   Verify that any associated data files, libraries, or external assets are correctly placed within the sketch folder or linked as specified by the Processing sketch.
+*   If a sketch utilises external libraries, ensure they are installed in your Processing environment (Sketch > Import Library > Add Library...).
+
+## License
+
+This project is distributed under the MIT License. For more information, please refer to the `LICENSE` file in the root of the repository.
