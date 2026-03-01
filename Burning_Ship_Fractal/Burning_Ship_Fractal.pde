@@ -1,79 +1,99 @@
 /**
  * @file Burning_Ship_Fractal.pde
  * @author @eanutt1272.v2
- * @version 2.1.0
+ * @version 2.2.0
  */
 
-int maxIterations = 256;
-double zoom = 1.0;
-double offsetX = -0.02;
-double offsetY = -0.08;
+int maxIterations = 128;
+double zoom       = 1.0;
+double offsetX    = -0.02;
+double offsetY    = -0.08;
 boolean needsRedraw = true;
 
 PGraphics fractalBuffer;
 
-String[] mapNames = {"cividis", "inferno", "magma", "mako", "plasma", "rocket", "turbo", "viridis", "greyscale"};
-int currentMapIndex = 1;
+String[] mapNames = {
+  "cividis", "inferno", "magma", "mako",
+  "plasma",  "rocket",  "turbo", "viridis", "greyscale"
+};
+int currentMapIndex = 2;
 int[] colorLUT = new int[2048];
 
-
-Button zoomInButton, zoomOutButton;
+Button   zoomInButton, zoomOutButton;
 Button[] stepButtons = new Button[4];
-Slider iterSlider;
+Slider   iterSlider;
 Dropdown mapDropdown;
 
-boolean showUI = true;
+boolean showUI       = true;
 boolean isTypingIter = false;
-String typingBuffer = "";
+String  typingBuffer = "";
 
 boolean keyUp, keyDown, keyLeft, keyRight, keyZoomIn, keyZoomOut;
 
-
-UITheme theme;
+UITheme  theme;
 UILayout layout;
 
 static final int PANEL_W = 390;
 
-void setup() {
-  size(800, 800);
-  fractalBuffer = createGraphics(width, height);
-  theme = new UITheme();
-  generateLUT();
+void settings() {
+  size(800, 800, P2D);
+  pixelDensity(displayDensity());
+}
 
-  layout = new UILayout(10, 10, PANEL_W, 12, 4);
-  layout.add("iterLabel",   20, 8);
-  layout.add("iterSlider",  18, 4);
-  layout.add("stepButtons", 28, 14);
-  layout.add("zoomInfo",    19, 3);
-  layout.add("posInfo",     19, 10);
-  layout.add("hints",       15, 10);
-  layout.add("colorMap",    28, 8);
+void setup() {
+  surface.setResizable(false);
+
+  javax.swing.SwingUtilities.invokeLater(new Runnable() {
+    public void run() {
+      com.jogamp.newt.opengl.GLWindow window =
+        (com.jogamp.newt.opengl.GLWindow) surface.getNative();
+      window.setUndecorated(false);
+      window.setSize(width, height);
+    }
+  });
+
+  fractalBuffer = createGraphics(width, height, P2D);
+  theme         = new UITheme();
+  generateLUT();
+  colorMode(RGB, 255);
+
+  layout = new UILayout(10, 10, PANEL_W, 12, 5, 18);
+
+  layout.add("iterLabel",   20, "group1");
+  layout.add("iterSlider",  18, "group1");
+  layout.add("stepButtons", 30, "group1");
+  layout.add("zoomInfo",    19, "group1");
+  layout.add("posInfo",     19, "group1");
+  layout.add("hints",       15, "group1");
+  layout.add("colorMap",    28, "group1");
   layout.finish();
 
   iterSlider = new Slider(
-    layout.x + layout.padding,
+    layout.contentX(),
     layout.getY("iterSlider"),
-    PANEL_W - layout.padding * 2,
-    18, 1, 2000, maxIterations
+    layout.contentW(),
+    18, 1, 512, maxIterations
   );
 
   String[] stepLabels = {"--", "-", "+", "++"};
   float stepY = layout.getY("stepButtons");
   for (int i = 0; i < 4; i++) {
-    stepButtons[i] = new Button(layout.x + layout.padding + i * 36, stepY, 32, 26, stepLabels[i]);
+    stepButtons[i] = new Button(
+      layout.contentX() + i * 36, stepY, 28, 28, stepLabels[i]
+    );
   }
 
   mapDropdown = new Dropdown(
-    layout.x + layout.padding,
-    layout.getY("colorMap"),
+    layout.contentX(), layout.getY("colorMap"),
     180, 26, mapNames
   );
 
   zoomInButton  = new Button(width - 80, height - 160, 56, 56, "+");
-  zoomOutButton = new Button(width - 80, height - 90,  56, 56, "-");
+  zoomOutButton = new Button(width - 80, height - 90,  56, 56, "\u2212");
 }
 
 void draw() {
+  background(0);
   handleContinuousInput();
   if (needsRedraw) { renderFractalToBuffer(); needsRedraw = false; }
   image(fractalBuffer, 0, 0);
@@ -82,20 +102,22 @@ void draw() {
 
 void handleContinuousInput() {
   if (showUI && (mapDropdown.isOpen || iterSlider.locked || isTypingIter)) return;
-  boolean changed = false;
-  double panSpeed = 0.05 / zoom;
+  boolean changed  = false;
+  double panSpeed  = 0.05 / zoom;
 
   if (keyUp)      { offsetY -= panSpeed; changed = true; }
   if (keyDown)    { offsetY += panSpeed; changed = true; }
   if (keyLeft)    { offsetX -= panSpeed; changed = true; }
   if (keyRight)   { offsetX += panSpeed; changed = true; }
-  if (keyZoomIn)  { doZoom(1.05, width / 2, height / 2); changed = true; }
+  if (keyZoomIn)  { doZoom(1.05,      width / 2, height / 2); changed = true; }
   if (keyZoomOut) { doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
 
   if (mousePressed && showUI) {
-    if (zoomInButton.isMouseOver())  { doZoom(1.05, width / 2, height / 2); changed = true; }
+    if (zoomInButton.isMouseOver())  { doZoom(1.05,      width / 2, height / 2); changed = true; }
     if (zoomOutButton.isMouseOver()) { doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
-    if (iterSlider.locked && iterSlider.update()) { maxIterations = (int)iterSlider.val; changed = true; }
+    if (iterSlider.locked && iterSlider.update()) {
+      maxIterations = (int) iterSlider.val; changed = true;
+    }
   }
   if (changed) needsRedraw = true;
 }
@@ -109,12 +131,11 @@ void mousePressed() {
     mapDropdown.isOpen = false;
     return;
   }
-
   if (mapDropdown.isHeaderOver()) { mapDropdown.toggle(); return; }
 
-  float labelX = layout.x + layout.padding;
-  float labelY = layout.getY("iterLabel");
-  if (mouseX > labelX && mouseX < labelX + 180 && mouseY > labelY && mouseY < labelY + 20) {
+  // Click iteration label to enter typing mode
+  if (mouseX > layout.contentX() && mouseX < layout.contentX() + 180
+   && mouseY > layout.getY("iterLabel") && mouseY < layout.getY("iterLabel") + 20) {
     isTypingIter = true; typingBuffer = ""; return;
   } else {
     isTypingIter = false;
@@ -122,8 +143,11 @@ void mousePressed() {
 
   if (iterSlider.isMouseOver()) {
     iterSlider.locked = true;
-    iterSlider.val = constrain(map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max), iterSlider.min, iterSlider.max);
-    maxIterations = (int)iterSlider.val;
+    iterSlider.val = constrain(
+      map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max),
+      iterSlider.min, iterSlider.max
+    );
+    maxIterations = (int) iterSlider.val;
     needsRedraw = true;
   }
 
@@ -141,16 +165,20 @@ void mouseReleased() { iterSlider.locked = false; }
 
 void mouseDragged() {
   if (iterSlider.locked) {
-    iterSlider.val = constrain(map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max), iterSlider.min, iterSlider.max);
-    maxIterations = (int)iterSlider.val;
+    iterSlider.val = constrain(
+      map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max),
+      iterSlider.min, iterSlider.max
+    );
+    maxIterations = (int) iterSlider.val;
     needsRedraw = true;
     return;
   }
   if (showUI && (mapDropdown.isOpen || isTypingIter)) return;
   if (showUI && (zoomInButton.isMouseOver() || zoomOutButton.isMouseOver())) return;
-  double aspect = (double)width / height;
-  offsetX -= (mouseX - pmouseX) * (3.2 * aspect) / width / zoom;
-  offsetY -= (mouseY - pmouseY) * 3.2 / height / zoom;
+
+  double aspect = (double) width / height;
+  offsetX -= (mouseX - pmouseX) * (3.2 * aspect) / width  / zoom;
+  offsetY -= (mouseY - pmouseY) * 3.2              / height / zoom;
   needsRedraw = true;
 }
 
@@ -162,14 +190,23 @@ void mouseWheel(MouseEvent event) {
 
 void keyPressed() {
   if (isTypingIter) {
-    if (key >= '0' && key <= '9') { typingBuffer += key; }
-    else if (keyCode == BACKSPACE && typingBuffer.length() > 0) { typingBuffer = typingBuffer.substring(0, typingBuffer.length() - 1); }
-    else if (keyCode == ENTER || keyCode == RETURN) {
-      if (typingBuffer.length() > 0) { maxIterations = constrain(int(typingBuffer), 1, 5000); iterSlider.val = maxIterations; needsRedraw = true; }
+    if (key >= '0' && key <= '9') {
+      typingBuffer += key;
+    } else if (keyCode == BACKSPACE && typingBuffer.length() > 0) {
+      typingBuffer = typingBuffer.substring(0, typingBuffer.length() - 1);
+    } else if (keyCode == ENTER || keyCode == RETURN) {
+      if (typingBuffer.length() > 0) {
+        maxIterations  = constrain(int(typingBuffer), 1, 512);
+        iterSlider.val = maxIterations;
+        needsRedraw    = true;
+      }
       isTypingIter = false;
-    } else if (keyCode == ESC) { isTypingIter = false; }
+    } else if (keyCode == ESC) {
+      isTypingIter = false;
+    }
     return;
   }
+
   if (key == 'h' || key == 'H') showUI = !showUI;
   if (key == 'w' || key == 'W' || keyCode == UP)    keyUp    = true;
   if (key == 's' || key == 'S' || keyCode == DOWN)  keyDown  = true;
@@ -189,11 +226,11 @@ void keyReleased() {
 }
 
 void doZoom(double factor, int targetX, int targetY) {
-  float aspectRatio = (float)width / height;
-  double baseX = map(targetX, 0, width,  -2.1f * aspectRatio, 1.1f * aspectRatio);
-  double baseY = map(targetY, 0, height, -2.1f, 1.1f);
-  double oldZoom = zoom;
-  zoom *= factor;
+  float  aspectRatio = (float) width / height;
+  double baseX       = map(targetX, 0, width,  -2.1f * aspectRatio, 1.1f * aspectRatio);
+  double baseY       = map(targetY, 0, height, -2.1f, 1.1f);
+  double oldZoom     = zoom;
+  zoom    *= factor;
   offsetX += baseX * (1.0 / oldZoom - 1.0 / zoom);
   offsetY += baseY * (1.0 / oldZoom - 1.0 / zoom);
 }
@@ -202,32 +239,38 @@ void renderFractalToBuffer() {
   fractalBuffer.beginDraw();
   fractalBuffer.loadPixels();
   fractalBuffer.colorMode(RGB, 1.0);
-  float aspectRatio = (float)width / height;
-  double invZoom = 1.0 / zoom;
+
+  float  aspectRatio = (float) width / height;
+  double invZoom     = 1.0 / zoom;
 
   for (int x = 0; x < width; x++) {
     for (int y = 0; y < height; y++) {
       double cx = map(x, 0, width,  -2.1f * aspectRatio, 1.1f * aspectRatio) * invZoom + offsetX;
-      double cy = map(y, 0, height, -2.1f, 1.1f) * invZoom + offsetY;
+      double cy = map(y, 0, height, -2.1f, 1.1f)                             * invZoom + offsetY;
       double zx = cx, zy = cy;
       int n = 0;
+
       while (n < maxIterations) {
         double zx2 = zx * zx, zy2 = zy * zy;
         if (zx2 + zy2 > 16.0) break;
         double nextZx = zx2 - zy2 + cx;
         zy = Math.abs(2.0 * zx * zy) + cy;
-        zx = nextZx; n++;
+        zx = nextZx;
+        n++;
       }
+
       if (n == maxIterations) {
         fractalBuffer.pixels[x + y * width] = fractalBuffer.color(0);
       } else {
-        float log_zn = (float)Math.log(zx * zx + zy * zy) / 2.0f;
-        float nu = (float)Math.log(log_zn / (float)Math.log(2)) / (float)Math.log(2);
-        float t = (n + 1 - nu) / maxIterations;
-        fractalBuffer.pixels[x + y * width] = colorLUT[floor(constrain(t, 0, 1) * (colorLUT.length - 1))];
+        float log_zn = (float) Math.log(zx * zx + zy * zy) / 2.0f;
+        float nu     = (float) Math.log(log_zn / (float) Math.log(2)) / (float) Math.log(2);
+        float t      = (n + 1 - nu) / maxIterations;
+        fractalBuffer.pixels[x + y * width] =
+          colorLUT[floor(constrain(t, 0, 1) * (colorLUT.length - 1))];
       }
     }
   }
+
   fractalBuffer.updatePixels();
   fractalBuffer.endDraw();
 }
@@ -240,24 +283,26 @@ void drawUI() {
   strokeWeight(theme.swPanel);
   rect(layout.x, layout.y, PANEL_W, layout.totalHeight, 4);
 
-  float sepY = layout.getY("zoomInfo") - 7;
-  stroke(theme.strokeSeparator);
-  strokeWeight(theme.swSeparator);
-  line(layout.x + layout.padding, sepY, layout.x + PANEL_W - layout.padding, sepY);
+  for (float sepY : layout.separatorYs()) {
+    stroke(theme.strokeSeparator);
+    strokeWeight(theme.swSeparator);
+    line(layout.contentX(), sepY, layout.x + PANEL_W - layout.padding, sepY);
+  }
 
-  float px = layout.x + layout.padding;
+  float px = layout.contentX();
 
-  float iterLabelY = layout.getY("iterLabel");
-  String iterText = isTypingIter ? "Input: " + typingBuffer + "_" : "Iterations: " + maxIterations;
+  String iterText = isTypingIter
+    ? "Input: " + typingBuffer + "_"
+    : "Iterations: " + maxIterations;
   fill(theme.textPrimary);
   textSize(theme.textSizePrimary);
   textAlign(LEFT, TOP);
-  text(iterText, px, iterLabelY);
+  text(iterText, px, layout.getY("iterLabel"));
 
   if (!isTypingIter) {
     fill(theme.textMuted);
     textSize(theme.textSizeCaption);
-    text("(click to type)", px + 100, iterLabelY + 3);
+    text("(click to type)", px + 105, layout.getY("iterLabel") + 3);
   }
 
   iterSlider.display();
@@ -267,12 +312,12 @@ void drawUI() {
   fill(theme.textSecondary);
   textSize(theme.textSizeSecondary);
   textAlign(LEFT, TOP);
-  text("Zoom: " + nfc((float)zoom, 1) + "x", px, layout.getY("zoomInfo"));
-  text("Position: "  + "X=" + nfc((float)-offsetX, 3) + ", " + "Y=" + nfc((float)offsetY, 3), px, layout.getY("posInfo"));
+  text("Zoom: "     + nfc((float) zoom, 1) + "x", px, layout.getY("zoomInfo"));
+  text("Position: X=" + nfc((float) -offsetX, 3) + ", Y=" + nfc((float) offsetY, 3), px, layout.getY("posInfo"));
 
   fill(theme.textMuted);
   textSize(theme.textSizeCaption);
-  text("[WASD/Arrows]: Pan, [Scroll/Q,E/-,+]: Zoom, [H]: Toggle UI Visibility", px, layout.getY("hints"));
+  text("[WASD/Arrows]: Pan,  [Scroll/Q,E]: Zoom,  [H]: Toggle UI", px, layout.getY("hints"));
 
   mapDropdown.display();
 
@@ -284,8 +329,12 @@ void generateLUT() {
   double[][] coeffs = getCoefficients(mapNames[currentMapIndex]);
   colorMode(RGB, 1.0);
   for (int i = 0; i < colorLUT.length; i++) {
-    float t = (float)i / (colorLUT.length - 1);
-    colorLUT[i] = color((float)applyPoly(t, coeffs[0]), (float)applyPoly(t, coeffs[1]), (float)applyPoly(t, coeffs[2]));
+    float t = (float) i / (colorLUT.length - 1);
+    colorLUT[i] = color(
+      (float) applyPoly(t, coeffs[0]),
+      (float) applyPoly(t, coeffs[1]),
+      (float) applyPoly(t, coeffs[2])
+    );
   }
 }
 
@@ -307,8 +356,8 @@ double[][] getCoefficients(String name) {
 
 class UITheme {
   color bgPanel  = color(18, 18, 22, 210);
-  color bgWidget = color(38, 38, 50, 220);
-  color bgHover  = color(62, 62, 80, 230);
+  color bgWidget = color(38, 38, 50,  220);
+  color bgHover  = color(62, 62, 80,  230);
   color bgActive = color(90, 90, 112, 245);
 
   color textPrimary   = color(238, 238, 238);
@@ -333,43 +382,69 @@ class UITheme {
   color accentHandle = color(210, 212, 235);
 }
 
-
 class UILayout {
-  float x, y, w, padding, spacing, totalHeight;
+  float x, y, w;
+  float padding;
+  float intraGap;
+  float interGap;
+  float totalHeight;
 
-  ArrayList<String> names   = new ArrayList<String>();
+  ArrayList<String> names  = new ArrayList<String>();
   ArrayList<Float>  heights = new ArrayList<Float>();
-  ArrayList<Float>  gaps    = new ArrayList<Float>(); 
-  HashMap<String, Float> yPositions = new HashMap<String, Float>();
+  ArrayList<String> groups  = new ArrayList<String>();
+  ArrayList<Float>  gaps    = new ArrayList<Float>();
 
-  UILayout(float x, float y, float w, float padding, float defaultSpacing) {
+  HashMap<String, Float> yPositions   = new HashMap<String, Float>();
+  ArrayList<Float>       _separatorYs = new ArrayList<Float>();
+
+  UILayout(float x, float y, float w, float padding, float intraGap, float interGap) {
     this.x = x; this.y = y; this.w = w;
-    this.padding = padding; this.spacing = defaultSpacing;
+    this.padding  = padding;
+    this.intraGap = intraGap;
+    this.interGap = interGap;
   }
 
-  // Overload: explicit gap after this row
-  void add(String name, float h, float gapBelow) {
-    names.add(name); heights.add(h); gaps.add(gapBelow);
-  }
-
-  // Overload: use default spacing
-  void add(String name, float h) {
-    add(name, h, spacing);
+  void add(String name, float h, String group) {
+    names.add(name); heights.add(h); groups.add(group);
   }
 
   void finish() {
+    gaps.clear();
+    for (int i = 0; i < names.size(); i++) {
+      boolean isLastInGroup = (i == names.size() - 1)
+        || !groups.get(i).equals(groups.get(i + 1));
+      gaps.add(isLastInGroup ? interGap : intraGap);
+    }
+
     float cursor = y + padding;
     for (int i = 0; i < names.size(); i++) {
       yPositions.put(names.get(i), cursor);
       cursor += heights.get(i) + gaps.get(i);
     }
-    totalHeight = cursor - y - gaps.get(gaps.size() - 1) + padding;
+
+    totalHeight = cursor - y - interGap + padding;
+
+    _separatorYs.clear();
+    for (int i = 0; i < names.size() - 1; i++) {
+      boolean isBoundary = !groups.get(i).equals(groups.get(i + 1));
+      if (isBoundary) {
+        float rowBottom = yPositions.get(names.get(i)) + heights.get(i);
+        float nextTop   = yPositions.get(names.get(i + 1));
+        _separatorYs.add((rowBottom + nextTop) / 2.0);
+      }
+    }
   }
 
   float getY(String name) {
     Float val = yPositions.get(name);
     return val != null ? val : y;
   }
+
+  float contentX() { return x + padding; }
+
+  float contentW() { return w - padding * 2; }
+
+  ArrayList<Float> separatorYs() { return _separatorYs; }
 }
 
 class Slider {
@@ -377,19 +452,17 @@ class Slider {
   boolean locked = false;
 
   Slider(float x, float y, float w, float h, float min, float max, float start) {
-    this.x=x; this.y=y; this.w=w; this.h=h; this.min=min; this.max=max; this.val=start;
+    this.x=x; this.y=y; this.w=w; this.h=h;
+    this.min=min; this.max=max; this.val=start;
   }
 
   void display() {
     colorMode(RGB, 255);
     float trackY = y + h / 2;
-
-    // Track — thinnest stroke tier
     stroke(theme.strokeTrack);
     strokeWeight(theme.swTrack);
     line(x, trackY, x + w, trackY);
 
-    // Handle
     float handleX = map(val, min, max, x, x + w);
     noStroke();
     fill(locked ? theme.accentHandle : theme.textSecondary);
@@ -402,7 +475,9 @@ class Slider {
     return false;
   }
 
-  boolean isMouseOver() { return mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h; }
+  boolean isMouseOver() {
+    return mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h;
+  }
 }
 
 class Dropdown {
@@ -428,7 +503,8 @@ class Dropdown {
 
     if (isOpen) {
       for (int i = 0; i < items.length; i++) {
-        boolean over = mouseX > x && mouseX < x + w && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h;
+        boolean over = mouseX > x && mouseX < x + w
+                    && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h;
         fill(over ? theme.bgActive : theme.bgHover);
         rect(x, y + h + i * h, w, h);
         fill(theme.textPrimary);
@@ -438,10 +514,15 @@ class Dropdown {
   }
 
   void toggle() { isOpen = !isOpen; }
-  boolean isHeaderOver() { return mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h; }
+
+  boolean isHeaderOver() {
+    return mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h;
+  }
+
   int getClickedIndex() {
     for (int i = 0; i < items.length; i++) {
-      if (mouseX > x && mouseX < x + w && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h) return i;
+      if (mouseX > x && mouseX < x + w
+       && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h) return i;
     }
     return -1;
   }
@@ -462,10 +543,12 @@ class Button {
     strokeWeight(theme.swWidget);
     rect(x, y, w, h, 3);
     fill(theme.textPrimary);
-    textSize(h * 0.42);
+    textSize(max(11, h * 0.42));
     textAlign(CENTER, CENTER);
     text(label, x + w / 2, y + h / 2);
   }
 
-  boolean isMouseOver() { return mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h; }
+  boolean isMouseOver() {
+    return mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h;
+  }
 }
