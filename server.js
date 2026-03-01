@@ -9,136 +9,296 @@ const hiddenFiles = [
     'server.js',
     'package.json',
     'package-lock.json',
-    '.gitignore',
-    '.env',
-    '.git'
+    'yarn.lock',
+    'pnpm-lock.yaml',
+    'Dockerfile',
+    'docker-compose.yml',
+    'docker-compose.yaml',
+    'Makefile',
+    'secrets.json',
+    'credentials.json',
+    'favicon.ico'
 ];
 
-// ─── Shared HTML Shell ───────────────────────────────────────────────────────
 
-const sharedStyles = `
-    :root {
-        --bg:       #111111;
-        --surface:  #171717;
-        --border:   #2a2a2a;
-        --hover:    #1e1e1e;
-        --row-alt:  #141414;
-        --text:     #c8c8c8;
-        --subtle:   #555555;
-        --accent:   #4a7eba;
-        --danger:   #c0392b;
-        --warning:  #e67e22;
-        --success:  #27ae60;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        font-size: 12px;
-        min-height: 100vh;
-    }
-    a { color: var(--text); text-decoration: none; }
-    a:hover { color: #ffffff; }
-    .mono { font-family: ui-monospace, "SF Mono", "Cascadia Code", "Fira Mono", monospace; }
-`;
+function getIconSvg(item, ext) {
+    const e = ext ? ext.toLowerCase() : '';
 
-function errorPage({ status, title, message, suggestion = null, showHome = true }) {
-    const statusColour = status >= 500 ? 'var(--danger)' : status === 403 ? 'var(--warning)' : 'var(--subtle)';
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${status} — Glacier</title>
-    <style>
-        ${sharedStyles}
-        .error-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            gap: 12px;
-            text-align: center;
-            padding: 40px 20px;
-        }
-        .status-code {
-            font-size: 72px;
-            font-weight: 700;
-            letter-spacing: -4px;
-            color: ${statusColour};
-            line-height: 1;
-            font-variant-numeric: tabular-nums;
-        }
-        .divider {
-            width: 40px;
-            height: 1px;
-            background: var(--border);
-        }
-        .error-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text);
-            letter-spacing: 0.02em;
-        }
-        .error-message {
-            font-size: 12px;
-            color: var(--subtle);
-            max-width: 360px;
-            line-height: 1.6;
-        }
-        .error-suggestion {
-            font-size: 11px;
-            color: var(--subtle);
-            font-family: ui-monospace, monospace;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 6px 12px;
-            border-radius: 3px;
-        }
-        .btn-home {
-            margin-top: 8px;
-            display: inline-block;
-            padding: 6px 18px;
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            color: var(--text);
-            font-size: 11px;
-            font-family: system-ui, sans-serif;
-            background: var(--surface);
-            cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
-        }
-        .btn-home:hover {
-            border-color: #444;
-            background: var(--hover);
-            color: #fff;
-        }
-    </style>
-</head>
-<body>
-    <div class="error-wrap">
-        <div class="status-code">${status}</div>
-        <div class="divider"></div>
-        <div class="error-title">${title}</div>
-        <p class="error-message">${message}</p>
-        ${suggestion ? `<div class="error-suggestion">${suggestion}</div>` : ''}
-        ${showHome ? `<a class="btn-home" href="/">Return to root</a>` : ''}
-    </div>
-</body>
-</html>`;
+    const ic = (body) =>
+        '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"' +
+        ' style="display:inline-block;flex-shrink:0;vertical-align:middle;margin-right:7px">' +
+        body + '</svg>';
+
+    const doc = (color, label) => {
+        const shape =
+            '<path d="M3 1.5H9.5L13 5V14.5H3V1.5Z" stroke="' + color + '" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<path d="M9.5 1.5V5H13" stroke="' + color + '" stroke-width="1.2" stroke-linejoin="round"/>';
+        const text = label
+            ? '<text x="8" y="11.5" text-anchor="middle" font-size="3.6" fill="' + color + '"' +
+              ' font-family="system-ui,-apple-system,sans-serif" font-weight="700" letter-spacing="0.2">' +
+              label + '</text>'
+            : '';
+        return ic(shape + text);
+    };
+
+    if (item.isDirectory()) {
+        return ic(
+            '<path d="M1.5 5.5C1.5 4.95 1.95 4.5 2.5 4.5H6.29C6.55 4.5 6.8 4.61 6.99 4.79L7.7 5.5H13.5' +
+            'C14.05 5.5 14.5 5.95 14.5 6.5V12C14.5 12.55 14.05 13 13.5 13H2.5C1.95 13 1.5 12.55 1.5 12V5.5Z"' +
+            ' fill="#4a7eba" fill-opacity="0.88"/>' +
+            '<path d="M1.5 6.5H14.5" stroke="#4a7eba" stroke-width="0.5" stroke-opacity="0.4"/>'
+        );
+    }
+
+    if (['.jpg','.jpeg','.png','.gif','.webp','.bmp','.tiff','.tif',
+         '.ico','.heic','.raw','.cr2','.nef','.psd','.ai','.eps','.svg',
+         '.indd'].includes(e)) {
+        return ic(
+            '<rect x="1.5" y="2.5" width="13" height="11" rx="1" stroke="#a855f7" stroke-width="1.2"/>' +
+            '<circle cx="5.5" cy="6.2" r="1.3" fill="#a855f7"/>' +
+            '<path d="M1.5 10.5L5 7.5L7.5 9.8L10.5 6.8L14.5 11" stroke="#a855f7"' +
+            ' stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>'
+        );
+    }
+
+    if (['.mp4','.mkv','.mov','.avi','.wmv','.flv','.webm','.m4v',
+         '.mpeg','.mpg','.3gp'].includes(e)) {
+        return ic(
+            '<rect x="1" y="3.5" width="10" height="9" rx="1" stroke="#ef4444" stroke-width="1.2"/>' +
+            '<path d="M11 6.5L15 4.5V11.5L11 9.5V6.5Z" stroke="#ef4444" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<line x1="3.5" y1="1.5" x2="3.5" y2="3.5" stroke="#ef4444" stroke-width="1.2" stroke-linecap="round"/>' +
+            '<line x1="6" y1="1.5" x2="6" y2="3.5" stroke="#ef4444" stroke-width="1.2" stroke-linecap="round"/>' +
+            '<line x1="8.5" y1="1.5" x2="8.5" y2="3.5" stroke="#ef4444" stroke-width="1.2" stroke-linecap="round"/>'
+        );
+    }
+
+    if (['.mp3','.wav','.flac','.ogg','.m4a','.aac','.wma','.mid',
+         '.midi','.aif','.aiff','.opus'].includes(e)) {
+        return ic(
+            '<path d="M8.5 3L5 5.5H2.5C2 5.5 1.5 6 1.5 6.5V9.5C1.5 10 2 10.5 2.5 10.5H5L8.5 13V3Z"' +
+            ' stroke="#ec4899" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<path d="M11 5.5C12.2 6.7 12.2 9.3 11 10.5" stroke="#ec4899" stroke-width="1.2" stroke-linecap="round"/>' +
+            '<path d="M13.2 3.5C15.6 5.9 15.6 10.1 13.2 12.5" stroke="#ec4899" stroke-width="1.2" stroke-linecap="round"/>'
+        );
+    }
+
+    if (e === '.pdf') {
+        return ic(
+            '<path d="M3 1.5H9.5L13 5V14.5H3V1.5Z" stroke="#ef4444" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<path d="M9.5 1.5V5H13" stroke="#ef4444" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<text x="8" y="11.5" text-anchor="middle" font-size="3.8" fill="#ef4444"' +
+            ' font-family="system-ui,-apple-system,sans-serif" font-weight="700">PDF</text>'
+        );
+    }
+
+    if (['.doc','.docx','.dotx','.odt','.pages'].includes(e)) return doc('#3b82f6', 'DOC');
+
+    if (['.xls','.xlsx','.xlsm','.ods','.numbers'].includes(e)) {
+        return ic(
+            '<path d="M3 1.5H9.5L13 5V14.5H3V1.5Z" stroke="#22c55e" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<path d="M9.5 1.5V5H13" stroke="#22c55e" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<line x1="5" y1="7.5" x2="11" y2="7.5" stroke="#22c55e" stroke-width="0.9"/>' +
+            '<line x1="5" y1="9.5" x2="11" y2="9.5" stroke="#22c55e" stroke-width="0.9"/>' +
+            '<line x1="5" y1="11.5" x2="11" y2="11.5" stroke="#22c55e" stroke-width="0.9"/>' +
+            '<line x1="8" y1="7" x2="8" y2="12" stroke="#22c55e" stroke-width="0.9"/>'
+        );
+    }
+    if (e === '.csv') return doc('#22c55e', 'CSV');
+
+    if (['.ppt','.pptx','.ppsx','.odp'].includes(e)) return doc('#f97316', 'PPT');
+    if (e === '.key') return doc('#f97316', 'KEY');
+
+    if (['.txt','.rtf','.nfo'].includes(e)) {
+        return ic(
+            '<path d="M3 1.5H9.5L13 5V14.5H3V1.5Z" stroke="#94a3b8" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<path d="M9.5 1.5V5H13" stroke="#94a3b8" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<line x1="5" y1="7.5" x2="11" y2="7.5" stroke="#94a3b8" stroke-width="1"/>' +
+            '<line x1="5" y1="9.5" x2="11" y2="9.5" stroke="#94a3b8" stroke-width="1"/>' +
+            '<line x1="5" y1="11.5" x2="9" y2="11.5" stroke="#94a3b8" stroke-width="1"/>'
+        );
+    }
+    if (['.md','.mdx'].includes(e)) return doc('#94a3b8', 'MD');
+    if (e === '.epub') return doc('#94a3b8', 'EPUB');
+
+    if (['.js','.mjs','.cjs'].includes(e)) return doc('#eab308', 'JS');
+    if (e === '.ts') return doc('#3b82f6', 'TS');
+    if (e === '.jsx') return doc('#06b6d4', 'JSX');
+    if (e === '.tsx') return doc('#06b6d4', 'TSX');
+
+    if (['.py','.pyc','.pyw'].includes(e)) return doc('#3b82f6', 'PY');
+
+    if (['.html','.htm'].includes(e)) return doc('#f97316', 'HTML');
+    if (e === '.css') return doc('#38bdf8', 'CSS');
+    if (e === '.scss') return doc('#ec4899', 'SCSS');
+    if (e === '.less') return doc('#3b82f6', 'LESS');
+
+    if (['.json','.jsonl'].includes(e)) return doc('#eab308', 'JSON');
+    if (['.yaml','.yml'].includes(e)) return doc('#94a3b8', 'YML');
+    if (e === '.toml') return doc('#94a3b8', 'TOML');
+    if (['.ini','.env'].includes(e)) return doc('#94a3b8', 'ENV');
+    if (e === '.xml') return doc('#f97316', 'XML');
+
+    if (['.sh','.zsh','.bash','.fish'].includes(e)) {
+        return ic(
+            '<rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="#22c55e" stroke-width="1.2"/>' +
+            '<path d="M4.5 6.5L7.5 8.5L4.5 10.5" stroke="#22c55e" stroke-width="1.2"' +
+            ' stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<line x1="9" y1="10.5" x2="12" y2="10.5" stroke="#22c55e" stroke-width="1.2" stroke-linecap="round"/>'
+        );
+    }
+    if (['.bat','.cmd'].includes(e)) return doc('#6b7280', 'BAT');
+    if (e === '.ps1') return doc('#3b82f6', 'PS1');
+    if (e === '.vbs') return doc('#6b7280', 'VBS');
+
+    if (e === '.c') return doc('#38bdf8', 'C');
+    if (e === '.h') return doc('#38bdf8', '.H');
+    if (['.cpp','.cc','.cxx'].includes(e)) return doc('#38bdf8', 'C++');
+    if (e === '.hpp') return doc('#38bdf8', 'HPP');
+
+    if (e === '.cs') return doc('#a855f7', 'C#');
+    if (['.java','.class'].includes(e)) return doc('#f97316', 'JAVA');
+    if (e === '.go') return doc('#06b6d4', 'GO');
+    if (e === '.rs') return doc('#f97316', 'RS');
+    if (e === '.php') return doc('#a855f7', 'PHP');
+    if (['.rb','.erb'].includes(e)) return doc('#ef4444', 'RB');
+    if (e === '.swift') return doc('#f97316', 'SW');
+    if (e === '.kt') return doc('#a855f7', 'KT');
+    if (e === '.dart') return doc('#06b6d4', 'DRT');
+    if (e === '.lua') return doc('#3b82f6', 'LUA');
+    if (e === '.pl') return doc('#94a3b8', 'PL');
+
+    if (e === '.sql') {
+        return ic(
+            '<ellipse cx="8" cy="4.5" rx="5" ry="2" stroke="#3b82f6" stroke-width="1.2"/>' +
+            '<path d="M3 4.5V11.5C3 12.6 5.24 13.5 8 13.5C10.76 13.5 13 12.6 13 11.5V4.5"' +
+            ' stroke="#3b82f6" stroke-width="1.2"/>' +
+            '<path d="M3 8C3 9.1 5.24 10 8 10C10.76 10 13 9.1 13 8" stroke="#3b82f6" stroke-width="1.2"/>'
+        );
+    }
+
+    if (e === '.dockerfile') return doc('#3b82f6', 'DOCK');
+
+    if (['.zip','.rar','.tar','.gz','.7z','.bz2','.xz','.iso'].includes(e)) {
+        return ic(
+            '<rect x="2" y="5" width="12" height="9" rx="1" stroke="#d97706" stroke-width="1.2"/>' +
+            '<path d="M5 5V3C5 2.45 5.45 2 6 2H10C10.55 2 11 2.45 11 3V5"' +
+            ' stroke="#d97706" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<rect x="6.5" y="7" width="3" height="1.5" rx="0.5" stroke="#d97706" stroke-width="1"/>' +
+            '<line x1="8" y1="8.5" x2="8" y2="11.5" stroke="#d97706" stroke-width="1" stroke-linecap="round"/>'
+        );
+    }
+    if (['.pkg','.deb','.rpm'].includes(e)) return doc('#d97706', 'PKG');
+
+    if (['.exe','.msi'].includes(e)) {
+        return ic(
+            '<rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="#6b7280" stroke-width="1.2"/>' +
+            '<path d="M5 8L7.5 5.5L10 8" stroke="#6b7280" stroke-width="1.2"' +
+            ' stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M7.5 5.5V11" stroke="#6b7280" stroke-width="1.2" stroke-linecap="round"/>'
+        );
+    }
+    if (['.app','.dmg'].includes(e)) return doc('#6b7280', 'APP');
+    if (['.bin','.dll','.so','.sys'].includes(e)) return doc('#6b7280', 'BIN');
+
+    if (['.ttf','.otf','.woff','.woff2','.eot'].includes(e)) {
+        return ic(
+            '<rect x="1.5" y="2.5" width="13" height="11" rx="1" stroke="#14b8a6" stroke-width="1.2"/>' +
+            '<text x="8" y="11" text-anchor="middle" font-size="8" fill="#14b8a6"' +
+            ' font-family="system-ui,-apple-system,sans-serif" font-weight="700">A</text>'
+        );
+    }
+
+    if (['.obj','.stl','.fbx','.blend','.dae','.gltf','.glb','.step',
+         '.dwg','.dxf'].includes(e)) {
+        return ic(
+            '<path d="M8 2L13.5 5V11L8 14L2.5 11V5L8 2Z" stroke="#06b6d4"' +
+            ' stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<path d="M8 2V14" stroke="#06b6d4" stroke-width="0.8" stroke-opacity="0.5"/>' +
+            '<path d="M2.5 5L8 8L13.5 5" stroke="#06b6d4" stroke-width="0.8" stroke-opacity="0.5"/>'
+        );
+    }
+
+    return ic(
+        '<path d="M3 1.5H9.5L13 5V14.5H3V1.5Z" stroke="#4b5563" stroke-width="1.2" stroke-linejoin="round"/>' +
+        '<path d="M9.5 1.5V5H13" stroke="#4b5563" stroke-width="1.2" stroke-linejoin="round"/>'
+    );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const ICON_SETTINGS =
+    '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" fill="currentColor" d="M 6.50 2.81 L 6.60 1.06 L 8.41 1.06 L 8.50 2.81 A 4.8 4.8 0 0 1 11.07 4.29 L 12.62 3.50 L 13.53 5.07 L 12.07 6.02 A 4.8 4.8 0 0 1 12.07 8.98 L 13.53 9.94 L 12.62 11.50 L 11.07 10.71 A 4.8 4.8 0 0 1 8.50 12.20 L 8.41 13.94 L 6.60 13.94 L 6.50 12.20 A 4.8 4.8 0 0 1 3.93 10.71 L 2.38 11.50 L 1.47 9.94 L 2.94 8.98 A 4.8 4.8 0 0 1 2.94 6.02 L 1.47 5.07 L 2.38 3.50 L 3.93 4.29 A 4.8 4.8 0 0 1 6.50 2.81 Z M 9.50 7.50 A 2 2 0 1 1 5.50 7.50 A 2 2 0 1 1 9.50 7.50 Z"/></svg>';
+
+const ICON_SORT_ASC =
+    '<svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M4 1.5L7 6.5H1L4 1.5Z" fill="currentColor"/></svg>';
+
+const ICON_SORT_DESC =
+    '<svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M4 6.5L1 1.5H7L4 6.5Z" fill="currentColor"/></svg>';
+
+const ICON_SEARCH =
+    '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2"/>' +
+    '<line x1="7.8" y1="7.8" x2="11" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+
+
+const sharedStyles =
+    ':root{' +
+    '--bg:#111111;--surface:#171717;--border:#262626;--hover:#1c1c1c;' +
+    '--row-alt:#141414;--text:#c8c8c8;--subtle:#505050;--accent:#4a7eba;' +
+    '--text-strong:#ffffff;' +
+    '--danger:#c0392b;--warning:#d97706;--success:#22c55e;' +
+    '}' +
+    '@media(prefers-color-scheme:light){:root{' +
+    '--bg:#f5f5f5;--surface:#ffffff;--border:#e0e0e0;--hover:#efefef;' +
+    '--row-alt:#fafafa;--text:#1f1f1f;--subtle:#888888;--accent:#2563eb;' +
+    '--text-strong:#000000;' +
+    '--danger:#dc2626;--warning:#d97706;--success:#16a34a;' +
+    '}}' +
+    '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}' +
+    'html,body{' +
+    'font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+    'background:var(--bg);color:var(--text);font-size:12px;min-height:100vh;' +
+    '}' +
+    'a{color:var(--text);text-decoration:none;}' +
+    'a:hover{color:var(--text-strong);}' +
+    '.mono{font-family:ui-monospace,"SF Mono","Cascadia Code","Fira Mono",monospace;}';
+
+function errorPage({ status, title, message, suggestion = null, showHome = true }) {
+    const c = status >= 500 ? 'var(--danger)' : status === 403 ? 'var(--warning)' : 'var(--subtle)';
+    return '<!DOCTYPE html><html lang="en"><head>' +
+        '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<title>' + status + ' \u2014 Glacier</title><style>' + sharedStyles +
+        '.wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'min-height:100vh;gap:14px;text-align:center;padding:40px 20px;}' +
+        '.code{font-size:80px;font-weight:700;letter-spacing:-5px;color:' + c + ';line-height:1;' +
+        'font-variant-numeric:tabular-nums;}' +
+        '.div{width:36px;height:1px;background:var(--border);}' +
+        '.ttl{font-size:15px;font-weight:600;color:var(--text);}' +
+        '.msg{font-size:12px;color:var(--subtle);max-width:380px;line-height:1.65;}' +
+        '.sug{font-size:11px;color:var(--subtle);font-family:ui-monospace,monospace;' +
+        'background:var(--surface);border:1px solid var(--border);padding:6px 14px;border-radius:3px;}' +
+        '.btn{margin-top:4px;display:inline-block;padding:6px 20px;border:1px solid var(--border);' +
+        'border-radius:3px;color:var(--text);font-size:11px;' +
+        'font-family:system-ui,-apple-system,sans-serif;' +
+        'background:var(--surface);transition:border-color .15s,background .15s;}' +
+        '.btn:hover{border-color:#444;background:var(--hover);color:var(--text-strong);}' +
+        '</style></head><body><div class="wrap">' +
+        '<div class="code">' + status + '</div>' +
+        '<div class="div"></div>' +
+        '<div class="ttl">' + title + '</div>' +
+        '<p class="msg">' + message + '</p>' +
+        (suggestion ? '<div class="sug">' + suggestion + '</div>' : '') +
+        (showHome ? '<a class="btn" href="/">Return to root</a>' : '') +
+        '</div></body></html>';
+}
 
 function formatBytes(bytes) {
-    if (bytes === -1) return '--';
+    if (bytes === -1) return '\u2014';
     if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + '\u00a0' + sizes[i];
 }
 
 function getDetailedType(item, ext) {
@@ -146,57 +306,46 @@ function getDetailedType(item, ext) {
     if (!ext) return 'File';
     const e = ext.toLowerCase();
     const types = {
-        '.jpg': 'JPEG Image', '.jpeg': 'JPEG Image', '.png': 'PNG Image', '.gif': 'GIF Image',
-        '.svg': 'SVG Vector', '.webp': 'WebP Image', '.ico': 'Icon Resource', '.bmp': 'Bitmap Image',
-        '.tiff': 'TIFF Image', '.tif': 'TIFF Image', '.psd': 'Adobe Photoshop', '.ai': 'Adobe Illustrator',
-        '.raw': 'RAW Image', '.cr2': 'Canon RAW', '.nef': 'Nikon RAW', '.heic': 'High Efficiency Image',
-        '.eps': 'Encapsulated PostScript', '.indd': 'Adobe InDesign',
-
-        '.pdf': 'PDF Document', '.doc': 'Word Document', '.docx': 'Word Document', '.dotx': 'Word Template',
-        '.txt': 'Plain Text', '.md': 'Markdown Document', '.rtf': 'Rich Text', '.csv': 'CSV Data',
-        '.xls': 'Excel Spreadsheet', '.xlsx': 'Excel Spreadsheet', '.xlsm': 'Excel Macro-Enabled',
-        '.ppt': 'PowerPoint Presentation', '.pptx': 'PowerPoint Presentation', '.ppsx': 'PowerPoint Show',
-        '.odt': 'OpenDocument Text', '.ods': 'OpenDocument Spreadsheet', '.odp': 'OpenDocument Presentation',
-        '.pages': 'Apple Pages', '.numbers': 'Apple Numbers', '.key': 'Apple Keynote', '.epub': 'E-Book',
-
-        '.js': 'JavaScript Source', '.mjs': 'ES Module JS', '.ts': 'TypeScript Source', '.tsx': 'React TypeScript',
-        '.jsx': 'React JavaScript', '.html': 'HTML Document', '.htm': 'HTML Document', '.css': 'CSS Stylesheet',
-        '.scss': 'Sass Stylesheet', '.less': 'Less Stylesheet', '.json': 'JSON Data', '.jsonl': 'JSON Lines',
-        '.py': 'Python Script', '.pyc': 'Compiled Python', '.cpp': 'C++ Source', '.hpp': 'C++ Header',
-        '.c': 'C Source', '.h': 'C Header', '.cs': 'C# Source', '.java': 'Java Source', '.class': 'Java Bytecode',
-        '.php': 'PHP Script', '.rb': 'Ruby Script', '.go': 'Go Source', '.rs': 'Rust Source', '.sh': 'Shell Script',
-        '.zsh': 'Zsh Script', '.bat': 'Windows Batch', '.ps1': 'PowerShell Script', '.yaml': 'YAML Config',
-        '.yml': 'YAML Config', '.xml': 'XML Document', '.sql': 'SQL Script', '.dart': 'Dart Source',
-        '.swift': 'Swift Source', '.kt': 'Kotlin Source', '.lua': 'Lua Script', '.pl': 'Perl Script',
-        '.ini': 'INI Config', '.env': 'Environment Variables', '.toml': 'TOML Config', '.vbs': 'VBScript',
-        '.dockerfile': 'Docker Config', '.makefile': 'Make Script',
-
-        '.mp3': 'MP3 Audio', '.wav': 'WAV Audio', '.flac': 'FLAC Audio', '.ogg': 'Ogg Vorbis',
-        '.m4a': 'MPEG-4 Audio', '.aac': 'AAC Audio', '.wma': 'Windows Media Audio', '.mid': 'MIDI',
-        '.midi': 'MIDI', '.aif': 'AIFF Audio', '.opus': 'Opus Audio',
-
-        '.mp4': 'MP4 Video', '.mkv': 'Matroska Video', '.mov': 'QuickTime Video', '.avi': 'AVI Video',
-        '.wmv': 'Windows Media Video', '.flv': 'Flash Video', '.webm': 'WebM Video', '.m4v': 'M4V Video',
-        '.mpeg': 'MPEG Video', '.mpg': 'MPEG Video', '.3gp': '3GP Video',
-
-        '.zip': 'ZIP Archive', '.rar': 'RAR Archive', '.tar': 'Tarball', '.gz': 'Gzip Archive',
-        '.7z': '7-Zip Archive', '.bz2': 'Bzip2 Archive', '.xz': 'XZ Archive', '.iso': 'Disc Image',
-        '.pkg': 'macOS Package', '.deb': 'Debian Package', '.rpm': 'RPM Package',
-
-        '.exe': 'Windows Executable', '.msi': 'Windows Installer', '.bin': 'Binary', '.dll': 'Dynamic Library',
-        '.so': 'Shared Object', '.dmg': 'Apple Disk Image', '.app': 'macOS Application',
-        '.sys': 'System File', '.lnk': 'Windows Shortcut', '.reg': 'Registry File',
-
-        '.obj': '3D Object', '.stl': 'STL 3D Model', '.fbx': 'Filmbox 3D', '.blend': 'Blender Project',
-        '.dae': 'Collada 3D', '.gltf': 'glTF 3D', '.glb': 'Binary glTF',
-        '.dwg': 'AutoCAD Drawing', '.dxf': 'Drawing Exchange',
-
-        '.ttf': 'TrueType Font', '.otf': 'OpenType Font', '.woff': 'Web Font', '.woff2': 'Web Font 2.0',
+        '.jpg':'JPEG Image','.jpeg':'JPEG Image','.png':'PNG Image','.gif':'GIF Image',
+        '.svg':'SVG Vector','.webp':'WebP Image','.ico':'Icon Resource','.bmp':'Bitmap Image',
+        '.tiff':'TIFF Image','.tif':'TIFF Image','.psd':'Adobe Photoshop','.ai':'Adobe Illustrator',
+        '.raw':'RAW Image','.cr2':'Canon RAW','.nef':'Nikon RAW','.heic':'HEIC Image',
+        '.eps':'Encapsulated PostScript','.indd':'Adobe InDesign',
+        '.pdf':'PDF Document','.doc':'Word Document','.docx':'Word Document','.dotx':'Word Template',
+        '.txt':'Plain Text','.md':'Markdown','.rtf':'Rich Text','.csv':'CSV Data',
+        '.xls':'Excel Spreadsheet','.xlsx':'Excel Spreadsheet','.xlsm':'Excel Macro-Enabled',
+        '.ppt':'PowerPoint','.pptx':'PowerPoint','.ppsx':'PowerPoint Show',
+        '.odt':'OpenDocument Text','.ods':'OpenDocument Spreadsheet','.odp':'OpenDocument Presentation',
+        '.pages':'Apple Pages','.numbers':'Apple Numbers','.key':'Apple Keynote','.epub':'E-Book',
+        '.js':'JavaScript','.mjs':'ES Module','.ts':'TypeScript','.tsx':'React TypeScript',
+        '.jsx':'React JavaScript','.html':'HTML Document','.htm':'HTML Document','.css':'CSS Stylesheet',
+        '.scss':'Sass Stylesheet','.less':'Less Stylesheet','.json':'JSON Data','.jsonl':'JSON Lines',
+        '.py':'Python Script','.pyc':'Compiled Python','.cpp':'C++ Source','.hpp':'C++ Header',
+        '.c':'C Source','.h':'C Header','.cs':'C# Source','.java':'Java Source','.class':'Java Bytecode',
+        '.php':'PHP Script','.rb':'Ruby Script','.go':'Go Source','.rs':'Rust Source','.sh':'Shell Script',
+        '.zsh':'Zsh Script','.bat':'Windows Batch','.ps1':'PowerShell','.yaml':'YAML Config',
+        '.yml':'YAML Config','.xml':'XML Document','.sql':'SQL Script','.dart':'Dart Source',
+        '.swift':'Swift Source','.kt':'Kotlin Source','.lua':'Lua Script','.pl':'Perl Script',
+        '.ini':'INI Config','.env':'Environment Variables','.toml':'TOML Config','.vbs':'VBScript',
+        '.dockerfile':'Docker Config','.mp3':'MP3 Audio','.wav':'WAV Audio','.flac':'FLAC Audio',
+        '.ogg':'Ogg Vorbis','.m4a':'MPEG-4 Audio','.aac':'AAC Audio','.wma':'Windows Media Audio',
+        '.mid':'MIDI','.midi':'MIDI','.aif':'AIFF Audio','.opus':'Opus Audio',
+        '.mp4':'MP4 Video','.mkv':'Matroska Video','.mov':'QuickTime Video','.avi':'AVI Video',
+        '.wmv':'Windows Media Video','.flv':'Flash Video','.webm':'WebM Video','.m4v':'M4V Video',
+        '.mpeg':'MPEG Video','.mpg':'MPEG Video','.3gp':'3GP Video',
+        '.zip':'ZIP Archive','.rar':'RAR Archive','.tar':'Tarball','.gz':'Gzip Archive',
+        '.7z':'7-Zip Archive','.bz2':'Bzip2 Archive','.xz':'XZ Archive','.iso':'Disc Image',
+        '.pkg':'macOS Package','.deb':'Debian Package','.rpm':'RPM Package',
+        '.exe':'Windows Executable','.msi':'Windows Installer','.bin':'Binary','.dll':'Dynamic Library',
+        '.so':'Shared Object','.dmg':'Apple Disk Image','.app':'macOS Application',
+        '.sys':'System File','.lnk':'Windows Shortcut','.reg':'Registry File',
+        '.obj':'3D Object','.stl':'STL 3D Model','.fbx':'Filmbox 3D','.blend':'Blender Project',
+        '.dae':'Collada 3D','.gltf':'glTF 3D','.glb':'Binary glTF','.dwg':'AutoCAD Drawing',
+        '.dxf':'Drawing Exchange','.ttf':'TrueType Font','.otf':'OpenType Font',
+        '.woff':'Web Font','.woff2':'Web Font 2.0',
     };
     return types[e] || (e.slice(1).toUpperCase() + ' File');
 }
-
-// ─── Route ───────────────────────────────────────────────────────────────────
 
 app.get(/^(.*)$/, (req, res) => {
     let relativePath;
@@ -212,9 +361,8 @@ app.get(/^(.*)$/, (req, res) => {
 
     const absolutePath = path.join(__dirname, relativePath);
 
-    // Path traversal guard
     if (!absolutePath.startsWith(__dirname + path.sep) && absolutePath !== __dirname) {
-        console.warn(`[SECURITY] Path traversal attempt: ${relativePath}`);
+        console.warn('[SECURITY] Path traversal attempt:', relativePath);
         return res.status(403).send(errorPage({
             status: 403,
             title: 'Forbidden',
@@ -223,12 +371,10 @@ app.get(/^(.*)$/, (req, res) => {
     }
 
     const pathParts = relativePath.split('/').filter(Boolean);
-    const isRestricted = pathParts.some(part =>
-        part.startsWith('.') || hiddenFiles.includes(part.toLowerCase())
-    );
+    const isRestricted = pathParts.some(p => p.startsWith('.') || hiddenFiles.includes(p.toLowerCase()));
 
     if (isRestricted) {
-        console.warn(`[SECURITY] Blocked restricted path: ${relativePath}`);
+        console.warn('[SECURITY] Blocked restricted path:', relativePath);
         return res.status(403).send(errorPage({
             status: 403,
             title: 'Forbidden',
@@ -249,7 +395,6 @@ app.get(/^(.*)$/, (req, res) => {
 
         const stats = fs.statSync(absolutePath);
 
-        // ── Directory listing ──────────────────────────────────────────────
         if (stats.isDirectory()) {
             let items;
             try {
@@ -262,12 +407,11 @@ app.get(/^(.*)$/, (req, res) => {
                 }));
             }
 
-            // Breadcrumbs
-            let breadcrumbHtml = `<a href="/">root</a>`;
+            let breadcrumbHtml = '<a href="/">root</a>';
             let currentLink = '';
             pathParts.forEach(part => {
-                currentLink += `/${part}`;
-                breadcrumbHtml += ` <span class="sep">/</span> <a href="${currentLink}">${part}</a>`;
+                currentLink += '/' + part;
+                breadcrumbHtml += ' <span class="sep">/</span> <a href="' + currentLink + '">' + part + '</a>';
             });
 
             const visibleItems = items.filter(
@@ -276,43 +420,52 @@ app.get(/^(.*)$/, (req, res) => {
 
             const rows = visibleItems.map(item => {
                 let s;
-                try {
-                    s = fs.statSync(path.join(absolutePath, item.name));
-                } catch {
-                    return '';
-                }
+                try { s = fs.statSync(path.join(absolutePath, item.name)); }
+                catch { return ''; }
                 const ext = path.extname(item.name);
                 const detailedType = getDetailedType(item, ext);
                 const link = path.join(relativePath, item.name);
                 const isNew = (Date.now() - s.mtime.getTime()) < 86400000;
-                const icon = item.isDirectory() ? '▸' : '·';
-                const sizeDisplay = item.isDirectory()
-                    ? `${visibleItems.filter(i => i.name !== item.name || true).length > 0 ? '—' : '—'}`
-                    : formatBytes(s.size);
+                const icon = getIconSvg(item, ext);
 
-                return `<tr
-                    data-name="${item.name.toLowerCase()}"
-                    data-size="${item.isDirectory() ? -1 : s.size}"
-                    data-mtime="${s.mtime.getTime()}"
-                    data-atime="${s.atime.getTime()}"
-                    data-ctime="${s.birthtime.getTime()}"
-                    data-type="${detailedType}">
-                    <td class="col-name">
-                        <span class="icon ${item.isDirectory() ? 'icon-dir' : 'icon-file'}">${icon}</span>
-                        <a href="${link}${item.isDirectory() ? '/' : ''}">${item.name}</a>
-                    </td>
-                    <td class="col-size mono">${item.isDirectory() ? '—' : formatBytes(s.size)}</td>
-                    <td class="col-kind">${item.isDirectory() ? 'Folder' : 'File'}</td>
-                    <td class="col-modified mono">${s.mtime.toISOString().split('T')[0]}</td>
-                    <td class="col-accessed mono hidden">${s.atime.toISOString().split('T')[0]}</td>
-                    <td class="col-created mono hidden">${s.birthtime.toISOString().split('T')[0]}</td>
-                    <td class="col-recency hidden">${isNew ? '●' : ''}</td>
-                    <td class="col-detailed-type">${detailedType}</td>
-                </tr>`;
+                let sizeDisplay, sortSize;
+                if (item.isDirectory()) {
+                    try {
+                        const sub = fs.readdirSync(path.join(absolutePath, item.name));
+                        const count = sub.filter(n => !n.startsWith('.') && !hiddenFiles.includes(n.toLowerCase())).length;
+                        sizeDisplay = count + '\u00a0' + (count === 1 ? 'item' : 'items');
+                        sortSize = count;
+                    } catch {
+                        sizeDisplay = '\u2014';
+                        sortSize = -1;
+                    }
+                } else {
+                    sizeDisplay = formatBytes(s.size);
+                    sortSize = s.size;
+                }
+                return '<tr' +
+                    ' data-name="' + item.name.toLowerCase() + '"' +
+                    ' data-size="' + sortSize + '"' +
+                    ' data-mtime="' + s.mtime.getTime() + '"' +
+                    ' data-atime="' + s.atime.getTime() + '"' +
+                    ' data-ctime="' + s.birthtime.getTime() + '"' +
+                    ' data-type="' + detailedType + '">' +
+                    '<td class="col-name"><div class="name-cell">' +
+                    icon +
+                    '<a href="' + link + (item.isDirectory() ? '/' : '') + '">' + item.name + '</a>' +
+                    '</div></td>' +
+                    '<td class="col-size mono">' + sizeDisplay + '</td>' +
+                    '<td class="col-kind">' + (item.isDirectory() ? 'Folder' : 'File') + '</td>' +
+                    '<td class="col-modified mono">' + s.mtime.toISOString().split('T')[0] + '</td>' +
+                    '<td class="col-accessed mono hidden">' + s.atime.toISOString().split('T')[0] + '</td>' +
+                    '<td class="col-created mono hidden">' + s.birthtime.toISOString().split('T')[0] + '</td>' +
+                    '<td class="col-recency hidden">' + (isNew ? '<span class="new-dot" title="Modified in last 24h"></span>' : '') + '</td>' +
+                    '<td class="col-detailed-type">' + detailedType + '</td>' +
+                    '</tr>';
             }).join('');
 
             const emptyState = visibleItems.length === 0
-                ? `<tr><td colspan="8" class="empty">This directory is empty.</td></tr>`
+                ? '<tr><td colspan="8" class="empty">This directory is empty.</td></tr>'
                 : '';
 
             return res.send(`<!DOCTYPE html>
@@ -320,14 +473,13 @@ app.get(/^(.*)$/, (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Glacier — ${relativePath}</title>
+    <title>Glacier \u2014 ${relativePath}</title>
     <style>
         ${sharedStyles}
 
-        /* Layout */
         .nav-bar {
             padding: 0 16px;
-            height: 36px;
+            height: 38px;
             background: var(--surface);
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -340,94 +492,86 @@ app.get(/^(.*)$/, (req, res) => {
         .breadcrumbs {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             color: var(--subtle);
-            font-size: 11px;
+            font-size: 11.5px;
         }
         .breadcrumbs a {
             color: var(--text);
-            padding: 2px 4px;
-            border-radius: 2px;
+            padding: 2px 5px;
+            border-radius: 3px;
+            transition: background 0.1s;
         }
-        .breadcrumbs a:hover { background: var(--hover); color: #fff; }
-        .sep { color: var(--border); user-select: none; }
+        .breadcrumbs a:hover { background: var(--hover); color: var(--text-strong); }
+        .sep { color: var(--border); user-select: none; margin: 0 1px; }
 
-        /* Controls */
         .controls { display: flex; align-items: center; gap: 6px; }
+        .search-wrap { position: relative; display: flex; align-items: center; }
+        .search-icon {
+            position: absolute; left: 7px;
+            color: var(--subtle); pointer-events: none; display: flex;
+        }
         #search {
             background: var(--bg);
             border: 1px solid var(--border);
-            padding: 3px 8px;
-            width: 160px;
+            padding: 3px 8px 3px 24px;
+            width: 168px;
             color: var(--text);
-            font-size: 11px;
-            font-family: system-ui, sans-serif;
+            font-size: 11.5px;
+            font-family: system-ui, -apple-system, sans-serif;
             outline: none;
-            border-radius: 2px;
-            transition: border-color 0.15s;
+            border-radius: 3px;
+            transition: border-color 0.15s, width 0.2s;
         }
-        #search:focus { border-color: var(--accent); }
+        #search:focus { border-color: var(--accent); width: 200px; }
         #search::placeholder { color: var(--subtle); }
+
         .settings-btn {
             background: none;
             border: 1px solid var(--border);
             color: var(--subtle);
-            width: 26px;
-            height: 22px;
-            font-size: 13px;
+            width: 28px; height: 26px;
             cursor: pointer;
-            border-radius: 2px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: border-color 0.15s, color 0.15s;
-            font-family: system-ui, sans-serif;
+            border-radius: 3px;
+            display: flex; align-items: center; justify-content: center;
+            transition: border-color 0.15s, color 0.15s, background 0.15s;
         }
-        .settings-btn:hover { border-color: #444; color: var(--text); }
+        .settings-btn:hover { border-color: #3a3a3a; color: var(--text); background: var(--hover); }
+        .settings-btn.active { border-color: var(--accent); color: var(--accent); }
 
-        /* Dropdown */
         .dropdown {
-            position: absolute;
-            right: 16px;
-            top: 40px;
+            position: absolute; right: 16px; top: 42px;
             background: var(--surface);
             border: 1px solid var(--border);
-            padding: 8px 0;
-            display: none;
-            width: 180px;
+            padding: 6px 0 8px;
+            display: none; width: 185px;
             z-index: 200;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-            border-radius: 3px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.65);
+            border-radius: 4px;
         }
         .dropdown.show { display: block; }
-        .dropdown-section {
-            padding: 4px 12px 2px;
+        .dropdown-title {
+            padding: 6px 14px 4px;
             font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.1em;
             color: var(--subtle);
+            font-weight: 500;
         }
         .dropdown label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 5px 12px;
+            display: flex; align-items: center; gap: 10px;
+            padding: 5px 14px;
             cursor: pointer;
             color: var(--text);
-            font-size: 11px;
-            font-family: system-ui, sans-serif;
+            font-size: 11.5px;
+            font-family: system-ui, -apple-system, sans-serif;
             transition: background 0.1s;
         }
         .dropdown label:hover { background: var(--hover); }
         .dropdown input[type="checkbox"] { accent-color: var(--accent); }
 
-        /* Table */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-        thead { position: sticky; top: 36px; z-index: 50; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        thead { position: sticky; top: 38px; z-index: 50; }
         th {
             text-align: left;
             padding: 7px 12px;
@@ -436,7 +580,7 @@ app.get(/^(.*)$/, (req, res) => {
             font-weight: 500;
             font-size: 10.5px;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.07em;
             cursor: pointer;
             white-space: nowrap;
             background: var(--surface);
@@ -445,76 +589,72 @@ app.get(/^(.*)$/, (req, res) => {
         }
         th:hover { background: var(--hover); color: var(--text); }
         th.sorted { color: var(--accent); }
-        .sort-icon { font-size: 8px; margin-left: 4px; opacity: 0.8; }
+        .sort-icon { display: inline-flex; align-items: center; margin-left: 4px; opacity: 0.85; }
+
         td {
-            padding: 5px 12px;
+            padding: 0 12px;
             border-bottom: 1px solid transparent;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            line-height: 1.4;
+            height: 28px;
+            vertical-align: middle;
         }
         tr:nth-child(even) td { background: var(--row-alt); }
         tr:hover td { background: var(--hover) !important; }
-        tr:hover .col-name a { color: #ffffff; }
+        tr:hover .col-name a { color: var(--text-strong); }
 
-        /* Icons */
-        .icon {
-            display: inline-block;
-            width: 14px;
-            text-align: center;
-            margin-right: 4px;
-            font-size: 11px;
-        }
-        .icon-dir { color: var(--accent); }
-        .icon-file { color: var(--subtle); }
+        /* Name cell: inner div is flex so the td stays a normal table cell */
+        .col-name { width: 36%; }
+        .name-cell { display: flex; align-items: center; overflow: hidden; }
+        .name-cell a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
 
-        /* Column widths */
-        .col-name         { width: 35%; }
-        .col-size         { width: 80px;  color: var(--subtle); }
-        .col-kind         { width: 64px;  color: var(--subtle); }
-        .col-modified     { width: 96px;  }
-        .col-accessed     { width: 96px;  }
-        .col-created      { width: 96px;  }
-        .col-recency      { width: 52px;  text-align: center; color: var(--accent); }
-        .col-detailed-type { width: 140px; color: var(--subtle); }
+        .col-size         { width: 80px; color: var(--subtle); font-size: 11px; }
+        .col-kind         { width: 58px; color: var(--subtle); }
+        .col-modified     { width: 98px; color: var(--subtle); font-size: 11px; }
+        .col-accessed     { width: 98px; color: var(--subtle); font-size: 11px; }
+        .col-created      { width: 98px; color: var(--subtle); font-size: 11px; }
+        .col-recency      { width: 52px; text-align: center; }
+        .col-detailed-type { width: 148px; color: var(--subtle); font-size: 11px; }
 
         .hidden { display: none !important; }
 
-        /* Empty state */
-        .empty {
-            text-align: center;
-            color: var(--subtle);
-            padding: 48px 0;
+        .new-dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
         }
+        .empty { text-align: center; color: var(--subtle); padding: 48px 0; }
 
-        /* Status bar */
         .status-bar {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            bottom: 0; left: 0; right: 0;
             height: 22px;
             background: var(--surface);
             border-top: 1px solid var(--border);
-            display: flex;
-            align-items: center;
+            display: flex; align-items: center;
             padding: 0 16px;
-            font-size: 10px;
+            font-size: 10.5px;
             color: var(--subtle);
-            gap: 16px;
+            gap: 14px;
         }
-        .status-bar span { display: flex; align-items: center; gap: 4px; }
+        body { padding-bottom: 22px; }
     </style>
 </head>
 <body>
     <div class="nav-bar">
         <div class="breadcrumbs">${breadcrumbHtml}</div>
         <div class="controls">
-            <input type="text" id="search" placeholder="Filter…" autocomplete="off" spellcheck="false">
-            <button class="settings-btn" id="settingsToggle" title="Column settings">⊞</button>
+            <div class="search-wrap">
+                <span class="search-icon">${ICON_SEARCH}</span>
+                <input type="text" id="search" placeholder="Filter\u2026" autocomplete="off" spellcheck="false">
+            </div>
+            <button class="settings-btn" id="settingsToggle" title="Column settings">
+                ${ICON_SETTINGS}
+            </button>
             <div class="dropdown" id="settingsDropdown">
-                <div class="dropdown-section">Columns</div>
+                <div class="dropdown-title">Columns</div>
                 <label><input type="checkbox" checked data-col="col-size"> Size</label>
                 <label><input type="checkbox" checked data-col="col-kind"> Type</label>
                 <label><input type="checkbox" checked data-col="col-modified"> Modified</label>
@@ -529,14 +669,14 @@ app.get(/^(.*)$/, (req, res) => {
     <table>
         <thead>
             <tr>
-                <th class="col-name" onclick="resort(0, this)">Name <span class="sort-icon"></span></th>
-                <th class="col-size" onclick="resort(1, this)">Size <span class="sort-icon"></span></th>
-                <th class="col-kind" onclick="resort(2, this)">Type <span class="sort-icon"></span></th>
-                <th class="col-modified" onclick="resort(3, this)">Modified <span class="sort-icon"></span></th>
-                <th class="col-accessed hidden" onclick="resort(4, this)">Accessed <span class="sort-icon"></span></th>
-                <th class="col-created hidden" onclick="resort(5, this)">Created <span class="sort-icon"></span></th>
-                <th class="col-recency hidden" onclick="resort(6, this)">Recent <span class="sort-icon"></span></th>
-                <th class="col-detailed-type" onclick="resort(7, this)">Detailed Type <span class="sort-icon"></span></th>
+                <th class="col-name" onclick="resort(0,this)">Name <span class="sort-icon" id="si0"></span></th>
+                <th class="col-size" onclick="resort(1,this)">Size <span class="sort-icon" id="si1"></span></th>
+                <th class="col-kind" onclick="resort(2,this)">Type <span class="sort-icon" id="si2"></span></th>
+                <th class="col-modified" onclick="resort(3,this)">Modified <span class="sort-icon" id="si3"></span></th>
+                <th class="col-accessed hidden" onclick="resort(4,this)">Accessed <span class="sort-icon" id="si4"></span></th>
+                <th class="col-created hidden" onclick="resort(5,this)">Created <span class="sort-icon" id="si5"></span></th>
+                <th class="col-recency hidden" onclick="resort(6,this)">Recent <span class="sort-icon" id="si6"></span></th>
+                <th class="col-detailed-type" onclick="resort(7,this)">Detailed Type <span class="sort-icon" id="si7"></span></th>
             </tr>
         </thead>
         <tbody id="file-list">${rows}${emptyState}</tbody>
@@ -544,17 +684,17 @@ app.get(/^(.*)$/, (req, res) => {
 
     <div class="status-bar">
         <span id="item-count">${visibleItems.length} item${visibleItems.length !== 1 ? 's' : ''}</span>
-        <span id="filter-status" style="display:none;">— <span id="filter-count"></span> visible</span>
+        <span id="filter-status" style="display:none;">&mdash; <span id="filter-count"></span> visible</span>
     </div>
 
     <script>
-        const search = document.getElementById('search');
-        const list   = document.getElementById('file-list');
-        const allHeaders = Array.from(document.querySelectorAll('th'));
-        let currentSortIdx = -1;
-        let sortDir = 1;
+        const ICON_ASC  = '${ICON_SORT_ASC.replace(/'/g, "\\'")}';
+        const ICON_DESC = '${ICON_SORT_DESC.replace(/'/g, "\\'")}';
+        const search    = document.getElementById('search');
+        const list      = document.getElementById('file-list');
+        const allTh     = Array.from(document.querySelectorAll('th'));
+        let curIdx = -1, sortDir = 1;
 
-        // Filter
         search.addEventListener('input', () => {
             const term = search.value.toLowerCase();
             let visible = 0;
@@ -564,84 +704,74 @@ app.get(/^(.*)$/, (req, res) => {
                 row.style.display = show ? '' : 'none';
                 if (show) visible++;
             });
-            const status = document.getElementById('filter-status');
-            const count  = document.getElementById('filter-count');
-            if (term) {
-                status.style.display = '';
-                count.textContent = visible + ' visible';
-            } else {
-                status.style.display = 'none';
-            }
+            const st = document.getElementById('filter-status');
+            const fc = document.getElementById('filter-count');
+            if (term) { st.style.display = ''; fc.textContent = visible + ' visible'; }
+            else { st.style.display = 'none'; }
         });
 
-        // Sort
-        function resort(idx, thEl) {
-            if (currentSortIdx === idx) {
-                sortDir *= -1;
-            } else {
-                sortDir = 1;
-                currentSortIdx = idx;
-            }
-
-            allHeaders.forEach(h => {
+        function resort(idx, th) {
+            sortDir = curIdx === idx ? sortDir * -1 : 1;
+            curIdx = idx;
+            allTh.forEach((h, i) => {
                 h.classList.remove('sorted');
-                const icon = h.querySelector('.sort-icon');
-                if (icon) icon.innerText = '';
+                const si = document.getElementById('si' + i);
+                if (si) si.innerHTML = '';
             });
-            thEl.classList.add('sorted');
-            const icon = thEl.querySelector('.sort-icon');
-            if (icon) icon.innerText = sortDir === 1 ? '▲' : '▼';
-
-            const rows = Array.from(list.children).filter(r => r.dataset.name);
-            const sorted = rows.sort((a, b) => {
+            th.classList.add('sorted');
+            const si = document.getElementById('si' + idx);
+            if (si) si.innerHTML = sortDir === 1 ? ICON_ASC : ICON_DESC;
+            Array.from(list.children).filter(r => r.dataset.name).sort((a, b) => {
                 let vA, vB;
                 switch (idx) {
-                    case 1: [vA, vB] = [parseInt(a.dataset.size), parseInt(b.dataset.size)]; break;
-                    case 3: [vA, vB] = [parseInt(a.dataset.mtime), parseInt(b.dataset.mtime)]; break;
-                    case 4: [vA, vB] = [parseInt(a.dataset.atime), parseInt(b.dataset.atime)]; break;
-                    case 5: [vA, vB] = [parseInt(a.dataset.ctime), parseInt(b.dataset.ctime)]; break;
-                    default: [vA, vB] = [
-                        a.children[idx]?.innerText.toLowerCase() ?? '',
-                        b.children[idx]?.innerText.toLowerCase() ?? ''
+                    case 1: [vA,vB]=[parseInt(a.dataset.size),parseInt(b.dataset.size)]; break;
+                    case 3: [vA,vB]=[parseInt(a.dataset.mtime),parseInt(b.dataset.mtime)]; break;
+                    case 4: [vA,vB]=[parseInt(a.dataset.atime),parseInt(b.dataset.atime)]; break;
+                    case 5: [vA,vB]=[parseInt(a.dataset.ctime),parseInt(b.dataset.ctime)]; break;
+                    default: [vA,vB]=[
+                        a.children[idx]?.innerText.toLowerCase()??'',
+                        b.children[idx]?.innerText.toLowerCase()??''
                     ];
                 }
                 return vA > vB ? sortDir : vA < vB ? -sortDir : 0;
-            });
-            sorted.forEach(r => list.appendChild(r));
+            }).forEach(r => list.appendChild(r));
         }
 
-        // Settings dropdown
-        document.getElementById('settingsToggle').onclick = (e) => {
+        const settingsBtn = document.getElementById('settingsToggle');
+        const dropdown    = document.getElementById('settingsDropdown');
+        settingsBtn.onclick = e => {
             e.stopPropagation();
-            document.getElementById('settingsDropdown').classList.toggle('show');
+            const open = dropdown.classList.toggle('show');
+            settingsBtn.classList.toggle('active', open);
         };
         document.querySelectorAll('#settingsDropdown input').forEach(cb => {
-            cb.onchange = () => {
-                const cls = cb.dataset.col;
-                document.querySelectorAll('.' + cls).forEach(el => el.classList.toggle('hidden', !cb.checked));
-            };
+            cb.onchange = () =>
+                document.querySelectorAll('.' + cb.dataset.col)
+                    .forEach(el => el.classList.toggle('hidden', !cb.checked));
         });
         document.addEventListener('click', () => {
-            document.getElementById('settingsDropdown').classList.remove('show');
+            dropdown.classList.remove('show');
+            settingsBtn.classList.remove('active');
         });
 
-        // Keyboard shortcut: focus search on '/'
-        document.addEventListener('keydown', (e) => {
+        document.addEventListener('keydown', e => {
             if (e.key === '/' && document.activeElement !== search) {
-                e.preventDefault();
-                search.focus();
+                e.preventDefault(); search.focus();
             }
-            if (e.key === 'Escape') search.value = '' && search.dispatchEvent(new Event('input'));
+            if (e.key === 'Escape' && document.activeElement === search) {
+                search.value = '';
+                search.dispatchEvent(new Event('input'));
+                search.blur();
+            }
         });
     </script>
 </body>
 </html>`);
         }
 
-        // ── File serving ───────────────────────────────────────────────────
         res.sendFile(absolutePath, (err) => {
             if (err && !res.headersSent) {
-                console.error(`[ERROR] Failed to send file: ${absolutePath}`, err);
+                console.error('[ERROR] Failed to send file:', absolutePath, err);
                 res.status(500).send(errorPage({
                     status: 500,
                     title: 'Internal Server Error',
@@ -652,7 +782,7 @@ app.get(/^(.*)$/, (req, res) => {
         });
 
     } catch (err) {
-        console.error(`[ERROR] Unhandled exception for path: ${relativePath}`, err);
+        console.error('[ERROR] Unhandled exception for path:', relativePath, err);
         if (!res.headersSent) {
             res.status(500).send(errorPage({
                 status: 500,
@@ -663,8 +793,6 @@ app.get(/^(.*)$/, (req, res) => {
     }
 });
 
-// ─── Start ────────────────────────────────────────────────────────────────────
-
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[INFO] Glacier running on port ${PORT}`);
+    console.log('[INFO] Server running on port', PORT);
 });
