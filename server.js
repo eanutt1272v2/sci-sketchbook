@@ -223,7 +223,6 @@ function getIconSvg(item, ext) {
     );
 }
 
-
 const ICON_SETTINGS =
     '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" fill="currentColor" d="M 6.50 2.81 L 6.60 1.06 L 8.41 1.06 L 8.50 2.81 A 4.8 4.8 0 0 1 11.07 4.29 L 12.62 3.50 L 13.53 5.07 L 12.07 6.02 A 4.8 4.8 0 0 1 12.07 8.98 L 13.53 9.94 L 12.62 11.50 L 11.07 10.71 A 4.8 4.8 0 0 1 8.50 12.20 L 8.41 13.94 L 6.60 13.94 L 6.50 12.20 A 4.8 4.8 0 0 1 3.93 10.71 L 2.38 11.50 L 1.47 9.94 L 2.94 8.98 A 4.8 4.8 0 0 1 2.94 6.02 L 1.47 5.07 L 2.38 3.50 L 3.93 4.29 A 4.8 4.8 0 0 1 6.50 2.81 Z M 9.50 7.50 A 2 2 0 1 1 5.50 7.50 A 2 2 0 1 1 9.50 7.50 Z"/></svg>';
 
@@ -239,7 +238,6 @@ const ICON_SEARCH =
     '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">' +
     '<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2"/>' +
     '<line x1="7.8" y1="7.8" x2="11" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
-
 
 const sharedStyles =
     ':root{' +
@@ -267,7 +265,7 @@ function errorPage({ status, title, message, suggestion = null, showHome = true 
     const c = status >= 500 ? 'var(--danger)' : status === 403 ? 'var(--warning)' : 'var(--subtle)';
     return '<!DOCTYPE html><html lang="en"><head>' +
         '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-        '<title>' + status + ' \u2014 Glacier</title><style>' + sharedStyles +
+        '<title>' + status + ' \u2014 Sketchbook Web Server</title><style>' + sharedStyles +
         '.wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;' +
         'min-height:100vh;gap:14px;text-align:center;padding:40px 20px;}' +
         '.code{font-size:80px;font-weight:700;letter-spacing:-5px;color:' + c + ';line-height:1;' +
@@ -472,7 +470,7 @@ app.get(/^(.*)$/, (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Glacier Web Server: ${relativePath}</title>
+    <title>Sketchbook Web Server: ${relativePath}</title>
     <style>
         ${sharedStyles}
 
@@ -793,5 +791,5 @@ app.get(/^(.*)$/, (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log('[INFO] Server running on port', PORT);
+    console.log('[INFO] Sketchbook Web Server running on port', PORT);
 });
