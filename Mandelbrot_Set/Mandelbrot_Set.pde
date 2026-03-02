@@ -244,12 +244,9 @@ void renderFractalToBuffer() {
 
   for (int x = 0; x < width; x++) {
     for (int y = 0; y < height; y++) {
-      // Map pixel to complex plane, applying zoom and pan
       double cx = map(x, 0, width,  -2.1f * aspectRatio, 1.1f * aspectRatio) * invZoom + offsetX;
       double cy = map(y, 0, height, -2.1f, 1.1f)                             * invZoom + offsetY;
 
-      // ── Mandelbrot iteration ──────────────────────────────────────────
-      // z₀ = 0  (both components start at zero, unlike Burning Ship where z₀ = c)
       double zx = 0.0;
       double zy = 0.0;
       int n = 0;
@@ -257,13 +254,12 @@ void renderFractalToBuffer() {
       while (n < maxIterations) {
         double zx2 = zx * zx;
         double zy2 = zy * zy;
-        if (zx2 + zy2 > 16.0) break;   // escape radius² = 16
-        double newZx = zx2 - zy2 + cx; // Re(z²) + Re(c)
-        zy = 2.0 * zx * zy + cy;       // Im(z²) + Im(c)  [no abs() — Mandelbrot is symmetric]
+        if (zx2 + zy2 > 16.0) break;
+        double newZx = zx2 - zy2 + cx;
+        zy = 2.0 * zx * zy + cy;
         zx = newZx;
         n++;
       }
-      // ─────────────────────────────────────────────────────────────────
 
       if (n == maxIterations) {
         // Inside the set — colour black
@@ -282,10 +278,6 @@ void renderFractalToBuffer() {
   fractalBuffer.updatePixels();
   fractalBuffer.endDraw();
 }
-
-// =============================================================================
-// UI DRAW
-// =============================================================================
 
 void drawUI() {
   colorMode(RGB, 255);
@@ -335,10 +327,6 @@ void drawUI() {
   zoomOutButton.display();
 }
 
-// =============================================================================
-// COLOUR MAP
-// =============================================================================
-
 void generateLUT() {
   double[][] coeffs = getCoefficients(mapNames[currentMapIndex]);
   colorMode(RGB, 1.0);
@@ -368,10 +356,6 @@ double[][] getCoefficients(String name) {
   return new double[][]{{0,1,0,0,0,0,0},{0,1,0,0,0,0,0},{0,1,0,0,0,0,0}};
 }
 
-// =============================================================================
-// UI THEME
-// =============================================================================
-
 class UITheme {
   color bgPanel  = color(18, 18, 22, 210);
   color bgWidget = color(38, 38, 50,  220);
@@ -399,10 +383,6 @@ class UITheme {
 
   color accentHandle = color(210, 212, 235);
 }
-
-// =============================================================================
-// UI LAYOUT
-// =============================================================================
 
 class UILayout {
   float x, y, w;
@@ -466,10 +446,6 @@ class UILayout {
   float contentW() { return w - padding * 2; }
   ArrayList<Float> separatorYs() { return _separatorYs; }
 }
-
-// =============================================================================
-// WIDGETS
-// =============================================================================
 
 class Slider {
   float x, y, w, h, min, max, val;
