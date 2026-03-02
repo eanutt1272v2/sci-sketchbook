@@ -75,7 +75,7 @@ void setup() {
     18, 1, 512, maxIterations
   );
 
-  String[] stepLabels = {"\u2212\u2212", "\u2212", "+", "++"};
+  String[] stepLabels = {"--", "-", "+", "++"};
   float stepY = layout.getY("stepButtons");
   for (int i = 0; i < 4; i++) {
     stepButtons[i] = new Button(
