@@ -20,7 +20,6 @@ const hiddenFiles = [
     'favicon.ico'
 ];
 
-// Helper to escape HTML to prevent XSS
 function escapeHtml(unsafe) {
     return unsafe
          .replace(/&/g, "&amp;")
