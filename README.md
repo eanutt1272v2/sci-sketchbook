@@ -26,8 +26,7 @@ The repository now includes a built-in Express server to easily browse and serve
     ```bash
     npm start
     ```
-3.  **Access the Library**:
-    Open [http://localhost:8080](http://localhost:8080) in your browser. The server provides a custom directory listing with file icons and direct access to all sketch folders.
+3.  Open [http://localhost:8080](http://localhost:8080) in your browser. The server provides a custom directory listing with file icons and direct access to all sketch folders.
 
 ### p5.js Sketches (Manual)
 
