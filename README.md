@@ -14,16 +14,31 @@ The repository is structured with individual directories for each p5.js or Proce
 
 ## Up and Running
 
-### p5.js Sketches
+### Web Server (Node.js)
 
-To execute any of the p5.js sketches, follow these steps:
+The repository now includes a built-in Express server to easily browse and serve all p5.js sketches.
+
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+2.  **Start the Server**:
+    ```bash
+    npm start
+    ```
+3.  **Access the Library**:
+    Open [http://localhost:8080](http://localhost:8080) in your browser. The server provides a custom directory listing with file icons and direct access to all sketch folders.
+
+### p5.js Sketches (Manual)
+
+To execute any of the p5.js sketches without the Node.js server, follow these steps:
 
 1.  Locate the specific project folder for the desired sketch within this repository.
 2.  Open the `index.html` file in your preferred web browser.
 
 **Important Notes:**
 *   Make sure that all dependent files, including `.js`, `.css`, shader (`.glsl`), and data (`.json`) files, are either located in the same directory as `index.html` or are correctly linked within the `index.html` and `sketch.js` files.
-*   For optimal performance and to avoid potential browser security restrictions (e.g., related to loading local files), it is recommended to run p5.js sketches using a local web server. Simple options include Python's `http.server` (`python3 -m http.server`) or Node.js's `serve` package (`npx serve`).
+*   For optimal performance and to avoid potential browser security restrictions (e.g., related to loading local files), it is recommended to run p5.js sketches using a local web server (like the built-in Node.js server mentioned above).
 
 ### Processing Sketches
 
