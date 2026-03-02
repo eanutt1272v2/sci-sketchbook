@@ -1,8 +1,39 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'self'"],
+            upgradeInsecureRequests: [],
+        },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "Too many requests from this IP, please try again after 15 minutes."
+});
+app.use(limiter);
 
 const hiddenFiles = [
     'node_modules',
@@ -11,6 +42,8 @@ const hiddenFiles = [
     'package-lock.json',
     'yarn.lock',
     'pnpm-lock.yaml',
+    '.git',
+    '.env',
     'Dockerfile',
     'docker-compose.yml',
     'docker-compose.yaml',
@@ -21,6 +54,7 @@ const hiddenFiles = [
 ];
 
 function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return '';
     return unsafe
          .replace(/&/g, "&amp;")
          .replace(/</g, "&lt;")
@@ -373,7 +407,7 @@ app.get(/^(.*)$/, (req, res) => {
             absolutePath = fs.realpathSync(absolutePath);
         }
     } catch (e) {
-        // fallback
+        // Fallback
     }
 
     if (!absolutePath.startsWith(__dirname + path.sep) && absolutePath !== __dirname) {
@@ -758,11 +792,13 @@ app.get(/^(.*)$/, (req, res) => {
 
         const settingsBtn = document.getElementById('settingsToggle');
         const dropdown    = document.getElementById('settingsDropdown');
-        settingsBtn.onclick = e => {
-            e.stopPropagation();
-            const open = dropdown.classList.toggle('show');
-            settingsBtn.classList.toggle('active', open);
-        };
+        if (settingsBtn) {
+            settingsBtn.onclick = e => {
+                e.stopPropagation();
+                const open = dropdown.classList.toggle('show');
+                settingsBtn.classList.toggle('active', open);
+            };
+        }
         document.querySelectorAll('#settingsDropdown input').forEach(cb => {
             cb.onchange = () =>
                 document.querySelectorAll('.' + cb.dataset.col)
