@@ -368,13 +368,12 @@ app.get(/^(.*)$/, (req, res) => {
 
     let absolutePath = path.join(__dirname, relativePath);
 
-    // Security: Resolve real path to prevent symlink traversal and verify root
     try {
         if (fs.existsSync(absolutePath)) {
             absolutePath = fs.realpathSync(absolutePath);
         }
     } catch (e) {
-        // Fallback if realpath fails
+        // fallback
     }
 
     if (!absolutePath.startsWith(__dirname + path.sep) && absolutePath !== __dirname) {
