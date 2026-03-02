@@ -14,7 +14,7 @@ The repository is structured with individual directories for each p5.js or Proce
 
 ## Up and Running
 
-### Glacier Web Server (Node.js)
+### Sketchbook Web Server (Node.js)
 
 The repository now includes a built-in Express server to easily browse and serve all p5.js sketches.
 
