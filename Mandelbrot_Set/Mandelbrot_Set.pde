@@ -1,7 +1,7 @@
 /**
  * @file Mandelbrot_Set.pde
  * @author @eanutt1272.v2
- * @version 2.2.0
+ * @version 2.2.3
  */
 
 int maxIterations = 128;
