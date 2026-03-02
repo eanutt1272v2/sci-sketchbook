@@ -20,7 +20,6 @@ const hiddenFiles = [
     'favicon.ico'
 ];
 
-
 function getIconSvg(item, ext) {
     const e = ext ? ext.toLowerCase() : '';
 
@@ -473,7 +472,7 @@ app.get(/^(.*)$/, (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Glacier \u2014 ${relativePath}</title>
+    <title>Glacier Web Server: ${relativePath}</title>
     <style>
         ${sharedStyles}
 
