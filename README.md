@@ -20,11 +20,11 @@ The repository now includes a built-in Express server to easily browse and serve
 
 1.  **Install Dependencies**:
     ```bash
-    npm install
+    pnpm install
     ```
 2.  **Start the Server**:
     ```bash
-    npm start
+    pnpm start
     ```
 3.  Open [http://localhost:8080](http://localhost:8080) in your browser. The server provides a custom directory listing with file icons and direct access to all sketch folders.
 
