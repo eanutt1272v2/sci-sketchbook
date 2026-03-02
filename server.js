@@ -20,6 +20,16 @@ const hiddenFiles = [
     'favicon.ico'
 ];
 
+// Helper to escape HTML to prevent XSS
+function escapeHtml(unsafe) {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
 function getIconSvg(item, ext) {
     const e = ext ? ext.toLowerCase() : '';
 
@@ -263,6 +273,7 @@ const sharedStyles =
 
 function errorPage({ status, title, message, suggestion = null, showHome = true }) {
     const c = status >= 500 ? 'var(--danger)' : status === 403 ? 'var(--warning)' : 'var(--subtle)';
+    const safeSuggestion = suggestion ? escapeHtml(suggestion) : null;
     return '<!DOCTYPE html><html lang="en"><head>' +
         '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
         '<title>' + status + ' \u2014 Sketchbook Web Server</title><style>' + sharedStyles +
@@ -283,9 +294,9 @@ function errorPage({ status, title, message, suggestion = null, showHome = true 
         '</style></head><body><div class="wrap">' +
         '<div class="code">' + status + '</div>' +
         '<div class="div"></div>' +
-        '<div class="ttl">' + title + '</div>' +
-        '<p class="msg">' + message + '</p>' +
-        (suggestion ? '<div class="sug">' + suggestion + '</div>' : '') +
+        '<div class="ttl">' + escapeHtml(title) + '</div>' +
+        '<p class="msg">' + escapeHtml(message) + '</p>' +
+        (safeSuggestion ? '<div class="sug">' + safeSuggestion + '</div>' : '') +
         (showHome ? '<a class="btn" href="/">Return to root</a>' : '') +
         '</div></body></html>';
 }
@@ -356,7 +367,16 @@ app.get(/^(.*)$/, (req, res) => {
         }));
     }
 
-    const absolutePath = path.join(__dirname, relativePath);
+    let absolutePath = path.join(__dirname, relativePath);
+
+    // Security: Resolve real path to prevent symlink traversal and verify root
+    try {
+        if (fs.existsSync(absolutePath)) {
+            absolutePath = fs.realpathSync(absolutePath);
+        }
+    } catch (e) {
+        // Fallback if realpath fails
+    }
 
     if (!absolutePath.startsWith(__dirname + path.sep) && absolutePath !== __dirname) {
         console.warn('[SECURITY] Path traversal attempt:', relativePath);
@@ -407,8 +427,8 @@ app.get(/^(.*)$/, (req, res) => {
             let breadcrumbHtml = '<a href="/">root</a>';
             let currentLink = '';
             pathParts.forEach(part => {
-                currentLink += '/' + part;
-                breadcrumbHtml += ' <span class="sep">/</span> <a href="' + currentLink + '">' + part + '</a>';
+                currentLink += '/' + encodeURIComponent(part);
+                breadcrumbHtml += ' <span class="sep">/</span> <a href="' + currentLink + '">' + escapeHtml(part) + '</a>';
             });
 
             const visibleItems = items.filter(
@@ -421,7 +441,7 @@ app.get(/^(.*)$/, (req, res) => {
                 catch { return ''; }
                 const ext = path.extname(item.name);
                 const detailedType = getDetailedType(item, ext);
-                const link = path.join(relativePath, item.name);
+                const link = path.posix.join(relativePath, item.name);
                 const isNew = (Date.now() - s.mtime.getTime()) < 86400000;
                 const icon = getIconSvg(item, ext);
 
@@ -440,16 +460,20 @@ app.get(/^(.*)$/, (req, res) => {
                     sizeDisplay = formatBytes(s.size);
                     sortSize = s.size;
                 }
+                
+                const safeName = escapeHtml(item.name);
+                const safeLink = link.split('/').map(encodeURIComponent).join('/');
+
                 return '<tr' +
-                    ' data-name="' + item.name.toLowerCase() + '"' +
+                    ' data-name="' + safeName.toLowerCase() + '"' +
                     ' data-size="' + sortSize + '"' +
                     ' data-mtime="' + s.mtime.getTime() + '"' +
                     ' data-atime="' + s.atime.getTime() + '"' +
                     ' data-ctime="' + s.birthtime.getTime() + '"' +
-                    ' data-type="' + detailedType + '">' +
+                    ' data-type="' + escapeHtml(detailedType) + '">' +
                     '<td class="col-name"><div class="name-cell">' +
                     icon +
-                    '<a href="' + link + (item.isDirectory() ? '/' : '') + '">' + item.name + '</a>' +
+                    '<a href="/' + safeLink + (item.isDirectory() ? '/' : '') + '">' + safeName + '</a>' +
                     '</div></td>' +
                     '<td class="col-size mono">' + sizeDisplay + '</td>' +
                     '<td class="col-kind">' + (item.isDirectory() ? 'Folder' : 'File') + '</td>' +
@@ -457,7 +481,7 @@ app.get(/^(.*)$/, (req, res) => {
                     '<td class="col-accessed mono hidden">' + s.atime.toISOString().split('T')[0] + '</td>' +
                     '<td class="col-created mono hidden">' + s.birthtime.toISOString().split('T')[0] + '</td>' +
                     '<td class="col-recency hidden">' + (isNew ? '<span class="new-dot" title="Modified in last 24h"></span>' : '') + '</td>' +
-                    '<td class="col-detailed-type">' + detailedType + '</td>' +
+                    '<td class="col-detailed-type">' + escapeHtml(detailedType) + '</td>' +
                     '</tr>';
             }).join('');
 
@@ -470,7 +494,7 @@ app.get(/^(.*)$/, (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sketchbook Web Server: ${relativePath}</title>
+    <title>Sketchbook Web Server: ${escapeHtml(relativePath)}</title>
     <style>
         ${sharedStyles}
 
@@ -599,12 +623,12 @@ app.get(/^(.*)$/, (req, res) => {
         }
         tr:nth-child(even) td { background: var(--row-alt); }
         tr:hover td { background: var(--hover) !important; }
-        tr:hover .col-name a { color: var(--text-strong); }
+        .col-name a:hover { color: var(--text-strong); }
 
         /* Name cell: inner div is flex so the td stays a normal table cell */
         .col-name { width: 36%; }
         .name-cell { display: flex; align-items: center; overflow: hidden; }
-        .name-cell a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+        .name-cell a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .col-size         { width: 80px; color: var(--subtle); font-size: 11px; }
         .col-kind         { width: 58px; color: var(--subtle); }
@@ -747,8 +771,8 @@ app.get(/^(.*)$/, (req, res) => {
                     .forEach(el => el.classList.toggle('hidden', !cb.checked));
         });
         document.addEventListener('click', () => {
-            dropdown.classList.remove('show');
-            settingsBtn.classList.remove('active');
+            if (dropdown) dropdown.classList.remove('show');
+            if (settingsBtn) settingsBtn.classList.remove('active');
         });
 
         document.addEventListener('keydown', e => {
