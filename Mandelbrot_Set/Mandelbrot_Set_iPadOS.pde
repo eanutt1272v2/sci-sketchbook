@@ -14,7 +14,7 @@ PGraphics fractalBuffer;
 
 String[] mapNames = {
    "cividis", "inferno", "magma", "mako",
-   "plasma",  "rocket",  "turbo", "viridis", "greyscale"
+   "plasma", "rocket", "turbo", "viridis", "greyscale"
 };
 
 int currentMapIndex = 2;
