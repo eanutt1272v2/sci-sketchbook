@@ -1,7 +1,7 @@
 /**
  * @file Burning_Ship_Fractal.pde
  * @author @eanutt1272.v2
- * @version 2.2.0
+ * @version 2.2.3
  */
 
 int maxIterations = 128;
@@ -14,7 +14,7 @@ PGraphics fractalBuffer;
 
 String[] mapNames = {
   "cividis", "inferno", "magma", "mako",
-  "plasma",  "rocket",  "turbo", "viridis", "greyscale"
+  "plasma", "rocket", "turbo", "viridis", "greyscale"
 };
 
 int currentMapIndex = 2;
@@ -59,13 +59,13 @@ void setup() {
 
   layout = new UILayout(10, 10, PANEL_W, 12, 5, 18);
 
-  layout.add("iterLabel",   20, "group1");
-  layout.add("iterSlider",  18, "group1");
-  layout.add("stepButtons", 30, "group1");
-  layout.add("zoomInfo",    19, "group1");
-  layout.add("posInfo",     19, "group1");
-  layout.add("hints",       15, "group1");
-  layout.add("colorMap",    28, "group1");
+  layout.add("iterLabel", 20, "panel");
+  layout.add("iterSlider", 18, "panel");
+  layout.add("stepButtons", 30, "panel");
+  layout.add("zoomInfo", 19, "panel");
+  layout.add("posInfo", 19, "panel");
+  layout.add("hints", 15, "panel");
+  layout.add("colorMap", 28, "panel");
   layout.finish();
 
   iterSlider = new Slider(layout.contentX(), layout.getY("iterSlider"), layout.contentW(), 18, 1, 512, maxIterations);
@@ -294,8 +294,14 @@ void drawUI() {
   fill(theme.textSecondary);
   textSize(theme.textSizeSecondary);
   textAlign(LEFT, TOP);
-  text("Zoom: "     + nfc((float) zoom, 1) + "x", px, layout.getY("zoomInfo"));
-  text("Position: X=" + nfc((float) -offsetX, 3) + ", Y=" + nfc((float) offsetY, 3), px, layout.getY("posInfo"));
+  double zoomRounded = round(zoom * 1000.0) / 1000.0;
+
+  text("Zoom: " + zoomRounded + "x", px, layout.getY("zoomInfo"));
+   
+  double xRounded = round(offsetX * 1000.0) / 1000.0;
+  double yRounded = round(-offsetY * 1000.0) / 1000.0;
+   
+  text("Position: X=" + xRounded + ", Y=" + yRounded, px, layout.getY("posInfo"));
 
   fill(theme.textMuted);
   textSize(theme.textSizeCaption);
@@ -326,40 +332,40 @@ double applyPoly(float t, double[] c) {
 
 double[][] getCoefficients(String name) {
   if (name.equals("cividis")) return new double[][]{{-0.008973,-0.384689,15.429210,-58.977031,102.370492,-83.187239,25.776070},{0.136756,0.639494,0.385562,-1.404197,2.600914,-2.140750,0.688122},{0.294170,2.982654,-22.363760,74.863561,-121.303164,93.974216,-28.262533}};
-  if (name.equals("inferno"))  return new double[][]{{0.000214,0.105874,11.617115,-41.709277,77.157454,-71.287667,25.092619},{0.001635,0.566364,-3.947723,17.457724,-33.415679,32.553880,-12.222155},{-0.037130,4.117926,-16.257323,44.645117,-82.253923,73.588132,-23.115650}};
-  if (name.equals("magma"))    return new double[][]{{-0.002067,0.250486,8.345901,-27.666969,52.170684,-50.758572,18.664253},{-0.000688,0.694455,-3.596031,14.253853,-27.944584,29.053880,-11.490027},{-0.009548,2.495287,0.329057,-13.646583,12.881091,4.269936,-5.570769}};
-  if (name.equals("mako"))     return new double[][]{{0.032987,1.620032,-5.833466,19.266730,-48.335836,57.794682,-23.674380},{0.013232,0.848348,-1.651402,8.153931,-12.793640,8.555513,-2.172825},{0.040283,0.292971,12.702365,-44.241782,65.176477,-47.319049,14.259791}};
-  if (name.equals("plasma"))   return new double[][]{{0.064053,2.142438,-2.653255,6.094711,-11.065106,9.974645,-3.623823},{0.024812,0.244749,-7.461101,42.308428,-82.644718,71.408341,-22.914405},{0.534900,0.742966,3.108382,-28.491792,60.093584,-54.020563,18.193381}};
-  if (name.equals("rocket"))   return new double[][]{{-0.003174,1.947267,-6.401815,30.376433,-57.268147,44.789992,-12.453563},{0.037717,-0.476821,15.073064,-81.403784,173.768416,-158.313952,52.250665},{0.112123,0.400542,6.253872,-21.550609,14.869938,11.402042,-10.648435}};
-  if (name.equals("turbo"))    return new double[][]{{0.080545,7.008980,-66.727306,228.660253,-334.841257,220.424075,-54.095540},{0.069393,3.147611,-4.927799,25.101273,-69.296265,67.510842,-21.578703},{0.219622,7.655918,-10.162980,-91.680678,288.708703,-305.386975,110.735079}};
-  if (name.equals("viridis"))  return new double[][]{{0.274455,0.107708,-0.327241,-4.599932,6.203736,4.751787,-5.432077},{0.005768,1.396470,0.214814,-5.758238,14.153965,-13.749439,4.641571},{0.332664,1.386771,0.091977,-19.291809,56.656300,-65.320968,26.272108}};
+  if (name.equals("inferno")) return new double[][]{{0.000214,0.105874,11.617115,-41.709277,77.157454,-71.287667,25.092619},{0.001635,0.566364,-3.947723,17.457724,-33.415679,32.553880,-12.222155},{-0.037130,4.117926,-16.257323,44.645117,-82.253923,73.588132,-23.115650}};
+  if (name.equals("magma")) return new double[][]{{-0.002067,0.250486,8.345901,-27.666969,52.170684,-50.758572,18.664253},{-0.000688,0.694455,-3.596031,14.253853,-27.944584,29.053880,-11.490027},{-0.009548,2.495287,0.329057,-13.646583,12.881091,4.269936,-5.570769}};
+  if (name.equals("mako")) return new double[][]{{0.032987,1.620032,-5.833466,19.266730,-48.335836,57.794682,-23.674380},{0.013232,0.848348,-1.651402,8.153931,-12.793640,8.555513,-2.172825},{0.040283,0.292971,12.702365,-44.241782,65.176477,-47.319049,14.259791}};
+  if (name.equals("plasma")) return new double[][]{{0.064053,2.142438,-2.653255,6.094711,-11.065106,9.974645,-3.623823},{0.024812,0.244749,-7.461101,42.308428,-82.644718,71.408341,-22.914405},{0.534900,0.742966,3.108382,-28.491792,60.093584,-54.020563,18.193381}};
+  if (name.equals("rocket")) return new double[][]{{-0.003174,1.947267,-6.401815,30.376433,-57.268147,44.789992,-12.453563},{0.037717,-0.476821,15.073064,-81.403784,173.768416,-158.313952,52.250665},{0.112123,0.400542,6.253872,-21.550609,14.869938,11.402042,-10.648435}};
+  if (name.equals("turbo")) return new double[][]{{0.080545,7.008980,-66.727306,228.660253,-334.841257,220.424075,-54.095540},{0.069393,3.147611,-4.927799,25.101273,-69.296265,67.510842,-21.578703},{0.219622,7.655918,-10.162980,-91.680678,288.708703,-305.386975,110.735079}};
+  if (name.equals("viridis")) return new double[][]{{0.274455,0.107708,-0.327241,-4.599932,6.203736,4.751787,-5.432077},{0.005768,1.396470,0.214814,-5.758238,14.153965,-13.749439,4.641571},{0.332664,1.386771,0.091977,-19.291809,56.656300,-65.320968,26.272108}};
   return new double[][]{{0,1,0,0,0,0,0},{0,1,0,0,0,0,0},{0,1,0,0,0,0,0}};
 }
 
 class UITheme {
-  color bgPanel  = color(18, 18, 22, 210);
+  color bgPanel = color(18, 18, 22, 210);
   color bgWidget = color(38, 38, 50,  220);
-  color bgHover  = color(62, 62, 80,  230);
+  color bgHover = color(62, 62, 80,  230);
   color bgActive = color(90, 90, 112, 245);
 
-  color textPrimary   = color(238, 238, 238);
+  color textPrimary = color(238, 238, 238);
   color textSecondary = color(170, 172, 190);
-  color textMuted     = color(108, 110, 128);
+  color textMuted = color(108, 110, 128);
 
-  float textSizePrimary   = 16;
+  float textSizePrimary = 16;
   float textSizeSecondary = 14;
-  float textSizeCaption   = 10;
+  float textSizeCaption = 10;
 
-  float swPanel     = 1.4;
-  float swWidget    = 1.0;
-  float swTrack     = 0.8;
+  float swPanel = 1.4;
+  float swWidget = 1.0;
+  float swTrack = 0.8;
   float swSeparator = 0.6;
 
-  color strokePanel     = color(100, 102, 120);
-  color strokeWidget    = color(80,  82,  100);
-  color strokeTrack     = color(70,  72,  90);
+  color strokePanel = color(100, 102, 120);
+  color strokeWidget = color(80,  82,  100);
+  color strokeTrack = color(70,  72,  90);
   color strokeSeparator = color(55,  57,  72);
-  color strokeFocus     = color(160, 162, 190);
+  color strokeFocus = color(160, 162, 190);
 
   color accentHandle = color(210, 212, 235);
 }
@@ -371,17 +377,17 @@ class UILayout {
   float interGap;
   float totalHeight;
 
-  ArrayList<String> names  = new ArrayList<String>();
-  ArrayList<Float>  heights = new ArrayList<Float>();
-  ArrayList<String> groups  = new ArrayList<String>();
-  ArrayList<Float>  gaps    = new ArrayList<Float>();
+  ArrayList<String> names = new ArrayList<String>();
+  ArrayList<Float> heights = new ArrayList<Float>();
+  ArrayList<String> groups = new ArrayList<String>();
+  ArrayList<Float> gaps = new ArrayList<Float>();
 
-  HashMap<String, Float> yPositions   = new HashMap<String, Float>();
-  ArrayList<Float>       _separatorYs = new ArrayList<Float>();
+  HashMap<String, Float> yPositions = new HashMap<String, Float>();
+  ArrayList<Float> _separatorYs = new ArrayList<Float>();
 
   UILayout(float x, float y, float w, float padding, float intraGap, float interGap) {
     this.x = x; this.y = y; this.w = w;
-    this.padding  = padding;
+    this.padding = padding;
     this.intraGap = intraGap;
     this.interGap = interGap;
   }
@@ -393,8 +399,7 @@ class UILayout {
   void finish() {
     gaps.clear();
     for (int i = 0; i < names.size(); i++) {
-      boolean isLastInGroup = (i == names.size() - 1)
-        || !groups.get(i).equals(groups.get(i + 1));
+      boolean isLastInGroup = (i == names.size() - 1) || !groups.get(i).equals(groups.get(i + 1));
       gaps.add(isLastInGroup ? interGap : intraGap);
     }
 
@@ -411,7 +416,7 @@ class UILayout {
       boolean isBoundary = !groups.get(i).equals(groups.get(i + 1));
       if (isBoundary) {
         float rowBottom = yPositions.get(names.get(i)) + heights.get(i);
-        float nextTop   = yPositions.get(names.get(i + 1));
+        float nextTop = yPositions.get(names.get(i + 1));
         _separatorYs.add((rowBottom + nextTop) / 2.0);
       }
     }
@@ -485,8 +490,7 @@ class Dropdown {
 
     if (isOpen) {
       for (int i = 0; i < items.length; i++) {
-        boolean over = mouseX > x && mouseX < x + w
-                    && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h;
+        boolean over = mouseX > x && mouseX < x + w && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h;
         fill(over ? theme.bgActive : theme.bgHover);
         rect(x, y + h + i * h, w, h);
         fill(theme.textPrimary);
