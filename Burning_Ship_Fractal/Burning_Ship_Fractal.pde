@@ -5,9 +5,9 @@
  */
 
 int maxIterations = 128;
-double zoom       = 1.0;
-double offsetX    = -0.02;
-double offsetY    = -0.08;
+double zoom = 1.0;
+double offsetX = -0.02;
+double offsetY = -0.08;
 boolean needsRedraw = true;
 
 PGraphics fractalBuffer;
@@ -16,27 +16,28 @@ String[] mapNames = {
   "cividis", "inferno", "magma", "mako",
   "plasma",  "rocket",  "turbo", "viridis", "greyscale"
 };
+
 int currentMapIndex = 2;
 int[] colorLUT = new int[2048];
 
-Button   zoomInButton, zoomOutButton;
+Button zoomInButton, zoomOutButton;
 Button[] stepButtons = new Button[4];
-Slider   iterSlider;
+Slider iterSlider;
 Dropdown mapDropdown;
 
-boolean showUI       = true;
+boolean showUI = true;
 boolean isTypingIter = false;
-String  typingBuffer = "";
+String typingBuffer = "";
 
 boolean keyUp, keyDown, keyLeft, keyRight, keyZoomIn, keyZoomOut;
 
-UITheme  theme;
+UITheme theme;
 UILayout layout;
 
-static final int PANEL_W = 390;
+static final int WIN_SIZE = 800, PANEL_W = 390;
 
 void settings() {
-  size(800, 800, P2D);
+  size(WIN_SIZE, WIN_SIZE, P2D);
   pixelDensity(displayDensity());
 }
 
@@ -45,15 +46,14 @@ void setup() {
 
   javax.swing.SwingUtilities.invokeLater(new Runnable() {
     public void run() {
-      com.jogamp.newt.opengl.GLWindow window =
-        (com.jogamp.newt.opengl.GLWindow) surface.getNative();
+      com.jogamp.newt.opengl.GLWindow window = (com.jogamp.newt.opengl.GLWindow) surface.getNative();
       window.setUndecorated(false);
       window.setSize(width, height);
     }
   });
 
   fractalBuffer = createGraphics(width, height, P2D);
-  theme         = new UITheme();
+  theme = new UITheme();
   generateLUT();
   colorMode(RGB, 255);
 
@@ -68,12 +68,7 @@ void setup() {
   layout.add("colorMap",    28, "group1");
   layout.finish();
 
-  iterSlider = new Slider(
-    layout.contentX(),
-    layout.getY("iterSlider"),
-    layout.contentW(),
-    18, 1, 512, maxIterations
-  );
+  iterSlider = new Slider(layout.contentX(), layout.getY("iterSlider"), layout.contentW(), 18, 1, 512, maxIterations);
 
   String[] stepLabels = {"--", "-", "+", "++"};
   float stepY = layout.getY("stepButtons");
@@ -83,13 +78,10 @@ void setup() {
     );
   }
 
-  mapDropdown = new Dropdown(
-    layout.contentX(), layout.getY("colorMap"),
-    180, 26, mapNames
-  );
+  mapDropdown = new Dropdown(layout.contentX(), layout.getY("colorMap"), 180, 26, mapNames);
 
   zoomInButton  = new Button(width - 80, height - 160, 56, 56, "+");
-  zoomOutButton = new Button(width - 80, height - 90,  56, 56, "\u2212");
+  zoomOutButton = new Button(width - 80, height - 90,  56, 56, "-");
 }
 
 void draw() {
@@ -105,15 +97,15 @@ void handleContinuousInput() {
   boolean changed  = false;
   double panSpeed  = 0.05 / zoom;
 
-  if (keyUp)      { offsetY -= panSpeed; changed = true; }
-  if (keyDown)    { offsetY += panSpeed; changed = true; }
-  if (keyLeft)    { offsetX -= panSpeed; changed = true; }
-  if (keyRight)   { offsetX += panSpeed; changed = true; }
-  if (keyZoomIn)  { doZoom(1.05,      width / 2, height / 2); changed = true; }
+  if (keyUp) { offsetY -= panSpeed; changed = true; }
+  if (keyDown) { offsetY += panSpeed; changed = true; }
+  if (keyLeft) { offsetX -= panSpeed; changed = true; }
+  if (keyRight) { offsetX += panSpeed; changed = true; }
+  if (keyZoomIn) { doZoom(1.05, width / 2, height / 2); changed = true; }
   if (keyZoomOut) { doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
 
   if (mousePressed && showUI) {
-    if (zoomInButton.isMouseOver())  { doZoom(1.05,      width / 2, height / 2); changed = true; }
+    if (zoomInButton.isMouseOver()) { doZoom(1.05, width / 2, height / 2); changed = true; }
     if (zoomOutButton.isMouseOver()) { doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
     if (iterSlider.locked && iterSlider.update()) {
       maxIterations = (int) iterSlider.val; changed = true;
@@ -133,7 +125,6 @@ void mousePressed() {
   }
   if (mapDropdown.isHeaderOver()) { mapDropdown.toggle(); return; }
 
-  // Click iteration label to enter typing mode
   if (mouseX > layout.contentX() && mouseX < layout.contentX() + 180
    && mouseY > layout.getY("iterLabel") && mouseY < layout.getY("iterLabel") + 20) {
     isTypingIter = true; typingBuffer = ""; return;
@@ -143,32 +134,26 @@ void mousePressed() {
 
   if (iterSlider.isMouseOver()) {
     iterSlider.locked = true;
-    iterSlider.val = constrain(
-      map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max),
-      iterSlider.min, iterSlider.max
-    );
+    iterSlider.val = constrain(map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max), iterSlider.min, iterSlider.max);
     maxIterations = (int) iterSlider.val;
     needsRedraw = true;
   }
 
-  int[] amounts = {-100, -10, 10, 100};
+  int[] amounts = {-64, -16, 16, 64};
   for (int i = 0; i < 4; i++) {
     if (stepButtons[i].isMouseOver()) {
-      maxIterations = constrain(maxIterations + amounts[i], 1, 5000);
+      maxIterations = constrain(maxIterations + amounts[i], iterSlider.min, iterSlider.max);
       iterSlider.val = maxIterations;
       needsRedraw = true;
     }
   }
 }
 
-void mouseReleased() { iterSlider.locked = false; }
+void mouseReleased() { iterSlider.locked = false; mouseX = mouseY = null; }
 
 void mouseDragged() {
   if (iterSlider.locked) {
-    iterSlider.val = constrain(
-      map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max),
-      iterSlider.min, iterSlider.max
-    );
+    iterSlider.val = constrain(map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max), iterSlider.min, iterSlider.max);
     maxIterations = (int) iterSlider.val;
     needsRedraw = true;
     return;
@@ -177,8 +162,8 @@ void mouseDragged() {
   if (showUI && (zoomInButton.isMouseOver() || zoomOutButton.isMouseOver())) return;
 
   double aspect = (double) width / height;
-  offsetX -= (mouseX - pmouseX) * (3.2 * aspect) / width  / zoom;
-  offsetY -= (mouseY - pmouseY) * 3.2              / height / zoom;
+  offsetX -= (mouseX - pmouseX) * (3.2 * aspect) / width / zoom;
+  offsetY -= (mouseY - pmouseY) * 3.2 / height / zoom;
   needsRedraw = true;
 }
 
@@ -196,9 +181,9 @@ void keyPressed() {
       typingBuffer = typingBuffer.substring(0, typingBuffer.length() - 1);
     } else if (keyCode == ENTER || keyCode == RETURN) {
       if (typingBuffer.length() > 0) {
-        maxIterations  = constrain(int(typingBuffer), 1, 512);
+        maxIterations = constrain(int(typingBuffer), iterSlider.min, iterSlider.max);
         iterSlider.val = maxIterations;
-        needsRedraw    = true;
+        needsRedraw = true;
       }
       isTypingIter = false;
     } else if (keyCode == ESC) {
@@ -208,29 +193,29 @@ void keyPressed() {
   }
 
   if (key == 'h' || key == 'H') showUI = !showUI;
-  if (key == 'w' || key == 'W' || keyCode == UP)    keyUp    = true;
-  if (key == 's' || key == 'S' || keyCode == DOWN)  keyDown  = true;
-  if (key == 'a' || key == 'A' || keyCode == LEFT)  keyLeft  = true;
+  if (key == 'w' || key == 'W' || keyCode == UP) keyUp = true;
+  if (key == 's' || key == 'S' || keyCode == DOWN) keyDown = true;
+  if (key == 'a' || key == 'A' || keyCode == LEFT) keyLeft = true;
   if (key == 'd' || key == 'D' || keyCode == RIGHT) keyRight = true;
-  if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn  = true;
-  if (key == 'q' || key == 'Q' || key == '-')               keyZoomOut = true;
+  if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn = true;
+  if (key == 'q' || key == 'Q' || key == '-') keyZoomOut = true;
 }
 
 void keyReleased() {
-  if (key == 'w' || key == 'W' || keyCode == UP)    keyUp    = false;
-  if (key == 's' || key == 'S' || keyCode == DOWN)  keyDown  = false;
-  if (key == 'a' || key == 'A' || keyCode == LEFT)  keyLeft  = false;
+  if (key == 'w' || key == 'W' || keyCode == UP) keyUp = false;
+  if (key == 's' || key == 'S' || keyCode == DOWN) keyDown = false;
+  if (key == 'a' || key == 'A' || keyCode == LEFT) keyLeft = false;
   if (key == 'd' || key == 'D' || keyCode == RIGHT) keyRight = false;
-  if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn  = false;
-  if (key == 'q' || key == 'Q' || key == '-')               keyZoomOut = false;
+  if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn = false;
+  if (key == 'q' || key == 'Q' || key == '-') keyZoomOut = false;
 }
 
 void doZoom(double factor, int targetX, int targetY) {
-  float  aspectRatio = (float) width / height;
-  double baseX       = map(targetX, 0, width,  -2.1f * aspectRatio, 1.1f * aspectRatio);
-  double baseY       = map(targetY, 0, height, -2.1f, 1.1f);
-  double oldZoom     = zoom;
-  zoom    *= factor;
+  float aspectRatio = (float) width / height;
+  double baseX = map(targetX, 0, width, -2.1f * aspectRatio, 1.1f * aspectRatio);
+  double baseY = map(targetY, 0, height, -2.1f, 1.1f);
+  double oldZoom = zoom;
+  zoom *= factor;
   offsetX += baseX * (1.0 / oldZoom - 1.0 / zoom);
   offsetY += baseY * (1.0 / oldZoom - 1.0 / zoom);
 }
@@ -240,13 +225,13 @@ void renderFractalToBuffer() {
   fractalBuffer.loadPixels();
   fractalBuffer.colorMode(RGB, 1.0);
 
-  float  aspectRatio = (float) width / height;
-  double invZoom     = 1.0 / zoom;
+  float aspectRatio = (float) width / height;
+  double invZoom = 1.0 / zoom;
 
   for (int x = 0; x < width; x++) {
     for (int y = 0; y < height; y++) {
-      double cx = map(x, 0, width,  -2.1f * aspectRatio, 1.1f * aspectRatio) * invZoom + offsetX;
-      double cy = map(y, 0, height, -2.1f, 1.1f)                             * invZoom + offsetY;
+      double cx = map(x, 0, width, -2.1f * aspectRatio, 1.1f * aspectRatio) * invZoom + offsetX;
+      double cy = map(y, 0, height, -2.1f, 1.1f) * invZoom + offsetY;
       double zx = cx, zy = cy;
       int n = 0;
 
@@ -263,10 +248,9 @@ void renderFractalToBuffer() {
         fractalBuffer.pixels[x + y * width] = fractalBuffer.color(0);
       } else {
         float log_zn = (float) Math.log(zx * zx + zy * zy) / 2.0f;
-        float nu     = (float) Math.log(log_zn / (float) Math.log(2)) / (float) Math.log(2);
-        float t      = (n + 1 - nu) / maxIterations;
-        fractalBuffer.pixels[x + y * width] =
-          colorLUT[floor(constrain(t, 0, 1) * (colorLUT.length - 1))];
+        float nu = (float) Math.log(log_zn / (float) Math.log(2)) / (float) Math.log(2);
+        float t = (n + 1 - nu) / maxIterations;
+        fractalBuffer.pixels[x + y * width] = colorLUT[floor(constrain(t, 0, 1) * (colorLUT.length - 1))];
       }
     }
   }
@@ -291,9 +275,7 @@ void drawUI() {
 
   float px = layout.contentX();
 
-  String iterText = isTypingIter
-    ? "Input: " + typingBuffer + "_"
-    : "Iterations: " + maxIterations;
+  String iterText = isTypingIter ? "Input: " + typingBuffer + "_" : "Iterations: " + maxIterations;
   fill(theme.textPrimary);
   textSize(theme.textSizePrimary);
   textAlign(LEFT, TOP);
