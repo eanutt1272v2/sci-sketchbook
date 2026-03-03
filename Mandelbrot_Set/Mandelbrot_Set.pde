@@ -68,25 +68,15 @@ void setup() {
   layout.add("colorMap", 28, "panel");
   layout.finish();
 
-  iterSlider = new Slider(
-    layout.contentX(),
-    layout.getY("iterSlider"),
-    layout.contentW(),
-    18, 1, 512, maxIterations
-  );
+  iterSlider = new Slider(layout.contentX(), layout.getY("iterSlider"), layout.contentW(), 18, 1, 512, maxIterations);
 
   String[] stepLabels = {"--", "-", "+", "++"};
   float stepY = layout.getY("stepButtons");
   for (int i = 0; i < 4; i++) {
-    stepButtons[i] = new Button(
-      layout.contentX() + i * 36, stepY, 28, 28, stepLabels[i]
-    );
+    stepButtons[i] = new Button(layout.contentX() + i * 36, stepY, 28, 28, stepLabels[i]);
   }
 
-  mapDropdown = new Dropdown(
-    layout.contentX(), layout.getY("colorMap"),
-    180, 26, mapNames
-  );
+  mapDropdown = new Dropdown(layout.contentX(), layout.getY("colorMap"), 180, 26, mapNames);
 
   zoomInButton = new Button(width - 80, height - 160, 56, 56, "+");
   zoomOutButton = new Button(width - 80, height - 90,  56, 56, "-");
@@ -142,10 +132,7 @@ void mousePressed() {
 
   if (iterSlider.isMouseOver()) {
     iterSlider.locked = true;
-    iterSlider.val = constrain(
-      map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max),
-      iterSlider.min, iterSlider.max
-    );
+    iterSlider.val = constrain(map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max), iterSlider.min, iterSlider.max);
     maxIterations = (int) iterSlider.val;
     needsRedraw = true;
   }
@@ -164,10 +151,7 @@ void mouseReleased() { iterSlider.locked = false; }
 
 void mouseDragged() {
   if (iterSlider.locked) {
-    iterSlider.val = constrain(
-      map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max),
-      iterSlider.min, iterSlider.max
-    );
+    iterSlider.val = constrain(map(mouseX, iterSlider.x, iterSlider.x + iterSlider.w, iterSlider.min, iterSlider.max), iterSlider.min, iterSlider.max);
     maxIterations = (int) iterSlider.val;
     needsRedraw = true;
     return;
@@ -195,9 +179,9 @@ void keyPressed() {
       typingBuffer = typingBuffer.substring(0, typingBuffer.length() - 1);
     } else if (keyCode == ENTER || keyCode == RETURN) {
       if (typingBuffer.length() > 0) {
-        maxIterations  = constrain(int(typingBuffer), iterSlider.min, iterSlider.max);
+        maxIterations = constrain(int(typingBuffer), iterSlider.min, iterSlider.max);
         iterSlider.val = maxIterations;
-        needsRedraw    = true;
+        needsRedraw = true;
       }
       isTypingIter = false;
     } else if (keyCode == ESC) {
