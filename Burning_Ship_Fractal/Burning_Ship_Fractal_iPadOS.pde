@@ -36,22 +36,10 @@ UILayout layout;
 
 static final int WIN_SIZE = 800, PANEL_W = 390;
 
-void settings() {
+void setup() {
   size(WIN_SIZE, WIN_SIZE, P2D);
   pixelDensity(displayDensity());
-}
-
-void setup() {
-  surface.setResizable(false);
-
-  javax.swing.SwingUtilities.invokeLater(new Runnable() {
-    public void run() {
-      com.jogamp.newt.opengl.GLWindow window = (com.jogamp.newt.opengl.GLWindow) surface.getNative();
-      window.setUndecorated(false);
-      window.setSize(width, height);
-    }
-  });
-
+  
   fractalBuffer = createGraphics(width, height, P2D);
   theme = new UITheme();
   generateLUT();
