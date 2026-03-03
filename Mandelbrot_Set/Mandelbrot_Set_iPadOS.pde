@@ -149,7 +149,7 @@ void mouseDragged() {
    if (showUI && (zoomInButton.isMouseOver() || zoomOutButton.isMouseOver())) return;
    
    double aspect = (double) width / height;
-   offsetX -= (mouseX - pmouseX) * (3.2 * aspect) / width  / zoom;
+   offsetX -= (mouseX - pmouseX) * (3.2 * aspect) / width / zoom;
    offsetY -= (mouseY - pmouseY) * 3.2 / height / zoom;
    needsRedraw = true;
 }
