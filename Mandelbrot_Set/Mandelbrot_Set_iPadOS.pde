@@ -34,10 +34,10 @@ boolean keyUp, keyDown, keyLeft, keyRight, keyZoomIn, keyZoomOut;
 UITheme  theme;
 UILayout layout;
 
-static final int PANEL_W = 390;
+static final int WIN_SIZE = 700, PANEL_W = 390;
 
 void setup() {
-   size(700, 700, P2D);
+   size(WIN_SIZE, WIN_SIZE, P2D);
    
    fractalBuffer = createGraphics(width, height, P2D);
    theme = new UITheme();
