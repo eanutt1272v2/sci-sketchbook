@@ -38,7 +38,6 @@ static final int WIN_SIZE = 800, PANEL_W = 390;
 
 void setup() {
   size(WIN_SIZE, WIN_SIZE, P2D);
-  pixelDensity(displayDensity());
   
   fractalBuffer = createGraphics(width, height, P2D);
   theme = new UITheme();
