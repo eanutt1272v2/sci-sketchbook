@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #ffffff;
+  --color-foreground: #000000;
+  --color-card: #ffffff;
+  --color-card-foreground: #000000;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #000000;
+  --color-muted: #f5f5f5;
+  --color-muted-foreground: #737373;
+  --color-accent: #000000;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e5e7eb;
+  --color-input: #e5e7eb;
+  --color-ring: #000000;
+  --radius: 0.5rem;
+}
+
+@supports (color-scheme: dark) {
+  @media (prefers-color-scheme: dark) {
+    @theme {
+      --color-background: #0a0a0a;
+      --color-foreground: #fafafa;
+      --color-card: #1a1a1a;
+      --color-card-foreground: #fafafa;
+      --color-popover: #1a1a1a;
+      --color-popover-foreground: #fafafa;
+      --color-muted: #262626;
+      --color-muted-foreground: #a3a3a3;
+      --color-accent: #fafafa;
+      --color-accent-foreground: #0a0a0a;
+      --color-destructive: #dc2626;
+      --color-destructive-foreground: #fafafa;
+      --color-border: #262626;
+      --color-input: #262626;
+      --color-ring: #fafafa;
+    }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+@layer components {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .transition-fast {
+    @apply transition-all duration-150;
+  }
+
+  .transition-smooth {
+    @apply transition-all duration-300;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-background) / <alpha-value>);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-muted) / <alpha-value>);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-muted-foreground) / <alpha-value>);
+}
+
+* {
+  scrollbar-color: rgb(var(--color-muted) / <alpha-value>) rgb(var(--color-background) / <alpha-value>);
+  scrollbar-width: thin;
+}
