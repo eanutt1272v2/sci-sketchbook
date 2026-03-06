@@ -1,21 +1,26 @@
 {
   "name": "sci-sketchbook",
-  "version": "1.0.0",
-  "description": "This repository is a library of p5.js and Processing sketch files and associated resources. Each sketch is organised into its own dedicated project folder.",
-  "main": "server.js",
+  "version": "2.0.0",
+  "description": "A modern file browser for p5.js and Processing sketches",
+  "type": "module",
+  "license": "MIT",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/eanutt1272v2/sci-sketchbook.git"
   },
-  "keywords": [],
+  "keywords": [
+    "p5.js",
+    "processing",
+    "sketches",
+    "file-browser"
+  ],
   "author": "",
-  "license": "MIT",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/eanutt1272v2/sci-sketchbook/issues"
   },
@@ -23,13 +28,21 @@
   "engines": {
     "node": ">=18"
   },
-  "packageManager": "pnpm@9.0.0",
   "dependencies": {
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.2.1",
-    "helmet": "^8.1.0"
+    "lucide-react": "^0.453.0",
+    "next": "^15.5.12",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
-  }
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^24.7.0",
+    "@types/react": "^19.2.1",
+    "@types/react-dom": "^19.2.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af"
 }
