@@ -33,10 +33,19 @@ export interface DirectoryListing {
 }
 
 export function resolveSafePath(requestPath: string): string {
-  const normalized = path.normalize(requestPath);
+  // Handle root path
+  if (requestPath === '/' || requestPath === '') {
+    return ROOT_DIR;
+  }
+
+  // Remove leading slash for proper path joining
+  const cleanPath = requestPath.startsWith('/') ? requestPath.slice(1) : requestPath;
+  const normalized = path.normalize(cleanPath);
   const resolved = path.resolve(ROOT_DIR, normalized);
 
-  if (!resolved.startsWith(ROOT_DIR)) {
+  // Ensure the resolved path is within ROOT_DIR
+  const relativePath = path.relative(ROOT_DIR, resolved);
+  if (relativePath.startsWith('..')) {
     throw new Error('Path traversal attempt detected');
   }
 
