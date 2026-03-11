@@ -1,7 +1,3 @@
-
-// @file Matrix.pde
-// @author @eanutt1272.v2
-// @version 1.0.0
 class Matrix {
   int rows;
   int cols;
