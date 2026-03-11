@@ -21,8 +21,21 @@ static final class Config {
 
 AppCore appcore;
 
+void settings() {
+  size(1100, 800, P2D);
+  pixelDensity(displayDensity());
+}
+
 void setup() {
-  size(screenWidth, screenHeight, P2D);
+  surface.setResizable(false);
+  javax.swing.SwingUtilities.invokeLater(new Runnable() {
+    public void run() {
+      com.jogamp.newt.opengl.GLWindow w = (com.jogamp.newt.opengl.GLWindow) surface.getNative();
+      w.setUndecorated(false);
+      w.setSize(width, height);
+    }
+  });
+
   appcore = new AppCore();
 }
 
