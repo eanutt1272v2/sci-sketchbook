@@ -1,42 +1,42 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #ffffff;
-  --color-foreground: #000000;
+  --color-background: #f8f9fa;
+  --color-foreground: #1a1a1a;
   --color-card: #ffffff;
-  --color-card-foreground: #000000;
+  --color-card-foreground: #1a1a1a;
   --color-popover: #ffffff;
-  --color-popover-foreground: #000000;
-  --color-muted: #f5f5f5;
-  --color-muted-foreground: #737373;
-  --color-accent: #000000;
+  --color-popover-foreground: #1a1a1a;
+  --color-muted: #e9ecef;
+  --color-muted-foreground: #6c757d;
+  --color-accent: #0d6efd;
   --color-accent-foreground: #ffffff;
-  --color-destructive: #ef4444;
+  --color-destructive: #dc3545;
   --color-destructive-foreground: #ffffff;
-  --color-border: #e5e7eb;
-  --color-input: #e5e7eb;
-  --color-ring: #000000;
-  --radius: 0.5rem;
+  --color-border: #dee2e6;
+  --color-input: #e9ecef;
+  --color-ring: #0d6efd;
+  --radius: 0.375rem;
 }
 
 @supports (color-scheme: dark) {
   @media (prefers-color-scheme: dark) {
     @theme {
-      --color-background: #0a0a0a;
-      --color-foreground: #fafafa;
-      --color-card: #1a1a1a;
-      --color-card-foreground: #fafafa;
-      --color-popover: #1a1a1a;
-      --color-popover-foreground: #fafafa;
-      --color-muted: #262626;
-      --color-muted-foreground: #a3a3a3;
-      --color-accent: #fafafa;
-      --color-accent-foreground: #0a0a0a;
-      --color-destructive: #dc2626;
-      --color-destructive-foreground: #fafafa;
-      --color-border: #262626;
-      --color-input: #262626;
-      --color-ring: #fafafa;
+      --color-background: #1a1a1a;
+      --color-foreground: #f0f0f0;
+      --color-card: #242424;
+      --color-card-foreground: #f0f0f0;
+      --color-popover: #242424;
+      --color-popover-foreground: #f0f0f0;
+      --color-muted: #343a40;
+      --color-muted-foreground: #adb5bd;
+      --color-accent: #0d6efd;
+      --color-accent-foreground: #ffffff;
+      --color-destructive: #dc3545;
+      --color-destructive-foreground: #ffffff;
+      --color-border: #495057;
+      --color-input: #343a40;
+      --color-ring: #0d6efd;
     }
   }
 }
@@ -48,6 +48,15 @@
 
   body {
     @apply bg-background text-foreground;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  #__next {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
   }
 
   * {
@@ -66,6 +75,14 @@
 
   .transition-smooth {
     @apply transition-all duration-300;
+  }
+
+  .main-content {
+    @apply flex-1;
+  }
+
+  .sticky-footer {
+    @apply mt-auto;
   }
 }
 
@@ -90,4 +107,42 @@
 * {
   scrollbar-color: rgb(var(--color-muted) / <alpha-value>) rgb(var(--color-background) / <alpha-value>);
   scrollbar-width: thin;
+}
+
+/* Corporate styling */
+input[type="text"],
+input[type="search"],
+textarea,
+select {
+  @apply bg-card text-foreground border border-border rounded transition-all;
+  @apply focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent;
+}
+
+button {
+  @apply transition-all duration-150;
+}
+
+a {
+  @apply transition-colors;
+}
+
+/* Table styling */
+table {
+  @apply w-full;
+}
+
+thead {
+  @apply bg-muted/50;
+}
+
+th {
+  @apply text-left font-semibold text-foreground;
+}
+
+td {
+  @apply text-foreground;
+}
+
+tbody tr {
+  @apply border-b border-border hover:bg-muted/30 transition-colors;
 }
