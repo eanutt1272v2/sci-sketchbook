@@ -1,7 +1,3 @@
-
-// @file P4Vector.pde
-// @author @eanutt1272.v2
-// @version 1.0.0
 class P4Vector {
   float x, y, z, w;
 
