@@ -1,7 +1,3 @@
-
-// @file sketch_4D_3D_projection.pde
-// @author @eanutt1272.v2
-// @version 1.0.0
 // Global rotation angles for each 4D plane:
 // Using mouse-only, we directly control XY and XW rotations.
 // The remaining rotations (YZ, XZ, ZW, YW) 
