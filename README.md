@@ -14,19 +14,23 @@ The repository is structured with individual directories for each p5.js or Proce
 
 ## Up and Running
 
-### Sketchbook Web Server (Node.js)
+### Sketchbook Web Server
 
-The repository now includes a built-in Express server to easily browse and serve all p5.js sketches.
+The repository now includes a built-in server to easily browse and serve all p5.js sketches.
 
 1.  **Install Dependencies**:
     ```bash
     pnpm install
     ```
-2.  **Start the Server**:
+2.  **Trigger Build**:
+3.  ```bash
+    next build
+    ```
+4.  **Start the Server**:
     ```bash
     pnpm start
     ```
-3.  Open [http://localhost:8080](http://localhost:8080) in your browser. The server provides a custom directory listing with file icons and direct access to all sketch folders.
+3.  Open [http://localhost:3000](http://localhost:3000) in your browser. The server provides a custom directory listing with file icons and direct access to all sketch folders.
 
 ### p5.js Sketches (Manual)
 
