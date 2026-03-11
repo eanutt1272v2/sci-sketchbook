@@ -3,6 +3,10 @@ import path from 'path';
 
 const ROOT_DIR = process.cwd();
 const HIDDEN_FILES = new Set([
+  'server.js',
+  'next-env.d.ts',
+  'app',
+  'favicon.ico',
   'node_modules',
   '.git',
   '.next',
