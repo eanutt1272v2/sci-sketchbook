@@ -23,7 +23,7 @@ class Simulation {
   
   private int defaultParticleCount() {
     int calibrationConst = 120.96f;
-    return (int) ((width * height) / calibrationConst);
+    return (int) ((screenWidth * screenHeight) / calibrationConst);
   }
   
   void restart() {
