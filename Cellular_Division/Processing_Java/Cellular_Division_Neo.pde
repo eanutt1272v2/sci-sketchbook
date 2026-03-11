@@ -1,0 +1,36 @@
+/**
+ * @file Cellular_Division_Neo.pde
+ * @author @eanutt1272.v2
+ * @version 2.5.5
+ * 
+ * Cellular Division Simulation
+ * A particle-based simulation modeling emergent cellular behaviour.
+ */
+
+static final class Config {
+  static final int GRID_SIZE = 30;
+  static final int CELLS_INTERVAL = 15;
+  static final int LEFT_PANEL_WIDTH = 260;
+  static final int RIGHT_COLUMN_WIDTH = 220;
+  static final int COLUMN_GAP = 10;
+  static final float VALUE_BOX_WIDTH = 50;
+  static final float VALUE_BOX_HEIGHT = 16;
+  static final int MIN_PARTICLES = 100;
+  static final int MAX_PARTICLES = 20000;
+}
+
+AppCore appcore;
+
+void setup() {
+  size(screenWidth, screenHeight, P2D);
+  appcore = new AppCore();
+}
+
+void draw() {
+  appcore.update();
+  appcore.render();
+}
+
+void keyPressed() {
+  appcore.onKeyPressed();
+}
