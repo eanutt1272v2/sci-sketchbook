@@ -14,7 +14,7 @@ interface BreadcrumbsProps {
 
 export function Breadcrumbs({ breadcrumbs }: BreadcrumbsProps) {
   return (
-    <nav className="flex items-center gap-1 text-sm mb-6 overflow-x-auto pb-2">
+    <nav className="flex items-center gap-1 text-sm mb-6 overflow-x-auto pb-2 px-4 py-3 bg-muted/20 rounded-lg border border-border">
       {breadcrumbs.map((crumb, index) => (
         <div key={crumb.path} className="flex items-center gap-1 whitespace-nowrap">
           {index > 0 && <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
