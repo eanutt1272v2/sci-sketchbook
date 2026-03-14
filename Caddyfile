@@ -1,0 +1,22 @@
+{
+    auto_https disable_redirects
+}
+
+:80 {
+    root * /srv
+    file_server browse
+
+    # Security Headers
+    header {
+        # Enable XSS protection
+        X-XSS-Protection "1; mode=block"
+        # Prevent MIME type sniffing
+        X-Content-Type-Options "nosniff"
+        # Referrer Policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Content Security Policy (CSP) - adjust as needed
+        # Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
+        # Feature Policy / Permissions Policy
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    }
+}

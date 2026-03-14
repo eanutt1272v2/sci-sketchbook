@@ -1,62 +1,70 @@
-# p5.js and Processing Sketch Library
+# Sci-Sketchbook
 
-This repository is a library of p5.js and Processing sketch files and associated resources. Each sketch is organised into its own dedicated project folder.
+This repository now hosts a collection of scientific sketches and visualisations, served securely via a Caddy web server with modern file browsing capabilities.
 
-## Repository Structure
+## Setup and Deployment
 
-The repository is structured with individual directories for each p5.js or Processing project. Within each project folder, you will typically find:
+To deploy and run the Caddy server, you will need Docker and Docker Compose installed on your system.
 
-*   `index.html` (for p5.js sketches): The entry point for web-based sketches.
-*   `sketch.js` (for p5.js sketches): The main JavaScript file containing the p5.js code.
-*   `.pde` files (for Processing sketches): The main Processing sketch file or other required source files.
-*   `.glsl` files: For sketches utilising GLSL shaders.
-*   `.json` files: For sketches that load external data.
+1.  **Clone the repository:**
 
-## Up and Running
-
-### Sketchbook Web Server
-
-The repository now includes a built-in server to easily browse and serve all p5.js sketches.
-
-1.  **Install Dependencies**:
     ```bash
-    pnpm install
+    git clone https://github.com/eanutt1272v2/sci-sketchbook.git
+    cd sci-sketchbook
     ```
-2.  **Trigger Build**:
-3.  ```bash
-    next build
+
+2.  **Place your sketch folders:**
+
+    The Caddy server is configured to serve files from the `./data` directory within this project. Your sketch folders (e.g., `Barnsley_Fern`, `Mandelbrot_Set`, etc.) should be placed inside a new directory named `data` at the root of this repository. For example:
+
     ```
-4.  **Start the Server**:
+    sci-sketchbook/
+    ├── Caddyfile
+    ├── docker-compose.yml
+    ├── README.md
+    └── data/
+        ├── Barnsley_Fern/
+        ├── Burning_Ship_Fractal/
+        └── ... (your other sketch folders)
+    ```
+
+    You can move your existing sketch folders into this `data` directory:
+
     ```bash
-    pnpm start
+    mkdir data
+    mv Barnsley_Fern Burning_Ship_Fractal Cellular_Division Collatz_Visualization DLA_Growth Diffusion_Limited_Aggregation Eigen Fluvia Fluvia_Lite GLSL_Shader_Exploration_01 Julia_Set Lenia_2D_Studio Lorenz_Attractor Mandelbrot_Set Mandelbulb_GLSL_Shader Mandelbulb_Processing MicroLab Neural_Network PG_Magnetic Sierpinski_Triangle Sketch_4D_3D_Projection Slime_Mold_Growth data/
     ```
-3.  Open [http://localhost:3000](http://localhost:3000) in your browser. The server provides a custom directory listing with file icons and direct access to all sketch folders.
 
-### p5.js Sketches (Manual)
+3.  **Run the Caddy server:**
 
-To execute any of the p5.js sketches without the Node.js server, follow these steps:
+    Navigate to the root of the `sci-sketchbook` directory in your terminal and run Docker Compose:
 
-1.  Locate the specific project folder for the desired sketch within this repository.
-2.  Open the `index.html` file in your preferred web browser.
+    ```bash
+    docker compose up -d
+    ```
 
-**Important Notes:**
-*   Make sure that all dependent files, including `.js`, `.css`, shader (`.glsl`), and data (`.json`) files, are either located in the same directory as `index.html` or are correctly linked within the `index.html` and `sketch.js` files.
-*   For optimal performance and to avoid potential browser security restrictions (e.g., related to loading local files), it is recommended to run p5.js sketches using a local web server (like the built-in Node.js server mentioned above).
+    This command will build the Caddy service, start it in detached mode, and expose it on port 80 (HTTP) and 443 (HTTPS).
 
-### Processing Sketches
+4.  **Access the web interface:**
 
-To run any of the Processing sketches, you will need the **Processing Development Environment** installed on your computer. The latest version can be downloaded from the [official Processing Website](https://processing.org/download).
+    Open your web browser and navigate to `http://localhost` (or `https://localhost` if you have configured DNS for HTTPS). You should see a modern file browsing interface displaying your sketch folders.
 
-Once Processing is installed, proceed as follows:
+## Caddy Configuration
 
-1.  Go to the respective project folder for the Processing sketch.
-2.  Open the primary `.pde` sketch file using the Processing IDE.
-3.  Click the "Run" button (a triangular play icon) within the Processing IDE to compile and run the sketch.
+The `Caddyfile` is configured to:
 
-**Important Notes:**
-*   Verify that any associated data files, libraries, or external assets are correctly placed within the sketch folder or linked as specified by the Processing sketch.
-*   If a sketch utilises external libraries, ensure they are installed in your Processing environment (Sketch > Import Library > Add Library...).
+-   Serve files from the `/srv` directory inside the container, which is mapped to the `./data` directory on your host machine.
+-   Enable file browsing for easy navigation of your sketch folders.
+-   Include essential security headers for a more secure browsing experience:
+    -   `X-XSS-Protection: 1; mode=block`
+    -   `X-Content-Type-Options: nosniff`
+    -   `Referrer-Policy: strict-origin-when-cross-origin`
+    -   `Permissions-Policy: geolocation=(), microphone=(), camera=()`
+
+## Contributing
+
+Feel free to add more sketches or improve the Caddy configuration. Pull requests are welcome.
 
 ## License
 
-This project is distributed under the MIT License. For more information, please refer to the `LICENSE` file in the root of the repository.
+This project is licensed under the terms specified in the `LICENSE` file.
