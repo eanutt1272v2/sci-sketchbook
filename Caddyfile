@@ -4,22 +4,17 @@
 }
 
 :{$PORT:10000} {
-    root * /srv
+    # In the current Dockerfile, we COPY data into /usr/share/caddy
+    root * /usr/share/caddy
     file_server browse
 
     # Security Headers
     header {
-        # Enable XSS protection
         X-XSS-Protection "1; mode=block"
-        # Prevent MIME type sniffing
         X-Content-Type-Options "nosniff"
-        # Referrer Policy
         Referrer-Policy "strict-origin-when-cross-origin"
-        # Content Security Policy (CSP) - relaxed slightly for initial deployment
         Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
-        # Feature Policy / Permissions Policy
         Permissions-Policy "geolocation=(), microphone=(), camera=()"
-        # Prevent clickjacking
         X-Frame-Options "DENY"
     }
 }
