@@ -1,16 +1,16 @@
 class UIManager {
-  private final App app;
+  private final AppCore appcore;
   private boolean visible = true;
   
   private final LeftPanel leftPanel;
   private final RightPanel rightPanel;
   private final InputHandler inputHandler;
   
-  UIManager(App app) {
-    this.app = app;
-    this.leftPanel = new LeftPanel(app);
-    this.rightPanel = new RightPanel(app);
-    this.inputHandler = new InputHandler(this, app.sim, leftPanel, rightPanel);
+  UIManager(AppCore appcore) {
+    this.appcore = appcore;
+    this.leftPanel = new LeftPanel(appcore);
+    this.rightPanel = new RightPanel(appcore);
+    this.inputHandler = new InputHandler(this, appcore.sim, leftPanel, rightPanel);
     this.leftPanel.setInputHandler(inputHandler);
     this.rightPanel.setInputHandler(inputHandler);
   }
@@ -35,6 +35,6 @@ class UIManager {
   boolean isVisible() { return visible; }
   
   void requestRestart() {
-    app.restartSimulation();
+    appcore.restartSimulation();
   }
 }

@@ -73,7 +73,7 @@ class Particle {
     y = wrapCoordinate(y + species.velocity * headingSin, height);
   }
   
-  void display(Theme theme) {
+  void display() {
     colorMode(RGB, 255);
     fill(getDisplayColour());
     float pRadius = 2;

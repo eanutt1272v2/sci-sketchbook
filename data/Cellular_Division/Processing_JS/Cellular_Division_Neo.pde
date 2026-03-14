@@ -1,10 +1,10 @@
 /**
  * @file Cellular_Division_Neo.pde
  * @author @eanutt1272.v2
- * @version 2.5.5
+ * @version 2.5.8
  * 
  * Cellular Division Simulation
- * A particle-based simulation modeling emergent cellular behaviour.
+ * A particle-based simulation modelling emergent cellular behaviour.
  */
 
 static final class Config {
@@ -22,7 +22,7 @@ static final class Config {
 AppCore appcore;
 
 void setup() {
-  size(screenWidth, screenHeight, P2D);
+  size(1100, 800, P2D);
   appcore = new AppCore();
 }
 

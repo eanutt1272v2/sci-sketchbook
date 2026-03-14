@@ -1,5 +1,4 @@
 class Simulation {
-  private final Theme theme;
   private Species species;
   private ArrayList<Particle> particles;
   private Grid spatialGrid;
@@ -15,14 +14,13 @@ class Simulation {
   private int startTime;
   private boolean needsRestart = false;
   
-  Simulation(Theme theme) {
-    this.theme = theme;
+  Simulation() {
     this.particleCount = defaultParticleCount();
     restart();
   }
   
   private int defaultParticleCount() {
-    int calibrationConst = 120.96f;
+    float calibrationConst = 120.96f;
     return (int) ((width * height) / calibrationConst);
   }
   
@@ -63,7 +61,7 @@ class Simulation {
     
     strokeWeight(1);
     for (Particle p : particles) {
-      p.display(theme);
+      p.display();
     }
   }
   

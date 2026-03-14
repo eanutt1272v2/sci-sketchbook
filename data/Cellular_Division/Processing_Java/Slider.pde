@@ -1,11 +1,11 @@
-class Slider {
+class SliderComponent {
   float x, y, w, h;
   final float min, max;
   float val;
   boolean locked = false;
   final Theme theme;
   
-  Slider(float x, float y, float w, float h, float min, float max, float val, Theme theme) {
+  SliderComponent(float x, float y, float w, float h, float min, float max, float val, Theme theme) {
     this.x = x;
     this.y = y;
     this.w = w;
