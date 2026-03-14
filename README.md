@@ -32,7 +32,7 @@ To deploy and run the Caddy server, you will need Docker and Docker Compose inst
 
     ```bash
     mkdir data
-    mv Barnsley_Fern Burning_Ship_Fractal Cellular_Division Collatz_Visualization DLA_Growth Diffusion_Limited_Aggregation Eigen Fluvia Fluvia_Lite GLSL_Shader_Exploration_01 Julia_Set Lenia_2D_Studio Lorenz_Attractor Mandelbrot_Set Mandelbulb_GLSL_Shader Mandelbulb_Processing MicroLab Neural_Network PG_Magnetic Sierpinski_Triangle Sketch_4D_3D_Projection Slime_Mold_Growth data/
+    mv <your_sketch_folder_1> <your_sketch_folder_2> ... <your_sketch_folder_N> data/
     ```
 
 3.  **Run the Caddy server:**
