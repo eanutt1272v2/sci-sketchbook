@@ -7,13 +7,11 @@
     root * /srv
     file_server browse
 
-    # Security Headers
     header {
         X-XSS-Protection "1; mode=block"
         X-Content-Type-Options "nosniff"
         Referrer-Policy "strict-origin-when-cross-origin"
         
-        # Content Security Policy (CSP) - Updated to allow common CDNs used by p5.js sketches
         Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://openprocessing.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
         
         Permissions-Policy "geolocation=(), microphone=(), camera=()"
