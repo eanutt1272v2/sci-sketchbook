@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   caddy:
     image: caddy:2-alpine
@@ -10,6 +8,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./data:/srv
+      - ./favicon.ico:/srv/favicon.ico
       - caddy_data:/data
       - caddy_config:/config
 

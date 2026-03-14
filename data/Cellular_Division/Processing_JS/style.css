@@ -1,10 +1,14 @@
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
   background-color: #323232;
   color: #ffffff;
-  overflow: hidden;
-  align-items: center;
 }
 
 canvas {
