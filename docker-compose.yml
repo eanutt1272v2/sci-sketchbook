@@ -8,7 +8,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./data:/srv
-      - ./favicon.ico:/srv/favicon.ico
+      - /favicon.ico:/srv/favicon.ico
       - caddy_data:/data
       - caddy_config:/config
 
