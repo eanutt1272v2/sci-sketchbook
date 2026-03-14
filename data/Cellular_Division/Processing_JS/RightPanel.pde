@@ -73,7 +73,7 @@ class RightPanel {
     params.releaseSliders();
   }
   
-  Slider getSlider(int index) {
+  SliderComponent getSlider(int index) {
     return params.getSlider(index);
   }
   

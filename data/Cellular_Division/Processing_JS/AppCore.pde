@@ -5,7 +5,7 @@ class AppCore {
   
   AppCore() {
     theme = new Theme();
-    sim = new Simulation(theme);
+    sim = new Simulation();
     ui = new UIManager(this);
     background(0);
   }

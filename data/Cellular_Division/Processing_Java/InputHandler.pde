@@ -25,7 +25,7 @@ class InputHandler {
     if (justPressed) {
       handlePress(mouseX, mouseY);
     } else if (isPressed) {
-      handleDrag(mouseX, mouseY);
+      handleDrag(mouseX);
     } else if (wasPressed && !isPressed) {
       handleRelease();
     }
@@ -95,7 +95,7 @@ class InputHandler {
     commitTyping();
   }
   
-  private void handleDrag(float mx, float my) {
+  private void handleDrag(float mx) {
     if (activeSlider >= 0) {
       updateParamFromSlider(activeSlider, mx);
     }
@@ -174,9 +174,8 @@ class InputHandler {
   }
   
   private void updateParamFromSlider(int index, float mx) {
-    Slider slider = rightPanel.getSlider(index);
-    float value = map(mx, slider.getX(), slider.getX() + slider.getWidth(), 
-                      slider.getMin(), slider.getMax());
+    SliderComponent slider = rightPanel.getSlider(index);
+    float value = map(mx, slider.getX(), slider.getX() + slider.getWidth(), slider.getMin(), slider.getMax());
     setParamValue(index, value);
   }
   

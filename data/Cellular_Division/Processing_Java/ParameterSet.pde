@@ -8,7 +8,7 @@ class ParameterSet {
   private final float[] maxes = {360, 90, 50, 50, 255, 60};
   private final float[] steps = {1, 1, 0.1f, 1, 5, 1};
   
-  private final Slider[] sliders = new Slider[6];
+  private final SliderComponent[] sliders = new SliderComponent[6];
   private final Button[] minusButtons = new Button[6];
   private final Button[] plusButtons = new Button[6];
   private final float[] valueX = new float[6];
@@ -21,7 +21,7 @@ class ParameterSet {
   
   String getLabel(int index) { return labels[index]; }
   float getStepSize(int index) { return steps[index]; }
-  Slider getSlider(int index) { return sliders[index]; }
+  SliderComponent getSlider(int index) { return sliders[index]; }
   
   void buildWidgets(AccordionPanel[] columns) {
     float[] values = getCurrentValues();
@@ -35,7 +35,7 @@ class ParameterSet {
       float vy = panel.getY("val" + p);
       float btnSize = 28;
       
-      sliders[p] = new Slider(sx, sy, sw, 20, mins[p], maxes[p], values[p], theme);
+      sliders[p] = new SliderComponent(sx, sy, sw, 20, mins[p], maxes[p], values[p], theme);
       minusButtons[p] = new Button(sx, by, btnSize, btnSize, "-", theme);
       plusButtons[p] = new Button(sx + 38, by, btnSize, btnSize, "+", theme);
       
@@ -89,9 +89,8 @@ class ParameterSet {
       fill(isTyping ? theme.textPrimary : theme.textSecondary);
       textSize(theme.textSizeCaption);
       textAlign(RIGHT, TOP);
-      String display = isTyping ? input.getTypingBuffer() + "_" : nf(values[p], 1, 1);
+      String display = (input != null && isTyping) ? input.getTypingBuffer() + "_" : nf(values[p], 1, 1);
       text(display, valueX[p] + Config.VALUE_BOX_WIDTH - 5, vy + 2);
-      
       sliders[p].val = constrain(values[p], mins[p], maxes[p]);
       sliders[p].display();
       minusButtons[p].display();
@@ -137,7 +136,7 @@ class ParameterSet {
   }
   
   void releaseSliders() {
-    for (Slider s : sliders) {
+    for (SliderComponent s : sliders) {
       if (s != null) s.locked = false;
     }
   }
