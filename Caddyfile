@@ -1,8 +1,9 @@
 {
-    auto_https disable_redirects
+    auto_https off
+    admin off
 }
 
-:{$PORT:80} {
+:{$PORT:10000} {
     root * /srv
     file_server browse
 
@@ -14,12 +15,10 @@
         X-Content-Type-Options "nosniff"
         # Referrer Policy
         Referrer-Policy "strict-origin-when-cross-origin"
-        # Content Security Policy (CSP)
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests; block-all-mixed-content;"
+        # Content Security Policy (CSP) - relaxed slightly for initial deployment
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
         # Feature Policy / Permissions Policy
         Permissions-Policy "geolocation=(), microphone=(), camera=()"
-        # HTTP Strict Transport Security (HSTS) - enforce HTTPS for future visits
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         # Prevent clickjacking
         X-Frame-Options "DENY"
     }

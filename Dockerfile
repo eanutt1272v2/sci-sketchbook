@@ -1,18 +1,20 @@
 FROM caddy:2-alpine
 
-WORKDIR /srv
+# Use the standard Caddy root directory
+WORKDIR /usr/share/caddy
 
+# Copy Caddyfile to the default location
 COPY Caddyfile /etc/caddy/Caddyfile
-COPY data /srv/data
 
-# Ensure the caddy user (UID 1000) owns the files for runtime
-RUN chown -R 1000:1000 /srv /etc/caddy
+# Copy your data folders to the web root
+COPY data /usr/share/caddy
 
-# We'll run as root to avoid the 'operation not permitted' error on Render's entrypoint,
-# but Caddy will still drop privileges or handle it correctly if configured.
-USER root
+# Ensure we have permissions for the Caddy config and web root
+# We don't change the user; let Caddy handle its default permissions.
+# Render will run this as a non-root user by default if we don't specify.
 
-EXPOSE 80
-EXPOSE 443
+# Expose the default Render port
+EXPOSE 10000
 
+# Start Caddy with the explicit config and adapter
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
