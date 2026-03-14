@@ -2,14 +2,11 @@ services:
   - type: web
     name: sci-sketchbook
     env: docker
+    # Render's free tier/standard web services bind to a single port (usually 10000 or $PORT)
+    # Caddy will automatically bind to $PORT if we tell it to.
     buildCommand: "# No build command needed for Caddy Docker image"
-    startCommand: "caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"
+    # We remove the explicit startCommand to let Dockerfile CMD handle it
     healthCheckPath: /
-    ports:
-      - 80
-      - 443
     envVars:
-      - key: CADDY_HTTP_PORT
-        value: 80
-      - key: CADDY_HTTPS_PORT
-        value: 443
+      - key: PORT
+        value: 10000

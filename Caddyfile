@@ -2,7 +2,7 @@
     auto_https disable_redirects
 }
 
-:80 {
+:{$PORT:80} {
     root * /srv
     file_server browse
 
@@ -14,7 +14,7 @@
         X-Content-Type-Options "nosniff"
         # Referrer Policy
         Referrer-Policy "strict-origin-when-cross-origin"
-        # Content Security Policy (CSP) - strict policy, adjust if external resources are needed
+        # Content Security Policy (CSP)
         Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests; block-all-mixed-content;"
         # Feature Policy / Permissions Policy
         Permissions-Policy "geolocation=(), microphone=(), camera=()"
