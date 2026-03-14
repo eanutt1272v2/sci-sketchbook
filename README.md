@@ -61,10 +61,6 @@ The `Caddyfile` is configured to:
     -   `Referrer-Policy: strict-origin-when-cross-origin`
     -   `Permissions-Policy: geolocation=(), microphone=(), camera=()`
 
-## Contributing
-
-Feel free to add more sketches or improve the Caddy configuration. Pull requests are welcome.
-
 ## License
 
 This project is licensed under the terms specified in the `LICENSE` file.
