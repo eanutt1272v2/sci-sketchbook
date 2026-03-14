@@ -8,7 +8,7 @@ float x = 0, y = 0;
 int pointsPerFrame = 8000;
 
 void setup() {
-  size(screenHeight, screenHeight, P2D); 
+  size(800, 800, P2D); 
   background(10, 15, 10);
   smooth(8);
 }
