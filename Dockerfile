@@ -1,20 +1,20 @@
 FROM caddy:2-alpine
 
-# Caddy alpine image already has a 'caddy' user
-# We'll use the default Caddy structure but ensure permissions are correct
+# The default caddy user in the official image usually has UID 1000 or is not present in some alpine variants.
+# To be safe and compatible with Render's environment, we'll use numeric IDs.
+# In the official caddy:2-alpine, the user is 'caddy' with UID 1000.
 WORKDIR /srv
 
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY data /srv/data
 
-# Ensure the caddy user can read the files
-RUN chown -R caddy:caddy /srv /etc/caddy
+# Ensure the directory is writable and readable
+# We use UID 1000 which is the default for the 'caddy' user in the official image
+RUN chown -R 1000:1000 /srv /etc/caddy
 
-# Use the unprivileged user
-USER caddy
+USER 1000
 
 EXPOSE 80
 EXPOSE 443
 
-# Use the default entrypoint which is usually better for signals/logs
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
