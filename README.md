@@ -1,6 +1,6 @@
-# Sci-Sketchbook
+# sci-sketchbook
 
-This repository now hosts a collection of scientific sketches and visualisations, served securely via a Caddy web server with modern file browsing capabilities.
+This repository hosts a collection of scientific sketches and visualisations implemented in p5.js and Processing, served securely via a Caddy web server with file browsing capabilities. A public instance is available at: <https://sci-sketchbook.onrender.com/>.
 
 ## Setup and Deployment
 
@@ -55,7 +55,7 @@ The `Caddyfile` is configured to:
 
 -   Serve files from the `/srv` directory inside the container, which is mapped to the `./data` directory on your host machine.
 -   Enable file browsing for easy navigation of your sketch folders.
--   Include essential security headers for a more secure browsing experience:
+-   Include security headers for a more secure server and browsing experience:
     -   `X-XSS-Protection: 1; mode=block`
     -   `X-Content-Type-Options: nosniff`
     -   `Referrer-Policy: strict-origin-when-cross-origin`
