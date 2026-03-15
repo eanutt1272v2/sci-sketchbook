@@ -76,7 +76,7 @@ class FractalRenderer {
 
   String[] mapNames = {
     "cividis", "inferno", "magma", "mako",
-    "plasma",  "rocket",  "turbo", "viridis", "greyscale"
+    "plasma", "rocket", "turbo", "viridis", "greyscale"
   };
   int currentMapIndex = 2;
 
@@ -90,13 +90,13 @@ class FractalRenderer {
     buffer.loadPixels();
     buffer.colorMode(RGB, 1.0);
 
-    float  ar      = (float) width / height;
+    float ar = (float) width / height;
     double invZoom = 1.0 / appcore.zoom;
 
     for (int x = 0; x < width; x++) {
       for (int y = 0; y < height; y++) {
-        double cx = map(x, 0, width,  -2.1f * ar, 1.1f * ar) * invZoom + appcore.offsetX;
-        double cy = map(y, 0, height, -2.1f,       1.1f)      * invZoom + appcore.offsetY;
+        double cx = map(x, 0, width, -2.1f * ar, 1.1f * ar) * invZoom + appcore.offsetX;
+        double cy = map(y, 0, height, -2.1f, 1.1f) * invZoom + appcore.offsetY;
         double zx = cx, zy = cy;
         int n = 0;
 
@@ -113,8 +113,8 @@ class FractalRenderer {
           buffer.pixels[x + y * width] = buffer.color(0);
         } else {
           float log_zn = (float) Math.log(zx * zx + zy * zy) / 2.0f;
-          float nu     = (float) Math.log(log_zn / (float) Math.log(2)) / (float) Math.log(2);
-          float t      = (n + 1 - nu) / appcore.maxIterations;
+          float nu = (float) Math.log(log_zn / (float) Math.log(2)) / (float) Math.log(2);
+          float t = (n + 1 - nu) / appcore.maxIterations;
           buffer.pixels[x + y * width] = colorLUT[floor(constrain(t, 0, 1) * (LUT_SIZE - 1))];
         }
       }
@@ -133,8 +133,8 @@ class FractalRenderer {
     double[][] c = getCoefficients(mapNames[currentMapIndex]);
     colorMode(RGB, 1.0);
     for (int i = 0; i < LUT_SIZE; i++) {
-      float t      = (float) i / (LUT_SIZE - 1);
-      colorLUT[i]  = color(
+      float t = (float) i / (LUT_SIZE - 1);
+      colorLUT[i] = color(
         (float) applyPoly(t, c[0]),
         (float) applyPoly(t, c[1]),
         (float) applyPoly(t, c[2])
@@ -165,8 +165,8 @@ class InputHandler {
   AppCore appcore;
 
   boolean keyUp, keyDown, keyLeft, keyRight, keyZoomIn, keyZoomOut;
-  boolean isTypingIter  = false;
-  String  typingBuffer  = "";
+  boolean isTypingIter = false;
+  String typingBuffer = "";
 
   InputHandler(AppCore appcore) {
     this.appcore = appcore;
@@ -177,16 +177,16 @@ class InputHandler {
     if (p.dropdown.isOpen || p.slider.locked || isTypingIter) return;
 
     boolean changed = false;
-    double  speed   = 0.05 / appcore.zoom;
+    double speed = 0.05 / appcore.zoom;
 
-    if (keyUp)     { appcore.offsetY -= speed; changed = true; }
-    if (keyDown)   { appcore.offsetY += speed; changed = true; }
-    if (keyLeft)   { appcore.offsetX -= speed; changed = true; }
-    if (keyRight)  { appcore.offsetX += speed; changed = true; }
-    if (keyZoomIn) { appcore.doZoom(1.05,       width / 2, height / 2); changed = true; }
+    if (keyUp) { appcore.offsetY -= speed; changed = true; }
+    if (keyDown) { appcore.offsetY += speed; changed = true; }
+    if (keyLeft) { appcore.offsetX -= speed; changed = true; }
+    if (keyRight) { appcore.offsetX += speed; changed = true; }
+    if (keyZoomIn) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; }
     if (keyZoomOut){ appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
     if (mousePressed && appcore.showUI && !appcore.justPressed) {
-      if (p.zoomInBtn.isMouseOver())  { appcore.doZoom(1.05,       width / 2, height / 2); changed = true; }
+      if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; }
       if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
     }
 
@@ -225,24 +225,24 @@ class InputHandler {
 
     if (p.slider.isMouseOver()) {
       p.slider.locked = true;
-      p.slider.val    = constrain(
+      p.slider.val = constrain(
         map(mouseX, p.slider.x, p.slider.x + p.slider.w, p.slider.min, p.slider.max),
         p.slider.min, p.slider.max
       );
       appcore.maxIterations = (int) p.slider.val;
-      appcore.needsRedraw   = true;
+      appcore.needsRedraw = true;
     }
 
     int[] amounts = {-64, -16, 16, 64};
     for (int i = 0; i < 4; i++) {
       if (p.stepButtons[i].isMouseOver()) {
         appcore.maxIterations = constrain(appcore.maxIterations + amounts[i], (int)p.slider.min, (int)p.slider.max);
-        p.slider.val       = appcore.maxIterations;
-        appcore.needsRedraw   = true;
+        p.slider.val = appcore.maxIterations;
+        appcore.needsRedraw = true;
       }
     }
 
-    if (p.zoomInBtn.isMouseOver())  { appcore.doZoom(1.05,       width / 2, height / 2); appcore.needsRedraw = true; }
+    if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; }
     if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; }
   }
 
@@ -285,9 +285,9 @@ class InputHandler {
         typingBuffer = typingBuffer.substring(0, typingBuffer.length() - 1);
       } else if (keyCode == ENTER || keyCode == RETURN) {
         if (typingBuffer.length() > 0) {
-          appcore.maxIterations    = constrain(int(typingBuffer), (int)appcore.panel.slider.min, (int)appcore.panel.slider.max);
+          appcore.maxIterations = constrain(int(typingBuffer), (int)appcore.panel.slider.min, (int)appcore.panel.slider.max);
           appcore.panel.slider.val = appcore.maxIterations;
-          appcore.needsRedraw      = true;
+          appcore.needsRedraw = true;
         }
         isTypingIter = false;
       } else if (keyCode == ESC) {
@@ -297,20 +297,20 @@ class InputHandler {
     }
 
     if (key == 'h' || key == 'H') appcore.showUI = !appcore.showUI;
-    if (key == 'w' || key == 'W' || keyCode == UP)    keyUp    = true;
-    if (key == 's' || key == 'S' || keyCode == DOWN)  keyDown  = true;
-    if (key == 'a' || key == 'A' || keyCode == LEFT)  keyLeft  = true;
+    if (key == 'w' || key == 'W' || keyCode == UP)    keyUp = true;
+    if (key == 's' || key == 'S' || keyCode == DOWN)  keyDown = true;
+    if (key == 'a' || key == 'A' || keyCode == LEFT)  keyLeft = true;
     if (key == 'd' || key == 'D' || keyCode == RIGHT) keyRight = true;
-    if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn  = true;
+    if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn = true;
     if (key == 'q' || key == 'Q' || key == '-')               keyZoomOut = true;
   }
 
   void onKeyReleased() {
-    if (key == 'w' || key == 'W' || keyCode == UP)    keyUp    = false;
-    if (key == 's' || key == 'S' || keyCode == DOWN)  keyDown  = false;
-    if (key == 'a' || key == 'A' || keyCode == LEFT)  keyLeft  = false;
+    if (key == 'w' || key == 'W' || keyCode == UP)    keyUp = false;
+    if (key == 's' || key == 'S' || keyCode == DOWN)  keyDown = false;
+    if (key == 'a' || key == 'A' || keyCode == LEFT)  keyLeft = false;
     if (key == 'd' || key == 'D' || keyCode == RIGHT) keyRight = false;
-    if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn  = false;
+    if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn = false;
     if (key == 'q' || key == 'Q' || key == '-')               keyZoomOut = false;
   }
 }
@@ -372,7 +372,7 @@ class UIPanel {
     float px = layout.contentX();
 
     InputHandler inp = appcore.input;
-    String iterText  = inp.isTypingIter
+    String iterText = inp.isTypingIter
       ? "Input: " + inp.typingBuffer + "_"
       : "Iterations: " + appcore.maxIterations;
     fill(t.textPrimary);
@@ -394,49 +394,68 @@ class UIPanel {
     textSize(t.textSizeSecondary);
     textAlign(LEFT, TOP);
 
-    double zr = round(appcore.zoom     * 1000.0) / 1000.0;
-    double xr = round(appcore.offsetX  * 1000.0) / 1000.0;
-    double yr = round(-appcore.offsetY * 1000.0) / 1000.0;
-    
-    text("Zoom: "     + zr + "x",                px, layout.getY("zoomInfo"));
-    text("Position: X=" + xr + ", Y=" + yr,      px, layout.getY("posInfo"));
+    String zr = format3dp(appcore.zoom);
+    String xr = format3dp(appcore.offsetX);
+    String yr = format3dp(-appcore.offsetY);
+
+    text("Zoom: " + zr + "x", px, layout.getY("zoomInfo"));
+    text("Position: X=" + xr + ", Y=" + yr, px, layout.getY("posInfo"));
 
     fill(t.textMuted);
     textSize(t.textSizeCaption);
-    text("[WASD/Arrows]: Pan,  [Scroll/Q,E]: Zoom,  [H]: Toggle UI",
-         px, layout.getY("hints"));
+    text("[WASD/Arrows]: Pan, [Scroll/Q,E]: Zoom, [H]: Toggle UI", px, layout.getY("hints"));
 
     dropdown.display(appcore.renderer.currentMapIndex);
 
     zoomInBtn.display();
     zoomOutBtn.display();
   }
+
+  String format3dp(double value) {
+    double rounded = Math.round(value * 1000.0) / 1000.0;
+    String sign = rounded < 0 ? "-" : "";
+    double absRounded = Math.abs(rounded);
+
+    double whole = Math.floor(absRounded);
+    int frac = (int) Math.round((absRounded - whole) * 1000.0);
+    if (frac == 1000) {
+      whole += 1;
+      frac = 0;
+    }
+
+    String wholeStr = "" + whole;
+    int dot = wholeStr.indexOf('.');
+    if (dot != -1) wholeStr = wholeStr.substring(0, dot);
+
+    String fracStr = (frac < 10 ? "00" : (frac < 100 ? "0" : "")) + frac;
+    return sign + wholeStr + "." + fracStr;
+  }
 }
 
 class UITheme {
-  color bgPanel  = color(20,  20,  20,  210);
-  color bgWidget = color(42,  42,  42,  220);
-  color bgHover  = color(68,  68,  68,  230);
+  color bgPanel = color(20, 20, 20, 210);
+  color bgWidget = color(42, 42, 42, 220);
+  color bgHover = color(68, 68, 68, 230);
   color bgActive = color(100, 100, 100, 245);
 
-  color textPrimary   = color(240);
+  color textPrimary = color(240);
   color textSecondary = color(180);
-  color textMuted     = color(110);
+  color textMuted = color(110);
 
-  float textSizePrimary   = 16;
+  float textSizePrimary = 16;
   float textSizeSecondary = 14;
-  float textSizeCaption   = 10;
+  float textSizeCaption = 10;
 
-  float swPanel     = 1.4;
-  float swWidget    = 1.0;
-  float swTrack     = 0.8;
+  float swPanel = 1.4;
+  float swWidget = 1.0;
+  float swTrack = 0.8;
   float swSeparator = 0.6;
 
-  color strokePanel     = color(105);
-  color strokeWidget    = color(82);
-  color strokeTrack     = color(65);
+  color strokePanel = color(105);
+  color strokeWidget = color(82);
+  color strokeTrack = color(65);
   color strokeSeparator = color(50);
-  color strokeFocus     = color(190);
+  color strokeFocus = color(190);
 
   color accentHandle = color(220);
 }
@@ -444,17 +463,17 @@ class UITheme {
 class UILayout {
   float x, y, w, padding, intraGap, interGap, totalHeight;
 
-  ArrayList<String> names  = new ArrayList<String>();
+  ArrayList<String> names = new ArrayList<String>();
   ArrayList<Float>  heights= new ArrayList<Float>();
   ArrayList<String> groups = new ArrayList<String>();
-  ArrayList<Float>  gaps   = new ArrayList<Float>();
+  ArrayList<Float>  gaps = new ArrayList<Float>();
 
-  HashMap<String, Float> yPositions   = new HashMap<String, Float>();
+  HashMap<String, Float> yPositions = new HashMap<String, Float>();
   ArrayList<Float>       _separatorYs = new ArrayList<Float>();
 
   UILayout(float x, float y, float w, float padding, float intraGap, float interGap) {
     this.x = x; this.y = y; this.w = w;
-    this.padding  = padding;
+    this.padding = padding;
     this.intraGap = intraGap;
     this.interGap = interGap;
   }
@@ -481,7 +500,7 @@ class UILayout {
     for (int i = 0; i < names.size() - 1; i++) {
       if (!groups.get(i).equals(groups.get(i + 1))) {
         float rowBottom = yPositions.get(names.get(i)) + heights.get(i);
-        float nextTop   = yPositions.get(names.get(i + 1));
+        float nextTop = yPositions.get(names.get(i + 1));
         _separatorYs.add((rowBottom + nextTop) / 2.0);
       }
     }
@@ -536,7 +555,7 @@ class Dropdown {
   float    x, y, w, h;
   String[] items;
   boolean  isOpen = false;
-  UITheme  theme;
+  UITheme theme;
 
   Dropdown(float x, float y, float w, float h, String[] items, UITheme theme) {
     this.x=x; this.y=y; this.w=w; this.h=h; this.items=items; this.theme=theme;
