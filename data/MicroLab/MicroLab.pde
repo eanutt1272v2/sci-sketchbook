@@ -8,11 +8,15 @@ int initialParticlesNum = 3000;
 float viscosity = 0.85;
 float maxSpeed = 500;
 float worldScale = 0.5;
+float trailAlpha = 30;
 
 boolean useInitialParticles = true;
 boolean useInstant = true;
 boolean useRect = false;
 boolean useEvolveRules = false;
+boolean useTrails = false;
+boolean showBounds = true;
+boolean showHUD = true;
 
 boolean isDesktop;
 int trueScreenWidth;
@@ -34,30 +38,21 @@ PImage darkAppIcon;
 boolean useLightAppIcon = true;
 
 void settings() {
+   size(displayWidth, displayHeight, P2D);
+   pixelDensity(displayDensity());
    osCheck();
-   
-   if (isDesktop) {
-      trueScreenWidth  = displayWidth;
-      trueScreenHeight = displayHeight;
-      fullScreen();
-   } else {
-      trueScreenWidth  = screenWidth;
-      trueScreenHeight = screenHeight;
-      size(screenWidth, screenHeight);
-   }
 }
 
 void setup() {
-   setAppIcon();
-   size(screenWidth, screenHeight, P2D);
+   frameRate(60);
+   //setAppIcon();
    man = new Manager();
-   gui = new GUI(man);
    mouse = new Mouse();
+   gui = new GUI(man);
    man.randomTypes();
 }
 
 void draw() {
-   frameRate(60);
    man.update();
    mouse.update();
    gui.update();
@@ -105,7 +100,9 @@ void osCheck() {
 }
 
 void mouseDragged() {
-   if (!mouse.selected && !gui.selected && gui.selected != 0) {
-      gui.mouseDragged();
-   }
+   gui.mouseDragged();
+}
+
+void keyPressed() {
+   gui.handleKey(key, keyCode);
 }

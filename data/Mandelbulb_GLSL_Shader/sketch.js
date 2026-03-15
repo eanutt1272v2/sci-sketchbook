@@ -34,7 +34,6 @@ function preload() {
 }
 
 function setup() {
-  const canvasSize = min(windowWidth, windowHeight);
   createCanvas(windowWidth, windowHeight, WEBGL);
 
   pixelDensity(1);
@@ -44,8 +43,7 @@ function setup() {
 }
 
 function windowResized() {
-  const canvasSize = min(windowWidth, windowHeight);
-  resizeCanvas(canvasSize, canvasSize);
+  resizeCanvas(windowWidth, windowHeight, WEBGL);
 }
 
 function draw() {
