@@ -7,10 +7,24 @@
 float x = 0, y = 0;
 int pointsPerFrame = 8000;
 
-void setup() {
-  size(800, 800, P2D); 
-  background(10, 15, 10);
+void settings() {
+  size(800, 800, P2D);
+  pixelDensity(displayDensity());
   smooth(8);
+}
+
+void setup() {
+  surface.setResizable(false);
+
+  javax.swing.SwingUtilities.invokeLater(new Runnable() {
+    public void run() {
+      com.jogamp.newt.opengl.GLWindow window = (com.jogamp.newt.opengl.GLWindow) surface.getNative();
+      window.setUndecorated(false);
+      window.setSize(width, height);
+    }
+  });
+  
+  background(10, 15, 10);
 }
 
 void draw() {

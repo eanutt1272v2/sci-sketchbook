@@ -16,8 +16,7 @@ void setup() {
 
   javax.swing.SwingUtilities.invokeLater(new Runnable() {
     public void run() {
-      com.jogamp.newt.opengl.GLWindow window =
-        (com.jogamp.newt.opengl.GLWindow) surface.getNative();
+      com.jogamp.newt.opengl.GLWindow window = (com.jogamp.newt.opengl.GLWindow) surface.getNative();
       window.setUndecorated(false);
       window.setSize(width, height);
     }
