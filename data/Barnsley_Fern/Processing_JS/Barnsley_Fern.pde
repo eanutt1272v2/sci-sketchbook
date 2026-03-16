@@ -8,9 +8,15 @@ float x = 0, y = 0;
 int pointsPerFrame = 8000;
 
 void setup() {
-  size(800, 800, P2D); 
+  const canvasSize = min(screenWidth, screenHeight);
+  size(canvasSize, canvasSize, P2D); 
   background(10, 15, 10);
   smooth(8);
+}
+
+void windowResized() {
+  const canvasSize = min(screenWidth, screenHeight);
+  resize(canvasSize, canvasSize, P2D);
 }
 
 void draw() {
