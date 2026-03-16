@@ -7,9 +7,21 @@
 AppCore appcore;
 
 void setup() {
-  size(800, 800, P2D);
+  const canvasSize = min(screenWidth, screenHeight);
+  size(canvasSize, canvasSize, P2D);
   appcore = new AppCore();
   appcore.setup();
+}
+
+void resizeSketch() {
+  const canvasSize = min(screenWidth, screenHeight);
+  size(canvasSize, canvasSize, P2D); 
+  
+  if (appcore != null) {
+    appcore.renderer.buffer = createGraphics(width, height, P2D);
+    appcore.panel = new UIPanel(appcore); 
+    appcore.needsRedraw = true;
+  }
 }
 
 void draw() { appcore.draw(); }
@@ -17,6 +29,7 @@ void mousePressed() { appcore.input.onMousePressed(); }
 void mouseReleased() { appcore.input.onMouseReleased(); }
 void mouseDragged() { appcore.input.onMouseDragged(); }
 void mouseWheel(MouseEvent e) { appcore.input.onMouseWheel(e); }
+void externalMouseWheel(int delta) { appcore.input.handleManualZoom(delta); }
 void keyPressed() { appcore.input.onKeyPressed(); }
 void keyReleased() { appcore.input.onKeyReleased(); }
 
@@ -273,6 +286,12 @@ class InputHandler {
   void onMouseWheel(MouseEvent e) {
     if (appcore.showUI && appcore.panel.dropdown.isOpen) return;
     appcore.doZoom((e.getCount() < 0) ? 1.15 : 1.0 / 1.15, mouseX, mouseY);
+    appcore.needsRedraw = true;
+  }
+
+  void handleManualZoom(int delta) {
+    double factor = (delta < 0) ? 1.05 : 1.0 / 1.05;
+    appcore.doZoom(factor, mouseX, mouseY);
     appcore.needsRedraw = true;
   }
 
