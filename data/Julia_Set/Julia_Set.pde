@@ -1,7 +1,7 @@
-
 // @file Julia_Set.pde
 // @author @eanutt1272.v2
 // @version 1.0.0
+
 int maxIterations = 256;
 float minVal = -1;
 float maxVal = 1;
