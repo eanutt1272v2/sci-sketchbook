@@ -2,7 +2,7 @@
 // @author @eanutt1272.v2
 // @version 1.0.0
 
-// NEEDS UPGRADE
+// SKETCH NEEDS UPGRADE
 
 int maxIterations = 256;
 float minVal = -1;
