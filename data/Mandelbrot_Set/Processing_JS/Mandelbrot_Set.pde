@@ -25,9 +25,9 @@ void resizeSketch() {
 }
 
 void draw() { appcore.draw(); }
-void mousePressed() { appcore.input.onMousePressed(); println("mousePress triggered"); }
-void mouseReleased() { appcore.input.onMouseReleased(); }
-void mouseDragged() { appcore.input.onMouseDragged(); }
+void mousePressed() { appcore.input.onMousePressed(); println("Triggered mousePressed"); }
+void mouseReleased() { appcore.input.onMouseReleased(); println("Triggered mouseReleased); }
+void mouseDragged() { appcore.input.onMouseDragged(); println("Triggered mouseDragged"); }
 void mouseWheel(MouseEvent e) { appcore.input.onMouseWheel(e); }
 void externalMouseWheel(int delta) { appcore.input.handleManualZoom(delta); }
 void keyPressed() { appcore.input.onKeyPressed(); }
@@ -197,7 +197,7 @@ class InputHandler {
     if (keyLeft) { appcore.offsetX -= speed; changed = true; }
     if (keyRight) { appcore.offsetX += speed; changed = true; }
     if (keyZoomIn) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; }
-    if (keyZoomOut){ appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
+    if (keyZoomOut) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
 
     if (mousePressed && appcore.showUI && pressConsumed && !p.slider.locked) {
       boolean overZoomIn = p.zoomInBtn.isMouseOver();
@@ -274,8 +274,8 @@ class InputHandler {
       }
     }
 
-    if (p.zoomInBtn.isMouseOver() && !appcore.justPressed) { appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; skipHoldZoomOnce = true; }
-    if (p.zoomOutBtn.isMouseOver() && !appcore.justPressed) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; skipHoldZoomOnce = true; }
+    if (p.zoomInBtn.isMouseOver() && !appcore.justPressed) { println("Triggered zoomInBtn"); appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; skipHoldZoomOnce = true; }
+    if (p.zoomOutBtn.isMouseOver() && !appcore.justPressed) { println("Triggered zoomOutBtn"); appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; skipHoldZoomOnce = true; }
   }
 
   void onMouseReleased() {
