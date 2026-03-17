@@ -60,7 +60,7 @@ class AppCore {
 
   void draw() {
     background(0);
-    input.handleContinuousInput();
+    //input.handleContinuousInput();
     if (needsRedraw) { renderer.render(); needsRedraw = false; }
     image(renderer.buffer, 0, 0);
     if (showUI) panel.draw();
