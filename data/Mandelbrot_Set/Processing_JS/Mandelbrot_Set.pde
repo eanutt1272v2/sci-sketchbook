@@ -27,7 +27,7 @@ void resizeSketch() {
 void draw() { appcore.draw(); }
 void mousePressed() { if (!appcore.input.justPressed) { appcore.input.onMousePressed(); println("Triggered mousePressed" + frameCount); } }
 void mouseReleased() { if (!appcore.input.justPressed) { appcore.input.onMouseReleased(); println("Triggered mouseReleased" + frameCount); } }
-void mouseDragged() { appcore.input.onMouseDragged(); println("Triggered mouseDragged" + frameCount); }
+void mouseDragged() { appcore.input.onMouseDragged(); }
 void mouseWheel(MouseEvent e) { appcore.input.onMouseWheel(e); }
 void externalMouseWheel(int delta) { appcore.input.handleManualZoom(delta); }
 void keyPressed() { appcore.input.onKeyPressed(); }
