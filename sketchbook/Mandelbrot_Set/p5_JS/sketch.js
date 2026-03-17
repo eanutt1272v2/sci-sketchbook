@@ -31,33 +31,16 @@ function draw() {
   appcore.draw();
 }
 
-function mousePressed() {
-  appcore.input.onMousePressed();
-  return false;
-}
-
-function mouseReleased() {
-  appcore.input.onMouseReleased();
-  return false;
-}
-
-function mouseDragged() {
-  appcore.input.onMouseDragged();
-  return false;
-}
-
-function mouseWheel(event) {
-  appcore.input.onMouseWheel(event);
-  return false;
-}
-
-function keyPressed() {
-  appcore.input.onKeyPressed();
-}
-
-function keyReleased() {
-  appcore.input.onKeyReleased();
-}
+function draw() { appcore.draw();}
+function mousePressed() { appcore.input.onMousePressed(); return false; }
+function mouseReleased() { appcore.input.onMouseReleased(); return false; }
+function mouseDragged() { appcore.input.onMouseDragged(); return false; }
+function touchStarted() { appcore.input.onMousePressed(); return false;}
+function touchEnded() { appcore.input.onMouseReleased(); return false; }
+function touchMoved() { appcore.input.onMouseDragged(); return false; }
+function mouseWheel(event) { appcore.input.onMouseWheel(event); return false; }
+function keyPressed() { appcore.input.onKeyPressed(); return false; }
+function keyReleased() { appcore.input.onKeyReleased(); return false; }
 
 class AppCore {
   constructor() {
