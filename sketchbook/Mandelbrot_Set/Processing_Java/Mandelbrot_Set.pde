@@ -1,27 +1,30 @@
 /**
- * @file Burning_Ship_Fractal.pde
+ * @file Mandelbrot_Set.pde
+ * @description A Processing Java implementation of a Mandelbrot set explorer with a custom UI for adjusting parameters and color maps.
  * @author @eanutt1272.v2
  * @version 3.0.0
  */
 
 AppCore appcore;
 
-void setup() {
-  const canvasSize = min(screenWidth, screenHeight);
-  size(canvasSize, canvasSize, P2D);
-  appcore = new AppCore();
-  appcore.setup();
+void settings() {
+  size(800, 800, P2D);
+  pixelDensity(displayDensity());
 }
 
-void resizeSketch() {
-  const canvasSize = min(screenWidth, screenHeight);
-  size(canvasSize, canvasSize, P2D); 
-  
-  if (appcore != null) {
-    appcore.renderer.buffer = createGraphics(width, height, P2D);
-    appcore.panel = new UIPanel(appcore); 
-    appcore.needsRedraw = true;
-  }
+void setup() {
+  surface.setResizable(false);
+
+  javax.swing.SwingUtilities.invokeLater(new Runnable() {
+    public void run() {
+      com.jogamp.newt.opengl.GLWindow window = (com.jogamp.newt.opengl.GLWindow) surface.getNative();
+      window.setUndecorated(false);
+      window.setSize(width, height);
+    }
+  });
+
+  appcore = new AppCore();
+  appcore.setup();
 }
 
 void draw() { appcore.draw(); }
@@ -29,17 +32,17 @@ void mousePressed() { appcore.input.onMousePressed(); }
 void mouseReleased() { appcore.input.onMouseReleased(); }
 void mouseDragged() { appcore.input.onMouseDragged(); }
 void mouseWheel(MouseEvent e) { appcore.input.onMouseWheel(e); }
-void externalMouseWheel(int delta) { appcore.input.handleManualZoom(delta); }
 void keyPressed() { appcore.input.onKeyPressed(); }
 void keyReleased() { appcore.input.onKeyReleased(); }
 
 class AppCore {
   int maxIterations = 128;
   double zoom = 1.0;
-  double offsetX = -0.02;
-  double offsetY = -0.08;
+  double offsetX = -0.25;
+  double offsetY = 0.5;
   boolean needsRedraw = true;
   boolean showUI = true;
+
   boolean justPressed = false;
 
   UITheme theme;
@@ -60,10 +63,7 @@ class AppCore {
   void draw() {
     background(0);
     input.handleContinuousInput();
-    if (needsRedraw) {
-      renderer.render();
-      needsRedraw = false;
-    }
+    if (needsRedraw) { renderer.render(); needsRedraw = false; }
     image(renderer.buffer, 0, 0);
     if (showUI) panel.draw();
     justPressed = false;
@@ -110,15 +110,16 @@ class FractalRenderer {
       for (int y = 0; y < height; y++) {
         double cx = map(x, 0, width, -2.1f * ar, 1.1f * ar) * invZoom + appcore.offsetX;
         double cy = map(y, 0, height, -2.1f, 1.1f) * invZoom + appcore.offsetY;
-        double zx = cx, zy = cy;
+        double zx = 0.0;
+        double zy = 0.0;
         int n = 0;
 
         while (n < appcore.maxIterations) {
           double zx2 = zx * zx, zy2 = zy * zy;
           if (zx2 + zy2 > 16.0) break;
-          double nextZx = zx2 - zy2 + cx;
-          zy = Math.abs(2.0 * zx * zy) + cy;
-          zx = nextZx;
+          double newZx = zx2 - zy2 + cx;
+          zy = 2.0 * zx * zy + cy;
+          zx = newZx;
           n++;
         }
 
@@ -157,18 +158,17 @@ class FractalRenderer {
   }
 
   private double applyPoly(float t, double[] c) {
-    return c[0] + c[1]*t + c[2]*t*t + c[3]*t*t*t
-         + c[4]*t*t*t*t + c[5]*t*t*t*t*t + c[6]*t*t*t*t*t*t;
+    return c[0] + c[1]*t + c[2]*t*t + c[3]*t*t*t + c[4]*t*t*t*t + c[5]*t*t*t*t*t + c[6]*t*t*t*t*t*t;
   }
 
   private double[][] getCoefficients(String name) {
     if (name.equals("cividis")) return new double[][]{{-0.008973,-0.384689,15.429210,-58.977031,102.370492,-83.187239,25.776070},{0.136756,0.639494,0.385562,-1.404197,2.600914,-2.140750,0.688122},{0.294170,2.982654,-22.363760,74.863561,-121.303164,93.974216,-28.262533}};
     if (name.equals("inferno")) return new double[][]{{0.000214,0.105874,11.617115,-41.709277,77.157454,-71.287667,25.092619},{0.001635,0.566364,-3.947723,17.457724,-33.415679,32.553880,-12.222155},{-0.037130,4.117926,-16.257323,44.645117,-82.253923,73.588132,-23.115650}};
-    if (name.equals("magma"))   return new double[][]{{-0.002067,0.250486,8.345901,-27.666969,52.170684,-50.758572,18.664253},{-0.000688,0.694455,-3.596031,14.253853,-27.944584,29.053880,-11.490027},{-0.009548,2.495287,0.329057,-13.646583,12.881091,4.269936,-5.570769}};
-    if (name.equals("mako"))    return new double[][]{{0.032987,1.620032,-5.833466,19.266730,-48.335836,57.794682,-23.674380},{0.013232,0.848348,-1.651402,8.153931,-12.793640,8.555513,-2.172825},{0.040283,0.292971,12.702365,-44.241782,65.176477,-47.319049,14.259791}};
-    if (name.equals("plasma"))  return new double[][]{{0.064053,2.142438,-2.653255,6.094711,-11.065106,9.974645,-3.623823},{0.024812,0.244749,-7.461101,42.308428,-82.644718,71.408341,-22.914405},{0.534900,0.742966,3.108382,-28.491792,60.093584,-54.020563,18.193381}};
-    if (name.equals("rocket"))  return new double[][]{{-0.003174,1.947267,-6.401815,30.376433,-57.268147,44.789992,-12.453563},{0.037717,-0.476821,15.073064,-81.403784,173.768416,-158.313952,52.250665},{0.112123,0.400542,6.253872,-21.550609,14.869938,11.402042,-10.648435}};
-    if (name.equals("turbo"))   return new double[][]{{0.080545,7.008980,-66.727306,228.660253,-334.841257,220.424075,-54.095540},{0.069393,3.147611,-4.927799,25.101273,-69.296265,67.510842,-21.578703},{0.219622,7.655918,-10.162980,-91.680678,288.708703,-305.386975,110.735079}};
+    if (name.equals("magma")) return new double[][]{{-0.002067,0.250486,8.345901,-27.666969,52.170684,-50.758572,18.664253},{-0.000688,0.694455,-3.596031,14.253853,-27.944584,29.053880,-11.490027},{-0.009548,2.495287,0.329057,-13.646583,12.881091,4.269936,-5.570769}};
+    if (name.equals("mako")) return new double[][]{{0.032987,1.620032,-5.833466,19.266730,-48.335836,57.794682,-23.674380},{0.013232,0.848348,-1.651402,8.153931,-12.793640,8.555513,-2.172825},{0.040283,0.292971,12.702365,-44.241782,65.176477,-47.319049,14.259791}};
+    if (name.equals("plasma")) return new double[][]{{0.064053,2.142438,-2.653255,6.094711,-11.065106,9.974645,-3.623823},{0.024812,0.244749,-7.461101,42.308428,-82.644718,71.408341,-22.914405},{0.534900,0.742966,3.108382,-28.491792,60.093584,-54.020563,18.193381}};
+    if (name.equals("rocket")) return new double[][]{{-0.003174,1.947267,-6.401815,30.376433,-57.268147,44.789992,-12.453563},{0.037717,-0.476821,15.073064,-81.403784,173.768416,-158.313952,52.250665},{0.112123,0.400542,6.253872,-21.550609,14.869938,11.402042,-10.648435}};
+    if (name.equals("turbo")) return new double[][]{{0.080545,7.008980,-66.727306,228.660253,-334.841257,220.424075,-54.095540},{0.069393,3.147611,-4.927799,25.101273,-69.296265,67.510842,-21.578703},{0.219622,7.655918,-10.162980,-91.680678,288.708703,-305.386975,110.735079}};
     if (name.equals("viridis")) return new double[][]{{0.274455,0.107708,-0.327241,-4.599932,6.203736,4.751787,-5.432077},{0.005768,1.396470,0.214814,-5.758238,14.153965,-13.749439,4.641571},{0.332664,1.386771,0.091977,-19.291809,56.656300,-65.320968,26.272108}};
     return new double[][]{{0,1,0,0,0,0,0},{0,1,0,0,0,0,0},{0,1,0,0,0,0,0}};
   }
@@ -198,6 +198,7 @@ class InputHandler {
     if (keyRight) { appcore.offsetX += speed; changed = true; }
     if (keyZoomIn) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; }
     if (keyZoomOut){ appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
+
     if (mousePressed && appcore.showUI && !appcore.justPressed) {
       if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; }
       if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
@@ -243,7 +244,7 @@ class InputHandler {
         p.slider.min, p.slider.max
       );
       appcore.maxIterations = (int) p.slider.val;
-      appcore.needsRedraw = true;
+      appcore.needsRedraw   = true;
     }
 
     int[] amounts = {-64, -16, 16, 64};
@@ -251,7 +252,7 @@ class InputHandler {
       if (p.stepButtons[i].isMouseOver()) {
         appcore.maxIterations = constrain(appcore.maxIterations + amounts[i], (int)p.slider.min, (int)p.slider.max);
         p.slider.val = appcore.maxIterations;
-        appcore.needsRedraw = true;
+        appcore.needsRedraw   = true;
       }
     }
 
@@ -271,28 +272,21 @@ class InputHandler {
         p.slider.min, p.slider.max
       );
       appcore.maxIterations = (int) p.slider.val;
-      appcore.needsRedraw = true;
+      appcore.needsRedraw   = true;
       return;
     }
-
     if (appcore.showUI && (p.dropdown.isOpen || isTypingIter)) return;
     if (appcore.showUI && (p.zoomInBtn.isMouseOver() || p.zoomOutBtn.isMouseOver())) return;
 
     double ar = (double) width / height;
-    appcore.offsetX -= (mouseX - pmouseX) * (3.2 * ar) / width / appcore.zoom;
-    appcore.offsetY -= (mouseY - pmouseY) * 3.2 / height / appcore.zoom;
+    appcore.offsetX -= (mouseX - pmouseX) * (3.2 * ar) / width  / appcore.zoom;
+    appcore.offsetY -= (mouseY - pmouseY) *  3.2 / height / appcore.zoom;
     appcore.needsRedraw = true;
   }
 
   void onMouseWheel(MouseEvent e) {
     if (appcore.showUI && appcore.panel.dropdown.isOpen) return;
     appcore.doZoom((e.getCount() < 0) ? 1.15 : 1.0 / 1.15, mouseX, mouseY);
-    appcore.needsRedraw = true;
-  }
-
-  void handleManualZoom(int delta) {
-    double factor = (delta < 0) ? 1.05 : 1.0 / 1.05;
-    appcore.doZoom(factor, mouseX, mouseY);
     appcore.needsRedraw = true;
   }
 
@@ -316,21 +310,21 @@ class InputHandler {
     }
 
     if (key == 'h' || key == 'H') appcore.showUI = !appcore.showUI;
-    if (key == 'w' || key == 'W' || keyCode == UP)    keyUp = true;
-    if (key == 's' || key == 'S' || keyCode == DOWN)  keyDown = true;
-    if (key == 'a' || key == 'A' || keyCode == LEFT)  keyLeft = true;
+    if (key == 'w' || key == 'W' || keyCode == UP) keyUp = true;
+    if (key == 's' || key == 'S' || keyCode == DOWN) keyDown = true;
+    if (key == 'a' || key == 'A' || keyCode == LEFT) keyLeft = true;
     if (key == 'd' || key == 'D' || keyCode == RIGHT) keyRight = true;
     if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn = true;
-    if (key == 'q' || key == 'Q' || key == '-')               keyZoomOut = true;
+    if (key == 'q' || key == 'Q' || key == '-') keyZoomOut = true;
   }
 
   void onKeyReleased() {
-    if (key == 'w' || key == 'W' || keyCode == UP)    keyUp = false;
-    if (key == 's' || key == 'S' || keyCode == DOWN)  keyDown = false;
-    if (key == 'a' || key == 'A' || keyCode == LEFT)  keyLeft = false;
+    if (key == 'w' || key == 'W' || keyCode == UP) keyUp = false;
+    if (key == 's' || key == 'S' || keyCode == DOWN) keyDown = false;
+    if (key == 'a' || key == 'A' || keyCode == LEFT) keyLeft = false;
     if (key == 'd' || key == 'D' || keyCode == RIGHT) keyRight = false;
     if (key == 'e' || key == 'E' || key == '=' || key == '+') keyZoomIn = false;
-    if (key == 'q' || key == 'Q' || key == '-')               keyZoomOut = false;
+    if (key == 'q' || key == 'Q' || key == '-') keyZoomOut = false;
   }
 }
 
@@ -357,10 +351,7 @@ class UIPanel {
     layout.add("colorMap", 28, "panel");
     layout.finish();
 
-    slider = new Slider(
-      layout.contentX(), layout.getY("iterSlider"),
-      layout.contentW(), 18, 1, 512, appcore.maxIterations, appcore.theme
-    );
+    slider = new Slider(layout.contentX(), layout.getY("iterSlider"), layout.contentW(), 18, 1, 512, appcore.maxIterations, appcore.theme);
 
     String[] stepLabels = {"--", "-", "+", "++"};
     float stepY = layout.getY("stepButtons");
@@ -391,9 +382,7 @@ class UIPanel {
     float px = layout.contentX();
 
     InputHandler inp = appcore.input;
-    String iterText = inp.isTypingIter
-      ? "Input: " + inp.typingBuffer + "_"
-      : "Iterations: " + appcore.maxIterations;
+    String iterText = inp.isTypingIter ? "Input: " + inp.typingBuffer + "_" : "Iterations: " + appcore.maxIterations;
     fill(t.textPrimary);
     textSize(t.textSizePrimary);
     textAlign(LEFT, TOP);
@@ -452,9 +441,9 @@ class UIPanel {
 }
 
 class UITheme {
-  color bgPanel = color(20, 20, 20, 210);
-  color bgWidget = color(42, 42, 42, 220);
-  color bgHover = color(68, 68, 68, 230);
+  color bgPanel = color(20,  20,  20,  210);
+  color bgWidget = color(42,  42,  42,  220);
+  color bgHover = color(68,  68,  68,  230);
   color bgActive = color(100, 100, 100, 245);
 
   color textPrimary = color(240);
@@ -483,12 +472,12 @@ class UILayout {
   float x, y, w, padding, intraGap, interGap, totalHeight;
 
   ArrayList<String> names = new ArrayList<String>();
-  ArrayList<Float>  heights= new ArrayList<Float>();
+  ArrayList<Float> heights = new ArrayList<Float>();
   ArrayList<String> groups = new ArrayList<String>();
-  ArrayList<Float>  gaps = new ArrayList<Float>();
+  ArrayList<Float> gaps = new ArrayList<Float>();
 
   HashMap<String, Float> yPositions = new HashMap<String, Float>();
-  ArrayList<Float>       _separatorYs = new ArrayList<Float>();
+  ArrayList<Float> _separatorYs = new ArrayList<Float>();
 
   UILayout(float x, float y, float w, float padding, float intraGap, float interGap) {
     this.x = x; this.y = y; this.w = w;
@@ -542,8 +531,7 @@ class Slider {
 
   Slider(float x, float y, float w, float h, float min, float max, float start, UITheme theme) {
     this.x=x; this.y=y; this.w=w; this.h=h;
-    this.min=min; this.max=max; this.val=start;
-    this.theme=theme;
+    this.min=min; this.max=max; this.val=start; this.theme=theme;
   }
 
   void display() {
@@ -556,8 +544,7 @@ class Slider {
     float handleX = map(val, min, max, x, x + w);
     noStroke();
     fill(locked ? theme.accentHandle : theme.textSecondary);
-    float r = h * 0.5;
-    ellipse(handleX, trackY, r, r);
+    ellipse(handleX, trackY, h * 0.5, h * 0.5);
   }
 
   boolean update() {
@@ -571,9 +558,9 @@ class Slider {
 }
 
 class Dropdown {
-  float    x, y, w, h;
+  float x, y, w, h;
   String[] items;
-  boolean  isOpen = false;
+  boolean isOpen = false;
   UITheme theme;
 
   Dropdown(float x, float y, float w, float h, String[] items, UITheme theme) {
@@ -594,8 +581,7 @@ class Dropdown {
 
     if (isOpen) {
       for (int i = 0; i < items.length; i++) {
-        boolean over = mouseX > x && mouseX < x + w
-                    && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h;
+        boolean over = mouseX > x && mouseX < x + w && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h;
         fill(over ? theme.bgActive : theme.bgHover);
         rect(x, y + h + i * h, w, h);
         fill(theme.textPrimary);
@@ -612,15 +598,14 @@ class Dropdown {
 
   int getClickedIndex() {
     for (int i = 0; i < items.length; i++) {
-      if (mouseX > x && mouseX < x + w
-       && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h) return i;
+      if (mouseX > x && mouseX < x + w && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h) return i;
     }
     return -1;
   }
 }
 
 class Button {
-  float  x, y, w, h;
+  float x, y, w, h;
   String label;
   UITheme theme;
 
