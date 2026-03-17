@@ -9,3 +9,6 @@ Interactive zooming and panning; UI sliders for iteration depth and colour mappi
 
 ## Technology
 - **Tech Stack:** Processing (Java) & p5.js
+
+## Preview
+![Burning Ship Fractal](Burning_Ship_Fractal.png)
