@@ -64,10 +64,7 @@ class AppCore {
     if (needsRedraw) { renderer.render(); needsRedraw = false; }
     image(renderer.buffer, 0, 0);
     if (showUI) panel.draw();
-
-    if (frameCount % 2 == 0) {
-      justPressed = false;
-    }
+    justPressed = false;
   }
 
   void doZoom(double factor, int tx, int ty) {
@@ -181,6 +178,8 @@ class InputHandler {
   boolean keyUp, keyDown, keyLeft, keyRight, keyZoomIn, keyZoomOut;
   boolean isTypingIter = false;
   String typingBuffer = "";
+  boolean pressConsumed = false;
+  boolean skipHoldZoomOnce = false;
 
   InputHandler(AppCore appcore) {
     this.appcore = appcore;
@@ -200,9 +199,23 @@ class InputHandler {
     if (keyZoomIn) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; }
     if (keyZoomOut){ appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
 
-    if (mousePressed && appcore.showUI && !appcore.justPressed) {
-      if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; appcore.justPressed = true; }
-      if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; appcore.justPressed = true; }
+    if (mousePressed && appcore.showUI && pressConsumed && !p.slider.locked) {
+      boolean overZoomIn = p.zoomInBtn.isMouseOver();
+      boolean overZoomOut = p.zoomOutBtn.isMouseOver();
+
+      if (overZoomIn || overZoomOut) {
+        if (skipHoldZoomOnce) {
+          skipHoldZoomOnce = false;
+        } else {
+          if (overZoomIn) appcore.doZoom(1.05, width / 2, height / 2);
+          if (overZoomOut) appcore.doZoom(1.0 / 1.05, width / 2, height / 2);
+          changed = true;
+        }
+      } else {
+        skipHoldZoomOnce = false;
+      }
+    } else {
+      skipHoldZoomOnce = false;
     }
 
     if (mousePressed && p.slider.locked && p.slider.update()) {
@@ -214,6 +227,10 @@ class InputHandler {
   }
 
   void onMousePressed() {
+    if (pressConsumed) return;
+    pressConsumed = true;
+    skipHoldZoomOnce = false;
+
     if (!appcore.showUI) return;
     UIPanel p = appcore.panel;
 
@@ -257,11 +274,13 @@ class InputHandler {
       }
     }
 
-    if (p.zoomInBtn.isMouseOver() && !appcore.justPressed) { appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; }
-    if (p.zoomOutBtn.isMouseOver() && !appcore.justPressed) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; }
+    if (p.zoomInBtn.isMouseOver() && !appcore.justPressed) { appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; skipHoldZoomOnce = true; }
+    if (p.zoomOutBtn.isMouseOver() && !appcore.justPressed) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; skipHoldZoomOnce = true; }
   }
 
   void onMouseReleased() {
+    pressConsumed = false;
+    skipHoldZoomOnce = false;
     appcore.panel.slider.locked = false;
   }
 
@@ -300,7 +319,7 @@ class InputHandler {
   void onKeyPressed() {
     if (isTypingIter) {
       if (key >= '0' && key <= '9') {
-        typingBuffer += key;
+        typingBuffer += str(key);
       } else if (keyCode == BACKSPACE && typingBuffer.length() > 0) {
         typingBuffer = typingBuffer.substring(0, typingBuffer.length() - 1);
       } else if (keyCode == ENTER || keyCode == RETURN) {
