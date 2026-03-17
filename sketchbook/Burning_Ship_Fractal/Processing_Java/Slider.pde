@@ -19,8 +19,7 @@ class Slider {
     float handleX = map(val, min, max, x, x + w);
     noStroke();
     fill(locked ? theme.accentHandle : theme.textSecondary);
-    float r = h * 0.75;
-    ellipse(handleX, trackY, r, r);
+    ellipse(handleX, trackY, h * 0.75, h * 0.75);
   }
 
   boolean update() {
