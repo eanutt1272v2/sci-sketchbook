@@ -25,7 +25,7 @@ void resizeSketch() {
 }
 
 void draw() { appcore.draw(); }
-void mousePressed() { appcore.input.onMousePressed(); }
+void mousePressed() { appcore.input.onMousePressed(); println("mousePress triggered"); }
 void mouseReleased() { appcore.input.onMouseReleased(); }
 void mouseDragged() { appcore.input.onMouseDragged(); }
 void mouseWheel(MouseEvent e) { appcore.input.onMouseWheel(e); }
