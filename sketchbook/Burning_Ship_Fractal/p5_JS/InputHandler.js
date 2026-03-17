@@ -11,6 +11,7 @@ class InputHandler {
 
     this.isTypingIter = false;
     this.typingBuffer = "";
+    this.pinchDistance = null;
   }
 
   handleContinuousInput() {
@@ -146,6 +147,52 @@ class InputHandler {
     this.appcore.panel.slider.locked = false;
     // ! Watch this flag carefully to avoid issues with click-drag interactions on the UI
     this.appcore.justPressed = false;
+    this.pinchDistance = null;
+  }
+
+  onTouchStarted() {
+    if (touches.length === 2) {
+      const t1 = touches[0];
+      const t2 = touches[1];
+      this.pinchDistance = dist(t1.x, t1.y, t2.x, t2.y);
+      return;
+    }
+
+    this.pinchDistance = null;
+    this.onMousePressed();
+  }
+
+  onTouchMoved() {
+    if (touches.length === 2) {
+      if (this.appcore.showUI && this.appcore.panel.dropdown.isOpen) {
+        return;
+      }
+
+      const t1 = touches[0];
+      const t2 = touches[1];
+      const distance = dist(t1.x, t1.y, t2.x, t2.y);
+      const cx = (t1.x + t2.x) * 0.5;
+      const cy = (t1.y + t2.y) * 0.5;
+
+      if (this.pinchDistance && this.pinchDistance > 0) {
+        const factor = distance / this.pinchDistance;
+        if (isFinite(factor) && factor > 0) {
+          this.appcore.doZoom(factor, cx, cy);
+          this.appcore.needsRedraw = true;
+        }
+      }
+
+      this.pinchDistance = distance;
+      return;
+    }
+
+    this.pinchDistance = null;
+    this.onMouseDragged();
+  }
+
+  onTouchEnded() {
+    this.pinchDistance = null;
+    this.onMouseReleased();
   }
 
   onMouseDragged() {

@@ -1,7 +1,7 @@
 # Slime Mold Growth
 
 ## Concept
-A simulation of Physarum polycephalum (slime mold) growth patterns using agent-based modeling.
+A simulation of Physarum polycephalum (slime mold) growth patterns using agent-based modelling.
 Agents follow chemoattractant gradients (pheromones) to form complex, efficient networks.
 
 ## Controls
