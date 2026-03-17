@@ -4,7 +4,7 @@ This repository hosts a collection of scientifically focused sketches, visualisa
 
 A public instance is available at: [https://sci-sketchbook.onrender.com/](https://sci-sketchbook.onrender.com/).
 
-## Sketch Index
+## Sketch Collection Index
 
 | Sketch | Description | Tech Stack |
 | :--- | :--- | :--- |
