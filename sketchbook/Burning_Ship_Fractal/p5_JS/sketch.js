@@ -492,6 +492,7 @@ class UIPanel {
 
     const inp = this.appcore.input;
     const iterText = inp.isTypingIter ? `Input: ${inp.typingBuffer}_` : `Iterations: ${this.appcore.maxIterations}`;
+    noStroke();
     fill(t.textPrimary);
     textSize(t.textSizePrimary);
     textAlign(LEFT, TOP);
@@ -509,6 +510,7 @@ class UIPanel {
       b.display();
     }
 
+    noStroke();
     fill(t.textSecondary);
     textSize(t.textSizeSecondary);
     textAlign(LEFT, TOP);
@@ -707,7 +709,7 @@ class Dropdown {
     fill(this.theme.textPrimary);
     textSize(this.theme.textSizeSecondary);
     textAlign(LEFT, CENTER);
-    text(`Map: ${this.items[currentIndex]}`, this.x + 8, this.y + this.h / 2);
+    text(`Map: ${this.items[currentIndex].charAt(0).toUpperCase() + this.items[currentIndex].slice(1)}`, this.x + 8, this.y + this.h / 2);
 
     if (this.isOpen) {
       for (let i = 0; i < this.items.length; i++) {
@@ -715,7 +717,7 @@ class Dropdown {
         fill(over ? this.theme.bgActive : this.theme.bgHover);
         rect(this.x, this.y + this.h + i * this.h, this.w, this.h);
         fill(this.theme.textPrimary);
-        text(this.items[i], this.x + 8, this.y + this.h + i * this.h + this.h / 2);
+        text(this.items[i].charAt(0).toUpperCase() + this.items[i].slice(1), this.x + 8, this.y + this.h + i * this.h + this.h / 2);
       }
     }
   }

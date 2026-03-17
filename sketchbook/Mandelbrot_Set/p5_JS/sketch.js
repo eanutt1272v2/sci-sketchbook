@@ -483,8 +483,8 @@ class UIPanel {
 
     const inp = this.appcore.input;
     const iterText = inp.isTypingIter ? `Input: ${inp.typingBuffer}_` : `Iterations: ${this.appcore.maxIterations}`;
-    fill(t.textPrimary);
     noStroke();
+    fill(t.textPrimary);
     textSize(t.textSizePrimary);
     textAlign(LEFT, TOP);
     text(iterText, px, this.layout.getY("iterLabel"));
@@ -501,6 +501,7 @@ class UIPanel {
       b.display();
     }
 
+    noStroke();
     fill(t.textSecondary);
     textSize(t.textSizeSecondary);
     textAlign(LEFT, TOP);
@@ -509,7 +510,6 @@ class UIPanel {
     const xr = this.format3dp(this.appcore.offsetX);
     const yr = this.format3dp(-this.appcore.offsetY);
 
-    noStroke();
     text(`Zoom: ${zr}x`, px, this.layout.getY("zoomInfo"));
     text(`Position: X=${xr}, Y=${yr}`, px, this.layout.getY("posInfo"));
 

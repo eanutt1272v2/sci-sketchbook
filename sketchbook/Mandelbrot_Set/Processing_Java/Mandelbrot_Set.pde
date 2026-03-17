@@ -1,6 +1,6 @@
 /**
  * @file Mandelbrot_Set.pde
- * @description A Processing Java implementation of a Mandelbrot set explorer with a custom UI for adjusting parameters and color maps.
+ * @description A Processing Java implementation of a Mandelbrot set explorer with a custom UI for adjusting parameters and colour maps.
  * @author @eanutt1272.v2
  * @version 3.0.0
  */
