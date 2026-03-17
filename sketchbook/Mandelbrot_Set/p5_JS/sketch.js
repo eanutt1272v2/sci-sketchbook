@@ -641,7 +641,7 @@ class Slider {
     const handleX = map(this.val, this.min, this.max, this.x, this.x + this.w);
     noStroke();
     fill(this.locked ? this.theme.accentHandle : this.theme.textSecondary);
-    ellipse(handleX, trackY, this.h * 0.5, this.h * 0.5);
+    ellipse(handleX, trackY, this.h * 0.75, this.h * 0.75);
   }
 
   update() {
