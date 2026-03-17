@@ -178,8 +178,6 @@ class InputHandler {
   boolean keyUp, keyDown, keyLeft, keyRight, keyZoomIn, keyZoomOut;
   boolean isTypingIter = false;
   String typingBuffer = "";
-  boolean pressConsumed = false;
-  boolean skipHoldZoomOnce = false;
 
   InputHandler(AppCore appcore) {
     this.appcore = appcore;
@@ -197,25 +195,11 @@ class InputHandler {
     if (keyLeft) { appcore.offsetX -= speed; changed = true; }
     if (keyRight) { appcore.offsetX += speed; changed = true; }
     if (keyZoomIn) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; }
-    if (keyZoomOut) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
+    if (keyZoomOut){ appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
 
-    if (mousePressed && appcore.showUI && pressConsumed && !p.slider.locked) {
-      boolean overZoomIn = p.zoomInBtn.isMouseOver();
-      boolean overZoomOut = p.zoomOutBtn.isMouseOver();
-
-      if (overZoomIn || overZoomOut) {
-        if (skipHoldZoomOnce) {
-          skipHoldZoomOnce = false;
-        } else {
-          if (overZoomIn) appcore.doZoom(1.05, width / 2, height / 2);
-          if (overZoomOut) appcore.doZoom(1.0 / 1.05, width / 2, height / 2);
-          changed = true;
-        }
-      } else {
-        skipHoldZoomOnce = false;
-      }
-    } else {
-      skipHoldZoomOnce = false;
+    if (mousePressed && appcore.showUI && !appcore.justPressed) {
+      if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; }
+      if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
     }
 
     if (mousePressed && p.slider.locked && p.slider.update()) {
@@ -227,9 +211,7 @@ class InputHandler {
   }
 
   void onMousePressed() {
-    if (pressConsumed) return;
-    pressConsumed = true;
-    skipHoldZoomOnce = false;
+    appcore.justPressed = true;
 
     if (!appcore.showUI) return;
     UIPanel p = appcore.panel;
@@ -260,27 +242,23 @@ class InputHandler {
         p.slider.min, p.slider.max
       );
       appcore.maxIterations = (int) p.slider.val;
-      appcore.needsRedraw = true;
-      appcore.justPressed = true;
+      appcore.needsRedraw   = true;
     }
 
     int[] amounts = {-64, -16, 16, 64};
     for (int i = 0; i < 4; i++) {
-      if (p.stepButtons[i].isMouseOver() && !appcore.justPressed) {
+      if (p.stepButtons[i].isMouseOver()) {
         appcore.maxIterations = constrain(appcore.maxIterations + amounts[i], (int)p.slider.min, (int)p.slider.max);
         p.slider.val = appcore.maxIterations;
-        appcore.needsRedraw = true;
-        appcore.justPressed = true;
+        appcore.needsRedraw   = true;
       }
     }
 
-    if (p.zoomInBtn.isMouseOver() && !appcore.justPressed) { println("Triggered zoomInBtn"); appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; skipHoldZoomOnce = true; }
-    if (p.zoomOutBtn.isMouseOver() && !appcore.justPressed) { println("Triggered zoomOutBtn"); appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; skipHoldZoomOnce = true; }
+    if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; }
+    if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; }
   }
 
   void onMouseReleased() {
-    pressConsumed = false;
-    skipHoldZoomOnce = false;
     appcore.panel.slider.locked = false;
   }
 
@@ -292,7 +270,7 @@ class InputHandler {
         p.slider.min, p.slider.max
       );
       appcore.maxIterations = (int) p.slider.val;
-      appcore.needsRedraw = true;
+      appcore.needsRedraw   = true;
       return;
     }
     if (appcore.showUI && (p.dropdown.isOpen || isTypingIter)) return;
@@ -319,7 +297,7 @@ class InputHandler {
   void onKeyPressed() {
     if (isTypingIter) {
       if (key >= '0' && key <= '9') {
-        typingBuffer += str(key);
+        typingBuffer += key;
       } else if (keyCode == BACKSPACE && typingBuffer.length() > 0) {
         typingBuffer = typingBuffer.substring(0, typingBuffer.length() - 1);
       } else if (keyCode == ENTER || keyCode == RETURN) {
