@@ -27,10 +27,6 @@ function windowResized() {
   }
 }
 
-function draw() {
-  appcore.draw();
-}
-
 function draw() { appcore.draw();}
 function mousePressed() { appcore.input.onMousePressed(); return false; }
 function mouseReleased() { appcore.input.onMouseReleased(); return false; }
