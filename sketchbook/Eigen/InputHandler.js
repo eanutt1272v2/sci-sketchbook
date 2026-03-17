@@ -1,0 +1,288 @@
+/**
+ * @file InputHandler.js
+ * @author @eanutt1272.v2
+ * @version 1.0.0
+ */
+
+class InputHandler {
+  constructor(manager) {
+    this.m = manager;
+    this.gesture = {
+      pan: null,
+      pinch: null
+    };
+  }
+
+  handleContinuousInput() {
+    if (this.shouldIgnoreKeyboard() || this.m.params.renderKeymapRef) {
+      return;
+    }
+
+    const { params } = this.m;
+    const shiftHeld = keyIsDown(SHIFT);
+    let needsRender = false;
+    let syncViewConstraints = false;
+
+    if (keyIsDown(LEFT_ARROW) || keyIsDown(RIGHT_ARROW)) {
+      if (shiftHeld) {
+        const step = max(0.25, params.viewRadius * 0.03);
+        const delta = keyIsDown(RIGHT_ARROW) ? step : -step;
+        this.panCurrentPlane(delta, 0);
+      } else {
+        params.sliceOffset = constrain(
+          params.sliceOffset + (keyIsDown(RIGHT_ARROW) ? 0.5 : -0.5),
+          -params.viewRadius,
+          params.viewRadius
+        );
+      }
+
+      needsRender = true;
+    }
+
+    if (keyIsDown(UP_ARROW) || keyIsDown(DOWN_ARROW)) {
+      if (shiftHeld) {
+        const step = max(0.25, params.viewRadius * 0.03);
+        const delta = keyIsDown(DOWN_ARROW) ? -step : step;
+        this.panCurrentPlane(0, delta);
+        needsRender = true;
+      } else {
+        const zoomIn = keyIsDown(UP_ARROW);
+        const zoomOut = keyIsDown(DOWN_ARROW);
+
+        if (zoomIn !== zoomOut) {
+          const zoomScale = zoomOut ? 1.02 : 0.98;
+          if (this.applyZoomAtNormalisedPoint(0.5, 0.5, zoomScale)) {
+            needsRender = true;
+            syncViewConstraints = true;
+          }
+        }
+      }
+    }
+
+    if (keyIsDown(219) || keyIsDown(221)) {
+      params.exposure = constrain(
+        params.exposure + (keyIsDown(221) ? 0.01 : -0.01),
+        0,
+        2
+      );
+      needsRender = true;
+    }
+
+    const isPlus = keyIsDown(187) || keyIsDown(61) || keyIsDown(107);
+    const isMinus = keyIsDown(189) || keyIsDown(173) || keyIsDown(109);
+
+    if (isPlus || isMinus) {
+      params.resolution = constrain(params.resolution + (isPlus ? 2 : -2), 64, 512);
+      needsRender = true;
+    }
+
+    if (!needsRender) {
+      return;
+    }
+
+    if (syncViewConstraints) {
+      this.m.syncViewConstraints();
+    } else {
+      this.m.requestRender();
+    }
+  }
+
+  handleKeyPressed(k, kCode) {
+    if (this.shouldIgnoreKeyboard()) {
+      return false;
+    }
+
+    let logMsg = "";
+    let shouldRefreshGUI = true;
+    const keyLower = (k || "").toLowerCase();
+
+    if (keyLower === "w" || keyLower === "s") {
+      this.m.updateQuantumNumbers("n", keyLower === "w" ? 1 : -1);
+      logMsg = `n changed to ${this.m.params.n}`;
+    } else if (keyLower === "d" || keyLower === "a") {
+      this.m.updateQuantumNumbers("l", keyLower === "d" ? 1 : -1);
+      logMsg = `l changed to ${this.m.params.l}`;
+    } else if (keyLower === "e" || keyLower === "q") {
+      this.m.updateQuantumNumbers("m", keyLower === "e" ? 1 : -1);
+      logMsg = `m changed to ${this.m.params.m}`;
+    }
+
+    const planes = { "1": "xy", "2": "xz", "3": "yz" };
+    if (planes[k]) {
+      this.m.changePlane(planes[k]);
+      logMsg = `Plane switched to ${this.m.params.slicePlane.toUpperCase()}`;
+    }
+
+    switch (keyLower) {
+      case "c":
+        this.m.cycleColourMap();
+        logMsg = `Map switched to ${this.m.params.colourMap}`;
+        break;
+      case "o":
+        this.m.toggleOverlay();
+        logMsg = `Overlay: ${this.m.params.renderOverlay}`;
+        break;
+      case "m":
+        this.m.toggleSmoothing();
+        logMsg = `Smoothing: ${this.m.params.pixelSmoothing}`;
+        break;
+      case "h":
+        this.m.toggleGUI();
+        shouldRefreshGUI = false;
+        break;
+      case "p":
+        this.m.exportImage();
+        shouldRefreshGUI = false;
+        break;
+      case "x":
+        this.m.resetViewCenter();
+        logMsg = "View center reset";
+        break;
+    }
+
+    if (k === "#") {
+      this.m.toggleKeymapRef();
+      logMsg = `Keymap Reference: ${this.m.params.renderKeymapRef}`;
+    }
+
+    if (k === " ") {
+      this.m.resetSliceOffset();
+      logMsg = "Offset reset to 0";
+    }
+
+    if (logMsg) {
+      console.log(`[Action] ${logMsg}`);
+    }
+
+    if (shouldRefreshGUI) {
+      this.m.refreshGUI();
+    }
+
+    return false;
+  }
+
+  handleKeyReleased() {
+    return false;
+  }
+
+  handleWheel(event) {
+    if (!this.m.canvasInteraction(event)) {
+      return;
+    }
+
+    const zoomScale = Math.exp(event.delta * 0.0015);
+    this.applyZoomAtNormalisedPoint(mouseX / max(1, width), mouseY / max(1, height), zoomScale);
+
+    this.m.syncViewConstraints();
+    return false;
+  }
+
+  handlePointer(event) {
+    if (!this.m.canvasInteraction(event)) {
+      return;
+    }
+
+    const touchCount = touches.length;
+
+    if (touchCount === 2) {
+      this.handlePinch(touches[0], touches[1]);
+      return false;
+    }
+
+    if (touchCount === 1) {
+      this.handlePan(touches[0]);
+      return false;
+    }
+
+    if (mouseIsPressed) {
+      this.handlePan({ x: mouseX, y: mouseY });
+      return false;
+    }
+
+    this.resetGesture();
+  }
+
+  handlePointerEnd(event) {
+    if (this.m.canvasInteraction(event)) {
+      this.resetGesture();
+      return false;
+    }
+
+    this.resetGesture();
+  }
+
+  handlePan(pointer) {
+    if (!this.gesture.pan) {
+      this.gesture.pan = { x: pointer.x, y: pointer.y };
+      this.gesture.pinch = null;
+      return;
+    }
+
+    const dx = pointer.x - this.gesture.pan.x;
+    const dy = pointer.y - this.gesture.pan.y;
+    const worldScale = (this.m.params.viewRadius * 2) / max(1, width);
+
+    this.panCurrentPlane(-dx * worldScale, -dy * worldScale);
+
+    this.gesture.pan.x = pointer.x;
+    this.gesture.pan.y = pointer.y;
+
+    this.m.requestRender();
+  }
+
+  handlePinch(t1, t2) {
+    const distance = dist(t1.x, t1.y, t2.x, t2.y);
+    const cx = (t1.x + t2.x) / 2;
+    const cy = (t1.y + t2.y) / 2;
+
+    if (!this.gesture.pinch) {
+      this.gesture.pinch = { distance };
+      this.gesture.pan = null;
+      return;
+    }
+
+    const ratio = distance / this.gesture.pinch.distance;
+    const zoomScale = 1 / max(ratio, 1e-6);
+    this.applyZoomAtNormalisedPoint(cx / max(1, width), cy / max(1, height), zoomScale);
+
+    this.gesture.pinch.distance = distance;
+    this.m.syncViewConstraints();
+  }
+
+  applyZoomAtNormalisedPoint(nx, ny, zoomScale) {
+    const { params } = this.m;
+    const oldRadius = params.viewRadius;
+    const newRadius = constrain(oldRadius * zoomScale, 1, 256);
+
+    if (newRadius === oldRadius) {
+      return false;
+    }
+
+    const clampedNx = constrain(nx, 0, 1);
+    const clampedNy = constrain(ny, 0, 1);
+    const { axis1, axis2 } = this.m.getPlaneAxes();
+    params.viewCenter[axis1] += (clampedNx - 0.5) * (oldRadius - newRadius) * 2;
+    params.viewCenter[axis2] += (clampedNy - 0.5) * (oldRadius - newRadius) * 2;
+    params.viewRadius = newRadius;
+
+    return true;
+  }
+  
+  panCurrentPlane(delta1, delta2) {
+    const { axis1, axis2 } = this.m.getPlaneAxes();
+    this.m.params.viewCenter[axis1] += delta1;
+    this.m.params.viewCenter[axis2] += delta2;
+  }
+
+  resetGesture() {
+    this.gesture.pan = null;
+    this.gesture.pinch = null;
+  }
+
+  shouldIgnoreKeyboard() {
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = (el.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !!el.isContentEditable;
+  }
+}

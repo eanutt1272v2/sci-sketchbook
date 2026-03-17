@@ -8,9 +8,37 @@ class Renderer {
   constructor(manager) {
     this.m = manager;
     this.buffer = null;
+    this.grid = new Float32Array(0);
+    this.axisSamples = new Float32Array(0);
+    this.axisSampleCache = { resolution: 0, viewRadius: 0 };
 
     this.lut = new Uint8ClampedArray(256 * 3);
     this.currentColourMap = "";
+  }
+
+  getAxisSamples(resolution, viewRadius) {
+    const cache = this.axisSampleCache;
+    if (cache.resolution === resolution && cache.viewRadius === viewRadius && this.axisSamples.length === resolution) {
+      return this.axisSamples;
+    }
+
+    this.axisSamples = new Float32Array(resolution);
+
+    if (resolution === 1) {
+      this.axisSamples[0] = 0;
+    } else {
+      const step = (viewRadius * 2) / (resolution - 1);
+      let value = -viewRadius;
+
+      for (let i = 0; i < resolution; i++) {
+        this.axisSamples[i] = value;
+        value += step;
+      }
+    }
+
+    cache.resolution = resolution;
+    cache.viewRadius = viewRadius;
+    return this.axisSamples;
   }
 
   updateLUT(colourMap) {
@@ -38,39 +66,63 @@ class Renderer {
     }
   }
 
+  getSliceAxes(slicePlane) {
+    if (slicePlane === "xy") return { c1: 0, c2: 1, cFixed: 2 };
+    if (slicePlane === "yz") return { c1: 1, c2: 2, cFixed: 0 };
+    return { c1: 0, c2: 2, cFixed: 1 };
+  }
+
   update() {
-    const { n, l, m, resolution: res, viewRadius, slicePlane, sliceOffset, colourMap, exposure } = this.m.params;
+    const { n, l, m, resolution: res, viewRadius, slicePlane, sliceOffset, colourMap, exposure, viewCenter } = this.m.params;
     const { solver } = this.m;
     let { buffer } = this;
 
-    if (!buffer || buffer.width !== res) {
+    if (!buffer || buffer.width !== res || buffer.height !== res) {
       buffer = createImage(res, res);
     }
 
-    let grid = new Float32Array(res * res);
+    if (this.grid.length !== res * res) {
+      this.grid = new Float32Array(res * res);
+    }
+
+    const grid = this.grid;
+    const axisSamples = this.getAxisSamples(res, viewRadius);
+    const { c1, c2, cFixed } = this.getSliceAxes(slicePlane);
     let peak = 1e-10;
 
-    let c1, c2, cFixed;
-    if (slicePlane === "xy") { c1 = 0; c2 = 1; cFixed = 2; }
-    else if (slicePlane === "xz") { c1 = 0; c2 = 2; cFixed = 1; }
-    else if (slicePlane === "yz") { c1 = 1; c2 = 2; cFixed = 0; }
+    const centerX = viewCenter.x;
+    const centerY = viewCenter.y;
+    const centerZ = viewCenter.z;
+
+    const axisCenter1 = c1 === 0 ? centerX : c1 === 1 ? centerY : centerZ;
+    const axisCenter2 = c2 === 0 ? centerX : c2 === 1 ? centerY : centerZ;
 
     for (let v = 0; v < res; v++) {
-      let p2 = map(v, 0, res - 1, -viewRadius, viewRadius);
-      let rowOffset = v * res;
+      const p2 = axisSamples[v] + axisCenter2;
+      const rowOffset = v * res;
 
       for (let u = 0; u < res; u++) {
-        let p1 = map(u, 0, res - 1, -viewRadius, viewRadius);
+        const p1 = axisSamples[u] + axisCenter1;
 
-        let coords = [0, 0, 0];
-        coords[c1] = p1;
-        coords[c2] = p2;
-        coords[cFixed] = sliceOffset;
+        let x = 0;
+        let y = 0;
+        let z = 0;
 
-        let d = solver.getProbabilityDensity(coords[0], coords[1], coords[2], n, l, m);
+        if (c1 === 0) x = p1;
+        else if (c1 === 1) y = p1;
+        else z = p1;
 
-        grid[rowOffset + u] = d;
-        if (d > peak) peak = d;
+        if (c2 === 0) x = p2;
+        else if (c2 === 1) y = p2;
+        else z = p2;
+
+        if (cFixed === 0) x = sliceOffset;
+        else if (cFixed === 1) y = sliceOffset;
+        else z = sliceOffset;
+
+        const density = solver.getProbabilityDensity(x, y, z, n, l, m);
+        grid[rowOffset + u] = density;
+        if (density > peak) peak = density;
       }
     }
 
@@ -96,7 +148,7 @@ class Renderer {
       g = Math.floor(constrain(poly(colourMapData.g, val), 0, 1) * 255);
       b = Math.floor(constrain(poly(colourMapData.b, val), 0, 1) * 255);
 
-      let idx = i * 4;
+      const idx = i * 4;
       buffer.pixels[idx] = r;
       buffer.pixels[idx + 1] = g;
       buffer.pixels[idx + 2] = b;
@@ -130,21 +182,10 @@ class Renderer {
   }
 
   renderOverlay() {
-    const { n, l, m, viewRadius, slicePlane, sliceOffset, orbitalNotation } = this.m.params;
-
-    let axisLabel;
-
-    if (slicePlane === "xy") {
-      axisLabel = "Z";
-    } else if (slicePlane === "xz") {
-      axisLabel = "Y";
-    } else if (slicePlane === "yz") {
-      axisLabel = "X";
-    } else {
-      axisLabel = "?";
-    }
-
-    const overlay = `Orbital Notation=${orbitalNotation}\nn=${n}, l=${l}, m=${m}\nView Radius=${viewRadius.toFixed(2)} a₀\nSlice ${axisLabel}=${sliceOffset.toFixed(2)} a₀`;
+    const { n, l, m, viewRadius, sliceOffset, orbitalNotation, viewCenter } = this.m.params;
+    const { axis1, axis2, fixedLabel, axis1Label, axis2Label } = this.m.getPlaneAxes();
+    const fps = this.m.statistics.fps;
+    const overlay = `Orbital: ${orbitalNotation}\nn=${n}, l=${l}, m=${m}\nView Radius: ${viewRadius.toFixed(2)} a₀\nPan ${axis1Label}: ${viewCenter[axis1].toFixed(2)} a₀   ${axis2Label}: ${viewCenter[axis2].toFixed(2)} a₀\nSlice ${fixedLabel}: ${sliceOffset.toFixed(2)} a₀\nFPS: ${fps.toFixed(1)}`;
 
     fill(255);
     noStroke();
@@ -169,10 +210,10 @@ class Renderer {
     for (let i = 0; i <= 10; i++) {
       const t = i / 10;
       const idx = (((1 - t) * 255) | 0) * 3;
-      grad.addColorStop(t, `rgb(${this.lut[idx]}, ${this.lut[idx+1]}, ${this.lut[idx+2]})`);
+      grad.addColorStop(t, `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`);
     }
 
-    drawingContext.strokeStyle = 'rgba(255, 255, 255, 0.78)';
+    drawingContext.strokeStyle = "rgba(255, 255, 255, 0.78)";
     drawingContext.lineWidth = 1;
 
     drawingContext.fillStyle = grad;
@@ -190,10 +231,10 @@ class Renderer {
     textSize(11);
     textAlign(RIGHT, CENTER);
 
-    labels.forEach(l => {
-      text(l.v.toFixed(3), x - w - 6, l.y);
+    labels.forEach((label) => {
+      text(label.v.toFixed(3), x - w - 6, label.y);
       stroke(255, 100);
-      line(x - w - 3, l.y, x - w, l.y);
+      line(x - w - 3, label.y, x - w, label.y);
     });
     pop();
   }
@@ -210,7 +251,7 @@ class Renderer {
     textAlign(LEFT, TOP);
     let x = 50;
     let y = 50;
-    let lineH = 30;
+    const lineH = 30;
 
     textSize(28);
     text(`${name} ${version} Keymap Reference`, x, y);
@@ -229,7 +270,11 @@ class Renderer {
       ["W/S, A/D, Q/E", "Increment n, l, m quantum numbers"],
       ["1, 2, 3", "Switch Planes (XY, XZ, YZ)"],
       ["L/R, U/D Arrow Keys", "Scan Slice / Zoom Radius"],
+      ["Shift + Arrow Keys", "Pan view within current slice plane"],
+      ["Mouse Drag / Touch Drag", "Pan view"],
+      ["Mouse Wheel / Pinch", "Zoom radius"],
       ["Space", "Reset Slice Offset to 0 a₀"],
+      ["X", "Reset view center"],
       ["[ / ]", "Adjust Exposure (Gamma)"],
       ["+ / -", "Alter Resolution"],
       ["M, C", "Toggle Smoothing / Cycle Colour Maps"],
@@ -239,20 +284,14 @@ class Renderer {
 
     noStroke();
 
-    for (let cmd of commands) {
+    for (const command of commands) {
       fill(255);
-      text(cmd[0], x, y);
+      text(command[0], x, y);
       fill(255, 150);
-      text(cmd[1], x + 210, y);
+      text(command[1], x + 210, y);
       y += lineH;
     }
 
     pop();
-  }
-
-  handleWheel(event) {
-    this.m.params.viewRadius = Math.max(1, this.m.params.viewRadius + event.delta * 0.025);
-    this.update();
-    this.m.gui.refresh();
   }
 }

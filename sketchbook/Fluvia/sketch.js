@@ -5,16 +5,15 @@ let vertShader, fragShader, colourMaps, monoFont;
 
 const metadata = {
   name: "Fluvia",
-  version: "v4.8",
+  version: "v4.8.0",
   author: "@eanutt1272.v2"
 };
 
 function preload() {
   monoFont = loadFont("monaco.ttf");
   colourMaps = loadJSON("colour-maps.json");
-  
-  loadStrings("vert.glsl", lines => vertShader = lines.join("\n"));
-  loadStrings("frag.glsl", lines => fragShader = lines.join("\n"));
+  loadStrings("vert.glsl", (lines) => vertShader = lines.join("\n"));
+  loadStrings("frag.glsl", (lines) => fragShader = lines.join("\n"));
 }
 
 function setup() {

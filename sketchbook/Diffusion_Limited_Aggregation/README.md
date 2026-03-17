@@ -5,7 +5,7 @@ Simulates the process where particles undergoing Brownian motion cluster togethe
 Models physical phenomena like mineral deposits, coral growth, and lightning discharge.
 
 ## Controls
-Real-time growth visualization; adjustable particle count and step size.
+Real-time growth visualisation; adjustable particle count and step size.
 
 ## Technology
 - **Tech Stack:** p5.js

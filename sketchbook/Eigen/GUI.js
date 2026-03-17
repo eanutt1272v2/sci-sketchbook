@@ -146,6 +146,22 @@ class GUI {
 
     page.addBlade({ view: "separator" });
 
+    page.addBinding(this.m.params.viewCenter, "x", {
+      label: "Pan X (a₀)", min: -256, max: 256, step: 0.1
+    }).on("change", () => this.m.requestRender());
+
+    page.addBinding(this.m.params.viewCenter, "y", {
+      label: "Pan Y (a₀)", min: -256, max: 256, step: 0.1
+    }).on("change", () => this.m.requestRender());
+
+    page.addBinding(this.m.params.viewCenter, "z", {
+      label: "Pan Z (a₀)", min: -256, max: 256, step: 0.1
+    }).on("change", () => this.m.requestRender());
+
+    page.addButton({ title: "Reset View Center" }).on("click", () => this.m.resetViewCenter());
+
+    page.addBlade({ view: "separator" });
+
     page.addBinding(this.m.params, "exportFormat", {
       label: "Format",
       options: { PNG: "png", JPG: "jpg", WebP: "webp" }
