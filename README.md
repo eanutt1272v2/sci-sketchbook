@@ -8,7 +8,7 @@ A public instance is available at: [https://sci-sketchbook.onrender.com/](https:
 
 | Sketch | Description | Tech Stack |
 | :--- | :--- | :--- |
-| [Barnsley Fern](./sketchbook/Barnsley_Fern) | An iterated function system (IFS) that produces a fractal resembling the Black Spleenwort fern using affine transformations. | Processing (Java & JS versions) |
+| [Barnsley Fern](./sketchbook/Barnsley_Fern) | An iterated function system (IFS) that produces a fractal resembling the Black Spleenwort fern using affine transformations. | Processing (Java) & p5.js |
 | [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | A fractal first described by Michael Michelitsch and Otto E. Rössler, known for its resemblance to a ship on fire. | Processing (Java) & p5.js |
 | [Cellular Division](./sketchbook/Cellular_Division) | A particle-based simulation of emergent cellular behaviour and division. | Processing (Java & JS versions) |
 | [Collatz Visualisation](./sketchbook/Collatz_Visualisation) | A visual representation of the Collatz conjecture paths (3n + 1 problem) as an organic tree-like structure. | p5.js |
