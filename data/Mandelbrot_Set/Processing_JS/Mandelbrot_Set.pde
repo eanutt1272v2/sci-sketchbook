@@ -65,7 +65,9 @@ class AppCore {
     image(renderer.buffer, 0, 0);
     if (showUI) panel.draw();
 
-    justPressed = false;
+    if (frameCount % 2 == 0) {
+      justPressed = false;
+    }
   }
 
   void doZoom(double factor, int tx, int ty) {
