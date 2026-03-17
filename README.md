@@ -1,6 +1,7 @@
-# sci-sketchbook
-
-![Project Logo](logo.png)
+<h1>
+  sci-sketchbook
+  <img src="logo.png" alt="logo" align="right" width="100">
+</h1>
 
 This repository hosts a collection of scientifically focused sketches, visualisations, applications/applets, and programs implemented in the p5.js and Processing languages, served securely via a Caddy web server with file browsing capabilities. A public instance is available at: <https://sci-sketchbook.onrender.com/>.
 
