@@ -199,8 +199,8 @@ class InputHandler {
     if (keyZoomOut){ appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
 
     if (mousePressed && appcore.showUI && !appcore.justPressed) {
-      if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; }
-      if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; }
+      if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); changed = true; appcore.justPressed = true; }
+      if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); changed = true; appcore.justPressed = true; }
     }
 
     if (mousePressed && p.slider.locked && p.slider.update()) {
@@ -212,8 +212,6 @@ class InputHandler {
   }
 
   void onMousePressed() {
-    appcore.justPressed = true;
-
     if (!appcore.showUI) return;
     UIPanel p = appcore.panel;
 
@@ -244,19 +242,21 @@ class InputHandler {
       );
       appcore.maxIterations = (int) p.slider.val;
       appcore.needsRedraw = true;
+      appcore.justPressed = true;
     }
 
     int[] amounts = {-64, -16, 16, 64};
     for (int i = 0; i < 4; i++) {
-      if (p.stepButtons[i].isMouseOver()) {
+      if (p.stepButtons[i].isMouseOver() && !appcore.justPressed) {
         appcore.maxIterations = constrain(appcore.maxIterations + amounts[i], (int)p.slider.min, (int)p.slider.max);
         p.slider.val = appcore.maxIterations;
         appcore.needsRedraw = true;
+        appcore.justPressed = true;
       }
     }
 
-    if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; }
-    if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; }
+    if (p.zoomInBtn.isMouseOver() && !appcore.justPressed) { appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; }
+    if (p.zoomOutBtn.isMouseOver() && !appcore.justPressed) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; appcore.justPressed = true; }
   }
 
   void onMouseReleased() {
