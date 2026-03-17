@@ -551,8 +551,6 @@ class UIPanel {
     float cx = layout.contentX();
     float cw = layout.contentW();
 
-    // Inset sliders by 6px each side so the handle ellipse never clips
-    // the panel edge at min or max value.
     float si = 6;
     iterSlider = new Slider(cx + si, layout.getY("iterSlider"), cw - si * 2, 22, 1, 32, appCore.renderer.maximumIterations);
     resSlider  = new Slider(cx + si, layout.getY("resSlider"),  cw - si * 2, 22, 32, 256, appCore.renderer.resolutionScale);
