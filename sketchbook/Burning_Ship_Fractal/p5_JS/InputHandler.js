@@ -178,12 +178,6 @@ class InputHandler {
     this.appcore.needsRedraw = true;
   }
 
-  handleManualZoom(delta) {
-    const factor = delta < 0 ? 1.05 : 1.0 / 1.05;
-    this.appcore.doZoom(factor, mouseX, mouseY);
-    this.appcore.needsRedraw = true;
-  }
-
   onKeyPressed() {
     if (this.isTypingIter) {
       if (key >= "0" && key <= "9") {
