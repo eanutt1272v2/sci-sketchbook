@@ -2,9 +2,7 @@ services:
   - type: web
     name: sci-sketchbook
     env: docker
-    # No build command needed for Caddy Docker image
     buildCommand: "# No build command needed"
-    # We remove the explicit startCommand to let Dockerfile CMD handle it
     healthCheckPath: /
     envVars:
       - key: PORT
