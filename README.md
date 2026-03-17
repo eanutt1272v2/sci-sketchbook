@@ -1,6 +1,6 @@
 # sci-sketchbook
 
-This repository hosts a collection of scientific sketches and visualisations implemented in p5.js and Processing, served securely via a Caddy web server with file browsing capabilities. A public instance is available at: <https://sci-sketchbook.onrender.com/>.
+This repository hosts a collection of scientifically focused sketches, visualisations, applications/applets, and programs implemented in the p5.js and Processing languages, served securely via a Caddy web server with file browsing capabilities. A public instance is available at: <https://sci-sketchbook.onrender.com/>.
 
 ## Setup and Deployment
 
