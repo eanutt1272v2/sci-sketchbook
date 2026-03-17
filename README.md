@@ -32,12 +32,12 @@ To deploy and run the Caddy server, you will need Docker and Docker Compose inst
 
     ```bash
     mkdir sketchbook
-    mv <your_sketch_folder_1> <your_sketch_folder_2> ... <your_sketch_folder_N> data/
+    mv <your_sketch_folder_1> <your_sketch_folder_2> ... <your_sketch_folder_N> sketchbook/
     ```
 
 3.  **Run the Caddy server**
 
-    Navigate to the root of the `sci-sketchbook` directory in your terminal and run Docker Compose:
+    Navigate to the root of the `sci-sketchbook` directory in your terminal and run Docker Compose.
 
     ```bash
     docker compose up -d
