@@ -8,7 +8,7 @@ Uses four affine maps with specific probabilities to simulate self-similar growt
 Automatic generation of points; parameters typically adjusted in source code (points per frame).
 
 ## Technology
-- **Tech Stack:** Processing (Java & JS versions)
+- **Tech Stack:** Processing (Java) and p5.js
 
 ## Preview
 ![Barnsley Fern](Fern_202631_153327.png)
