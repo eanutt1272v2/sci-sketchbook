@@ -6,36 +6,36 @@ This repository hosts a collection of scientific sketches and visualisations imp
 
 To deploy and run the Caddy server, you will need Docker and Docker Compose installed on your system.
 
-1.  **Clone the repository:**
+1.  **Clone the repository**
 
     ```bash
     git clone https://github.com/eanutt1272v2/sci-sketchbook.git
     cd sci-sketchbook
     ```
 
-2.  **Place your sketch folders:**
+2.  **Place your sketch folders**
 
-    The Caddy server is configured to serve files from the `./data` directory within this project. Your sketch folders (e.g., `Barnsley_Fern`, `Mandelbrot_Set`, etc.) should be placed inside a new directory named `data` at the root of this repository. For example:
+    The Caddy server is configured to serve files from the `./sketchbook` directory within this project. Your sketch folders (e.g., `Barnsley_Fern`, `Mandelbrot_Set`, etc.) should be placed inside a new directory named `sketchbook` at the root of this repository. For example:
 
     ```
     sci-sketchbook/
     ├── Caddyfile
     ├── docker-compose.yml
     ├── README.md
-    └── data/
+    └── sketchbook/
         ├── Barnsley_Fern/
         ├── Burning_Ship_Fractal/
         └── ... (your other sketch folders)
     ```
 
-    You can move your existing sketch folders into this `data` directory:
+    You can move your existing sketch folders into this `sketchbook` directory:
 
     ```bash
-    mkdir data
+    mkdir sketchbook
     mv <your_sketch_folder_1> <your_sketch_folder_2> ... <your_sketch_folder_N> data/
     ```
 
-3.  **Run the Caddy server:**
+3.  **Run the Caddy server**
 
     Navigate to the root of the `sci-sketchbook` directory in your terminal and run Docker Compose:
 
@@ -45,17 +45,17 @@ To deploy and run the Caddy server, you will need Docker and Docker Compose inst
 
     This command will build the Caddy service, start it in detached mode, and expose it on port 80 (HTTP) and 443 (HTTPS).
 
-4.  **Access the web interface:**
+4.  **Access the web interface**
 
-    Open your web browser and navigate to `http://localhost` (or `https://localhost` if you have configured DNS for HTTPS). You should see a modern file browsing interface displaying your sketch folders.
+    Open your web browser and visit `http://localhost` (or `https://localhost` if you have configured DNS for HTTPS). You should see a file browsing interface displaying your sketch folders.
 
 ## Caddy Configuration
 
 The `Caddyfile` is configured to:
 
--   Serve files from the `/srv` directory inside the container, which is mapped to the `./data` directory on your host machine.
+-   Serve files from the `/srv` directory inside the container, which is mapped to the `./sketchbook` directory on your host machine.
 -   Enable file browsing for easy navigation of your sketch folders.
--   Include security headers for a more secure server and browsing experience:
+-   Include security headers for increased protection against a limited range of web attacks:
     -   `X-XSS-Protection: 1; mode=block`
     -   `X-Content-Type-Options: nosniff`
     -   `Referrer-Policy: strict-origin-when-cross-origin`
