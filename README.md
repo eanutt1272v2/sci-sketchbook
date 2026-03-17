@@ -4,7 +4,7 @@ This repository hosts a collection of scientific sketches and visualisations imp
 
 ## Setup and Deployment
 
-To deploy and run the Caddy server, you will need Docker and Docker Compose installed on your system.
+To deploy and run the Caddy server, you will need Docker and Docker Compose installed on your system, with your current user possessing the necessary permissions to operate them.
 
 1.  **Clone the repository**
 
