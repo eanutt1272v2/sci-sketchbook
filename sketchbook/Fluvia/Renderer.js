@@ -14,6 +14,31 @@ class Renderer {
 
     this.lut = new Uint8ClampedArray(256 * 3);
     this.currentColourMap = "";
+    this.lutChannels = ["r", "g", "b"];
+    this.compositeLegendItems = [
+      { l: "Flat", cKey: "flatColour" },
+      { l: "Steep", cKey: "steepColour" },
+      { l: "Sediment", cKey: "sedimentColour" },
+      { l: "Water", cKey: "waterColour" },
+    ];
+    this.keymapCommands = [
+      ["#", "Toggle Keymap Reference"],
+      ["H", "Toggle GUI panel"],
+      ["P / Space", "Pause / Resume simulation"],
+      ["G / R", "Generate / Reset terrain"],
+      ["1 / 2", "Switch display: 2D / 3D"],
+      ["O / L", "Toggle stats / legend overlays"],
+      ["V", "Start/stop recording"],
+      ["F", "Export image"],
+      ["U", "Import heightmap"],
+      ["C", "Cycle colour map (Shift: reverse)"],
+      ["M", "Cycle surface map (Shift: reverse)"],
+      ["[ / ]", "Height scale -/+ (Shift: large step)"],
+      ["I / K", "Droplets per frame + / -"],
+      ["WASD or Arrow Keys", "Orbit camera (3D mode)"],
+      ["Q / E", "Zoom camera out / in (3D mode)"],
+      ["Mouse Drag / Wheel", "Orbit / zoom camera (3D mode)"],
+    ];
   }
 
   reinitialise() {
@@ -29,7 +54,7 @@ class Renderer {
     if (!colourData) return;
 
     this.currentColourMap = colourMap;
-    const channels = ["r", "g", "b"];
+    const channels = this.lutChannels;
 
     for (let i = 0; i < 256; i++) {
       const intensity = i / 255;
@@ -165,20 +190,21 @@ class Renderer {
   }
 
   calculateBounds(mode) {
-    const { statistics } = this.m;
+    const { terrain } = this.m;
 
     if (mode === "height") {
-      const { min, max } = statistics.heightBounds;
-      return { min, range: (max - min) || 1 };
+      const bounds = terrain.getMapBounds(terrain.heightMap);
+      return { min: bounds.min, range: (bounds.max - bounds.min) || 1 };
     }
 
     if (mode === "discharge") {
-      return { min: 0, range: statistics.peakDischarge || 1 };
+      const bounds = terrain.getDischargeBounds();
+      return { min: bounds.min, range: (bounds.max - bounds.min) || 1 };
     }
 
     if (mode === "sediment") {
-      const { min, max } = statistics.sedimentBounds;
-      return { min, range: (max - min) || 1 };
+      const bounds = terrain.getMapBounds(terrain.sedimentMap);
+      return { min: bounds.min, range: (bounds.max - bounds.min) || 1 };
     }
 
     return { min: 0, range: 1 };
@@ -231,6 +257,7 @@ class Renderer {
   renderOverlay() {
     if (this.m.params.renderStats) this.renderStats();
     if (this.m.params.renderLegend) this.renderLegend();
+    if (this.m.params.renderKeymapRef) this.renderKeymapRef();
   }
 
   renderStats() {
@@ -247,7 +274,7 @@ class Renderer {
 	   `Display Method: ${params.displayMethod}`,
       `Surface Map: ${params.surfaceMap}`,
 	   `Colour Map: ${params.colourMap}`,
-      `Elevation Range: ${statistics.minElevation.toFixed(3)} - ${statistics.maxElevation.toFixed(3)}`,
+      `Elevation Range: ${statistics.heightBounds.min.toFixed(3)} - ${statistics.heightBounds.max.toFixed(3)}`,
       `Peak Discharge: ${statistics.peakDischarge.toFixed(3)}`,
       `Rugosity Index: ${statistics.rugosity.toFixed(3)}`
     ];
@@ -266,21 +293,15 @@ class Renderer {
 
   renderCompositeLegend() {
     push();
-    const { flatColour, steepColour, sedimentColour, waterColour } = this.m.params;
-    
-    const items = [
-      { l: "Flat", c: flatColour },
-      { l: "Steep", c: steepColour },
-      { l: "Sediment", c: sedimentColour },
-      { l: "Water", c: waterColour }
-    ];
+    const params = this.m.params;
 
     textSize(14);
     textAlign(LEFT, CENTER);
 
-    items.forEach((item, i) => {
+    this.compositeLegendItems.forEach((item, i) => {
+      const c = params[item.cKey];
       const y = 15 + i * 28;
-      fill(item.c.r, item.c.g, item.c.b);
+      fill(c.r, c.g, c.b);
 		stroke(255, 200);
 		strokeWeight(1);
       rect(width - 110, y, 20, 20);
@@ -334,6 +355,44 @@ class Renderer {
       stroke(255, 100);
       line(x - w - 3, l.y, x - w, l.y);
     });
+    pop();
+  }
+
+  renderKeymapRef() {
+    const { name, version } = this.m.metadata;
+
+    push();
+    fill(0, 220);
+    noStroke();
+    rect(0, 0, width, height);
+
+    fill(255);
+    textAlign(LEFT, TOP);
+    let x = 50;
+    let y = 50;
+    let lineH = 28;
+
+    textSize(28);
+    text(`${name} ${version} Keymap Reference`, x, y);
+
+    textSize(16);
+    y += 50;
+    text("Keys", x, y);
+    text("Action", x + 260, y);
+
+    stroke(255, 50);
+    line(x, y + 25, width - 50, y + 25);
+    y += 40;
+
+    noStroke();
+    for (const cmd of this.keymapCommands) {
+      fill(255);
+      text(cmd[0], x, y);
+      fill(255, 150);
+      text(cmd[1], x + 260, y);
+      y += lineH;
+    }
+
     pop();
   }
 

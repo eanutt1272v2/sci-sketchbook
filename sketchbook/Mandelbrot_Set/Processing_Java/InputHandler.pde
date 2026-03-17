@@ -11,6 +11,7 @@ class InputHandler {
 
   void handleContinuousInput() {
     UIPanel p = appcore.panel;
+    if (appcore.showKeymapRef) return;
     if (p.dropdown.isOpen || p.slider.locked || isTypingIter) return;
 
     boolean changed = false;
@@ -54,7 +55,7 @@ class InputHandler {
     if (p.dropdown.isHeaderOver()) { p.dropdown.toggle(); return; }
 
     UILayout lay = p.layout;
-    if (mouseX > lay.contentX() && mouseX < lay.contentX() + 180
+    if (mouseX > lay.contentX() && mouseX < lay.contentX() + 255
      && mouseY > lay.getY("iterLabel") && mouseY < lay.getY("iterLabel") + 20) {
       isTypingIter = true; typingBuffer = ""; return;
     } else {
@@ -133,7 +134,38 @@ class InputHandler {
       return;
     }
 
+    if (key == '#') {
+      appcore.showKeymapRef = !appcore.showKeymapRef;
+      return;
+    }
     if (key == 'h' || key == 'H') appcore.showUI = !appcore.showUI;
+    if (key == 'r' || key == 'R') { appcore.resetView(); return; }
+    if (key == 'c' || key == 'C') { appcore.cycleColorMap(1); return; }
+    if (key == 'x' || key == 'X') { appcore.cycleColorMap(-1); return; }
+
+    if (key == '[' || key == '{') {
+      int delta = (key == '{') ? 64 : 16;
+      appcore.maxIterations = constrain(appcore.maxIterations - delta, (int) appcore.panel.slider.min, (int) appcore.panel.slider.max);
+      appcore.panel.slider.val = appcore.maxIterations;
+      appcore.needsRedraw = true;
+      return;
+    }
+    if (key == ']' || key == '}') {
+      int delta = (key == '}') ? 64 : 16;
+      appcore.maxIterations = constrain(appcore.maxIterations + delta, (int) appcore.panel.slider.min, (int) appcore.panel.slider.max);
+      appcore.panel.slider.val = appcore.maxIterations;
+      appcore.needsRedraw = true;
+      return;
+    }
+    if (key >= '1' && key <= '9') {
+      int idx = (int) key - (int) '1';
+      if (idx < appcore.renderer.mapNames.length) {
+        appcore.renderer.setMap(idx);
+        appcore.needsRedraw = true;
+      }
+      return;
+    }
+
     if (key == 'w' || key == 'W' || keyCode == UP) keyUp = true;
     if (key == 's' || key == 'S' || keyCode == DOWN) keyDown = true;
     if (key == 'a' || key == 'A' || keyCode == LEFT) keyLeft = true;

@@ -13,6 +13,7 @@ class Simulation {
   private int particleCount;
   private int startTime;
   private boolean needsRestart = false;
+  private boolean paused = false;
   
   Simulation() {
     this.particleCount = defaultParticleCount();
@@ -39,6 +40,10 @@ class Simulation {
   void update() {
     if (needsRestart) {
       restart();
+    }
+
+    if (paused) {
+      return;
     }
     
     spatialGrid.clear();
@@ -91,6 +96,8 @@ class Simulation {
   void setParticleCount(int value) { particleCount = constrain(value, Config.MIN_PARTICLES, Config.MAX_PARTICLES); }
   
   void requestRestart() { needsRestart = true; }
+  void togglePause() { paused = !paused; }
+  boolean isPaused() { return paused; }
   
   private void updateSpecies() {
     species = new Species(alpha, beta, gamma, radius);

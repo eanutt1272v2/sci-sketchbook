@@ -2,8 +2,14 @@ class ParameterSet {
   private final Simulation sim;
   private final Theme theme;
   
-  private final String[] labels = {"Alpha (α)", "Beta (β)", "Gamma (γ)", 
-                                    "Radius (r)", "Trail Alpha", "Density Threshold"};
+  private final String[] labels = {
+    "Alpha",
+    "Beta",
+    "Gamma", 
+    "Radius",
+    "Trail Alpha",
+    "Density Threshold"
+  };
   private final float[] mins = {0, 0, 0, 5, 0, 1};
   private final float[] maxes = {360, 90, 50, 50, 255, 60};
   private final float[] steps = {1, 1, 0.1f, 1, 5, 1};

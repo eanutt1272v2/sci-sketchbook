@@ -54,6 +54,12 @@ class InputHandler {
       ui.requestRestart();
       return;
     }
+
+    if (leftPanel.handlePauseClick(mx, my)) {
+      commitTyping();
+      ui.toggleSimulationPause();
+      return;
+    }
     
     if (leftPanel.handleParticleInputClick(mx, my)) {
       commitTyping();
@@ -121,8 +127,48 @@ class InputHandler {
   }
   
   private void handleShortcutKey() {
-    if (key == 'h' || key == 'H') ui.toggleVisibility();
-    if (key == 'r' || key == 'R') ui.requestRestart();
+    if (key == '#') {
+      ui.toggleKeymapReference();
+      return;
+    }
+
+    if (key == 'h' || key == 'H') {
+      ui.toggleVisibility();
+      return;
+    }
+
+    if (key == 'r' || key == 'R') {
+      ui.requestRestart();
+      return;
+    }
+
+    if (key == 'p' || key == 'P' || key == ' ') {
+      ui.toggleSimulationPause();
+      return;
+    }
+
+    // Full keyboard parameter control mirrors all panel controls without mouse.
+    float stepBoost = keyPressed && keyEvent != null && keyEvent.isShiftDown() ? 10 : 1;
+    switch (key) {
+      case '1': adjustParam(0, -getStepSize(0) * stepBoost); break;
+      case '2': adjustParam(0, getStepSize(0) * stepBoost); break;
+      case '3': adjustParam(1, -getStepSize(1) * stepBoost); break;
+      case '4': adjustParam(1, getStepSize(1) * stepBoost); break;
+      case '5': adjustParam(2, -getStepSize(2) * stepBoost); break;
+      case '6': adjustParam(2, getStepSize(2) * stepBoost); break;
+      case '7': adjustParam(3, -getStepSize(3) * stepBoost); break;
+      case '8': adjustParam(3, getStepSize(3) * stepBoost); break;
+      case '9': adjustParam(4, -getStepSize(4) * stepBoost); break;
+      case '0': adjustParam(4, getStepSize(4) * stepBoost); break;
+      case '-':
+      case '_': adjustParam(5, -getStepSize(5) * stepBoost); break;
+      case '=':
+      case '+': adjustParam(5, getStepSize(5) * stepBoost); break;
+      case '[':
+      case '{': sim.setParticleCount(sim.getParticleCount() - int(100 * stepBoost)); break;
+      case ']':
+      case '}': sim.setParticleCount(sim.getParticleCount() + int(100 * stepBoost)); break;
+    }
   }
   
   private void commitTyping() {

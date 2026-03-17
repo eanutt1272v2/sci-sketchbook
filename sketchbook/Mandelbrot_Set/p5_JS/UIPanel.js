@@ -56,7 +56,7 @@ class UIPanel {
     if (!inp.isTypingIter) {
       fill(t.textMuted);
       textSize(t.textSizeCaption);
-      text("(click to type)", px + 105, this.layout.getY("iterLabel") + 3);
+      text("(click to type)", px + 155, this.layout.getY("iterLabel") + 3);
     }
 
     this.slider.display();
@@ -79,12 +79,13 @@ class UIPanel {
 
     fill(t.textMuted);
     textSize(t.textSizeCaption);
-    text("[WASD/Arrows]: Pan, [Scroll/Q,E]: Zoom, [H]: Toggle UI", px, this.layout.getY("hints"));
+    text("[WASD/Arrows]: Pan, [Q/E, Scroll]: Zoom, [#]: Keymap", px, this.layout.getY("hints"));
 
     this.dropdown.display(this.appcore.renderer.currentMapIndex);
 
     this.zoomInBtn.display();
     this.zoomOutBtn.display();
+    this.drawCredits();
   }
 
   format3dp(value) {
@@ -102,5 +103,62 @@ class UIPanel {
     const wholeStr = String(whole);
     const fracStr = `${frac < 10 ? "00" : frac < 100 ? "0" : ""}${frac}`;
     return `${sign}${wholeStr}.${fracStr}`;
+  }
+
+  drawKeymapReference() {
+    push();
+    fill(0, 220);
+    noStroke();
+    rect(0, 0, width, height);
+
+    fill(255);
+    textAlign(LEFT, TOP);
+    let x = 50;
+    let y = 50;
+    const lineH = 28;
+
+    textSize(28);
+    text("Mandelbrot Keymap Reference", x, y);
+
+    textSize(16);
+    y += 50;
+    text("Keys", x, y);
+    text("Action", x + 240, y);
+    stroke(255, 50);
+    line(x, y + 25, width - 50, y + 25);
+    y += 40;
+
+    const commands = [
+      ["W/A/S/D or Arrow Keys", "Pan viewport"],
+      ["Q / E, Mouse Wheel", "Zoom out / in"],
+      ["[ / ]", "Iterations -16 / +16"],
+      ["{ / }", "Iterations -64 / +64"],
+      ["1..9", "Select colour map by index"],
+      ["X / C", "Previous / next colour map"],
+      ["R", "Reset view and iterations"],
+      ["H", "Toggle UI"],
+      ["#", "Toggle keymap reference"],
+    ];
+
+    noStroke();
+    for (const cmd of commands) {
+      fill(255);
+      text(cmd[0], x, y);
+      fill(255, 150);
+      text(cmd[1], x + 240, y);
+      y += lineH;
+    }
+
+    pop();
+  }
+
+  drawCredits() {
+    push();
+    noStroke();
+    fill(255, 170);
+    textSize(12);
+    textAlign(LEFT, BOTTOM);
+    text(`${metadata.name} ${metadata.version} by ${metadata.author}`, 12, height - 12);
+    pop();
   }
 }

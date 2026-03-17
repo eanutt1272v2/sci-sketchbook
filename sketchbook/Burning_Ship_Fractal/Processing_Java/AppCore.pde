@@ -3,8 +3,13 @@ class AppCore {
   double zoom = 1.0;
   double offsetX = -0.02;
   double offsetY = -0.08;
+  final double defaultZoom = 1.0;
+  final double defaultOffsetX = -0.02;
+  final double defaultOffsetY = -0.08;
+  final int defaultIterations = 128;
   boolean needsRedraw = true;
   boolean showUI = true;
+  boolean showKeymapRef = false;
   boolean justPressed = false;
 
   UITheme theme;
@@ -31,6 +36,7 @@ class AppCore {
     }
     image(renderer.buffer, 0, 0);
     if (showUI) panel.draw();
+    if (showKeymapRef) panel.drawKeymapReference();
     justPressed = false;
   }
 
@@ -42,5 +48,23 @@ class AppCore {
     zoom *= factor;
     offsetX += baseX * (1.0 / old - 1.0 / zoom);
     offsetY += baseY * (1.0 / old - 1.0 / zoom);
+  }
+
+  void resetView() {
+    zoom = defaultZoom;
+    offsetX = defaultOffsetX;
+    offsetY = defaultOffsetY;
+    maxIterations = defaultIterations;
+    if (panel != null && panel.slider != null) {
+      panel.slider.val = maxIterations;
+    }
+    needsRedraw = true;
+  }
+
+  void cycleColorMap(int step) {
+    int count = renderer.mapNames.length;
+    int next = (renderer.currentMapIndex + step + count) % count;
+    renderer.setMap(next);
+    needsRedraw = true;
   }
 }

@@ -6,18 +6,23 @@ class Terrain {
     this.size = terrainSize;
     this.area = terrainSize * terrainSize;
 
-    this.heightMap         = new Float32Array(this.area);
+    this.heightMap = new Float32Array(this.area);
     this.originalHeightMap = new Float32Array(this.area);
-    this.bedrockMap        = new Float32Array(this.area);
-    this.sedimentMap       = new Float32Array(this.area);
-    this.dischargeMap      = new Float32Array(this.area);
-    this.dischargeTrack    = new Float32Array(this.area);
-    this.momentumX         = new Float32Array(this.area);
-    this.momentumY         = new Float32Array(this.area);
-    this.momentumXTrack    = new Float32Array(this.area);
-    this.momentumYTrack    = new Float32Array(this.area);
+    this.bedrockMap = new Float32Array(this.area);
+    this.sedimentMap = new Float32Array(this.area);
+    this.dischargeMap = new Float32Array(this.area);
+    this.dischargeTrack = new Float32Array(this.area);
+    this.momentumX = new Float32Array(this.area);
+    this.momentumY = new Float32Array(this.area);
+    this.momentumXTrack = new Float32Array(this.area);
+    this.momentumYTrack = new Float32Array(this.area);
 
     this.sharedNormal = { x: 0, y: 0, z: 0 };
+    this.bounds = {
+      height: { min: 0, max: 1 },
+      sediment: { min: 0, max: 0 },
+      discharge: { min: 0, max: 0 },
+    };
   }
 
   getIndex(x, y) {
@@ -35,16 +40,52 @@ class Terrain {
   }
 
   getMapBounds(mapArray) {
-    let minVal = Infinity;
-    let maxVal = -Infinity;
+    if (!mapArray || mapArray.length === 0) {
+      return { min: 0, max: 0 };
+    }
 
-    for (let i = 0; i < mapArray.length; i++) {
+    let minVal = mapArray[0];
+    let maxVal = mapArray[0];
+
+    for (let i = 1, len = mapArray.length; i < len; i++) {
       const val = mapArray[i];
       if (val < minVal) minVal = val;
       if (val > maxVal) maxVal = val;
     }
 
     return { min: minVal, max: maxVal };
+  }
+
+  getDischargeBounds() {
+    const { area } = this;
+    if (area <= 0) {
+      return { min: 0, max: 0 };
+    }
+
+    let first = this.getDischarge(0);
+    let minVal = first;
+    let maxVal = first;
+
+    for (let i = 1; i < area; i++) {
+      const d = this.getDischarge(i);
+      if (d < minVal) minVal = d;
+      if (d > maxVal) maxVal = d;
+    }
+
+    return { min: minVal, max: maxVal };
+  }
+
+  updateBoundsCache() {
+    this.bounds.height = this.getMapBounds(this.heightMap);
+    this.bounds.sediment = this.getMapBounds(this.sedimentMap);
+    this.bounds.discharge = this.getDischargeBounds();
+  }
+
+  getBoundsForMode(mode) {
+    if (mode === "height") return this.bounds.height;
+    if (mode === "sediment") return this.bounds.sediment;
+    if (mode === "discharge") return this.bounds.discharge;
+    return { min: 0, max: 1 };
   }
 
   getSurfaceNormal(x, y) {
@@ -139,6 +180,8 @@ class Terrain {
       bedrockMap[i] = norm;
       originalHeightMap[i] = norm;
     }
+
+    this.updateBoundsCache();
   }
 
   reset() {
@@ -154,5 +197,7 @@ class Terrain {
       sedimentMap, dischargeMap, dischargeTrack, 
       momentumX, momentumY, momentumXTrack, momentumYTrack
     ].forEach(m => m.fill(0));
+
+    this.updateBoundsCache();
   }
 }

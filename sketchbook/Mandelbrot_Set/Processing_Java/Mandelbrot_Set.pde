@@ -6,6 +6,11 @@
  */
 
 AppCore appcore;
+PFont monoFont;
+
+final String SKETCH_NAME = "Mandelbrot";
+final String SKETCH_VERSION = "v3.0.0";
+final String SKETCH_AUTHOR = "@eanutt1272.v2";
 
 void settings() {
   size(800, 800, P2D);
@@ -22,6 +27,9 @@ void setup() {
       window.setSize(width, height);
     }
   });
+
+  monoFont = createFont("monaco.ttf", 13, true);
+  textFont(monoFont);
 
   appcore = new AppCore();
   appcore.setup();

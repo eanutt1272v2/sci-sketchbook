@@ -1,3 +1,9 @@
+@font-face {
+  font-family: "Monaco";
+  src: url("./monaco.ttf") format("truetype");
+  font-display: swap;
+}
+
 html,
 body {
   margin: 0;
@@ -9,6 +15,7 @@ body {
   overflow: hidden;
   background-color: #323232;
   color: #ffffff;
+  font-family: "Monaco", monospace;
 }
 
 canvas {

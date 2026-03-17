@@ -15,6 +15,10 @@ class InputHandler {
 
   handleContinuousInput() {
     const p = this.appcore.panel;
+    if (this.appcore.showKeymapRef) {
+      return;
+    }
+
     if (p.dropdown.isOpen || p.slider.locked || this.isTypingIter) {
       return;
     }
@@ -94,7 +98,7 @@ class InputHandler {
 
     const lay = p.layout;
     if (
-      mouseX > lay.contentX() && mouseX < lay.contentX() + 180 &&
+      mouseX > lay.contentX() && mouseX < lay.contentX() + 250 &&
       mouseY > lay.getY("iterLabel") && mouseY < lay.getY("iterLabel") + 20
     ) {
       this.isTypingIter = true;
@@ -198,6 +202,44 @@ class InputHandler {
     }
 
     if (key === "h" || key === "H") this.appcore.showUI = !this.appcore.showUI;
+    if (key === "#") {
+      this.appcore.showKeymapRef = !this.appcore.showKeymapRef;
+      return;
+    }
+    if (key === "r" || key === "R") {
+      this.appcore.resetView();
+      return;
+    }
+    if (key === "c" || key === "C") {
+      this.appcore.cycleColorMap(1);
+      return;
+    }
+    if (key === "x" || key === "X") {
+      this.appcore.cycleColorMap(-1);
+      return;
+    }
+    if (key === "[" || key === "{") {
+      this.appcore.maxIterations = constrain(this.appcore.maxIterations - (key === "{" ? 64 : 16), int(this.appcore.panel.slider.min), int(this.appcore.panel.slider.max));
+      this.appcore.panel.slider.val = this.appcore.maxIterations;
+      this.appcore.needsRedraw = true;
+      return;
+    }
+    if (key === "]" || key === "}") {
+      this.appcore.maxIterations = constrain(this.appcore.maxIterations + (key === "}" ? 64 : 16), int(this.appcore.panel.slider.min), int(this.appcore.panel.slider.max));
+      this.appcore.panel.slider.val = this.appcore.maxIterations;
+      this.appcore.needsRedraw = true;
+      return;
+    }
+
+    if (key >= "1" && key <= "9") {
+      const idx = int(key) - 1;
+      if (idx < this.appcore.renderer.mapNames.length) {
+        this.appcore.renderer.setMap(idx);
+        this.appcore.needsRedraw = true;
+      }
+      return;
+    }
+
     if (key === "w" || key === "W" || keyCode === UP_ARROW) this.keyUp = true;
     if (key === "s" || key === "S" || keyCode === DOWN_ARROW) this.keyDown = true;
     if (key === "a" || key === "A" || keyCode === LEFT_ARROW) this.keyLeft = true;

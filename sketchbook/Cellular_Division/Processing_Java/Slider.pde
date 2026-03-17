@@ -26,7 +26,7 @@ class SliderComponent {
     float handleX = map(val, min, max, x, x + w);
     noStroke();
     fill(locked ? theme.accentHandle : (isMouseOver() ? theme.textPrimary : theme.textSecondary));
-    ellipse(handleX, trackY, h * 0.5f, h * 0.5f);
+    ellipse(handleX, trackY, h * 0.75f, h * 0.75f);
   }
   
   boolean isPressed(float mx, float my) {

@@ -20,6 +20,11 @@ static final class Config {
 }
 
 AppCore appcore;
+PFont monoFont;
+
+final String SKETCH_NAME = "Cellular Division";
+final String SKETCH_VERSION = "v2.5.8";
+final String SKETCH_AUTHOR = "@eanutt1272.v2";
 
 void settings() {
   size(1100, 800, P2D);
@@ -35,6 +40,9 @@ void setup() {
       w.setSize(width, height);
     }
   });
+
+  monoFont = createFont("monaco.ttf", 13, true);
+  textFont(monoFont);
 
   appcore = new AppCore();
 }

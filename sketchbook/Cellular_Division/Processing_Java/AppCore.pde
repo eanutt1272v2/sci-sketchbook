@@ -29,6 +29,10 @@ class AppCore {
   void restartSimulation() {
     sim.requestRestart();
   }
+
+  void toggleSimulationPause() {
+    sim.togglePause();
+  }
   
   void toggleUI() {
     ui.toggleVisibility();

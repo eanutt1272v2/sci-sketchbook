@@ -4,8 +4,13 @@ class AppCore {
     this.zoom = 1.0;
     this.offsetX = -0.02;
     this.offsetY = -0.08;
+    this.defaultOffsetX = -0.02;
+    this.defaultOffsetY = -0.08;
+    this.defaultZoom = 1.0;
+    this.defaultIterations = 128;
     this.needsRedraw = true;
     this.showUI = true;
+    this.showKeymapRef = false;
     this.justPressed = false;
 
     this.theme = null;
@@ -39,6 +44,10 @@ class AppCore {
       this.panel.draw();
     }
 
+    if (this.showKeymapRef) {
+      this.panel.drawKeymapReference();
+    }
+
     this.justPressed = false;
   }
 
@@ -50,5 +59,23 @@ class AppCore {
     this.zoom *= factor;
     this.offsetX += baseX * (1.0 / old - 1.0 / this.zoom);
     this.offsetY += baseY * (1.0 / old - 1.0 / this.zoom);
+  }
+
+  resetView() {
+    this.zoom = this.defaultZoom;
+    this.offsetX = this.defaultOffsetX;
+    this.offsetY = this.defaultOffsetY;
+    this.maxIterations = this.defaultIterations;
+    if (this.panel && this.panel.slider) {
+      this.panel.slider.val = this.maxIterations;
+    }
+    this.needsRedraw = true;
+  }
+
+  cycleColorMap(step) {
+    const count = this.renderer.mapNames.length;
+    const next = (this.renderer.currentMapIndex + step + count) % count;
+    this.renderer.setMap(next);
+    this.needsRedraw = true;
   }
 }

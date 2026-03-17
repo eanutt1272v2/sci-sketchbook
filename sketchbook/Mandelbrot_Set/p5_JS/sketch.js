@@ -6,10 +6,22 @@
  */
 
 let appcore;
+let monoFont;
+
+const metadata = {
+  name: "Mandelbrot",
+  version: "v3.0.0",
+  author: "@eanutt1272.v2",
+};
+
+function preload() {
+  monoFont = loadFont("monaco.ttf");
+}
 
 function setup() {
   const canvasSize = min(windowWidth, windowHeight);
   createCanvas(canvasSize, canvasSize);
+  textFont(monoFont);
   pixelDensity(1);
   appcore = new AppCore();
   appcore.setup();

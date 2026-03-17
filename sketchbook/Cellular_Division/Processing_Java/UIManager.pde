@@ -1,6 +1,7 @@
 class UIManager {
   private final AppCore appcore;
   private boolean visible = true;
+  private boolean renderKeymapRef = false;
   
   private final LeftPanel leftPanel;
   private final RightPanel rightPanel;
@@ -22,6 +23,9 @@ class UIManager {
   void render() {
     leftPanel.render();
     rightPanel.render();
+    if (renderKeymapRef) {
+      leftPanel.renderKeymapReference();
+    }
   }
   
   void onKeyPressed() {
@@ -33,8 +37,16 @@ class UIManager {
   }
   
   boolean isVisible() { return visible; }
+
+  void toggleKeymapReference() {
+    renderKeymapRef = !renderKeymapRef;
+  }
   
   void requestRestart() {
     appcore.restartSimulation();
+  }
+
+  void toggleSimulationPause() {
+    appcore.toggleSimulationPause();
   }
 }

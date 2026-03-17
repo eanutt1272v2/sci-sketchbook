@@ -28,9 +28,7 @@ class Analyser {
     stats.totalWater = 0;
     stats.totalSediment = 0;
     stats.totalBedrock = 0;
-    
-    stats.maxElevation = 0;
-    stats.minElevation = 0;
+
     stats.avgElevation = 0;
     stats.elevationStdDev = 0;
     
@@ -38,9 +36,12 @@ class Analyser {
     stats.activeWaterCover = 0;
     stats.slopeComplexity = 0;
 
-    stats.heightBounds = { min: 0, max: 0 };
-    stats.sedimentBounds = { min: 0, max: 0 };
-    stats.dischargeBounds = { min: 0, max: 0 };
+    stats.heightBounds.min = 0;
+    stats.heightBounds.max = 0;
+    stats.sedimentBounds.min = 0;
+    stats.sedimentBounds.max = 0;
+    stats.dischargeBounds.min = 0;
+    stats.dischargeBounds.max = 0;
   }
 
   update() {
@@ -60,9 +61,8 @@ class Analyser {
     const { heightScale, evaporationRate } = params;
 
     let totalW = 0, totalS = 0, totalB = 0, riverCells = 0, totalSA = 0;
-    let minE = Infinity, maxE = -Infinity, sumE = 0, sumSqE = 0;
-    let minS = Infinity, maxS = -Infinity;
-    let maxD = 0, slopeSum = 0;
+    let sumE = 0, sumSqE = 0;
+    let slopeSum = 0;
     
     statistics.heightHistogram.fill(0);
 
@@ -81,12 +81,6 @@ class Analyser {
       sumE += h;
       sumSqE += h * h;
 
-      if (h < minE) minE = h;
-      if (h > maxE) maxE = h;
-      if (s < minS) minS = s;
-      if (s > maxS) maxS = s;
-      if (d > maxD) maxD = d;
-
       if (d > 0.05) riverCells++;
 
       const bin = Math.min(255, Math.max(0, (h * 255) | 0));
@@ -101,12 +95,18 @@ class Analyser {
       }
     }
 
-    statistics.minElevation = minE;
-    statistics.maxElevation = maxE;
-    statistics.heightBounds = { min: minE, max: maxE };
-    statistics.sedimentBounds = { min: minS, max: maxS };
-    statistics.dischargeBounds = { min: 0, max: maxD };
-    statistics.peakDischarge = maxD;
+    terrain.updateBoundsCache();
+    const hBounds = terrain.bounds.height;
+    const sBounds = terrain.bounds.sediment;
+    const dBounds = terrain.bounds.discharge;
+
+    statistics.heightBounds.min = hBounds.min;
+    statistics.heightBounds.max = hBounds.max;
+    statistics.sedimentBounds.min = sBounds.min;
+    statistics.sedimentBounds.max = sBounds.max;
+    statistics.dischargeBounds.min = dBounds.min;
+    statistics.dischargeBounds.max = dBounds.max;
+    statistics.peakDischarge = dBounds.max;
 
     statistics.avgElevation = sumE / area;
     const variance = (sumSqE / area) - (statistics.avgElevation ** 2);

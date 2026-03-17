@@ -3,6 +3,8 @@ class LeftPanel {
   private final Theme theme;
   private final AccordionPanel panel;
   private final Button restartButton;
+  private final Button pauseButton;
+  private final Button playButton;
   
   private float particleInputX, particleInputY, particleInputW;
   private InputHandler input;
@@ -22,6 +24,7 @@ class LeftPanel {
     simulation.addRow("particleCaption", 15);
     simulation.addRow("particleInput", 28);
     simulation.addRow("restart", 32);
+    simulation.addRow("pause", 32);
     panel.addGroup(simulation);
     
     panel.recompute();
@@ -29,6 +32,16 @@ class LeftPanel {
     restartButton = new Button(
       panel.contentX(), panel.getY("restart"),
       panel.contentW(), 28, "Restart Simulation", theme
+    );
+
+    pauseButton = new Button(
+      panel.contentX(), panel.getY("pause"),
+      panel.contentW(), 28, "Pause Simulation", theme
+    );
+
+    playButton = new Button(
+      panel.contentX(), panel.getY("pause"),
+      panel.contentW(), 28, "Play Simulation", theme
     );
     
     cacheHitBoxes();
@@ -42,6 +55,8 @@ class LeftPanel {
     panel.recompute();
     cacheHitBoxes();
     restartButton.y = panel.getY("restart");
+    pauseButton.y = panel.getY("pause");
+    playButton.y = panel.getY("pause");
     
     panel.drawBackground();
     float px = panel.contentX();
@@ -49,6 +64,7 @@ class LeftPanel {
     renderStatistics(px);
     renderSimulationControls(px);
     renderGraph();
+    renderCredits();
   }
   
   private void renderStatistics(float px) {
@@ -76,6 +92,11 @@ class LeftPanel {
     
     renderParticleInput(px);
     restartButton.display();
+    if (sim.isPaused()) {
+      playButton.display();
+    } else {
+      pauseButton.display();
+    }
   }
   
   private void renderParticleInput(float px) {
@@ -145,6 +166,11 @@ class LeftPanel {
   boolean handleRestartClick(float mx, float my) {
     return !panel.getGroup("Simulation").collapsed && restartButton.isPressed(mx, my);
   }
+
+  boolean handlePauseClick(float mx, float my) {
+    return !panel.getGroup("Simulation").collapsed
+      && (pauseButton.isPressed(mx, my) || playButton.isPressed(mx, my));
+  }
   
   boolean handleParticleInputClick(float mx, float my) {
     return !panel.getGroup("Simulation").collapsed 
@@ -162,11 +188,71 @@ class LeftPanel {
     return int(seconds / 3600) + "h " + int((seconds / 60) % 60) + "m " + int(seconds % 60) + "s";
   }
   
-  // call this reference instead to get max for graph
   private int getMax(ArrayList<Integer> list) {
     int _max = 0;
     for (int v : list) _max = max(_max, v);
     return _max;
+  }
+
+  void renderKeymapReference() {
+    pushStyle();
+    fill(0, 220);
+    noStroke();
+    rect(0, 0, width, height);
+
+    fill(255);
+    textAlign(LEFT, TOP);
+    float x = 50;
+    float y = 50;
+    float lineH = 28;
+
+    textSize(28);
+    text("Cellular Division Keymap Reference", x, y);
+
+    textSize(16);
+    y += 50;
+    text("Keys", x, y);
+    text("Action", x + 230, y);
+
+    stroke(255, 50);
+    line(x, y + 25, width - 50, y + 25);
+    y += 40;
+
+    String[][] commands = {
+      {"H", "Toggle UI panels"},
+      {"R", "Restart simulation"},
+      {"P / Space", "Pause or play simulation"},
+      {"#", "Toggle this keymap reference"},
+      {"1 / 2", "Alpha - / +"},
+      {"3 / 4", "Beta - / +"},
+      {"5 / 6", "Gamma - / +"},
+      {"7 / 8", "Radius - / +"},
+      {"9 / 0", "Trail alpha - / +"},
+      {"- / =", "Density threshold - / +"},
+      {"[ / ]", "Particles - / + (restart to apply)"},
+      {"Hold Shift", "Apply 10x change step"}
+    };
+
+    noStroke();
+    for (String[] cmd : commands) {
+      fill(255);
+      text(cmd[0], x, y);
+      fill(255, 150);
+      text(cmd[1], x + 230, y);
+      y += lineH;
+    }
+
+    popStyle();
+  }
+
+  void renderCredits() {
+    pushStyle();
+    noStroke();
+    fill(255, 170);
+    textSize(12);
+    textAlign(LEFT, BOTTOM);
+    text(SKETCH_NAME + " " + SKETCH_VERSION + " by " + SKETCH_AUTHOR, 12, height - 12);
+    popStyle();
   }
 }
 

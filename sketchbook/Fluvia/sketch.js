@@ -1,16 +1,16 @@
 p5.disableFriendlyErrors = true;
 
 let manager;
-let vertShader, fragShader, colourMaps, font;
+let vertShader, fragShader, colourMaps, monoFont;
 
 const metadata = {
   name: "Fluvia",
-  version: "v4.5",
+  version: "v4.8",
   author: "@eanutt1272.v2"
 };
 
 function preload() {
-  font = loadFont("monaco.ttf");
+  monoFont = loadFont("monaco.ttf");
   colourMaps = loadJSON("colour-maps.json");
   
   loadStrings("vert.glsl", lines => vertShader = lines.join("\n"));
@@ -22,7 +22,7 @@ function setup() {
   createCanvas(canvasSize, canvasSize);
   
   noSmooth();
-  textFont(font);
+  textFont(monoFont);
   pixelDensity(1);
 
   manager = new Manager({
@@ -30,7 +30,7 @@ function setup() {
     vertShader,
     fragShader,
     colourMaps,
-    font
+    monoFont
   });
 }
 
@@ -39,11 +39,13 @@ function draw() {
   manager.draw();
 }
 
-function mouseWheel(event)   { return manager.handleWheel(event);   }
+function keyPressed() { return manager.handleKeyPressed(key, keyCode); }
+function keyReleased() { return manager.handleKeyReleased(key, keyCode); }
+function mouseWheel(event) { return manager.handleWheel(event); }
 function mouseDragged(event) { return manager.handlePointer(event); }
 function touchStarted(event) { return manager.handlePointer(event); }
-function touchMoved(event)   { return manager.handlePointer(event); }
-function touchEnded(event)   { return manager.handlePointer(event); }
+function touchMoved(event) { return manager.handlePointer(event); }
+function touchEnded(event) { return manager.handlePointer(event); }
 
 function windowResized() {
   manager.resize();

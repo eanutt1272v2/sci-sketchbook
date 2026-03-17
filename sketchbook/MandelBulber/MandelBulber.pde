@@ -90,7 +90,7 @@ class AppCore {
 }
 
 class BulbRenderer {
-  AppCore appCore;
+  AppCore appcore;
 
   int maximumIterations = 8;
   int power = 8;
@@ -112,8 +112,8 @@ class BulbRenderer {
 
   final Object swapLock = new Object();
 
-  BulbRenderer(AppCore appCore) {
-    this.appCore = appCore;
+  BulbRenderer(AppCore appcore) {
+    this.appcore = appcore;
   }
 
   void startCompute() {
@@ -228,7 +228,7 @@ class BulbRenderer {
   }
 
   void drawBulb() {
-    PGraphics g = appCore.sceneBuffer;
+    PGraphics g = appcore.sceneBuffer;
     ArrayList<PVector> pts;
     synchronized (swapLock) { pts = bulbPoints; }
     g.strokeWeight(1);
@@ -240,7 +240,7 @@ class BulbRenderer {
   }
 
   void drawAxes() {
-    PGraphics g = appCore.sceneBuffer;
+    PGraphics g = appcore.sceneBuffer;
     float al = axesLength();
     g.strokeWeight(1.5);
     g.stroke(255, 60, 60);
@@ -252,7 +252,7 @@ class BulbRenderer {
   }
 
   void drawAxesLabels() {
-    PGraphics g = appCore.sceneBuffer;
+    PGraphics g = appcore.sceneBuffer;
     float al = axesLength();
     g.textSize(14);
     g.textAlign(CENTER, CENTER);
@@ -277,49 +277,49 @@ class BulbRenderer {
 
 class InputHandler {
 
-  AppCore appCore;
+  AppCore appcore;
   float rotateSensitivity = 0.008;
   float keyRotateSpeed = 0.03;
   float zoomFactor = 1.05;
 
-  InputHandler(AppCore appCore) {
-    this.appCore = appCore;
+  InputHandler(AppCore appcore) {
+    this.appcore = appcore;
   }
 
   void handleContinuousInput() {
-    UIPanel p = appCore.panel;
+    UIPanel p = appcore.panel;
 
     if (!p.collapsed) {
       if (p.dropdown.isOpen || p.resDropdown.isOpen || p.iterSlider.locked || p.resSlider.locked) return;
     }
 
-    if (appCore.keyUp) appCore.radiansX -= keyRotateSpeed;
-    if (appCore.keyDown) appCore.radiansX += keyRotateSpeed;
-    if (appCore.keyLeft) appCore.radiansY -= keyRotateSpeed;
-    if (appCore.keyRight) appCore.radiansY += keyRotateSpeed;
-    if (appCore.keyZoomIn) doZoom(zoomFactor);
-    if (appCore.keyZoomOut) doZoom(1.0 / zoomFactor);
+    if (appcore.keyUp) appcore.radiansX -= keyRotateSpeed;
+    if (appcore.keyDown) appcore.radiansX += keyRotateSpeed;
+    if (appcore.keyLeft) appcore.radiansY -= keyRotateSpeed;
+    if (appcore.keyRight) appcore.radiansY += keyRotateSpeed;
+    if (appcore.keyZoomIn) doZoom(zoomFactor);
+    if (appcore.keyZoomOut) doZoom(1.0 / zoomFactor);
 
-    if (mousePressed && appCore.showUI && !appCore.justPressed) {
+    if (mousePressed && appcore.showUI && !appcore.justPressed) {
       if (p.zoomInBtn.isMouseOver()) doZoom(zoomFactor);
       if (p.zoomOutBtn.isMouseOver()) doZoom(1.0 / zoomFactor);
     }
 
     if (!p.collapsed) {
       if (mousePressed && p.iterSlider.locked && p.iterSlider.update()) {
-        appCore.renderer.maximumIterations = (int) p.iterSlider.val;
+        appcore.renderer.maximumIterations = (int) p.iterSlider.val;
       }
       if (mousePressed && p.resSlider.locked && p.resSlider.update()) {
-        appCore.renderer.resolutionScale = (int) p.resSlider.val;
+        appcore.renderer.resolutionScale = (int) p.resSlider.val;
       }
     }
   }
 
   void onMousePressed() {
-    appCore.justPressed = true;
+    appcore.justPressed = true;
 
-    if (!appCore.showUI) return;
-    UIPanel p = appCore.panel;
+    if (!appcore.showUI) return;
+    UIPanel p = appcore.panel;
 
     if (p.isHeaderOver()) {
       p.collapsed = !p.collapsed;
@@ -330,7 +330,7 @@ class InputHandler {
 
     if (p.dropdown.isOpen) {
       int clicked = p.dropdown.getClickedIndex();
-      if (clicked != -1) appCore.renderer.power = appCore.renderer.powerValues[clicked];
+      if (clicked != -1) appcore.renderer.power = appcore.renderer.powerValues[clicked];
       p.dropdown.isOpen = false;
       return;
     }
@@ -339,8 +339,8 @@ class InputHandler {
     if (p.resDropdown.isOpen) {
       int clicked = p.resDropdown.getClickedIndex();
       if (clicked != -1) {
-        appCore.renderer.resolutionScale = appCore.renderer.resolutionValues[clicked];
-        p.resSlider.val = appCore.renderer.resolutionScale;
+        appcore.renderer.resolutionScale = appcore.renderer.resolutionValues[clicked];
+        p.resSlider.val = appcore.renderer.resolutionScale;
       }
       p.resDropdown.isOpen = false;
       return;
@@ -362,33 +362,33 @@ class InputHandler {
       p.isTypingRes = false;
     }
 
-    if (p.recomputeBtn.isMouseOver() && !appCore.renderer.isComputing) { appCore.renderer.startCompute(); return; }
+    if (p.recomputeBtn.isMouseOver() && !appcore.renderer.isComputing) { appcore.renderer.startCompute(); return; }
 
     if (p.iterSlider.isMouseOver()) {
       p.iterSlider.locked = true;
       p.iterSlider.val = constrain(map(mouseX, p.iterSlider.x, p.iterSlider.x + p.iterSlider.w, p.iterSlider.min, p.iterSlider.max), p.iterSlider.min, p.iterSlider.max);
-      appCore.renderer.maximumIterations = (int) p.iterSlider.val;
+      appcore.renderer.maximumIterations = (int) p.iterSlider.val;
     }
 
     if (p.resSlider.isMouseOver()) {
       p.resSlider.locked = true;
       p.resSlider.val = constrain(map(mouseX, p.resSlider.x, p.resSlider.x + p.resSlider.w, p.resSlider.min, p.resSlider.max),p.resSlider.min, p.resSlider.max);
-      appCore.renderer.resolutionScale = (int) p.resSlider.val;
+      appcore.renderer.resolutionScale = (int) p.resSlider.val;
     }
 
     int[] iterAmounts = {-4, -1, 1, 4};
     for (int i = 0; i < 4; i++) {
       if (p.iterStepButtons[i].isMouseOver()) {
-        appCore.renderer.maximumIterations = constrain(appCore.renderer.maximumIterations + iterAmounts[i], (int) p.iterSlider.min, (int) p.iterSlider.max);
-        p.iterSlider.val = appCore.renderer.maximumIterations;
+        appcore.renderer.maximumIterations = constrain(appcore.renderer.maximumIterations + iterAmounts[i], (int) p.iterSlider.min, (int) p.iterSlider.max);
+        p.iterSlider.val = appcore.renderer.maximumIterations;
       }
     }
 
     int[] resAmounts = {-32, -16, 16, 32};
     for (int i = 0; i < 4; i++) {
       if (p.resStepButtons[i].isMouseOver()) {
-        appCore.renderer.resolutionScale = constrain(appCore.renderer.resolutionScale + resAmounts[i], (int) p.resSlider.min, (int) p.resSlider.max);
-        p.resSlider.val = appCore.renderer.resolutionScale;
+        appcore.renderer.resolutionScale = constrain(appcore.renderer.resolutionScale + resAmounts[i], (int) p.resSlider.min, (int) p.resSlider.max);
+        p.resSlider.val = appcore.renderer.resolutionScale;
       }
     }
 
@@ -397,41 +397,41 @@ class InputHandler {
   }
 
   void onMouseReleased() {
-    appCore.panel.iterSlider.locked = false;
-    appCore.panel.resSlider.locked = false;
+    appcore.panel.iterSlider.locked = false;
+    appcore.panel.resSlider.locked = false;
   }
 
   void onMouseDragged() {
-    UIPanel p = appCore.panel;
+    UIPanel p = appcore.panel;
 
     if (!p.collapsed) {
       if (p.iterSlider.locked) {
         p.iterSlider.val = constrain(map(mouseX, p.iterSlider.x, p.iterSlider.x + p.iterSlider.w, p.iterSlider.min, p.iterSlider.max), p.iterSlider.min, p.iterSlider.max);
-        appCore.renderer.maximumIterations = (int) p.iterSlider.val;
+        appcore.renderer.maximumIterations = (int) p.iterSlider.val;
         return;
       }
       if (p.resSlider.locked) {
         p.resSlider.val = constrain(map(mouseX, p.resSlider.x, p.resSlider.x + p.resSlider.w, p.resSlider.min, p.resSlider.max), p.resSlider.min, p.resSlider.max);
-        appCore.renderer.resolutionScale = (int) p.resSlider.val;
+        appcore.renderer.resolutionScale = (int) p.resSlider.val;
         return;
       }
-      if (appCore.showUI && (p.dropdown.isOpen || p.resDropdown.isOpen)) return;
+      if (appcore.showUI && (p.dropdown.isOpen || p.resDropdown.isOpen)) return;
     }
 
-    if (appCore.showUI && (p.zoomInBtn.isMouseOver() || p.zoomOutBtn.isMouseOver())) return;
+    if (appcore.showUI && (p.zoomInBtn.isMouseOver() || p.zoomOutBtn.isMouseOver())) return;
 
-    appCore.radiansX += (pmouseY - mouseY) * rotateSensitivity;
-    appCore.radiansY -= (pmouseX - mouseX) * rotateSensitivity;
+    appcore.radiansX += (pmouseY - mouseY) * rotateSensitivity;
+    appcore.radiansY -= (pmouseX - mouseX) * rotateSensitivity;
   }
 
   void onMouseWheel(MouseEvent e) {
-    UIPanel p = appCore.panel;
-    if (!p.collapsed && appCore.showUI && (p.dropdown.isOpen || p.resDropdown.isOpen)) return;
+    UIPanel p = appcore.panel;
+    if (!p.collapsed && appcore.showUI && (p.dropdown.isOpen || p.resDropdown.isOpen)) return;
     doZoom(e.getCount() < 0 ? 1.15 : 1.0 / 1.15);
   }
 
   void onKeyPressed() {
-    UIPanel p = appCore.panel;
+    UIPanel p = appcore.panel;
 
     if (!p.collapsed) {
       if (p.isTypingIter) {
@@ -441,8 +441,8 @@ class InputHandler {
           p.iterTypingBuffer = p.iterTypingBuffer.substring(0, p.iterTypingBuffer.length() - 1);
         } else if (keyCode == ENTER || keyCode == RETURN) {
           if (p.iterTypingBuffer.length() > 0) {
-            appCore.renderer.maximumIterations = constrain( int(p.iterTypingBuffer), (int) p.iterSlider.min, (int) p.iterSlider.max);
-            p.iterSlider.val = appCore.renderer.maximumIterations;
+            appcore.renderer.maximumIterations = constrain( int(p.iterTypingBuffer), (int) p.iterSlider.min, (int) p.iterSlider.max);
+            p.iterSlider.val = appcore.renderer.maximumIterations;
           }
           p.isTypingIter = false;
         } else if (keyCode == ESC) {
@@ -458,8 +458,8 @@ class InputHandler {
           p.resTypingBuffer = p.resTypingBuffer.substring(0, p.resTypingBuffer.length() - 1);
         } else if (keyCode == ENTER || keyCode == RETURN) {
           if (p.resTypingBuffer.length() > 0) {
-            appCore.renderer.resolutionScale = constrain(int(p.resTypingBuffer), (int) p.resSlider.min, (int) p.resSlider.max);
-            p.resSlider.val = appCore.renderer.resolutionScale;
+            appcore.renderer.resolutionScale = constrain(int(p.resTypingBuffer), (int) p.resSlider.min, (int) p.resSlider.max);
+            p.resSlider.val = appcore.renderer.resolutionScale;
           }
           p.isTypingRes = false;
         } else if (keyCode == ESC) {
@@ -469,36 +469,36 @@ class InputHandler {
       }
     }
 
-    if (key == 'h' || key == 'H') appCore.showUI = !appCore.showUI;
-    if (key == 'r' || key == 'R') { if (!appCore.renderer.isComputing) appCore.renderer.startCompute(); }
-    if (key == 'w' || key == 'W' || keyCode == UP) appCore.keyUp = true;
-    if (key == 's' || key == 'S' || keyCode == DOWN) appCore.keyDown = true;
-    if (key == 'a' || key == 'A' || keyCode == LEFT) appCore.keyLeft = true;
-    if (key == 'd' || key == 'D' || keyCode == RIGHT) appCore.keyRight = true;
-    if (key == 'e' || key == 'E' || key == '=' || key == '+') appCore.keyZoomIn = true;
-    if (key == 'q' || key == 'Q' || key == '-') appCore.keyZoomOut = true;
+    if (key == 'h' || key == 'H') appcore.showUI = !appcore.showUI;
+    if (key == 'r' || key == 'R') { if (!appcore.renderer.isComputing) appcore.renderer.startCompute(); }
+    if (key == 'w' || key == 'W' || keyCode == UP) appcore.keyUp = true;
+    if (key == 's' || key == 'S' || keyCode == DOWN) appcore.keyDown = true;
+    if (key == 'a' || key == 'A' || keyCode == LEFT) appcore.keyLeft = true;
+    if (key == 'd' || key == 'D' || keyCode == RIGHT) appcore.keyRight = true;
+    if (key == 'e' || key == 'E' || key == '=' || key == '+') appcore.keyZoomIn = true;
+    if (key == 'q' || key == 'Q' || key == '-') appcore.keyZoomOut = true;
   }
 
   void onKeyReleased() {
-    if (key == 'w' || key == 'W' || keyCode == UP) appCore.keyUp = false;
-    if (key == 's' || key == 'S' || keyCode == DOWN) appCore.keyDown = false;
-    if (key == 'a' || key == 'A' || keyCode == LEFT) appCore.keyLeft = false;
-    if (key == 'd' || key == 'D' || keyCode == RIGHT) appCore.keyRight = false;
-    if (key == 'e' || key == 'E' || key == '=' || key == '+') appCore.keyZoomIn = false;
-    if (key == 'q' || key == 'Q' || key == '-') appCore.keyZoomOut = false;
+    if (key == 'w' || key == 'W' || keyCode == UP) appcore.keyUp = false;
+    if (key == 's' || key == 'S' || keyCode == DOWN) appcore.keyDown = false;
+    if (key == 'a' || key == 'A' || keyCode == LEFT) appcore.keyLeft = false;
+    if (key == 'd' || key == 'D' || keyCode == RIGHT) appcore.keyRight = false;
+    if (key == 'e' || key == 'E' || key == '=' || key == '+') appcore.keyZoomIn = false;
+    if (key == 'q' || key == 'Q' || key == '-') appcore.keyZoomOut = false;
   }
 
   private void doZoom(float factor) {
-    int oldSize = appCore.renderer.objectSize;
-    appCore.renderer.objectSize = constrain(round(oldSize * factor), 50, 600);
-    if (appCore.renderer.objectSize != oldSize) {
-      appCore.renderer.rescalePoints(oldSize);
+    int oldSize = appcore.renderer.objectSize;
+    appcore.renderer.objectSize = constrain(round(oldSize * factor), 50, 600);
+    if (appcore.renderer.objectSize != oldSize) {
+      appcore.renderer.rescalePoints(oldSize);
     }
   }
 }
 
 class UIPanel {
-  AppCore appCore;
+  AppCore appcore;
   UILayout layout;
 
   static final int PANEL_W = 280;
@@ -522,8 +522,8 @@ class UIPanel {
   boolean isTypingRes = false;
   String resTypingBuffer = "";
 
-  UIPanel(AppCore appCore) {
-    this.appCore = appCore;
+  UIPanel(AppCore appcore) {
+    this.appcore = appcore;
     buildLayout();
   }
 
@@ -552,8 +552,8 @@ class UIPanel {
     float cw = layout.contentW();
 
     float si = 6;
-    iterSlider = new Slider(cx + si, layout.getY("iterSlider"), cw - si * 2, 22, 1, 32, appCore.renderer.maximumIterations);
-    resSlider  = new Slider(cx + si, layout.getY("resSlider"),  cw - si * 2, 22, 32, 256, appCore.renderer.resolutionScale);
+    iterSlider = new Slider(cx + si, layout.getY("iterSlider"), cw - si * 2, 22, 1, 32, appcore.renderer.maximumIterations);
+    resSlider  = new Slider(cx + si, layout.getY("resSlider"),  cw - si * 2, 22, 32, 256, appcore.renderer.resolutionScale);
 
     String[] stepLabels = {"--", "-", "+", "++"};
     float iterStepY = layout.getY("iterStepBtns");
@@ -563,15 +563,15 @@ class UIPanel {
       resStepButtons[i]  = new Button(cx + i * 38, resStepY, 32, 28, stepLabels[i]);
     }
 
-    String[] powerLabels = new String[appCore.renderer.powerValues.length];
+    String[] powerLabels = new String[appcore.renderer.powerValues.length];
     for (int i = 0; i < powerLabels.length; i++) {
-      powerLabels[i] = "Power: " + appCore.renderer.powerValues[i];
+      powerLabels[i] = "Power: " + appcore.renderer.powerValues[i];
     }
     dropdown = new Dropdown(cx, layout.getY("powerDropdown"), cw, 26, powerLabels);
 
-    String[] resLabels = new String[appCore.renderer.resolutionValues.length];
+    String[] resLabels = new String[appcore.renderer.resolutionValues.length];
     for (int i = 0; i < resLabels.length; i++) {
-      resLabels[i] = "Res: " + appCore.renderer.resolutionValues[i];
+      resLabels[i] = "Res: " + appcore.renderer.resolutionValues[i];
     }
     resDropdown = new Dropdown(cx, layout.getY("resDropdown"), cw, 26, resLabels);
 
@@ -586,9 +586,9 @@ class UIPanel {
   }
 
   void draw() {
-    PGraphics g = appCore.uiBuffer;
-    UITheme t = appCore.theme;
-    BulbRenderer r = appCore.renderer;
+    PGraphics g = appcore.uiBuffer;
+    UITheme t = appcore.theme;
+    BulbRenderer r = appcore.renderer;
 
     g.colorMode(RGB, 255);
 
@@ -695,8 +695,8 @@ class UIPanel {
     g.fill(t.textSecondary);
     g.textSize(t.textSizeSecondary);
     g.textAlign(LEFT, TOP);
-    float degX = appCore.radiansX * (180.0 / PI);
-    float degY = appCore.radiansY * (180.0 / PI);
+    float degX = appcore.radiansX * (180.0 / PI);
+    float degY = appcore.radiansY * (180.0 / PI);
     g.text("X=" + nf(degX, 1, 1) + "\u00b0  Y=" + nf(degY, 1, 1) + "\u00b0" + "  Size=" + r.objectSize, cx, layout.getY("rotInfo"));
     g.text("Iter=" + r.maximumIterations + "  Power=" + r.power + "  Res=" + r.resolutionScale, cx, layout.getY("sizeInfo"));
 

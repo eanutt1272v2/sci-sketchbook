@@ -21,6 +21,8 @@ class Camera {
       pinch: null
     };
 
+    this.singlePointer = { x: 0, y: 0 };
+
     this.lerpWeight = 0.25;
   }
 
@@ -52,22 +54,28 @@ class Camera {
   }
 
   handlePointer() {
-    let points = touches.length > 0 ? touches : [];
-    if (points.length === 0 && mouseIsPressed) {
-      points = [{ x: mouseX, y: mouseY }];
+    const touchCount = touches.length;
+
+    if (touchCount === 1) {
+      this.handleOrbit(touches[0]);
+      return;
     }
 
-    const count = points.length;
-
-    if (count === 1) {
-      this.handleOrbit(points[0]);
-    } else if (count === 2) {
-      this.handlePinch(points[0], points[1]);
-    } else {
-      const { gesture } = this;
-      gesture.orbit = null;
-      gesture.pinch = null;
+    if (touchCount === 2) {
+      this.handlePinch(touches[0], touches[1]);
+      return;
     }
+
+    if (touchCount === 0 && mouseIsPressed) {
+      this.singlePointer.x = mouseX;
+      this.singlePointer.y = mouseY;
+      this.handleOrbit(this.singlePointer);
+      return;
+    }
+
+    const { gesture } = this;
+    gesture.orbit = null;
+    gesture.pinch = null;
   }
 
   handleOrbit(touch) {

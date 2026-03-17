@@ -66,7 +66,7 @@ class UIPanel {
     if (!inp.isTypingIter) {
       fill(t.textMuted);
       textSize(t.textSizeCaption);
-      text("(click to type)", px + 105, layout.getY("iterLabel") + 3);
+      text("(click to type)", px + 160, layout.getY("iterLabel") + 3);
     }
 
     slider.display();
@@ -86,12 +86,13 @@ class UIPanel {
 
     fill(t.textMuted);
     textSize(t.textSizeCaption);
-    text("[WASD/Arrows]: Pan, [Scroll/Q,E]: Zoom, [H]: Toggle UI", px, layout.getY("hints"));
+    text("[WASD/Arrows]: Pan, [Q/E, Scroll]: Zoom, [#]: Keymap", px, layout.getY("hints"));
 
     dropdown.display(appcore.renderer.currentMapIndex);
 
     zoomInBtn.display();
     zoomOutBtn.display();
+    drawCredits();
   }
 
   String format3dp(double value) {
@@ -112,5 +113,62 @@ class UIPanel {
 
     String fracStr = (frac < 10 ? "00" : (frac < 100 ? "0" : "")) + frac;
     return sign + wholeStr + "." + fracStr;
+  }
+
+  void drawKeymapReference() {
+    pushStyle();
+    fill(0, 220);
+    noStroke();
+    rect(0, 0, width, height);
+
+    fill(255);
+    textAlign(LEFT, TOP);
+    float x = 50;
+    float y = 50;
+    float lineH = 28;
+
+    textSize(28);
+    text("Burning Ship Keymap Reference", x, y);
+
+    textSize(16);
+    y += 50;
+    text("Keys", x, y);
+    text("Action", x + 240, y);
+    stroke(255, 50);
+    line(x, y + 25, width - 50, y + 25);
+    y += 40;
+
+    String[][] commands = {
+      {"W/A/S/D or Arrow Keys", "Pan viewport"},
+      {"Q / E, Mouse Wheel", "Zoom out / in"},
+      {"[ / ]", "Iterations -16 / +16"},
+      {"{ / }", "Iterations -64 / +64"},
+      {"1..9", "Select colour map by index"},
+      {"X / C", "Previous / next colour map"},
+      {"R", "Reset view and iterations"},
+      {"H", "Toggle UI"},
+      {"#", "Toggle keymap reference"}
+    };
+
+    noStroke();
+    for (String[] cmd : commands) {
+      fill(255);
+      text(cmd[0], x, y);
+      fill(255, 150);
+      text(cmd[1], x + 240, y);
+      y += lineH;
+    }
+
+    popStyle();
+  }
+
+  void drawCredits() {
+    pushStyle();
+    noStroke();
+    fill(255, 170);
+    textSize(12);
+    textAlign(LEFT, BOTTOM);
+    text(SKETCH_NAME + " " + SKETCH_VERSION + " by " + SKETCH_AUTHOR, 12, height - 12);
+    popStyle();
   }
 }
