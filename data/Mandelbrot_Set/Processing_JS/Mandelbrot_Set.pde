@@ -26,7 +26,7 @@ void resizeSketch() {
 
 void draw() { appcore.draw(); }
 void mousePressed() { appcore.input.onMousePressed(); println("Triggered mousePressed"); }
-void mouseReleased() { appcore.input.onMouseReleased(); println("Triggered mouseReleased); }
+void mouseReleased() { appcore.input.onMouseReleased(); println("Triggered mouseReleased"); }
 void mouseDragged() { appcore.input.onMouseDragged(); println("Triggered mouseDragged"); }
 void mouseWheel(MouseEvent e) { appcore.input.onMouseWheel(e); }
 void externalMouseWheel(int delta) { appcore.input.handleManualZoom(delta); }
