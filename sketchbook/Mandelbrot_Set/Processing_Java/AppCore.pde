@@ -65,4 +65,18 @@ class AppCore {
     renderer.setMap(next);
     needsRedraw = true;
   }
+
+  void exportImagePNG() {
+    String timestamp = "" + year()
+      + nf(month(), 2)
+      + nf(day(), 2)
+      + "_"
+      + nf(hour(), 2)
+      + nf(minute(), 2)
+      + nf(second(), 2);
+    String slug = SKETCH_NAME.toLowerCase().replace(" ", "_");
+    String filename = slug + "_" + timestamp + ".png";
+    renderer.buffer.save("data/" + filename);
+    println("Saved image: data/" + filename);
+  }
 }

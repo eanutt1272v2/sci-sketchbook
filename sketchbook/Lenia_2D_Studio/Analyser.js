@@ -9,17 +9,23 @@ class Analyser {
     let mass = 0;
     let growth = 0;
     let maxValue = 0;
-    let mx = 0, my = 0;
+    let mx = 0;
+    let my = 0;
 
-    for (let y = 0; y < board.size; y++) {
-      for (let x = 0; x < board.size; x++) {
-        const val = board.cells[y][x];
-        mass += val;
-        if (board.field[y][x] > 0) growth += board.field[y][x];
-        if (val > maxValue) maxValue = val;
-        mx += val * x;
-        my += val * y;
-      }
+    const size = board.size;
+    const cells = board.cells;
+    const field = board.field;
+    const count = size * size;
+
+    for (let i = 0; i < count; i++) {
+      const val = cells[i];
+      mass += val;
+      if (field[i] > 0) growth += field[i];
+      if (val > maxValue) maxValue = val;
+      const x = i % size;
+      const y = (i / size) | 0;
+      mx += val * x;
+      my += val * y;
     }
 
     let gyradius = 0;
@@ -28,13 +34,16 @@ class Analyser {
       const cy = my / mass;
       let inertia = 0;
 
-      for (let y = 0; y < board.size; y++) {
-        for (let x = 0; x < board.size; x++) {
-          const dx = x - cx;
-          const dy = y - cy;
-          inertia += board.cells[y][x] * (dx * dx + dy * dy);
-        }
+      for (let i = 0; i < count; i++) {
+        const val = cells[i];
+        if (val <= 0) continue;
+        const x = i % size;
+        const y = (i / size) | 0;
+        const dx = x - cx;
+        const dy = y - cy;
+        inertia += val * (dx * dx + dy * dy);
       }
+
       gyradius = Math.sqrt(inertia / mass);
     }
 

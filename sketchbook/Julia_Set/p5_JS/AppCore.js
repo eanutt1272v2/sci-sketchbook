@@ -2,12 +2,14 @@ class AppCore {
   constructor() {
     this.maxIterations = 128;
     this.zoom = 1.0;
-    this.offsetX = -0.25;
-    this.offsetY = 0.5;
-    this.defaultOffsetX = -0.25;
-    this.defaultOffsetY = 0.5;
+    this.offsetX = 0.0;
+    this.offsetY = 0.0;
+    this.defaultOffsetX = 0.0;
+    this.defaultOffsetY = 0.0;
     this.defaultZoom = 1.0;
     this.defaultIterations = 128;
+    this.juliaCx = -0.8;
+    this.juliaCy = 0.156;
     this.needsRedraw = true;
     this.showUI = true;
     this.showKeymapRef = false;

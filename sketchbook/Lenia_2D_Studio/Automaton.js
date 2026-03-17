@@ -7,7 +7,12 @@
 class Automaton {
   constructor(params) {
     this.kernel = null;
+    this.kernelSize = 0;
     this.kernelRadius = 0;
+    this.kernelMax = 0;
+    this.kernelDX = new Int16Array(0);
+    this.kernelDY = new Int16Array(0);
+    this.kernelValues = new Float32Array(0);
     this.updateParameters(params);
   }
 
@@ -21,46 +26,72 @@ class Automaton {
     this.gn = params.gn;
     this.softClip = params.softClip;
     this.multiStep = params.multiStep;
+    this.addNoise = params.addNoise || 0;
+    this.maskRate = params.maskRate || 0;
+    this.paramP = params.paramP || 0;
 
     this._calculateKernel();
   }
 
   _calculateKernel() {
-    const kernelSize = Math.ceil(this.R) * 2 + 1;
-    this.kernel = Array(kernelSize).fill(0).map(() => Array(kernelSize).fill(0));
+    this.kernelSize = Math.ceil(this.R) * 2 + 1;
     this.kernelRadius = Math.ceil(this.R);
+    this.kernel = new Float32Array(this.kernelSize * this.kernelSize);
 
-    const cx = Math.floor(kernelSize / 2);
-    const cy = Math.floor(kernelSize / 2);
+    const cx = Math.floor(this.kernelSize / 2);
+    const cy = Math.floor(this.kernelSize / 2);
 
-    for (let y = 0; y < kernelSize; y++) {
-      for (let x = 0; x < kernelSize; x++) {
-        const dx = x - cx, dy = y - cy;
+    for (let y = 0; y < this.kernelSize; y++) {
+      for (let x = 0; x < this.kernelSize; x++) {
+        const dx = x - cx;
+        const dy = y - cy;
         const d = Math.sqrt(dx * dx + dy * dy) / this.R;
-        this.kernel[y][x] = this._kernelShell(d);
+        this.kernel[y * this.kernelSize + x] = this._kernelShell(d);
       }
     }
 
     this._normaliseKernel();
+    this._buildKernelSparse();
   }
 
   _normaliseKernel() {
-    const kernelSize = this.kernel.length;
     let sum = 0;
+    let maxVal = 0;
 
-    for (let y = 0; y < kernelSize; y++) {
-      for (let x = 0; x < kernelSize; x++) {
-        sum += this.kernel[y][x];
-      }
+    for (let i = 0; i < this.kernel.length; i++) {
+      sum += this.kernel[i];
+      if (this.kernel[i] > maxVal) maxVal = this.kernel[i];
     }
 
     if (sum > 0) {
-      for (let y = 0; y < kernelSize; y++) {
-        for (let x = 0; x < kernelSize; x++) {
-          this.kernel[y][x] /= sum;
-        }
+      for (let i = 0; i < this.kernel.length; i++) {
+        this.kernel[i] /= sum;
+      }
+      maxVal /= sum;
+    }
+
+    this.kernelMax = maxVal;
+  }
+
+  _buildKernelSparse() {
+    const dx = [];
+    const dy = [];
+    const kv = [];
+    const kr = this.kernelRadius;
+
+    for (let y = 0; y < this.kernelSize; y++) {
+      for (let x = 0; x < this.kernelSize; x++) {
+        const val = this.kernel[y * this.kernelSize + x];
+        if (val <= 0) continue;
+        dx.push(x - kr);
+        dy.push(y - kr);
+        kv.push(val);
       }
     }
+
+    this.kernelDX = Int16Array.from(dx);
+    this.kernelDY = Int16Array.from(dy);
+    this.kernelValues = Float32Array.from(kv);
   }
 
   _kernelShell(r) {
@@ -112,22 +143,29 @@ class Automaton {
   }
 
   convolve(board) {
-    const kr = this.kernelRadius;
-    const ksize = this.kernel.length;
+    const size = board.size;
+    const cells = board.cells;
+    const potential = board.potential;
+    const kdx = this.kernelDX;
+    const kdy = this.kernelDY;
+    const kval = this.kernelValues;
 
-    for (let y = 0; y < board.size; y++) {
-      for (let x = 0; x < board.size; x++) {
+    for (let y = 0; y < size; y++) {
+      const rowOffset = y * size;
+      for (let x = 0; x < size; x++) {
         let sum = 0;
 
-        for (let ky = 0; ky < ksize; ky++) {
-          for (let kx = 0; kx < ksize; kx++) {
-            const cy = (y + ky - kr + board.size) % board.size;
-            const cx = (x + kx - kr + board.size) % board.size;
-            sum += board.cells[cy][cx] * this.kernel[ky][kx];
-          }
+        for (let k = 0; k < kval.length; k++) {
+          let cx = x + kdx[k];
+          let cy = y + kdy[k];
+          if (cx < 0) cx += size;
+          else if (cx >= size) cx -= size;
+          if (cy < 0) cy += size;
+          else if (cy >= size) cy -= size;
+          sum += cells[cy * size + cx] * kval[k];
         }
 
-        board.potential[y][x] = sum;
+        potential[rowOffset + x] = sum;
       }
     }
   }
@@ -136,36 +174,51 @@ class Automaton {
     this.convolve(board);
 
     const dt = 1 / this.T;
+    const cells = board.cells;
+    const potential = board.potential;
+    const field = board.field;
+    const fieldOld = board.fieldOld;
+    const count = board.size * board.size;
+    const hasOld = this.multiStep && fieldOld;
+    const noiseAmp = this.addNoise / 10;
+    const hasNoise = noiseAmp > 0;
+    const maskRate = this.maskRate / 10;
+    const hasMask = maskRate > 0;
+    const quant = this.paramP;
 
-    for (let y = 0; y < board.size; y++) {
-      for (let x = 0; x < board.size; x++) {
-        const growth = this._growthFunc(board.potential[y][x]);
-        board.field[y][x] = growth;
+    for (let i = 0; i < count; i++) {
+      const growth = this._growthFunc(potential[i]);
+      field[i] = growth;
 
-        let D = growth;
-        if (this.multiStep && board.fieldOld) {
-          D = 0.5 * (3 * board.field[y][x] - board.fieldOld[y][x]);
-        }
+      let D = growth;
+      if (hasOld) {
+        D = 0.5 * (3 * field[i] - fieldOld[i]);
+      }
 
-        let newVal = board.cells[y][x] + dt * D;
+      let newVal = cells[i] + dt * D;
 
-        if (this.softClip) {
-          newVal = Automaton.softClip(newVal, 0, 1, 1 / dt);
-        } else {
-          newVal = Math.max(0, Math.min(1, newVal));
-        }
+      if (hasNoise) {
+        newVal *= 1 + (Math.random() - 0.5) * noiseAmp;
+      }
 
-        board.cells[y][x] = newVal;
+      if (this.softClip) {
+        newVal = Automaton.softClip(newVal, 0, 1, 1 / dt);
+      } else {
+        newVal = Math.max(0, Math.min(1, newVal));
+      }
+
+      if (quant > 0) {
+        newVal = Math.round(newVal * quant) / quant;
+      }
+
+      if (!hasMask || Math.random() > maskRate) {
+        cells[i] = newVal;
       }
     }
 
     if (this.multiStep) {
       if (!board.fieldOld) board.fieldOld = board._createGrid();
-      for (let y = 0; y < board.size; y++) {
-        for (let x = 0; x < board.size; x++) {
-          board.fieldOld[y][x] = board.field[y][x];
-        }
-      }
+      board.fieldOld.set(field);
     }
   }
 }

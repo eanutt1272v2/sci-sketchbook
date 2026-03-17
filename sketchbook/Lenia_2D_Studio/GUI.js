@@ -121,6 +121,18 @@ class GUI {
 
     time.addBinding(params, "multiStep", { label: "Multi-Step" })
     .on("change", () => automaton.updateParameters(params));
+
+    time.addBinding(params, "addNoise", {
+      min: 0, max: 10, step: 0.1, label: "Noise"
+    }).on("change", () => automaton.updateParameters(params));
+
+    time.addBinding(params, "maskRate", {
+      min: 0, max: 10, step: 0.1, label: "Mask Rate"
+    }).on("change", () => automaton.updateParameters(params));
+
+    time.addBinding(params, "paramP", {
+      min: 0, max: 64, step: 1, label: "Quantisation P"
+    }).on("change", () => automaton.updateParameters(params));
   }
 
   createAnimalsTab(page) {

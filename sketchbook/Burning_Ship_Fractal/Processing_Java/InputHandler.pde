@@ -82,6 +82,7 @@ class InputHandler {
 
     if (p.zoomInBtn.isMouseOver()) { appcore.doZoom(1.05, width / 2, height / 2); appcore.needsRedraw = true; }
     if (p.zoomOutBtn.isMouseOver()) { appcore.doZoom(1.0 / 1.05, width / 2, height / 2); appcore.needsRedraw = true; }
+    if (p.exportBtn.isMouseOver()) { appcore.exportImagePNG(); }
   }
 
   void onMouseReleased() {
@@ -140,6 +141,7 @@ class InputHandler {
     }
     if (key == 'h' || key == 'H') appcore.showUI = !appcore.showUI;
     if (key == 'r' || key == 'R') { appcore.resetView(); return; }
+    if (key == 'p' || key == 'P') { appcore.exportImagePNG(); return; }
     if (key == 'c' || key == 'C') { appcore.cycleColorMap(1); return; }
     if (key == 'x' || key == 'X') { appcore.cycleColorMap(-1); return; }
 

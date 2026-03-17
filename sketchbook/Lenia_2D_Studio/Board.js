@@ -14,15 +14,17 @@ class Board {
   }
 
   _createGrid() {
-    return Array(this.size).fill(0).map(() => Array(this.size).fill(0));
+    return new Float32Array(this.size * this.size);
+  }
+
+  _index(x, y) {
+    return y * this.size + x;
   }
 
   clear() {
-    for (let y = 0; y < this.size; y++) {
-      for (let x = 0; x < this.size; x++) {
-        this.cells[y][x] = 0;
-      }
-    }
+    this.cells.fill(0);
+    this.potential.fill(0);
+    this.field.fill(0);
     this.fieldOld = null;
   }
 
@@ -33,13 +35,13 @@ class Board {
     for (let i = 0; i < numBlobs; i++) {
       const cx = Math.floor(Math.random() * this.size);
       const cy = Math.floor(Math.random() * this.size);
-      const dim = Math.floor(kernelRadius * 0.9);
+      const dim = Math.max(1, Math.floor(kernelRadius * 0.9));
 
       for (let dy = 0; dy < dim; dy++) {
         for (let dx = 0; dx < dim; dx++) {
           const y = (cy + dy - Math.floor(dim / 2) + this.size) % this.size;
           const x = (cx + dx - Math.floor(dim / 2) + this.size) % this.size;
-          this.cells[y][x] = Math.random() * 0.9;
+          this.cells[this._index(x, y)] = Math.random() * 0.9;
         }
       }
     }
@@ -51,7 +53,8 @@ class Board {
     const grid = RLEParser.parse(pattern.cells);
     this.clear();
 
-    const h = grid.length, w = grid[0].length;
+    const h = grid.length;
+    const w = grid[0].length;
     const sy = Math.floor((this.size - h) / 2);
     const sx = Math.floor((this.size - w) / 2);
 
@@ -60,7 +63,7 @@ class Board {
         const targetY = sy + y;
         const targetX = sx + x;
         if (targetY >= 0 && targetY < this.size && targetX >= 0 && targetX < this.size) {
-          this.cells[targetY][targetX] = grid[y][x];
+          this.cells[this._index(targetX, targetY)] = grid[y][x];
         }
       }
     }
@@ -70,7 +73,8 @@ class Board {
     if (!pattern.cells) return;
 
     const grid = RLEParser.parse(pattern.cells);
-    const h = grid.length, w = grid[0].length;
+    const h = grid.length;
+    const w = grid[0].length;
     const sy = cellY - Math.floor(h / 2);
     const sx = cellX - Math.floor(w / 2);
 
@@ -78,7 +82,7 @@ class Board {
       for (let x = 0; x < w; x++) {
         const ty = (sy + y + this.size) % this.size;
         const tx = (sx + x + this.size) % this.size;
-        this.cells[ty][tx] = grid[y][x];
+        this.cells[this._index(tx, ty)] = grid[y][x];
       }
     }
   }

@@ -17,7 +17,8 @@ class Renderer {
 
   render(board, automaton, displayMode) {
     let data = board.cells;
-    let vmin = 0, vmax = 1;
+    let vmin = 0;
+    let vmax = 1;
     let currentSize = this.size;
 
     if (displayMode === "potential") {
@@ -35,24 +36,26 @@ class Renderer {
       }
     } else if (displayMode === "kernel") {
       data = automaton.kernel;
-      currentSize = automaton.kernel.length;
+      currentSize = automaton.kernelSize;
       if (this.img.width !== currentSize) {
         this.img = createImage(currentSize, currentSize);
       }
-      vmax = Math.max(...automaton.kernel.flat());
+      vmax = Math.max(automaton.kernelMax, 1e-9);
     } else {
       if (this.img.width !== this.size) {
         this.img = createImage(this.size, this.size);
       }
     }
 
+    const denom = Math.max(vmax - vmin, 1e-9);
     this.img.loadPixels();
     for (let y = 0; y < currentSize; y++) {
+      const row = y * currentSize;
       for (let x = 0; x < currentSize; x++) {
-        const val = data[y][x];
-        const normVal = (val - vmin) / (vmax - vmin);
+        const val = data[row + x];
+        const normVal = (val - vmin) / denom;
         const rgb = this._valueToColour(Math.max(0, Math.min(1, normVal)));
-        const idx = (y * currentSize + x) * 4;
+        const idx = (row + x) * 4;
         this.img.pixels[idx] = rgb[0];
         this.img.pixels[idx + 1] = rgb[1];
         this.img.pixels[idx + 2] = rgb[2];
@@ -188,7 +191,7 @@ class Renderer {
     textSize(20);
     textAlign(LEFT, TOP);
 
-    const stats = `Generation: ${statistics.gen}\nTime: ${statistics.time.toFixed(2)}s\nMass: ${(statistics.mass / RN).toFixed(2)}\nGrowth: ${(statistics.growth / RN).toFixed(3)}\nFPS: ${statistics.fps}`;
+    const stats = `Generation: ${statistics.gen}\nTime: ${statistics.time.toFixed(2)}s\nMass: ${(statistics.mass / RN).toFixed(2)}\nGrowth: ${(statistics.growth / RN).toFixed(3)}\nPeak: ${statistics.maxValue.toFixed(3)}\nGyradius: ${statistics.gyradius.toFixed(2)}\nFPS: ${statistics.fps}`;
 
     text(stats, x, y);
     pop();

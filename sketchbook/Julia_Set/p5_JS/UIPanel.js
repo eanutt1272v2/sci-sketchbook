@@ -74,9 +74,11 @@ class UIPanel {
     const zr = this.format3dp(this.appcore.zoom);
     const xr = this.format3dp(this.appcore.offsetX);
     const yr = this.format3dp(-this.appcore.offsetY);
+    const cr = this.format3dp(this.appcore.juliaCx);
+    const ci = this.format3dp(this.appcore.juliaCy);
 
     text(`Zoom: ${zr}x`, px, this.layout.getY("zoomInfo"));
-    text(`Position: X=${xr}, Y=${yr}`, px, this.layout.getY("posInfo"));
+    text(`Position: X=${xr}, Y=${yr} | c=${cr}${this.appcore.juliaCy >= 0 ? "+" : ""}${ci}i`, px, this.layout.getY("posInfo"));
 
     fill(t.textMuted);
     textSize(t.textSizeCaption);
@@ -120,7 +122,7 @@ class UIPanel {
     const lineH = 28;
 
     textSize(28);
-    text("Mandelbrot Keymap Reference", x, y);
+    text("Julia Set Keymap Reference", x, y);
 
     textSize(16);
     y += 50;

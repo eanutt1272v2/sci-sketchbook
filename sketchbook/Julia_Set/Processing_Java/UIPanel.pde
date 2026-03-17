@@ -21,10 +21,7 @@ class UIPanel {
     layout.add("colorMap", 28, "panel");
     layout.finish();
 
-    slider = new Slider(
-      layout.contentX(), layout.getY("iterSlider"),
-      layout.contentW(), 18, 1, 512, appcore.maxIterations, appcore.theme
-    );
+    slider = new Slider(layout.contentX(), layout.getY("iterSlider"), layout.contentW(), 18, 1, 512, appcore.maxIterations, appcore.theme);
 
     String[] stepLabels = {"--", "-", "+", "++"};
     float stepY = layout.getY("stepButtons");
@@ -56,9 +53,7 @@ class UIPanel {
     float px = layout.contentX();
 
     InputHandler inp = appcore.input;
-    String iterText = inp.isTypingIter
-      ? "Input: " + inp.typingBuffer + "_"
-      : "Iterations: " + appcore.maxIterations;
+    String iterText = inp.isTypingIter ? "Input: " + inp.typingBuffer + "_" : "Iterations: " + appcore.maxIterations;
     fill(t.textPrimary);
     textSize(t.textSizePrimary);
     textAlign(LEFT, TOP);
@@ -81,9 +76,12 @@ class UIPanel {
     String zr = format3dp(appcore.zoom);
     String xr = format3dp(appcore.offsetX);
     String yr = format3dp(-appcore.offsetY);
+    String cr = format3dp(appcore.juliaCx);
+    String ci = format3dp(appcore.juliaCy);
+    String ciSign = appcore.juliaCy >= 0 ? "+" : "";
 
     text("Zoom: " + zr + "x", px, layout.getY("zoomInfo"));
-    text("Position: X=" + xr + ", Y=" + yr, px, layout.getY("posInfo"));
+    text("Position: X=" + xr + ", Y=" + yr + " | c=" + cr + ciSign + ci + "i", px, layout.getY("posInfo"));
 
     fill(t.textMuted);
     textSize(t.textSizeCaption);
@@ -130,7 +128,7 @@ class UIPanel {
     float lineH = 28;
 
     textSize(28);
-    text("Burning Ship Keymap Reference", x, y);
+    text("Julia Set Keymap Reference", x, y);
 
     textSize(16);
     y += 50;

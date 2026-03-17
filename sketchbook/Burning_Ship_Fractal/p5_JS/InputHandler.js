@@ -141,6 +141,11 @@ class InputHandler {
       this.appcore.needsRedraw = true;
       this.appcore.justPressed = true;
     }
+
+    if (p.exportBtn.isMouseOver() && !this.appcore.justPressed) {
+      this.appcore.exportImagePNG();
+      this.appcore.justPressed = true;
+    }
   }
 
   onMouseReleased() {
@@ -263,6 +268,10 @@ class InputHandler {
     }
     if (key === "x" || key === "X") {
       this.appcore.cycleColorMap(-1);
+      return;
+    }
+    if (key === "p" || key === "P") {
+      this.appcore.exportImagePNG();
       return;
     }
     if (key === "[" || key === "{") {

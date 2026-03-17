@@ -24,6 +24,7 @@ class UIPanel {
     }
 
     this.dropdown = new Dropdown(this.layout.contentX(), this.layout.getY("colorMap"), 180, 26, this.appcore.renderer.mapNames, this.appcore.theme);
+    this.exportBtn = new Button(width - 80, height - 220, 56, 56, "PNG", this.appcore.theme);
     this.zoomInBtn = new Button(width - 80, height - 150, 56, 56, "+", this.appcore.theme);
     this.zoomOutBtn = new Button(width - 80, height - 80, 56, 56, "-", this.appcore.theme);
   }
@@ -79,10 +80,11 @@ class UIPanel {
 
     fill(t.textMuted);
     textSize(t.textSizeCaption);
-    text("[WASD/Arrows]: Pan, [Q/E, Scroll]: Zoom, [#]: Keymap", px, this.layout.getY("hints"));
+    text("[WASD/Arrows]: Pan, [Q/E, Scroll]: Zoom, [P]: PNG, [#]: Keymap", px, this.layout.getY("hints"));
 
     this.dropdown.display(this.appcore.renderer.currentMapIndex);
 
+    this.exportBtn.display();
     this.zoomInBtn.display();
     this.zoomOutBtn.display();
     this.drawCredits();
@@ -135,6 +137,7 @@ class UIPanel {
       ["{ / }", "Iterations -64 / +64"],
       ["1..9", "Select colour map by index"],
       ["X / C", "Previous / next colour map"],
+      ["P", "Export PNG image"],
       ["R", "Reset view and iterations"],
       ["H", "Toggle UI"],
       ["#", "Toggle keymap reference"],

@@ -25,6 +25,9 @@ const params = {
 
   softClip: false,
   multiStep: false,
+  addNoise: 0,
+  maskRate: 0,
+  paramP: 0,
 
   displayMode: "world",
   showGrid: true,

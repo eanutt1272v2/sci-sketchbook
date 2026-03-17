@@ -1,15 +1,18 @@
 class AppCore {
   int maxIterations = 128;
   double zoom = 1.0;
-  double offsetX = -0.02;
-  double offsetY = -0.08;
+  double offsetX = 0.0;
+  double offsetY = 0.0;
+  double juliaCx = -0.8;
+  double juliaCy = 0.156;
   final double defaultZoom = 1.0;
-  final double defaultOffsetX = -0.02;
-  final double defaultOffsetY = -0.08;
+  final double defaultOffsetX = 0.0;
+  final double defaultOffsetY = 0.0;
   final int defaultIterations = 128;
   boolean needsRedraw = true;
   boolean showUI = true;
   boolean showKeymapRef = false;
+
   boolean justPressed = false;
 
   UITheme theme;
@@ -30,10 +33,7 @@ class AppCore {
   void draw() {
     background(0);
     input.handleContinuousInput();
-    if (needsRedraw) {
-      renderer.render();
-      needsRedraw = false;
-    }
+    if (needsRedraw) { renderer.render(); needsRedraw = false; }
     image(renderer.buffer, 0, 0);
     if (showUI) panel.draw();
     if (showKeymapRef) panel.drawKeymapReference();

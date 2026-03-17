@@ -78,3 +78,22 @@ void mouseDragged() {
    offsetX += (mouseX - pmouseX) / ((screenHeight * zoom) / 2);
    offsetY += (mouseY - pmouseY) / ((screenHeight * zoom) / 2);
 }
+
+void keyPressed() {
+   if (key == 's' || key == 'S') {
+      exportImagePNG();
+   }
+}
+
+void exportImagePNG() {
+   String timestamp = "" + year()
+     + nf(month(), 2)
+     + nf(day(), 2)
+     + "_"
+     + nf(hour(), 2)
+     + nf(minute(), 2)
+     + nf(second(), 2);
+   String filename = "julia_set_legacy_" + timestamp + ".png";
+   saveFrame("data/" + filename);
+   println("Saved image: data/" + filename);
+}

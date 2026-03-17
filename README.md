@@ -17,7 +17,7 @@ A public instance is available at: [https://sci-sketchbook.onrender.com/](https:
 | [Fluvia](./sketchbook/Fluvia) | A high-performance terrain erosion simulation with advanced features. | p5.js & GLSL Shaders |
 | [Fluvia Lite](./sketchbook/Fluvia_Lite) | A lightweight version of the Fluvia erosion simulation optimised for ease of forking. | p5.js |
 | [GLSL Shader Exploration 01](./sketchbook/GLSL_Shader_Exploration_01) | A mini study sketch for experimenting with fragment shaders and procedural animations. | p5.js & GLSL Shaders |
-| [Julia Set](./sketchbook/Julia_Set) | Visualisation of the Julia set, a classic fractal associated with the Mandelbrot set (NEEDS UPGRADE TO APPCORE) | Processing (Java) |
+| [Julia Set](./sketchbook/Julia_Set) | Visualisation of the Julia set, a classic fractal associated with the Mandelbrot set | Processing (Java) |
 | [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | An advanced but currently slow implementation of Lenia, a continuous cellular automata system (NEEDS UPGRADE) | p5.js |
 | [MandelBulber](./sketchbook/MandelBulber) | A 3D exploration of the Mandelbulb fractal as a point-cloud. | Processing (Java) |
 | [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | The iconic Mandelbrot set fractal, exploring the boundary of stability for z = z² + c. | Processing (Java) & p5.js |

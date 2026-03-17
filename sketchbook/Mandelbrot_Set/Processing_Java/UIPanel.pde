@@ -3,7 +3,7 @@ class UIPanel {
   UILayout layout;
   Slider slider;
   Dropdown dropdown;
-  Button zoomInBtn, zoomOutBtn;
+  Button exportBtn, zoomInBtn, zoomOutBtn;
   Button[] stepButtons = new Button[4];
 
   static final int PANEL_W = 390;
@@ -30,6 +30,7 @@ class UIPanel {
     }
 
     dropdown = new Dropdown(layout.contentX(), layout.getY("colorMap"), 180, 26, appcore.renderer.mapNames, appcore.theme);
+    exportBtn = new Button(width - 80, height - 220, 56, 56, "PNG", appcore.theme);
     zoomInBtn = new Button(width - 80, height - 150, 56, 56, "+", appcore.theme);
     zoomOutBtn = new Button(width - 80, height - 80, 56, 56, "-", appcore.theme);
   }
@@ -81,10 +82,11 @@ class UIPanel {
 
     fill(t.textMuted);
     textSize(t.textSizeCaption);
-    text("[WASD/Arrows]: Pan, [Q/E, Scroll]: Zoom, [#]: Keymap", px, layout.getY("hints"));
+    text("[WASD/Arrows]: Pan, [Q/E, Scroll]: Zoom, [P]: PNG, [#]: Keymap", px, layout.getY("hints"));
 
     dropdown.display(appcore.renderer.currentMapIndex);
 
+    exportBtn.display();
     zoomInBtn.display();
     zoomOutBtn.display();
     drawCredits();
@@ -140,6 +142,7 @@ class UIPanel {
       {"{ / }", "Iterations -64 / +64"},
       {"1..9", "Select colour map by index"},
       {"X / C", "Previous / next colour map"},
+      {"P", "Export PNG image"},
       {"R", "Reset view and iterations"},
       {"H", "Toggle UI"},
       {"#", "Toggle keymap reference"}
