@@ -13,22 +13,22 @@ A public instance is available at: [https://sci-sketchbook.onrender.com/](https:
 | [Cellular Division](./sketchbook/Cellular_Division) | A particle-based simulation of emergent cellular behaviour and division. | Processing (Java & JS versions) |
 | [Collatz Visualization](./sketchbook/Collatz_Visualization) | A visual representation of the Collatz conjecture paths (3n + 1 problem) as an organic tree-like structure. | p5.js |
 | [Diffusion Limited Aggregation (DLA)](./sketchbook/Diffusion_Limited_Aggregation) | Simulates the process where particles undergoing Brownian motion cluster together to form aggregate structures. | p5.js |
-| [Eigen](./sketchbook/Eigen) | A sophisticated visualization tool for exploring linear transformations, eigenvalues, and eigenvectors. | p5.js |
-| [Fluvia](./sketchbook/Fluvia) | A high-performance fluid dynamics and terrain erosion simulator. | p5.js & GLSL Shaders |
-| [Fluvia Lite](./sketchbook/Fluvia_Lite) | A lightweight version of the Fluvia fluid simulator optimized for web performance. | p5.js |
-| [GLSL Shader Exploration 01](./sketchbook/GLSL_Shader_Exploration_01) | A sandbox for experimenting with fragment shaders and procedural generation. | p5.js & GLSL Shaders |
-| [Julia Set](./sketchbook/Julia_Set) | Visualisation of the Julia set, a classic fractal associated with the Mandelbrot set. | Processing (Java) |
-| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | An advanced implementation of Lenia, a continuous cellular automata system. | p5.js |
-| [MandelBulber](./sketchbook/MandelBulber) | A 3D exploration of the Mandelbulb fractal. | Processing (Java) |
+| [Eigen](./sketchbook/Eigen) | A sophisticated visualisation tool for exploring linear transformations, eigenvalues, and eigenvectors. | p5.js |
+| [Fluvia](./sketchbook/Fluvia) | A high-performance terrain erosion simulation with advanced features. | p5.js & GLSL Shaders |
+| [Fluvia Lite](./sketchbook/Fluvia_Lite) | A lightweight version of the Fluvia erosion simulation optimised for ease of forking. | p5.js |
+| [GLSL Shader Exploration 01](./sketchbook/GLSL_Shader_Exploration_01) | A mini study sketch for experimenting with fragment shaders and procedural animations. | p5.js & GLSL Shaders |
+| [Julia Set](./sketchbook/Julia_Set) | Visualisation of the Julia set, a classic fractal associated with the Mandelbrot set (NEEDS UPGRADE TO APPCORE) | Processing (Java) |
+| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | An advanced but currently slow implementation of Lenia, a continuous cellular automata system (NEEDS UPGRADE) | p5.js |
+| [MandelBulber](./sketchbook/MandelBulber) | A 3D exploration of the Mandelbulb fractal as a point-cloud. | Processing (Java) |
 | [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | The iconic Mandelbrot set fractal, exploring the boundary of stability for z = z² + c. | Processing (Java) & p5.js |
-| [Mandelbulb GLSL Shader](./sketchbook/Mandelbulb_GLSL_Shader) | High-performance 3D Mandelbulb rendering using GPU raymarching. | p5.js & GLSL Shaders |
-| [Neural Network](./sketchbook/Neural_Network) | A visualization of a simple feedforward neural network's learning process. | Processing (Java) |
-| [Slime Mold Growth](./sketchbook/Slime_Mold_Growth) | A simulation of Physarum polycephalum (slime mold) growth patterns using agent-based modeling. | p5.js |
+| [Mandelbulb GLSL Shader](./sketchbook/Mandelbulb_GLSL_Shader) | High-performance, minimal 3D Mandelbulb rendering using GPU accelerated raymarching. | p5.js & GLSL Shaders |
+| [Neural Network](./sketchbook/Neural_Network) | A visualisation of a simple feedforward neural network's learning process. | Processing (Java) |
+| [Slime Mold Growth](./sketchbook/Slime_Mold_Growth) | A simulation of Physarum polycephalum (slime mold) growth patterns using agent-based modelling. | p5.js |
 
 
 ## Technology Stack
 
-This project uses a variety of creative coding tools and web technologies:
+This project uses a variety of creative coding tools and web technologies.
 
 - **p5.js**: A JavaScript library for creative coding, used for most web-based sketches.
 - **Processing (Java)**: Original Java-based sketches, requiring the Processing 4.x IDE to run locally.
