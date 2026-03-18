@@ -153,6 +153,16 @@ class InputHandler {
       return false;
     }
 
+    if (keyLower === "w") {
+      this.appcore.media.exportWorldJSON();
+      return false;
+    }
+
+    if (keyLower === "q") {
+      this.appcore.media.importWorldJSON();
+      return false;
+    }
+
     if (keyLower === "e" || kCode === 187 || kCode === 107) {
       this.keys.zoomIn = true;
       return false;

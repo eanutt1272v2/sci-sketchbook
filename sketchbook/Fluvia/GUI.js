@@ -220,12 +220,18 @@ class GUI {
     const { media, params } = this.appcore;
 
     const imp = page.addFolder({ title: "Import" });
+    imp.addButton({ title: "Import Heightmap" }).on("click", () => media.openImportDialog());
+    imp.addButton({ title: "Import Params (JSON)" }).on("click", () => media.importParamsJSON());
+    imp.addButton({ title: "Import World (JSON)" }).on("click", () => media.importWorldJSON());
 
-    imp
-      .addButton({ title: "Import Heightmap" })
-      .on("click", () => media.openImportDialog());
+    const data = page.addFolder({ title: "Data" });
+    data.addButton({ title: "Export Params (JSON)" }).on("click", () => media.exportParamsJSON());
+    data.addButton({ title: "Export Stats (JSON)" }).on("click", () => media.exportStatisticsJSON());
+    data.addButton({ title: "Export Stats (CSV)" }).on("click", () => media.exportStatisticsCSV());
+    data.addButton({ title: "Export World (JSON)" }).on("click", () => media.exportWorldJSON());
+    data.addButton({ title: "Export Heightmap (PNG)" }).on("click", () => media.exportHeightmapPNG());
 
-    const exp = page.addFolder({ title: "Export" });
+    const exp = page.addFolder({ title: "Capture" });
 
     const btn = exp.addButton({
       title: media.isRecording ? "Stop Recording" : "Start Recording",
@@ -249,9 +255,7 @@ class GUI {
       options: { PNG: "png", JPG: "jpg", WebP: "webp" },
     });
 
-    exp
-      .addButton({ title: "Export Image" })
-      .on("click", () => media.exportImage());
+    exp.addButton({ title: "Export Image" }).on("click", () => media.exportImage());
   }
 
   createStatsTab(page) {

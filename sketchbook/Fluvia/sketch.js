@@ -5,7 +5,7 @@ let vertShader, fragShader, colourMaps, font;
 
 const metadata = {
   name: "Fluvia",
-  version: "v4.8.0",
+  version: "v4.8.0-dev",
   author: "@eanutt1272.v2"
 };
 
@@ -19,6 +19,7 @@ function preload() {
 function setup() {
   const canvasSize = min(windowWidth, windowHeight);
   createCanvas(canvasSize, canvasSize);
+  frameRate(60);
   
   noSmooth();
   textFont(font);

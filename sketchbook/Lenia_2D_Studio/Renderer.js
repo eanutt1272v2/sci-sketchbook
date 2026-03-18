@@ -265,13 +265,16 @@ class Renderer {
           ["Y", "Cycle growth function"],
           ["U", "Toggle soft clipping"],
           ["I", "Toggle multi-step integration"],
+           ["Q / Shift+Q", "Cycle placement scale ↑ / ↓"],
+           ["` (backtick)", "Auto-scale R & T to placement scale"],
         ]
       },
       {
-        title: "Export",
+        title: "Data",
         entries: [
           ["S", "Save canvas as PNG"],
           ["E", "Export world state (JSON)"],
+          ["W", "Import world state (JSON)"],
           ["C", "Export statistics (CSV)"],
         ]
       },
@@ -319,7 +322,7 @@ class Renderer {
     fill(120);
     textSize(11);
     textAlign(CENTER, BOTTOM);
-    text("Press  #  to close", width / 2, height - 16);
+    text("Press # to close", width / 2, height - 16);
 
     pop();
   }

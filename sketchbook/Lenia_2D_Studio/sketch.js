@@ -19,6 +19,7 @@ function preload() {
 function setup() {
   const canvasSize = min(windowWidth, windowHeight);
   mainCanvas = createCanvas(canvasSize, canvasSize);
+  frameRate(60);
 
   setupCanvasProperties();
 
@@ -48,26 +49,6 @@ function setupCanvasProperties() {
   textFont(font);
   pixelDensity(1);
 }
-
-function downloadFile(content, filename, mimeType) {
-  const element = document.createElement('a');
-  element.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(content));
-  element.setAttribute('download', filename);
-  element.style.display = 'none';
-  document.body.appendChild(element);
-  element.click();
-  document.body.removeChild(element);
-}
-
-function stepOnce() { appcore.stepOnce();}
-function clearWorld() { appcore.clearWorld();}
-function randomiseWorld() { appcore.randomiseWorld();}
-function changeResolution() { appcore.changeResolution();}
-function loadAnimal(animal) { appcore.loadAnimal(animal); }
-function loadSelectedAnimal() { appcore.loadSelectedAnimal(); }
-function placeAnimal(cellX, cellY) { appcore.placeAnimal(cellX, cellY); }
-function loadInitialAnimal() { appcore.loadInitialAnimal(); }
-function canvasInteraction(e) { return appcore.canvasInteraction(e); }
 function mouseClicked(e) { return appcore.handleMouseClicked(e); }
 function touchStarted(e) { return appcore.handleMouseClicked(e); }
 function windowResized() { appcore.windowResized(); }

@@ -42,6 +42,7 @@ function setup() {
   const canvasSize = min(windowWidth, windowHeight);
   createCanvas(canvasSize, canvasSize);
 
+  frameRate(60);
   noSmooth();
   pixelDensity(1);
 

@@ -1,6 +1,7 @@
 class Analyser {
   constructor(appcore) {
     this.appcore = appcore;
+    this.analysisIntervalMs = 120;
     this.simulationStartTime = performance.now();
     this.reinitialise();
   }
@@ -49,14 +50,33 @@ class Analyser {
     statistics.frameCounter++;
     statistics.simulationTime = (performance.now() - this.simulationStartTime) / 1000;
 
+    if (!this._hasTerrainBuffers()) {
+      return;
+    }
+
     if (params.running) {
-      this.runAnalysis();
+      const now = performance.now();
+      if ((now - this.lastAnalysisTime) >= this.analysisIntervalMs) {
+        this.runAnalysis();
+      }
     }
   }
+
+ _hasTerrainBuffers() {
+   const t = this.appcore.terrain;
+   return !!(
+     t &&
+     t.heightMap &&
+     t.bedrockMap &&
+     t.sedimentMap &&
+     t.dischargeMap
+   );
+ }
 
   runAnalysis() {
     const { terrain, statistics, params } = this.appcore;
     const { area, size, heightMap, bedrockMap, sedimentMap, dischargeMap } = terrain;
+    if (!heightMap || !bedrockMap || !sedimentMap || !dischargeMap) return;
     const { heightScale, evaporationRate } = params;
 
     let totalW = 0, totalS = 0, totalB = 0, riverCells = 0, totalSA = 0;

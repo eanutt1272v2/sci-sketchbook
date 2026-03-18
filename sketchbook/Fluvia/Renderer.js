@@ -15,29 +15,59 @@ class Renderer {
     this.lut = new Uint8ClampedArray(256 * 3);
     this.currentColourMap = "";
     this.lutChannels = ["r", "g", "b"];
+    this.textureUpdateIntervalMs = 33;
+    this.lastTextureUpdateMs = 0;
+    this.textureDirty = true;
     this.compositeLegendItems = [
       { l: "Flat", cKey: "flatColour" },
       { l: "Steep", cKey: "steepColour" },
       { l: "Sediment", cKey: "sedimentColour" },
       { l: "Water", cKey: "waterColour" },
     ];
-    this.keymapCommands = [
-      ["#", "Toggle keymap reference"],
-      ["H", "Toggle GUI panel"],
-      ["P / Space", "Pause / Resume simulation"],
-      ["G / R", "Generate / Reset terrain"],
-      ["1 / 2", "Switch display: 2D / 3D"],
-      ["O / L", "Toggle stats / legend overlays"],
-      ["V", "Start/stop recording"],
-      ["F", "Export image"],
-      ["U", "Import heightmap"],
-      ["C", "Cycle colour map (Shift: reverse)"],
-      ["M", "Cycle surface map (Shift: reverse)"],
-      ["[ / ]", "Height scale -/+ (Shift: large step)"],
-      ["I / K", "Droplets per frame + / -"],
-      ["WASD or Arrow Keys", "Orbit camera (3D mode)"],
-      ["Q / E", "Zoom camera out / in (3D mode)"],
-      ["Mouse Drag / Wheel", "Orbit / zoom camera (3D mode)"],
+    this.keymapSections = [
+      {
+        title: "Simulation",
+        entries: [
+          ["P / Space", "Pause / Resume simulation"],
+          ["G / R", "Generate / Reset terrain"],
+          ["I / K", "Droplets per frame + / -"],
+        ],
+      },
+      {
+        title: "Display",
+        entries: [
+          ["1 / 2", "Switch display: 2D / 3D"],
+          ["O / L", "Toggle stats / legend overlays"],
+          ["C", "Cycle colour map (Shift reverse)"],
+          ["M", "Cycle surface map (Shift reverse)"],
+          ["[ / ]", "Height scale -/+ (Shift large)"],
+        ],
+      },
+      {
+        title: "Camera",
+        entries: [
+          ["WASD / Arrow", "Orbit camera (3D mode)"],
+          ["Q / E", "Zoom camera out / in (3D mode)"],
+          ["Mouse Drag / Wheel", "Orbit / zoom camera"],
+        ],
+      },
+      {
+        title: "Media",
+        entries: [
+          ["V", "Start/stop recording"],
+          ["F", "Export image"],
+          ["U", "Import heightmap"],
+          ["W / Q", "Export/import world state"],
+          ["GUI: Media tab", "Params/stats/world import/export"],
+        ],
+      },
+      {
+        title: "Reference",
+        entries: [
+          ["H", "Toggle GUI panel"],
+          ["#", "Toggle keymap reference"],
+        ],
+      },
     ];
   }
 
@@ -45,6 +75,31 @@ class Renderer {
     const { size } = this.appcore.terrain;
     this.canvas2D = createImage(size, size);
     this.heightMapTexture = createImage(size, size);
+    this.textureDirty = true;
+  }
+
+  _adaptTextureInterval(renderCostMs) {
+    if (renderCostMs > 40) {
+      this.textureUpdateIntervalMs = 66;
+      return;
+    }
+
+    if (renderCostMs > 28) {
+      this.textureUpdateIntervalMs = 50;
+      return;
+    }
+
+    if (renderCostMs > 18) {
+      this.textureUpdateIntervalMs = 40;
+      return;
+    }
+
+    if (renderCostMs < 12) {
+      this.textureUpdateIntervalMs = 25;
+      return;
+    }
+
+    this.textureUpdateIntervalMs = 33;
   }
 
   updateLUT(colourMap) {
@@ -211,9 +266,31 @@ class Renderer {
   }
 
   render() {
-    const is3D = (this.appcore.params.displayMethod === "3D");
+     const terrain = this.appcore.terrain;
+     if (!terrain || !terrain.heightMap || !terrain.sedimentMap || !terrain.dischargeMap) {
+       if (this.appcore.params.displayMethod === "3D") {
+         image(this.canvas3D, 0, 0, width, height);
+       } else {
+         image(this.canvas2D, 0, 0, width, height);
+       }
+       this.renderOverlay();
+       return;
+     }
 
-    this.generateTextures(is3D);
+    const is3D = (this.appcore.params.displayMethod === "3D");
+    const nowMs = performance.now();
+    const shouldUpdateTexture =
+      this.textureDirty ||
+      (nowMs - this.lastTextureUpdateMs) >= this.textureUpdateIntervalMs;
+
+    if (shouldUpdateTexture) {
+      const startMs = performance.now();
+      this.generateTextures(is3D);
+      const costMs = performance.now() - startMs;
+      this.lastTextureUpdateMs = nowMs;
+      this.textureDirty = false;
+      this._adaptTextureInterval(costMs);
+    }
 
     if (is3D) {
       this.render3D();
@@ -368,30 +445,53 @@ class Renderer {
 
     fill(255);
     textAlign(LEFT, TOP);
-    let x = 50;
+    const x = 50;
     let y = 50;
-    let lineH = 28;
+    const lh = 26;
+    const colW = (width - 100) / 2;
 
-    textSize(28);
+    textSize(24);
     text(`${name} ${version} Keymap Reference`, x, y);
 
-    textSize(16);
-    y += 50;
-    text("Keys", x, y);
-    text("Action", x + 260, y);
+    y += 48;
 
-    stroke(255, 50);
-    line(x, y + 25, width - 50, y + 25);
-    y += 40;
+    let col = 0;
+    let cx = x;
+    let cy = y;
 
-    noStroke();
-    for (const cmd of this.keymapCommands) {
-      fill(255);
-      text(cmd[0], x, y);
-      fill(255, 150);
-      text(cmd[1], x + 260, y);
-      y += lineH;
+    for (const section of this.keymapSections) {
+      if (cy + (section.entries.length + 2) * lh > height - 30 && col === 0) {
+        col = 1;
+        cx = x + colW;
+        cy = y + 50;
+      }
+
+      fill(180, 220, 255);
+      textSize(13);
+      text(section.title.toUpperCase(), cx, cy);
+      cy += lh - 4;
+
+      stroke(255, 40);
+      line(cx, cy, cx + colW - 20, cy);
+      noStroke();
+      cy += 8;
+
+      for (const [k, desc] of section.entries) {
+        fill(255);
+        textSize(13);
+        text(k, cx, cy);
+        fill(200);
+        text(desc, cx + 130, cy);
+        cy += lh;
+      }
+
+      cy += 14;
     }
+
+    fill(120);
+    textSize(11);
+    textAlign(CENTER, BOTTOM);
+    text("Press # to close", width / 2, height - 16);
 
     pop();
   }
@@ -401,5 +501,6 @@ class Renderer {
     if (this.canvas3D) {
       this.canvas3D.resizeCanvas(s, s);
     }
+    this.textureDirty = true;
   }
 }

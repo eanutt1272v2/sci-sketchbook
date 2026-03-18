@@ -26,8 +26,27 @@ class Automaton {
     this.field = null;
     this.fieldOld = null;
     this.potential = null;
+
+    // Set when the worker returns kernel-ready data so the renderer can display
+    // the kernel and the worker skips re-computing it on every step.
+    this.kernelReady = false;
     
     this.updateParameters(params);
+  }
+
+  /**
+   * Called by AppCore when the worker posts a "kernelReady" message.
+   * Replaces the locally-computed kernel with the one built in the worker.
+   */
+  applyWorkerKernel(data) {
+    this.kernel        = new Float32Array(data.kernel);
+    this.kernelSize    = data.kernelSize;
+    this.kernelRadius  = Math.floor(data.kernelSize / 2);
+    this.kernelMax     = data.kernelMax;
+    this.kernelDX      = new Int16Array(data.kernelDX);
+    this.kernelDY      = new Int16Array(data.kernelDY);
+    this.kernelValues  = new Float32Array(data.kernelValues);
+    this.kernelReady   = true;
   }
 
   updateParameters(params) {

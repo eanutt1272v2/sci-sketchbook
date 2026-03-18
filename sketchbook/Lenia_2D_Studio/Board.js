@@ -25,6 +25,14 @@ class Board {
     return y * this.size + x;
   }
 
+  _getPatternGrid(pattern) {
+    if (!pattern || !pattern.cells) return null;
+    if (!pattern._parsedGrid) {
+      pattern._parsedGrid = RLEParser.parse(pattern.cells);
+    }
+    return pattern._parsedGrid;
+  }
+
   clear() {
     this.cells.fill(0);
     this.potential.fill(0);
@@ -52,9 +60,8 @@ class Board {
   }
 
   loadPattern(pattern) {
-    if (!pattern.cells) return;
-
-    const grid = RLEParser.parse(pattern.cells);
+    const grid = this._getPatternGrid(pattern);
+    if (!grid) return;
     this.clear();
 
     const h = grid.length;
@@ -73,10 +80,22 @@ class Board {
     }
   }
 
-  placePattern(pattern, cellX, cellY) {
-    if (!pattern.cells) return;
+  loadPatternScaled(pattern, scale) {
+    this.clear();
 
-    const grid = RLEParser.parse(pattern.cells);
+    if (!pattern || !pattern.cells) return;
+    if (Math.abs(scale - 1) < 1e-6) {
+      this.loadPattern(pattern);
+      return;
+    }
+
+    const center = Math.floor(this.size / 2);
+    this.placePatternScaled(pattern, center, center, scale);
+  }
+
+  placePattern(pattern, cellX, cellY) {
+    const grid = this._getPatternGrid(pattern);
+    if (!grid) return;
     const h = grid.length;
     const w = grid[0].length;
     const sy = cellY - Math.floor(h / 2);
@@ -87,6 +106,49 @@ class Board {
         const ty = (sy + y + this.size) % this.size;
         const tx = (sx + x + this.size) % this.size;
         this.cells[this._index(tx, ty)] = grid[y][x];
+      }
+    }
+  }
+
+  placePatternScaled(pattern, cellX, cellY, scale) {
+    if (!pattern || !pattern.cells) return;
+    if (scale === 1) { this.placePattern(pattern, cellX, cellY); return; }
+
+    const grid = this._getPatternGrid(pattern);
+    if (!grid) return;
+    const srcH = grid.length;
+    const srcW = grid[0].length;
+
+    const dstW = Math.max(1, Math.round(srcW * scale));
+    const dstH = Math.max(1, Math.round(srcH * scale));
+
+    const sy = cellY - Math.floor(dstH / 2);
+    const sx = cellX - Math.floor(dstW / 2);
+
+    for (let dy = 0; dy < dstH; dy++) {
+      for (let dx = 0; dx < dstW; dx++) {
+        const srcXf = (dx / scale);
+        const srcYf = (dy / scale);
+
+        const x0 = Math.floor(srcXf);
+        const y0 = Math.floor(srcYf);
+        const x1 = Math.min(x0 + 1, srcW - 1);
+        const y1 = Math.min(y0 + 1, srcH - 1);
+        const fx = srcXf - x0;
+        const fy = srcYf - y0;
+
+        const v = (x0 < srcW && y0 < srcH)
+          ? (grid[y0][x0] || 0) * (1 - fx) * (1 - fy)
+          + (grid[y0][x1] || 0) * fx       * (1 - fy)
+          + (grid[y1][x0] || 0) * (1 - fx) * fy
+          + (grid[y1][x1] || 0) * fx       * fy
+          : 0;
+
+        if (v <= 1e-10) continue;
+
+        const ty = (sy + dy + this.size * 100) % this.size;
+        const tx = (sx + dx + this.size * 100) % this.size;
+        this.cells[this._index(tx, ty)] = v;
       }
     }
   }

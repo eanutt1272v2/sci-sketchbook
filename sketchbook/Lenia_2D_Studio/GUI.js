@@ -8,6 +8,7 @@ class GUI {
     this.appcore = appcore;
     this.pane = null;
     this.animalBinding = null;
+    this.recordButton = null;
   }
 
   setupTabs() {
@@ -23,7 +24,7 @@ class GUI {
         { title: "Animals" },
         { title: "Display" },
         { title: "Stats" },
-        { title: "Export" }
+        { title: "Media" }
       ],
     });
 
@@ -32,7 +33,7 @@ class GUI {
     this.createAnimalsTab(tabs.pages[2]);
     this.createDisplayTab(tabs.pages[3]);
     this.createStatisticsTab(tabs.pages[4]);
-    this.createExportTab(tabs.pages[5]);
+    this.createMediaTab(tabs.pages[5]);
   }
 
   createSimulationTab(page) {
@@ -72,7 +73,7 @@ class GUI {
     const bindAutomaton = (target, key, options) => {
       return target
         .addBinding(params, key, options)
-        .on("change", () => this.appcore?.automaton?.updateParameters(params));
+        .on("change", () => this.appcore?.updateAutomatonParams());
     };
 
     const growth = page.addFolder({ title: "Growth Function", expanded: true });
@@ -149,6 +150,55 @@ class GUI {
 
     page.addBinding(params, "placeMode", { label: "Place Mode" });
 
+    page.addBlade({ view: "separator" });
+
+    const scaleFolder = page.addFolder({ title: "Placement Scale", expanded: true });
+
+    scaleFolder.addBinding(params, "placeScale", {
+      label: "Scale ×",
+      min: 0.25,
+      max: 4,
+      step: 0.05,
+    }).on("change", () => {
+      if (!this.appcore) return;
+      this.appcore.updatePlacementScale(params.placeScale);
+    });
+
+    scaleFolder.addBinding(params, "autoScaleSimParams", {
+      label: "Auto-scale Params",
+    }).on("change", () => {
+      if (!this.appcore || !params.autoScaleSimParams) return;
+      const animal = this.appcore.getSelectedAnimal();
+      if (!animal) return;
+      this.appcore.applyScaledAnimalParams(animal, params.placeScale);
+      this.appcore.updateAutomatonParams();
+      this.appcore.refreshGUI();
+    });
+
+    scaleFolder.addButton({ title: "Auto-scale Sim Params to Scale" })
+      .on("click", () => {
+        if (!this.appcore) return;
+        const animal = this.appcore.getSelectedAnimal();
+        if (!animal) return;
+        this.appcore.applyScaledAnimalParams(animal, params.placeScale);
+        this.appcore.updateAutomatonParams();
+        this.appcore.refreshGUI();
+        console.log(`[Lenia] Auto-scaled params: R=${params.R}, T=${params.T}`);
+      });
+
+    scaleFolder.addButton({ title: "Reset Sim Params from Animal" })
+      .on("click", () => {
+        if (!this.appcore) return;
+        const animal = this.appcore.getSelectedAnimal();
+        if (animal) {
+          this.appcore.animalLibrary.applyAnimalParameters(animal);
+          this.appcore.updateAutomatonParams();
+          this.appcore.refreshGUI();
+        }
+      });
+
+    page.addBlade({ view: "separator" });
+
     page.addButton({ title: "Load Selected Animal Pattern" })
     .on("click", () => this.appcore?.loadSelectedAnimal());
   }
@@ -212,33 +262,51 @@ class GUI {
     metrics.addBinding(statistics, "fps", { readonly: true, label: "FPS" });
   }
 
-  createExportTab(page) {
-    const { statistics } = this;
-    const board = this.appcore?.board;
-    const automaton = this.appcore?.automaton;
-    const analyser = this.appcore?.analyser;
+  createMediaTab(page) {
+    const { statistics, appcore } = this;
+    const media = appcore?.media;
+    const analyser = appcore?.analyser;
 
-    page.addButton({ title: "Export World (JSON)" }).on("click", () => {
-      const data = board?.toJSON();
-      if (!data) return;
-      const json = JSON.stringify(data, null, 2);
-      downloadFile(json, `lenia-world-${automaton.gen}.json`, 'application/json');
+    const imp = page.addFolder({ title: "Import" });
+    imp.addButton({ title: "Import Image to World" }).on("click", () => media?.openImportDialog());
+    imp.addButton({ title: "Import Params (JSON)" }).on("click", () => media?.importParamsJSON());
+    imp.addButton({ title: "Import World (JSON)" }).on("click", () => media?.importWorldJSON());
+
+    const data = page.addFolder({ title: "Data" });
+    data.addButton({ title: "Export Params (JSON)" }).on("click", () => media?.exportParamsJSON());
+    data.addButton({ title: "Export Stats (JSON)" }).on("click", () => media?.exportStatisticsJSON());
+    data.addButton({ title: "Export Stats (CSV)" }).on("click", () => media?.exportStatisticsCSV());
+    data.addButton({ title: "Export World (JSON)" }).on("click", () => media?.exportWorldJSON());
+
+    const exp = page.addFolder({ title: "Capture" });
+
+    this.recordButton = exp.addButton({
+      title: media?.isRecording ? "Stop Recording" : "Start Recording",
     });
 
-    page.addButton({ title: "Export Statistics (CSV)" }).on("click", () => {
-      const csv = analyser?.exportCSV();
-      if (!csv) return;
-      downloadFile(csv, `lenia-stats-${automaton.gen}.csv`, 'text/csv');
+    this.recordButton.on("click", () => {
+      if (!media) return;
+      if (media.isRecording) {
+        media.stopRecording();
+      } else {
+        media.startRecording();
+      }
+      this.syncMediaControls();
     });
 
-    page.addButton({ title: "Export Canvas (PNG)" }).on("click", () => {
-      saveCanvas(`lenia-frame-${automaton?.gen || 0}`, 'png');
+    exp.addBlade({ view: "separator" });
+
+    exp.addBinding(this.params, "imageFormat", {
+      label: "Image Format",
+      options: { PNG: "png", JPG: "jpg", WebP: "webp" },
     });
+
+    exp.addButton({ title: "Export Image" }).on("click", () => media?.exportImage());
 
     page.addBlade({ view: "separator" });
 
     page.addBinding(statistics, "gen", { readonly: true, label: "Current Gen" });
-    
+
     page.addButton({ title: "Clear Statistics" }).on("click", () => {
       if (!analyser) return;
       analyser.series = [];
@@ -254,6 +322,11 @@ class GUI {
     });
   }
 
+  syncMediaControls() {
+    if (!this.recordButton || !this.appcore || !this.appcore.media) return;
+    this.recordButton.title = this.appcore.media.isRecording ? "Stop Recording" : "Start Recording";
+  }
+
   dispose() {
     if (this.pane) {
       this.pane.dispose();
@@ -261,6 +334,7 @@ class GUI {
       this.animalBinding = null;
       this.kernelBinding = null;
       this.growthBinding = null;
+      this.recordButton = null;
     }
   }
 }

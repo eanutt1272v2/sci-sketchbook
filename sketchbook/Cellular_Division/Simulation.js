@@ -10,6 +10,9 @@ class Simulation {
     this.startTime = 0;
     this.needsRestart = false;
     this.paused = false;
+    this.isRestarting = false;
+    this.restartCursor = 0;
+    this.restartChunkSize = 0;
 
     this.species = null;
     this.particles = [];
@@ -27,18 +30,40 @@ class Simulation {
   restart() {
     this.species = new Species(this.alpha, this.beta, this.gamma, this.radius);
     this.particles = [];
-    for (let i = 0; i < this.particleCount; i++) {
-      this.particles.push(new Particle());
-    }
     this.spatialGrid = new Grid(Config.GRID_SIZE);
     this.cellTracker = new CellTracker();
     this.startTime = millis();
     this.needsRestart = false;
+
+    this.restartCursor = 0;
+    this.restartChunkSize = max(200, int(this.particleCount / 12));
+    this.isRestarting = true;
+
+    this._buildParticlesChunk();
+  }
+
+  _buildParticlesChunk() {
+    if (!this.isRestarting) return;
+
+    const target = min(this.restartCursor + this.restartChunkSize, this.particleCount);
+    for (let i = this.restartCursor; i < target; i++) {
+      this.particles.push(new Particle());
+    }
+
+    this.restartCursor = target;
+    if (this.restartCursor >= this.particleCount) {
+      this.isRestarting = false;
+    }
   }
 
   update() {
     if (this.needsRestart) {
       this.restart();
+    }
+
+    if (this.isRestarting) {
+      this._buildParticlesChunk();
+      return;
     }
 
     if (this.paused) {
@@ -100,7 +125,7 @@ class Simulation {
   }
 
   getParticleCount() {
-    return this.particleCount;
+    return this.isRestarting ? this.particles.length : this.particleCount;
   }
 
   getCellPopulation() {

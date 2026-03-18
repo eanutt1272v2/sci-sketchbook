@@ -65,6 +65,10 @@ class Analyser {
     stats.maxValue = 0;
     let mx = 0;
     let my = 0;
+    let cosX = 0;
+    let sinX = 0;
+    let cosY = 0;
+    let sinY = 0;
 
     for (let i = 0; i < count; i++) {
       const val = cells[i];
@@ -76,9 +80,24 @@ class Analyser {
       const y = Math.floor(i / size);
       mx += val * x;
       my += val * y;
+
+      const ax = (2 * Math.PI * x) / size;
+      const ay = (2 * Math.PI * y) / size;
+      cosX += val * Math.cos(ax);
+      sinX += val * Math.sin(ax);
+      cosY += val * Math.cos(ay);
+      sinY += val * Math.sin(ay);
     }
-    stats.centerX = stats.mass > this.epsilon ? mx / stats.mass : 0;
-    stats.centerY = stats.mass > this.epsilon ? my / stats.mass : 0;
+
+    if (stats.mass > this.epsilon) {
+      const thetaX = Math.atan2(sinX, cosX);
+      const thetaY = Math.atan2(sinY, cosY);
+      stats.centerX = ((thetaX / (2 * Math.PI)) * size + size) % size;
+      stats.centerY = ((thetaY / (2 * Math.PI)) * size + size) % size;
+    } else {
+      stats.centerX = 0;
+      stats.centerY = 0;
+    }
 
     let inertia = 0;
     if (stats.mass > this.epsilon) {
@@ -88,16 +107,16 @@ class Analyser {
 
         const x = i % size;
         const y = Math.floor(i / size);
-        const dx = x - stats.centerX;
-        const dy = y - stats.centerY;
+        const dx = this._torusDelta(x, stats.centerX, size);
+        const dy = this._torusDelta(y, stats.centerY, size);
         inertia += val * (dx * dx + dy * dy);
       }
     }
 
     stats.gyradius = stats.mass > this.epsilon ? Math.sqrt(inertia / stats.mass) : 0;
     if (this.lastCenterX !== null && stats.mass > this.epsilon) {
-      const dx = stats.centerX - this.lastCenterX;
-      const dy = stats.centerY - this.lastCenterY;
+      const dx = this._torusDelta(stats.centerX, this.lastCenterX, size);
+      const dy = this._torusDelta(stats.centerY, this.lastCenterY, size);
       const norm = Math.sqrt(dx * dx + dy * dy);
 
       if (norm > this.epsilon) {
@@ -112,8 +131,8 @@ class Analyser {
 
           const x = i % size;
           const y = Math.floor(i / size);
-          const px = x - stats.centerX;
-          const py = y - stats.centerY;
+          const px = this._torusDelta(x, stats.centerX, size);
+          const py = this._torusDelta(y, stats.centerY, size);
           const side = px * ny - py * nx;
 
           if (side > 0) massRight += val;
@@ -132,8 +151,8 @@ class Analyser {
     }
     this._detectSymmetry(cells, size, stats);
     if (this.lastCenterX !== null) {
-      const dx = stats.centerX - this.lastCenterX;
-      const dy = stats.centerY - this.lastCenterY;
+      const dx = this._torusDelta(stats.centerX, this.lastCenterX, size);
+      const dy = this._torusDelta(stats.centerY, this.lastCenterY, size);
       stats.speed = Math.sqrt(dx * dx + dy * dy);
       stats.angle = Math.atan2(dy, dx) * 180 / Math.PI;
     } else {
@@ -145,6 +164,14 @@ class Analyser {
     this.lastCenterY = stats.centerY;
 
     return stats;
+  }
+
+  _torusDelta(a, b, size) {
+    let d = a - b;
+    const half = size * 0.5;
+    if (d > half) d -= size;
+    if (d < -half) d += size;
+    return d;
   }
 
   _detectSymmetry(cells, size, stats) {

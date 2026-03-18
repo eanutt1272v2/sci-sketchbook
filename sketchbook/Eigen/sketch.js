@@ -36,7 +36,8 @@ function setupCanvasProperties(canvas) {
   }, 100);
 
   textFont(font);
-  pixelDensity(2);
+  pixelDensity(1);
+  frameRate(60);
 }
 
 function draw() {
@@ -45,8 +46,7 @@ function draw() {
 }
 
 function windowResized() {
-  const canvasSize = min(windowWidth, windowHeight);
-  resizeCanvas(canvasSize, canvasSize);
+  appcore.resize();
 }
 
 function keyPressed() {

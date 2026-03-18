@@ -57,8 +57,8 @@ class Terrain {
   }
 
   getDischargeBounds() {
-    const { area } = this;
-    if (area <= 0) {
+    const { area, dischargeMap } = this;
+    if (area <= 0 || !dischargeMap || dischargeMap.length === 0) {
       return { min: 0, max: 0 };
     }
 
@@ -111,6 +111,9 @@ class Terrain {
   }
 
   getDischarge(index) {
+    if (!this.dischargeMap || index < 0 || index >= this.dischargeMap.length) {
+      return 0;
+    }
     return this.codyErf(0.4 * this.dischargeMap[index]);
   }
 

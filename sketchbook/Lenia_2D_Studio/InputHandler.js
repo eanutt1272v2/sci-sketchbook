@@ -1,6 +1,7 @@
 class InputHandler {
   constructor(appcore) {
     this.appcore = appcore;
+    this._lastGuiRefreshMs = 0;
   }
 
   handleContinuousInput() {
@@ -8,48 +9,56 @@ class InputHandler {
       return;
     }
 
-    if (frameCount % 6 !== 0) {
+    // Rebuild-heavy kernel changes are applied at half frame rate for stability.
+    if (frameCount % 2 !== 0) {
       return;
     }
 
     const { params } = this.appcore;
+    const dtScale = constrain((deltaTime || 16.67) / 16.67, 0.5, 2.0);
     let shouldUpdateAutomaton = false;
 
     if (keyIsDown(219) || keyIsDown(221)) {
-      params.R = constrain(params.R + (keyIsDown(221) ? 1 : -1), 2, 50);
+      params.R = constrain(params.R + (keyIsDown(221) ? 1 : -1) * dtScale, 2, 50);
+      params.R = Math.round(params.R);
       shouldUpdateAutomaton = true;
     }
 
     if (keyIsDown(186) || keyIsDown(222)) {
-      params.T = constrain(params.T + (keyIsDown(222) ? 1 : -1), 1, 50);
+      params.T = constrain(params.T + (keyIsDown(222) ? 1 : -1) * dtScale, 1, 50);
+      params.T = Math.round(params.T);
       shouldUpdateAutomaton = true;
     }
 
     if (keyIsDown(188) || keyIsDown(190)) {
-      params.m = constrain(params.m + (keyIsDown(190) ? 0.002 : -0.002), 0, 0.5);
+      params.m = constrain(params.m + (keyIsDown(190) ? 0.002 : -0.002) * dtScale, 0, 0.5);
       shouldUpdateAutomaton = true;
     }
 
     const minusHeld = keyIsDown(189) || keyIsDown(173) || keyIsDown(109);
     const plusHeld = keyIsDown(187) || keyIsDown(61) || keyIsDown(107);
     if (minusHeld || plusHeld) {
-      params.s = constrain(params.s + (plusHeld ? 0.0005 : -0.0005), 0.001, 0.1);
+      params.s = constrain(params.s + (plusHeld ? 0.0005 : -0.0005) * dtScale, 0.001, 0.1);
       shouldUpdateAutomaton = true;
     }
 
     if (keyIsDown(LEFT_ARROW) || keyIsDown(RIGHT_ARROW)) {
-      params.addNoise = constrain(params.addNoise + (keyIsDown(RIGHT_ARROW) ? 0.1 : -0.1), 0, 10);
+      params.addNoise = constrain(params.addNoise + (keyIsDown(RIGHT_ARROW) ? 0.1 : -0.1) * dtScale, 0, 10);
       shouldUpdateAutomaton = true;
     }
 
     if (keyIsDown(UP_ARROW) || keyIsDown(DOWN_ARROW)) {
-      params.maskRate = constrain(params.maskRate + (keyIsDown(UP_ARROW) ? 0.1 : -0.1), 0, 10);
+      params.maskRate = constrain(params.maskRate + (keyIsDown(UP_ARROW) ? 0.1 : -0.1) * dtScale, 0, 10);
       shouldUpdateAutomaton = true;
     }
 
     if (shouldUpdateAutomaton) {
-      this.appcore.automaton.updateParameters(params);
-      this.appcore.refreshGUI();
+      this.appcore.updateAutomatonParams();
+      const nowMs = millis();
+      if (nowMs - this._lastGuiRefreshMs > 120) {
+        this.appcore.refreshGUI();
+        this._lastGuiRefreshMs = nowMs;
+      }
     }
   }
 
@@ -184,7 +193,7 @@ class InputHandler {
 
     if (keyLower === "k") {
       this.appcore.params.kn = this._cycleInt(this.appcore.params.kn, 1, 4, 1);
-      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       console.log(`[Lenia] Kernel type: ${this.appcore.params.kn}`);
       return false;
@@ -192,7 +201,7 @@ class InputHandler {
 
     if (keyLower === "y") {
       this.appcore.params.gn = this._cycleInt(this.appcore.params.gn, 1, 3, 1);
-      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       console.log(`[Lenia] Growth type: ${this.appcore.params.gn}`);
       return false;
@@ -200,7 +209,7 @@ class InputHandler {
 
     if (keyLower === "u") {
       this.appcore.params.softClip = !this.appcore.params.softClip;
-      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       console.log(`[Lenia] Soft clip: ${this.appcore.params.softClip}`);
       return false;
@@ -208,7 +217,7 @@ class InputHandler {
 
     if (keyLower === "i") {
       this.appcore.params.multiStep = !this.appcore.params.multiStep;
-      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       console.log(`[Lenia] Multi-step: ${this.appcore.params.multiStep}`);
       return false;
@@ -221,7 +230,7 @@ class InputHandler {
 
     if (k === "[") {
       this.appcore.params.R = Math.max(2, this.appcore.params.R - 1);
-      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       console.log(`[Lenia] R = ${this.appcore.params.R}`);
       return false;
@@ -229,7 +238,7 @@ class InputHandler {
 
     if (k === "]") {
       this.appcore.params.R = Math.min(50, this.appcore.params.R + 1);
-      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       console.log(`[Lenia] R = ${this.appcore.params.R}`);
       return false;
@@ -237,7 +246,7 @@ class InputHandler {
 
     if (k === ";") {
       this.appcore.params.T = Math.max(1, this.appcore.params.T - 1);
-      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       console.log(`[Lenia] T = ${this.appcore.params.T}`);
       return false;
@@ -245,30 +254,48 @@ class InputHandler {
 
     if (k === "'") {
       this.appcore.params.T = Math.min(50, this.appcore.params.T + 1);
-      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       console.log(`[Lenia] T = ${this.appcore.params.T}`);
       return false;
     }
 
     if (keyLower === "e") {
-      const data = this.appcore.board.toJSON();
-      const json = JSON.stringify(data, null, 2);
       console.log("[Lenia] Exporting world state…");
-      downloadFile(json, `lenia-world-${this.appcore.automaton.gen}.json`, "application/json");
+      this.appcore.media.exportWorldJSON();
+      return false;
+    }
+
+    if (keyLower === "w") {
+      console.log("[Lenia] Importing world state…");
+      this.appcore.media.importWorldJSON();
       return false;
     }
 
     if (keyLower === "c") {
-      const csv = this.appcore.analyser.exportCSV();
       console.log("[Lenia] Exporting statistics CSV…");
-      downloadFile(csv, `lenia-stats-${this.appcore.automaton.gen}.csv`, "text/csv");
+      this.appcore.media.exportStatisticsCSV();
       return false;
     }
 
     if (keyLower === "s") {
-      console.log("[Lenia] Saving canvas PNG…");
-      saveCanvas(`lenia-frame-${this.appcore.automaton.gen}`, "png");
+      console.log("[Lenia] Exporting image…");
+      this.appcore.media.exportImage();
+      return false;
+    }
+
+    if (keyLower === "j") {
+      this.appcore.media.openImportDialog();
+      return false;
+    }
+
+    if (keyLower === "q") {
+      this._cyclePlaceScale(k === "Q" ? -1 : 1);
+      return false;
+    }
+
+    if (k === "`") {
+      this._autoScaleParams();
       return false;
     }
 
@@ -320,6 +347,29 @@ class InputHandler {
     if (next > maxValue) return minValue;
     if (next < minValue) return maxValue;
     return next;
+  }
+
+  _cyclePlaceScale(delta) {
+    const scales = [0.25, 0.5, 1, 2, 3, 4];
+    const current = this.appcore.params.placeScale || 1;
+    const idx = scales.findIndex(s => Math.abs(s - current) < 0.01);
+    const base = idx >= 0 ? idx : 2;
+    const next = (base + delta + scales.length) % scales.length;
+    this.appcore.params.placeScale = scales[next];
+    this.appcore.refreshGUI();
+    console.log(`[Lenia] Place scale: ${scales[next]}×`);
+  }
+
+  _autoScaleParams() {
+    const animal = this.appcore.getSelectedAnimal();
+    const baseR = animal?.params?.R ?? this.appcore.params.R;
+    const baseT = animal?.params?.T ?? this.appcore.params.T;
+    const s = this.appcore.params.placeScale || 1;
+    this.appcore.params.R = Math.round(Math.min(50, Math.max(2, baseR * s)));
+    this.appcore.params.T = Math.round(Math.min(50, Math.max(1,  baseT * s)));
+    this.appcore.updateAutomatonParams();
+    this.appcore.refreshGUI();
+    console.log(`[Lenia] Auto-scaled: R=${this.appcore.params.R}, T=${this.appcore.params.T}`);
   }
 
   shouldIgnoreKeyboard() {

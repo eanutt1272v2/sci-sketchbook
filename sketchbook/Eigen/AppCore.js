@@ -7,7 +7,9 @@ class AppCore {
 
     this.params = {
       orbitalNotation: "",
-      n: 4, l: 1, m: 0,
+      n: 4,
+      l: 1,
+      m: 0,
 
       colourMap: "rocket",
       exposure: 0.75,
@@ -23,19 +25,37 @@ class AppCore {
       sliceOffset: 0,
       viewCenter: { x: 0, y: 0, z: 0 },
 
-      exportFormat: "png"
+      imageFormat: "png",
     };
 
     this.statistics = {
-      fps: 0
+      fps: 0,
+      density: 0,
+      peakDensity: 0,
+      mean: 0,
+      stdDev: 0,
+      entropy: 0,
+      concentration: 0,
+      radialPeak: 0,
+      radialSpread: 0,
+      nodeEstimate: 0,
     };
 
+    this._pendingActions = [];
+
     this.solver = new Solver(this);
+    this.analyser = new Analyser(this.statistics);
     this.renderer = new Renderer(this);
+    this.media = new Media(this);
     this.gui = new GUI(this);
     this.input = new InputHandler(this);
 
-    this.renderer.update();
+    this._worker = null;
+    this._workerBusy = false;
+    this._renderPending = false;
+    this._initWorker();
+
+    this.requestRender();
   }
 
   update() {
@@ -45,6 +65,10 @@ class AppCore {
 
   draw() {
     this.renderer.render();
+
+    if (this._pendingActions.length > 0) {
+      this._runNextAction();
+    }
   }
 
   updateQuantumNumbers(type, delta) {
@@ -107,7 +131,11 @@ class AppCore {
   }
 
   adjustSliceOffset(delta) {
-    this.params.sliceOffset = constrain(this.params.sliceOffset + delta, -this.params.viewRadius, this.params.viewRadius);
+    this.params.sliceOffset = constrain(
+      this.params.sliceOffset + delta,
+      -this.params.viewRadius,
+      this.params.viewRadius,
+    );
     this.requestRender();
   }
 
@@ -127,7 +155,13 @@ class AppCore {
   }
 
   exportImage() {
-    this.gui.exportImage();
+    this.media.exportImage();
+  }
+
+  resize() {
+    const canvasSize = min(windowWidth, windowHeight);
+    resizeCanvas(canvasSize, canvasSize);
+    this.requestRender();
   }
 
   handleWheel(e) {
@@ -161,18 +195,130 @@ class AppCore {
   getPlaneAxes() {
     switch (this.params.slicePlane) {
       case "xy":
-        return { axis1: "x", axis2: "y", fixedAxis: "z", axis1Label: "X", axis2Label: "Y", fixedLabel: "Z" };
+        return {
+          axis1: "x",
+          axis2: "y",
+          fixedAxis: "z",
+          axis1Label: "X",
+          axis2Label: "Y",
+          fixedLabel: "Z",
+        };
       case "yz":
-        return { axis1: "y", axis2: "z", fixedAxis: "x", axis1Label: "Y", axis2Label: "Z", fixedLabel: "X" };
+        return {
+          axis1: "y",
+          axis2: "z",
+          fixedAxis: "x",
+          axis1Label: "Y",
+          axis2Label: "Z",
+          fixedLabel: "X",
+        };
       case "xz":
       default:
-        return { axis1: "x", axis2: "z", fixedAxis: "y", axis1Label: "X", axis2Label: "Z", fixedLabel: "Y" };
+        return {
+          axis1: "x",
+          axis2: "z",
+          fixedAxis: "y",
+          axis1Label: "X",
+          axis2Label: "Z",
+          fixedLabel: "Y",
+        };
     }
   }
 
   requestRender() {
-    this.renderer.update();
-    this.refreshGUI();
+    this._queueAction("render", () => this._requestRenderNow());
+  }
+
+  _requestRenderNow() {
+    if (this._worker) {
+      if (this._workerBusy) {
+        this._renderPending = true;
+      } else {
+        this._dispatchRender();
+      }
+    } else {
+      this.renderer.update();
+      if (this.renderer.grid && this.renderer.grid.length > 0) {
+        this.analyser.updateStatistics(this.renderer.grid, this.params);
+      }
+      this.refreshGUI();
+    }
+  }
+
+  _queueAction(name, handler) {
+    if (!Array.isArray(this._pendingActions)) {
+      this._pendingActions = [];
+    }
+    this._pendingActions = this._pendingActions.filter((action) => action.name !== name);
+    this._pendingActions.push({ name, handler });
+  }
+
+  _runNextAction() {
+    const next = this._pendingActions.shift();
+    if (!next || typeof next.handler !== "function") return;
+    next.handler();
+  }
+
+  _initWorker() {
+    try {
+      this._worker = new Worker("EigenWorker.js");
+    } catch (e) {
+      console.warn(
+        "[Eigen] Worker unavailable — falling back to synchronous render.",
+        e,
+      );
+      this._worker = null;
+      return;
+    }
+    this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
+    this._worker.onerror = (e) => {
+      console.error("[Eigen] Worker error:", e);
+      this._workerBusy = false;
+      this.renderer.update();
+      if (this.renderer.grid && this.renderer.grid.length > 0) {
+        this.analyser.updateStatistics(this.renderer.grid, this.params);
+      }
+      this.refreshGUI();
+    };
+  }
+
+  _dispatchRender() {
+    const {
+      n,
+      l,
+      m,
+      resolution: res,
+      viewRadius,
+      slicePlane,
+      sliceOffset,
+      viewCenter,
+    } = this.params;
+    this._workerBusy = true;
+    this._renderPending = false;
+    this._worker.postMessage({
+      type: "render",
+      n,
+      l,
+      m,
+      res,
+      viewRadius,
+      slicePlane,
+      sliceOffset,
+      viewCenter: { x: viewCenter.x, y: viewCenter.y, z: viewCenter.z },
+    });
+  }
+
+  _onWorkerMessage(data) {
+    if (data.type !== "result") return;
+    this.renderer.renderFromGrid(data.grid, data.peak);
+    if (this.renderer.grid && this.renderer.grid.length > 0) {
+      this.analyser.updateStatistics(this.renderer.grid, this.params);
+    }
+    this._workerBusy = false;
+    if (this._renderPending) {
+      this._renderPending = false;
+      this._dispatchRender();
+    }
   }
 
   syncViewConstraints() {
@@ -185,6 +331,10 @@ class AppCore {
   }
 
   refreshGUI() {
+    if (this.gui && typeof this.gui.syncMediaControls === "function") {
+      this.gui.syncMediaControls();
+    }
+
     if (this.gui && typeof this.gui.refresh === "function") {
       this.gui.refresh();
     }

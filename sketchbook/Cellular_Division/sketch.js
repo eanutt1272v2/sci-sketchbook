@@ -27,6 +27,7 @@ function preload() {
 
 function setup() {
   createCanvas(1100, 800);
+  frameRate(60);
   textFont(font);
   appcore = new AppCore();
 }

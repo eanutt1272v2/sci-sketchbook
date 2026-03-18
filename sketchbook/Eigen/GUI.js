@@ -3,9 +3,10 @@ class GUI {
     this.appcore = appcore;
 
     this.bindings = {};
+    this.recordButton = null;
     this.pane = new Tweakpane.Pane({
       title: `${this.appcore.metadata.name} ${this.appcore.metadata.version} by ${this.appcore.metadata.author}`,
-      expanded: true
+      expanded: true,
     });
 
     this.setupTabs();
@@ -14,13 +15,17 @@ class GUI {
   setupTabs() {
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Quantum Parameters" },
-        { title: "Visualisation/Other" },
+        { title: "Quantum" },
+        { title: "Visuals" },
+        { title: "Statistics" },
+        { title: "Media" },
       ],
     });
 
     this.createGeneralTab(tabs.pages[0]);
     this.createVisualisationTab(tabs.pages[1]);
+    this.createStatisticsTab(tabs.pages[2]);
+    this.createMediaTab(tabs.pages[3]);
 
     this.enforceConstraints();
   }
@@ -37,14 +42,14 @@ class GUI {
 
     page.addBinding(this.appcore.statistics, "fps", {
       label: "",
-      readonly: true
+      readonly: true,
     });
 
     page.addBlade({ view: "separator" });
 
     page.addBinding(this.appcore.params, "orbitalNotation", {
       label: "Orbital Notation",
-      readonly: true
+      readonly: true,
     });
 
     page.addBlade({ view: "separator" });
@@ -53,21 +58,21 @@ class GUI {
       label: "n (principal)",
       min: 1,
       max: 7,
-      step: 1
+      step: 1,
     });
 
     this.bindings.l = page.addBinding(this.appcore.params, "l", {
       label: "l (angular)",
       min: 0,
       max: 0,
-      step: 1
+      step: 1,
     });
 
     this.bindings.m = page.addBinding(this.appcore.params, "m", {
       label: "m (magnetic)",
       min: 0,
       max: 0,
-      step: 1
+      step: 1,
     });
 
     this.bindings.n.on("change", () => this.enforceConstraints());
@@ -76,115 +81,244 @@ class GUI {
   }
 
   createVisualisationTab(page) {
-    const colourMapOptions = Object.keys(this.appcore.colourMaps).reduce((obj, name) => {
-      obj[name.charAt(0).toUpperCase() + name.slice(1)] = name;
-      return obj;
-    }, {});
+    const colourMapOptions = Object.keys(this.appcore.colourMaps).reduce(
+      (obj, name) => {
+        obj[name.charAt(0).toUpperCase() + name.slice(1)] = name;
+        return obj;
+      },
+      {},
+    );
 
-    page.addBinding(this.appcore.params, "colourMap", {
-      label: "Colour Map",
-      options: colourMapOptions
-    }).on("change", () => this.appcore.renderer.update());
+    page
+      .addBinding(this.appcore.params, "colourMap", {
+        label: "Colour Map",
+        options: colourMapOptions,
+      })
+      .on("change", () => this.appcore.requestRender());
 
-    page.addBinding(this.appcore.params, "exposure", {
-      label: "Exposure",
-      min: 0,
-      max: 2
-    }).on("change", () => this.appcore.renderer.update());
-
-    page.addBlade({ view: "separator" });
-    page.addBinding(this.appcore.params, "resolution", {
-      label: "Resolution (px)",
-      min: 64,
-      max: 512,
-      step: 2
-    }).on("change", () => this.appcore.renderer.update());
-
-    page.addBinding(this.appcore.params, "pixelSmoothing", {
-      label: "Pixel Smoothing",
-    }).on("change", () => this.appcore.renderer.update());
-
-    page.addBinding(this.appcore.params, "renderOverlay", {
-      label: "Render Overlay",
-    }).on("change", () => this.appcore.renderer.update());
-
-    page.addBinding(this.appcore.params, "renderLegend", {
-      label: "Render Legend",
-    }).on("change", () => this.appcore.renderer.update());
+    page
+      .addBinding(this.appcore.params, "exposure", {
+        label: "Exposure",
+        min: 0,
+        max: 2,
+      })
+      .on("change", () => this.appcore.requestRender());
 
     page.addBlade({ view: "separator" });
+    page
+      .addBinding(this.appcore.params, "resolution", {
+        label: "Resolution (px)",
+        min: 64,
+        max: 512,
+        step: 2,
+      })
+      .on("change", () => this.appcore.requestRender());
 
-    this.bindings.viewRadius = page.addBinding(this.appcore.params, "viewRadius", {
-      label: "View Radius (a₀)",
-      min: 1,
-      max: 256
-    });
+    page
+      .addBinding(this.appcore.params, "pixelSmoothing", {
+        label: "Pixel Smoothing",
+      })
+      .on("change", () => this.appcore.requestRender());
+
+    page
+      .addBinding(this.appcore.params, "renderOverlay", {
+        label: "Render Overlay",
+      })
+      .on("change", () => this.appcore.requestRender());
+
+    page
+      .addBinding(this.appcore.params, "renderLegend", {
+        label: "Render Legend",
+      })
+      .on("change", () => this.appcore.requestRender());
 
     page.addBlade({ view: "separator" });
 
-    page.addBinding(this.appcore.params, "slicePlane", {
-      label: "Slice Plane",
-      options: {
-        "XY Plane (Slice Z)": "xy",
-        "XZ Plane (Slice Y)": "xz",
-        "YZ Plane (Slice X)": "yz"
-      }
-    }).on("change", () => this.appcore.renderer.update());
+    this.bindings.viewRadius = page.addBinding(
+      this.appcore.params,
+      "viewRadius",
+      {
+        label: "View Radius (a₀)",
+        min: 1,
+        max: 256,
+      },
+    );
 
-    this.bindings.sliceOffset = page.addBinding(this.appcore.params, "sliceOffset", {
-      label: "Slice Offset (a₀)",
-      min: -250,
-      max: 250
-    });
+    page.addBlade({ view: "separator" });
+
+    page
+      .addBinding(this.appcore.params, "slicePlane", {
+        label: "Slice Plane",
+        options: {
+          "XY Plane (Slice Z)": "xy",
+          "XZ Plane (Slice Y)": "xz",
+          "YZ Plane (Slice X)": "yz",
+        },
+      })
+      .on("change", () => this.appcore.requestRender());
+
+    this.bindings.sliceOffset = page.addBinding(
+      this.appcore.params,
+      "sliceOffset",
+      {
+        label: "Slice Offset (a₀)",
+        min: -250,
+        max: 250,
+      },
+    );
 
     this.bindings.viewRadius.on("change", () => this.updateViewConstraints());
-    this.bindings.sliceOffset.on("change", () => this.appcore.renderer.update());
+    this.bindings.sliceOffset.on("change", () =>
+      this.appcore.requestRender(),
+    );
 
     page.addBlade({ view: "separator" });
 
-    page.addBinding(this.appcore.params.viewCenter, "x", {
-      label: "Pan X (a₀)", min: -256, max: 256, step: 0.1
-    }).on("change", () => this.appcore.requestRender());
+    page
+      .addBinding(this.appcore.params.viewCenter, "x", {
+        label: "Pan X (a₀)",
+        min: -256,
+        max: 256,
+        step: 0.1,
+      })
+      .on("change", () => this.appcore.requestRender());
 
-    page.addBinding(this.appcore.params.viewCenter, "y", {
-      label: "Pan Y (a₀)", min: -256, max: 256, step: 0.1
-    }).on("change", () => this.appcore.requestRender());
+    page
+      .addBinding(this.appcore.params.viewCenter, "y", {
+        label: "Pan Y (a₀)",
+        min: -256,
+        max: 256,
+        step: 0.1,
+      })
+      .on("change", () => this.appcore.requestRender());
 
-    page.addBinding(this.appcore.params.viewCenter, "z", {
-      label: "Pan Z (a₀)", min: -256, max: 256, step: 0.1
-    }).on("change", () => this.appcore.requestRender());
+    page
+      .addBinding(this.appcore.params.viewCenter, "z", {
+        label: "Pan Z (a₀)",
+        min: -256,
+        max: 256,
+        step: 0.1,
+      })
+      .on("change", () => this.appcore.requestRender());
 
-    page.addButton({ title: "Reset View Center" }).on("click", () => this.appcore.resetViewCenter());
+    page
+      .addButton({ title: "Reset View Center" })
+      .on("click", () => this.appcore.resetViewCenter());
 
     page.addBlade({ view: "separator" });
-
-    page.addBinding(this.appcore.params, "exportFormat", {
-      label: "Format",
-      options: { PNG: "png", JPG: "jpg", WebP: "webp" }
-    });
-
-    page.addButton({
-      title: "Export Image",
-    }).on("click", () => this.exportImage());
   }
 
-  exportImage() {
-    const format = this.appcore.params.exportFormat || "png";
-    const filename = `orbital_${this.appcore.params.orbitalNotation.replace(/[\s=()]/g, "_")}.${format}`;
+  createStatisticsTab(page) {
+    const { statistics, analyser, media } = this.appcore;
 
-    const canvas = document.querySelector("canvas");
-    if (!canvas) return;
+    page.addBinding(statistics, "density", {
+      readonly: true,
+      label: "Density",
+      interval: 60,
+    });
 
-    const link = document.createElement("a");
-    link.download = filename;
+    page.addBinding(statistics, "peakDensity", {
+      readonly: true,
+      label: "Peak Density",
+    });
 
-    link.href = canvas.toDataURL(`image/${format === "jpg" ? "jpeg" : format}`);
+    page.addBinding(statistics, "mean", {
+      readonly: true,
+      label: "Mean Value",
+    });
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    page.addBinding(statistics, "stdDev", {
+      readonly: true,
+      label: "Std Dev",
+    });
 
-    console.log(`Exported image: ${filename}`);
+    page.addBinding(statistics, "entropy", {
+      readonly: true,
+      label: "Entropy",
+    });
+
+    page.addBinding(statistics, "concentration", {
+      readonly: true,
+      label: "Concentration",
+    });
+
+    page.addBinding(statistics, "radialPeak", {
+      readonly: true,
+      label: "Radial Peak",
+    });
+
+    page.addBinding(statistics, "radialSpread", {
+      readonly: true,
+      label: "Radial Spread",
+    });
+
+    page.addBinding(statistics, "nodeEstimate", {
+      readonly: true,
+      label: "Node Estimate",
+    });
+
+    page.addBlade({ view: "separator" });
+
+    const data = page.addFolder({ title: "Analysis Data" });
+    data
+      .addButton({ title: "Export Analysis (JSON)" })
+      .on("click", () => media?.exportAnalysisJSON());
+    data
+      .addButton({ title: "Export Stats (CSV)" })
+      .on("click", () => media?.exportStatisticsCSV());
+  }
+
+  createMediaTab(page) {
+    const { media, params } = this.appcore;
+
+    const data = page.addFolder({ title: "Data" });
+
+    data
+      .addButton({ title: "Export Params (JSON)" })
+      .on("click", () => media.exportParamsJSON());
+    data
+      .addButton({ title: "Import Params (JSON)" })
+      .on("click", () => media.importParamsJSON());
+    data
+      .addButton({ title: "Export Stats (JSON)" })
+      .on("click", () => media.exportStatisticsJSON());
+    data
+      .addButton({ title: "Export Stats (CSV)" })
+      .on("click", () => media.exportStatisticsCSV());
+
+    const exp = page.addFolder({ title: "Capture" });
+
+    this.recordButton = exp.addButton({
+      title: media.isRecording ? "Stop Recording" : "Start Recording",
+    });
+
+    this.recordButton.on("click", () => {
+      if (media.isRecording) {
+        media.stopRecording();
+      } else {
+        media.startRecording();
+      }
+
+      this.syncMediaControls();
+    });
+
+    exp.addBlade({ view: "separator" });
+
+    exp.addBinding(params, "imageFormat", {
+      label: "Format",
+      options: { PNG: "png", JPG: "jpg", WebP: "webp" },
+    });
+
+    exp
+      .addButton({ title: "Export Image" })
+      .on("click", () => media.exportImage());
+  }
+
+  syncMediaControls() {
+    if (!this.recordButton) return;
+    this.recordButton.title = this.appcore.media.isRecording
+      ? "Stop Recording"
+      : "Start Recording";
   }
 
   enforceConstraints() {
@@ -197,13 +331,16 @@ class GUI {
     this.bindings.m.min = -params.l;
     this.bindings.m.max = params.l;
 
-    params.m = Math.max(this.bindings.m.min, Math.min(this.bindings.m.max, params.m));
+    params.m = Math.max(
+      this.bindings.m.min,
+      Math.min(this.bindings.m.max, params.m),
+    );
 
     const shells = ["s", "p", "d", "f", "g", "h", "i"];
     params.orbitalNotation = `${params.n}${shells[params.l] || "?"} (m=${params.m})`;
 
     this.pane.refresh();
-    this.appcore.renderer.update();
+    this.appcore.requestRender();
   }
 
   updateViewConstraints() {
@@ -212,13 +349,17 @@ class GUI {
     this.bindings.sliceOffset.min = -params.viewRadius;
     this.bindings.sliceOffset.max = params.viewRadius;
 
-    params.sliceOffset = Math.max(this.bindings.sliceOffset.min, Math.min(this.bindings.sliceOffset.max, params.sliceOffset));
+    params.sliceOffset = Math.max(
+      this.bindings.sliceOffset.min,
+      Math.min(this.bindings.sliceOffset.max, params.sliceOffset),
+    );
 
     this.pane.refresh();
-    this.appcore.renderer.update();
+    this.appcore.requestRender();
   }
 
   refresh() {
+    this.syncMediaControls();
     this.pane.refresh();
   }
 }

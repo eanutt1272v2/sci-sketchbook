@@ -136,6 +136,12 @@ class InputHandler {
         this.appcore.exportImage();
         shouldRefreshGUI = false;
         break;
+      case "g":
+        this.appcore.media.exportAnalysisJSON();
+        shouldRefreshGUI = false;
+        logMsg = "Analysis exported";
+        break;
+
       case "x":
         this.appcore.resetViewCenter();
         logMsg = "View center reset";
@@ -172,14 +178,17 @@ class InputHandler {
       return;
     }
 
-    const zoomScale = Math.exp(event.delta * 0.0015);
-    this.applyZoomAtNormalisedPoint(
+    const wheelDelta = constrain(event.delta || 0, -80, 80);
+    const zoomScale = Math.exp(wheelDelta * 0.001);
+    if (!this.applyZoomAtNormalisedPoint(
       mouseX / max(1, width),
       mouseY / max(1, height),
       zoomScale,
-    );
+    )) {
+      return false;
+    }
 
-    this.appcore.syncViewConstraints();
+    this.appcore.requestRender();
     return false;
   }
 
@@ -249,14 +258,16 @@ class InputHandler {
 
     const ratio = distance / this.gesture.pinch.distance;
     const zoomScale = 1 / max(ratio, 1e-6);
-    this.applyZoomAtNormalisedPoint(
+    if (!this.applyZoomAtNormalisedPoint(
       cx / max(1, width),
       cy / max(1, height),
       zoomScale,
-    );
+    )) {
+      return;
+    }
 
     this.gesture.pinch.distance = distance;
-    this.appcore.syncViewConstraints();
+    this.appcore.requestRender();
   }
 
   applyZoomAtNormalisedPoint(nx, ny, zoomScale) {

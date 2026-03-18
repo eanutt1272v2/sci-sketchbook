@@ -124,28 +124,31 @@ class Renderer {
     this.renderToBuffer(grid, peak, res, colourMap, exposure);
   }
 
+   renderFromGrid(gridBuffer, peak) {
+     const { resolution: res, colourMap, exposure } = this.appcore.params;
+     this.grid = new Float32Array(gridBuffer);
+     if (!this.buffer || this.buffer.width !== res || this.buffer.height !== res) {
+       this.buffer = createImage(res, res);
+     }
+     this.renderToBuffer(this.grid, peak, res, colourMap, exposure);
+   }
+
   renderToBuffer(grid, peak, res, colourMap, exposure) {
-    const colourMapData = this.appcore.colourMaps[colourMap] || this.appcore.colourMaps.rocket;
     const { buffer } = this;
+    this.updateLUT(colourMap || "rocket");
 
     const gamma = 1.0 / (1.0 + exposure);
-    const poly = (c, t) => c[0] + t * (c[1] + t * (c[2] + t * (c[3] + t * (c[4] + t * (c[5] + t * c[6])))));
-
-    let r, g, b;
     buffer.loadPixels();
 
     for (let i = 0; i < res * res; i++) {
       let norm = grid[i] / peak;
       let val = Math.pow(constrain(norm, 0, 1), gamma);
-
-      r = Math.floor(constrain(poly(colourMapData.r, val), 0, 1) * 255);
-      g = Math.floor(constrain(poly(colourMapData.g, val), 0, 1) * 255);
-      b = Math.floor(constrain(poly(colourMapData.b, val), 0, 1) * 255);
+      const lutIndex = Math.min(255, Math.max(0, Math.round(val * 255))) * 3;
 
       const idx = i * 4;
-      buffer.pixels[idx] = r;
-      buffer.pixels[idx + 1] = g;
-      buffer.pixels[idx + 2] = b;
+      buffer.pixels[idx] = this.lut[lutIndex];
+      buffer.pixels[idx + 1] = this.lut[lutIndex + 1];
+      buffer.pixels[idx + 2] = this.lut[lutIndex + 2];
       buffer.pixels[idx + 3] = 255;
     }
 
@@ -245,53 +248,100 @@ class Renderer {
 
     fill(255);
     textAlign(LEFT, TOP);
-    let x = 50;
+    const x = 50;
     let y = 50;
-    const lineH = 30;
+    const lh = 26;
+    const colW = (width - 100) / 2;
 
-    textSize(28);
+    textSize(24);
     text(`${name} ${version} Keymap Reference`, x, y);
 
-    textSize(16);
-    y += 50;
+    y += 48;
 
-    text("Keys", x, y);
-    text("Action", x + 250, y);
-
-    stroke(255, 50);
-    line(x, y + 25, width - 50, y + 25);
-    y += 40;
-
-    const commands = [
-      ["W/S, A/D, Q/E", "Increment n, l, m quantum numbers"],
-      ["1, 2, 3", "Switch planes (XY, XZ, YZ)"],
-      ["← / →, ↑ / ↓ Arrow Keys", "Scan slice / zoom radius"],
-      ["Shift + Arrow Keys", "Pan view within current slice plane"],
-      ["Mouse Drag / Touch Drag", "Pan view"],
-      ["Mouse Wheel / Pinch", "Zoom radius"],
-      ["Space", "Reset slice offset to 0 a₀"],
-      ["X", "Reset view center"],
-      ["[ / ]", "Adjust exposure (gamma)"],
-      ["+ / -", "Alter resolution"],
-      ["M, C, L", "Toggle smoothing / cycle colour maps / toggle legend"],
-      ["H, O, P", "Toggle GUI / toggle overlay / export"],
-      ["#", "Toggle keymap reference"]
+    const sections = [
+      {
+        title: "Quantum",
+        entries: [
+          ["W/S", "Increment/decrement n"],
+          ["D/A", "Increment/decrement l"],
+          ["E/Q", "Increment/decrement m"],
+        ],
+      },
+      {
+        title: "View",
+        entries: [
+          ["1 / 2 / 3", "Switch plane: XY / XZ / YZ"],
+          ["Space", "Reset slice offset"],
+          ["X", "Reset view centre"],
+          ["Arrow Keys", "Slice or zoom radius"],
+          ["Shift + Arrow", "Pan in active plane"],
+          ["Mouse Drag / Touch", "Pan view"],
+          ["Wheel / Pinch", "Zoom radius"],
+        ],
+      },
+      {
+        title: "Display",
+        entries: [
+          ["C", "Cycle colour map"],
+          ["M", "Toggle pixel smoothing"],
+          ["O", "Toggle overlay"],
+          ["L", "Toggle legend"],
+          ["H", "Toggle GUI"],
+        ],
+      },
+      {
+        title: "Data",
+        entries: [
+          ["P", "Export image"],
+          ["G", "Export analysis data"],
+          ["GUI: Media tab", "Export/import params + stats"],
+        ],
+      },
+      {
+        title: "Reference",
+        entries: [
+          ["#", "Toggle keymap reference"],
+        ],
+      },
     ];
 
-    noStroke();
+    let col = 0;
+    let cx = x;
+    let cy = y;
 
-    for (const command of commands) {
-      fill(255);
-      text(command[0], x, y);
-      fill(255, 150);
-      text(command[1], x + 250, y);
-      y += lineH;
+    for (const section of sections) {
+      if (cy + (section.entries.length + 2) * lh > height - 30 && col === 0) {
+        col = 1;
+        cx = x + colW;
+        cy = y + 50;
+      }
+
+      fill(180, 220, 255);
+      textSize(13);
+      text(section.title.toUpperCase(), cx, cy);
+      cy += lh - 4;
+
+      stroke(255, 40);
+      line(cx, cy, cx + colW - 20, cy);
+      noStroke();
+      cy += 8;
+
+      for (const [k, desc] of section.entries) {
+        fill(255);
+        textSize(13);
+        text(k, cx, cy);
+        fill(200);
+        text(desc, cx + 130, cy);
+        cy += lh;
+      }
+
+      cy += 14;
     }
 
     fill(120);
     textSize(11);
     textAlign(CENTER, BOTTOM);
-    text("Press  #  to close", width / 2, height - 16);
+    text("Press # to close", width / 2, height - 16);
     
     pop();
   }
