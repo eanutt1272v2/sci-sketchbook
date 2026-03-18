@@ -1,5 +1,12 @@
 # sci-sketchbook <img src="logo.png" alt="sci-sketchbook logo" align="right" width="175">
 
+> [!IMPORTANT]
+> **Major Migration and Refactor Notice**
+> 
+> I am currently transitioning the vast majority of the library's sketches from **Processing (Java)** to **p5.js** to improve web accessibility, cross-device support, and eliminate version/feature drift caused by legacy versions. During this period:
+> - Many sketches are undergoing massive structural refactors.
+> - Legacy `.pde` files are being phased out. Some older experiments may be discontinued or deleted if they no longer fit the project's direction.
+
 A collection of scientific and mathematical creative-coding sketches, simulations, and visualisations.
 
 The repository includes projects built with:
