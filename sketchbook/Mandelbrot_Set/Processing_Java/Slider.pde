@@ -1,4 +1,3 @@
-
 class Slider {
   float x, y, w, h, min, max, val;
   boolean locked = false;

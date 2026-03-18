@@ -1,16 +1,14 @@
-
-
 let appcore;
 let font;
 
 const metadata = {
-  name: "Mandelbrot",
-  version: "v3.0.0",
+  name: "Mandelbrot Set",
+  version: "v3.0.0-dev",
   author: "@eanutt1272.v2",
 };
 
 function preload() {
-  font = loadFont("monaco.ttf");
+  font = loadFont("JetBrainsMono-Regular.ttf");
 }
 
 function setup() {

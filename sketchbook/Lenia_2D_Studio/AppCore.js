@@ -161,19 +161,11 @@ class AppCore {
     this.animalLibrary.applyAnimalParameters(animal);
     this.automaton.updateParameters(this.params);
 
-    if (this.gui && this.gui.pane) {
-      this.gui.pane.refresh();
-    }
+    this.refreshGUI();
   }
 
   loadSelectedAnimal() {
-    const value = this.params.selectedAnimal;
-    if (!value || value === "") return;
-
-    const idx = parseInt(value);
-    if (isNaN(idx)) return;
-
-    const animal = this.animalLibrary.getAnimal(idx);
+    const animal = this.getSelectedAnimal();
     if (animal) {
       this.loadAnimal(animal);
     }
@@ -188,32 +180,21 @@ class AppCore {
     this.animalLibrary.applyAnimalParameters(animal);
     this.automaton.updateParameters(this.params);
 
-    if (this.gui && this.gui.pane) {
-      this.gui.pane.refresh();
-    }
+    this.refreshGUI();
   }
 
 
   loadSelectedAnimalParams() {
-    const value = this.params.selectedAnimal;
-    if (!value || value === "") return;
-
-    const idx = parseInt(value);
-    if (isNaN(idx)) return;
-
-    const animal = this.animalLibrary.getAnimal(idx);
+    const animal = this.getSelectedAnimal();
     if (animal) {
       this.loadAnimalParams(animal);
     }
   }
 
   placeAnimal(cellX, cellY) {
-    if (!this.params.placeMode || !this.params.selectedAnimal) return;
+    if (!this.params.placeMode) return;
 
-    const idx = parseInt(this.params.selectedAnimal);
-    if (isNaN(idx)) return;
-
-    const animal = this.animalLibrary.getAnimal(idx);
+    const animal = this.getSelectedAnimal();
     if (!animal) return;
 
     this.board.placePattern(animal, cellX, cellY);
@@ -226,10 +207,22 @@ class AppCore {
     if (firstAnimal) {
       this.params.selectedAnimal = "0";
       this.loadAnimal(firstAnimal);
-      if (this.gui && this.gui.pane) {
-        this.gui.pane.refresh();
-      }
+      this.refreshGUI();
     }
+  }
+
+  getSelectedAnimalIndex() {
+    const value = this.params.selectedAnimal;
+    if (!value || value === "") return null;
+
+    const idx = parseInt(value, 10);
+    return Number.isNaN(idx) ? null : idx;
+  }
+
+  getSelectedAnimal() {
+    const idx = this.getSelectedAnimalIndex();
+    if (idx === null) return null;
+    return this.animalLibrary.getAnimal(idx);
   }
 
   canvasInteraction(e) {

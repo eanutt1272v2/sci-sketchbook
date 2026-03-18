@@ -1,4 +1,3 @@
-
 class Button {
   float x, y, w, h;
   String label;

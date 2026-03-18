@@ -1,4 +1,3 @@
-
 class InputHandler {
   constructor(appcore) {
     this.appcore = appcore;

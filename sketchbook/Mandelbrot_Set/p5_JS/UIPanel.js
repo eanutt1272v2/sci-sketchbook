@@ -1,4 +1,3 @@
-
 class UIPanel {
   constructor(appcore) {
     this.appcore = appcore;

@@ -1,4 +1,3 @@
-
 class Slider {
   constructor(x, y, w, h, minVal, maxVal, start, theme) {
     this.x = x;

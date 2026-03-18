@@ -1,4 +1,3 @@
-
 class Button {
   constructor(x, y, w, h, label, theme) {
     this.x = x;

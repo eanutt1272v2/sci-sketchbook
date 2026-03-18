@@ -1,8 +1,7 @@
-
 class UITheme {
-  color bgPanel = color(20,  20,  20,  210);
-  color bgWidget = color(42,  42,  42,  220);
-  color bgHover = color(68,  68,  68,  230);
+  color bgPanel = color(20, 20, 20, 210);
+  color bgWidget = color(42, 42, 42, 220);
+  color bgHover = color(68, 68, 68, 230);
   color bgActive = color(100, 100, 100, 245);
 
   color textPrimary = color(240);

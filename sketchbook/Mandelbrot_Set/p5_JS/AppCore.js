@@ -1,4 +1,3 @@
-
 class AppCore {
   constructor() {
     this.maxIterations = 128;

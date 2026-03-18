@@ -1,4 +1,3 @@
-
 class UILayout {
   constructor(x, y, w, padding, intraGap, interGap) {
     this.x = x;

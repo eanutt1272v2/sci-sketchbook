@@ -1,4 +1,3 @@
-
 class FractalRenderer {
   constructor(appcore) {
     this.appcore = appcore;

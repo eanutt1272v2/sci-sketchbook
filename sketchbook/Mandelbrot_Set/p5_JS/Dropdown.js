@@ -1,4 +1,3 @@
-
 class Dropdown {
   constructor(x, y, w, h, items, theme) {
     this.x = x;

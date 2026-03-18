@@ -69,36 +69,40 @@ class GUI {
 
   createParametersTab(page) {
     const { params } = this;
-    const automaton = this.appcore?.automaton;
+    const bindAutomaton = (target, key, options) => {
+      return target
+        .addBinding(params, key, options)
+        .on("change", () => this.appcore?.automaton?.updateParameters(params));
+    };
 
     const growth = page.addFolder({ title: "Growth Function", expanded: true });
 
-    growth.addBinding(params, "m", {
+    bindAutomaton(growth, "m", {
       min: 0, max: 0.5, step: 0.001, label: "Centre (μ)"
-    }).on("change", () => automaton?.updateParameters(params));
+    });
 
-    growth.addBinding(params, "s", {
+    bindAutomaton(growth, "s", {
       min: 0.001, max: 0.1, step: 0.0001, label: "Width (σ)"
-    }).on("change", () => automaton?.updateParameters(params));
+    });
 
-    this.growthBinding = growth.addBinding(params, "gn", {
+    this.growthBinding = bindAutomaton(growth, "gn", {
       label: "Type",
       options: {
         "Polynomial": 1,
         "Exponential": 2,
         "Step": 3
       }
-    }).on("change", () => automaton?.updateParameters(params));
+    });
 
     page.addBlade({ view: "separator" });
 
     const kernel = page.addFolder({ title: "Kernel Function", expanded: true });
 
-    kernel.addBinding(params, "R", {
+    bindAutomaton(kernel, "R", {
       min: 2, max: 50, step: 1, label: "Radius (R)"
-    }).on("change", () => automaton?.updateParameters(params));
+    });
 
-    this.kernelBinding = kernel.addBinding(params, "kn", {
+    this.kernelBinding = bindAutomaton(kernel, "kn", {
       label: "Type",
       options: {
         "Polynomial": 1,
@@ -106,33 +110,31 @@ class GUI {
         "Step": 3,
         "Staircase": 4
       }
-    }).on("change", () => automaton?.updateParameters(params));
+    });
 
     page.addBlade({ view: "separator" });
 
     const time = page.addFolder({ title: "Time Integration" });
 
-    time.addBinding(params, "T", {
+    bindAutomaton(time, "T", {
       min: 1, max: 50, step: 1, label: "Steps (T)"
-    }).on("change", () => automaton?.updateParameters(params));
+    });
 
-    time.addBinding(params, "softClip", { label: "Soft Clipping" })
-    .on("change", () => automaton?.updateParameters(params));
+    bindAutomaton(time, "softClip", { label: "Soft Clipping" });
 
-    time.addBinding(params, "multiStep", { label: "Multi-Step" })
-    .on("change", () => automaton?.updateParameters(params));
+    bindAutomaton(time, "multiStep", { label: "Multi-Step" });
 
-    time.addBinding(params, "addNoise", {
+    bindAutomaton(time, "addNoise", {
       min: 0, max: 10, step: 0.1, label: "Noise"
-    }).on("change", () => automaton?.updateParameters(params));
+    });
 
-    time.addBinding(params, "maskRate", {
+    bindAutomaton(time, "maskRate", {
       min: 0, max: 10, step: 0.1, label: "Mask Rate"
-    }).on("change", () => automaton?.updateParameters(params));
+    });
 
-    time.addBinding(params, "paramP", {
+    bindAutomaton(time, "paramP", {
       min: 0, max: 64, step: 1, label: "Quantisation P"
-    }).on("change", () => automaton?.updateParameters(params));
+    });
   }
 
   createAnimalsTab(page) {

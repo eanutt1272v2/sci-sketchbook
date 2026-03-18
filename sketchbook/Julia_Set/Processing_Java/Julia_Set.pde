@@ -4,7 +4,7 @@ AppCore appcore;
 PFont font;
 
 final String SKETCH_NAME = "Julia Set";
-final String SKETCH_VERSION = "v3.0.0";
+final String SKETCH_VERSION = "v3.0.0-dev";
 final String SKETCH_AUTHOR = "@eanutt1272.v2";
 
 void settings() {

@@ -5,7 +5,7 @@ let font;
 
 const metadata = {
   name: "Julia Set",
-  version: "v3.0.0",
+  version: "v3.0.0-dev",
   author: "@eanutt1272.v2",
 };
 

@@ -1,4 +1,3 @@
-
 class UITheme {
   constructor() {
     this.bgPanel = color(20, 20, 20, 210);
