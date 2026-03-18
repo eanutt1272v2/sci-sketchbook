@@ -92,8 +92,8 @@ class Terrain {
     const { size, heightMap, sharedNormal } = this;
     const { heightScale } = this.appcore.params;
 
-    const west  = x > 0 ? y * size + (x - 1) : y * size + x;
-    const east  = x < size - 1 ? y * size + (x + 1) : y * size + x;
+    const west = x > 0 ? y * size + (x - 1) : y * size + x;
+    const east = x < size - 1 ? y * size + (x + 1) : y * size + x;
     const north = y > 0 ? (y - 1) * size + x : y * size + x;
     const south = y < size - 1 ? (y + 1) * size + x : y * size + x;
 
