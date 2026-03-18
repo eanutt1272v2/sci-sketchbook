@@ -19,15 +19,15 @@ const metadata = {
 };
 
 let appcore;
-let monoFont;
+let font;
 
 function preload() {
-  monoFont = loadFont("monaco.ttf");
+  font = loadFont("monaco.ttf");
 }
 
 function setup() {
   createCanvas(1100, 800);
-  textFont(monoFont);
+  textFont(font);
   appcore = new AppCore();
 }
 

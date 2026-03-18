@@ -1,7 +1,7 @@
 p5.disableFriendlyErrors = true;
 
 let appcore;
-let vertShader, fragShader, colourMaps, monoFont;
+let vertShader, fragShader, colourMaps, font;
 
 const metadata = {
   name: "Fluvia",
@@ -10,7 +10,7 @@ const metadata = {
 };
 
 function preload() {
-  monoFont = loadFont("monaco.ttf");
+  font = loadFont("JetBrainsMono-Regular.ttf");
   colourMaps = loadJSON("colour-maps.json");
   loadStrings("vert.glsl", (lines) => vertShader = lines.join("\n"));
   loadStrings("frag.glsl", (lines) => fragShader = lines.join("\n"));
@@ -21,7 +21,7 @@ function setup() {
   createCanvas(canvasSize, canvasSize);
   
   noSmooth();
-  textFont(monoFont);
+  textFont(font);
   pixelDensity(1);
 
   appcore = new AppCore({
@@ -29,8 +29,12 @@ function setup() {
     vertShader,
     fragShader,
     colourMaps,
-    font: monoFont
+    font: font
   });
+}
+
+function windowResized() {
+  appcore.resize();
 }
 
 function draw() {
@@ -45,7 +49,3 @@ function mouseDragged(event) { return appcore.handlePointer(event); }
 function touchStarted(event) { return appcore.handlePointer(event); }
 function touchMoved(event) { return appcore.handlePointer(event); }
 function touchEnded(event) { return appcore.handlePointer(event); }
-
-function windowResized() {
-  appcore.resize();
-}

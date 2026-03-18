@@ -87,7 +87,7 @@ class UIPanel {
     this.exportBtn.display();
     this.zoomInBtn.display();
     this.zoomOutBtn.display();
-    this.drawCredits();
+    this.renderCredits();
   }
 
   format3dp(value) {
@@ -107,7 +107,7 @@ class UIPanel {
     return `${sign}${wholeStr}.${fracStr}`;
   }
 
-  drawKeymapReference() {
+  renderKeymapReference() {
     push();
     fill(0, 220);
     noStroke();
@@ -155,7 +155,7 @@ class UIPanel {
     pop();
   }
 
-  drawCredits() {
+  renderCredits() {
     push();
     noStroke();
     fill(255, 170);

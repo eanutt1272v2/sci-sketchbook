@@ -1,11 +1,9 @@
-
-
 class InputHandler {
   constructor(manager) {
     this.m = manager;
     this.gesture = {
       pan: null,
-      pinch: null
+      pinch: null,
     };
   }
 
@@ -28,7 +26,7 @@ class InputHandler {
         params.sliceOffset = constrain(
           params.sliceOffset + (keyIsDown(RIGHT_ARROW) ? 0.5 : -0.5),
           -params.viewRadius,
-          params.viewRadius
+          params.viewRadius,
         );
       }
 
@@ -38,7 +36,7 @@ class InputHandler {
     if (keyIsDown(UP_ARROW) || keyIsDown(DOWN_ARROW)) {
       if (shiftHeld) {
         const step = max(0.25, params.viewRadius * 0.03);
-        const delta = keyIsDown(DOWN_ARROW) ? -step : step;
+        const delta = keyIsDown(UP_ARROW) ? -step : step;
         this.panCurrentPlane(0, delta);
         needsRender = true;
       } else {
@@ -59,7 +57,7 @@ class InputHandler {
       params.exposure = constrain(
         params.exposure + (keyIsDown(221) ? 0.01 : -0.01),
         0,
-        2
+        2,
       );
       needsRender = true;
     }
@@ -68,7 +66,11 @@ class InputHandler {
     const isMinus = keyIsDown(189) || keyIsDown(173) || keyIsDown(109);
 
     if (isPlus || isMinus) {
-      params.resolution = constrain(params.resolution + (isPlus ? 2 : -2), 64, 512);
+      params.resolution = constrain(
+        params.resolution + (isPlus ? 2 : -2),
+        64,
+        512,
+      );
       needsRender = true;
     }
 
@@ -83,7 +85,7 @@ class InputHandler {
     }
   }
 
-  handleKeyPressed(k, kCode) {
+  handleKeyPressed(k) {
     if (this.shouldIgnoreKeyboard()) {
       return false;
     }
@@ -103,7 +105,7 @@ class InputHandler {
       logMsg = `m changed to ${this.m.params.m}`;
     }
 
-    const planes = { "1": "xy", "2": "xz", "3": "yz" };
+    const planes = { 1: "xy", 2: "xz", 3: "yz" };
     if (planes[k]) {
       this.m.changePlane(planes[k]);
       logMsg = `Plane switched to ${this.m.params.slicePlane.toUpperCase()}`;
@@ -117,6 +119,10 @@ class InputHandler {
       case "o":
         this.m.toggleOverlay();
         logMsg = `Overlay: ${this.m.params.renderOverlay}`;
+        break;
+      case "l":
+        this.m.toggleLegend();
+        logMsg = `Legend: ${this.m.params.renderLegend}`;
         break;
       case "m":
         this.m.toggleSmoothing();
@@ -167,7 +173,11 @@ class InputHandler {
     }
 
     const zoomScale = Math.exp(event.delta * 0.0015);
-    this.applyZoomAtNormalisedPoint(mouseX / max(1, width), mouseY / max(1, height), zoomScale);
+    this.applyZoomAtNormalisedPoint(
+      mouseX / max(1, width),
+      mouseY / max(1, height),
+      zoomScale,
+    );
 
     this.m.syncViewConstraints();
     return false;
@@ -239,7 +249,11 @@ class InputHandler {
 
     const ratio = distance / this.gesture.pinch.distance;
     const zoomScale = 1 / max(ratio, 1e-6);
-    this.applyZoomAtNormalisedPoint(cx / max(1, width), cy / max(1, height), zoomScale);
+    this.applyZoomAtNormalisedPoint(
+      cx / max(1, width),
+      cy / max(1, height),
+      zoomScale,
+    );
 
     this.gesture.pinch.distance = distance;
     this.m.syncViewConstraints();
@@ -263,7 +277,7 @@ class InputHandler {
 
     return true;
   }
-  
+
   panCurrentPlane(delta1, delta2) {
     const { axis1, axis2 } = this.m.getPlaneAxes();
     this.m.params.viewCenter[axis1] += delta1;
@@ -279,6 +293,11 @@ class InputHandler {
     const el = document.activeElement;
     if (!el) return false;
     const tag = (el.tagName || "").toUpperCase();
-    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !!el.isContentEditable;
+    return (
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      tag === "SELECT" ||
+      !!el.isContentEditable
+    );
   }
 }

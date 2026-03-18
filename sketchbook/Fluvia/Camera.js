@@ -1,6 +1,6 @@
 class Camera {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
 
     this.target = {
       yaw: 0,

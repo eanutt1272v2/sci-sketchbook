@@ -89,7 +89,7 @@ class UIPanel {
     exportBtn.display();
     zoomInBtn.display();
     zoomOutBtn.display();
-    drawCredits();
+    renderCredits();
   }
 
   String format3dp(double value) {
@@ -112,7 +112,7 @@ class UIPanel {
     return sign + wholeStr + "." + fracStr;
   }
 
-  void drawKeymapReference() {
+  void renderKeymapReference() {
     pushStyle();
     fill(0, 220);
     noStroke();
@@ -160,7 +160,7 @@ class UIPanel {
     popStyle();
   }
 
-  void drawCredits() {
+  void renderCredits() {
     pushStyle();
     noStroke();
     fill(255, 170);

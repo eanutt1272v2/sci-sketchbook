@@ -1,8 +1,8 @@
 class GUI {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
     this.recordButton = null;
-    const { name, version, author } = this.m.metadata;
+    const { name, version, author } = this.appcore.metadata;
 
     this.pane = new Tweakpane.Pane({
       title: `${name} ${version} by ${author}`,
@@ -32,14 +32,14 @@ class GUI {
   }
 
   createGeneralTab(page) {
-    const { params, statistics } = this.m;
+    const { params, statistics } = this.appcore;
 
     page
       .addButton({ title: "Generate Terrain" })
-      .on("click", () => this.m.generate());
+      .on("click", () => this.appcore.generate());
     page
       .addButton({ title: "Reset Terrain" })
-      .on("click", () => this.m.reset());
+      .on("click", () => this.appcore.reset());
 
     page.addBlade({ view: "separator" });
 
@@ -105,7 +105,7 @@ class GUI {
   }
 
   createErosionTab(page) {
-    const { params } = this.m;
+    const { params } = this.appcore;
     const hydraulic = page.addFolder({ title: "Hydraulic" });
 
     const hydraulicSettings = [
@@ -151,7 +151,7 @@ class GUI {
   }
 
   createVisualTab(page) {
-    const { params, colourMaps } = this.m;
+    const { params, colourMaps } = this.appcore;
 
     page.addBinding(params, "displayMethod", {
       label: "Display Method",
@@ -217,7 +217,7 @@ class GUI {
   }
 
   createMediaTab(page) {
-    const { media, params } = this.m;
+    const { media, params } = this.appcore;
 
     const imp = page.addFolder({ title: "Import" });
 
@@ -255,7 +255,7 @@ class GUI {
   }
 
   createStatsTab(page) {
-    const { statistics } = this.m;
+    const { statistics } = this.appcore;
 
     const perfFolder = page.addFolder({ title: "Performance & Time" });
 
@@ -412,7 +412,7 @@ class GUI {
 
   syncMediaControls() {
     if (this.recordButton) {
-      this.recordButton.title = this.m.media.isRecording ? "Stop Recording" : "Start Recording";
+      this.recordButton.title = this.appcore.media.isRecording ? "Stop Recording" : "Start Recording";
     }
   }
 }

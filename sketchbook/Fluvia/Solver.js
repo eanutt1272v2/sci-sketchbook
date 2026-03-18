@@ -1,6 +1,6 @@
 class Solver {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
 
     const SQRT2 = Math.SQRT2;
     this.neighbours = [
@@ -11,11 +11,11 @@ class Solver {
   }
 
   updateDischargeMap() {
-    const { learningRate } = this.m.params;
+    const { learningRate } = this.appcore.params;
     const { 
       area, dischargeMap, dischargeTrack, 
       momentumX, momentumXTrack, momentumY, momentumYTrack 
-    } = this.m.terrain;
+    } = this.appcore.terrain;
 
     const invLR = 1.0 - learningRate;
 
@@ -31,9 +31,9 @@ class Solver {
       dropletsPerFrame, maxAge, minVolume, precipitationRate,
       gravity, momentumTransfer, entrainment, depositionRate,
       evaporationRate, sedimentErosionRate, bedrockErosionRate
-    } = this.m.params;
+    } = this.appcore.params;
 
-    const { terrain } = this.m;
+    const { terrain } = this.appcore;
     const { 
       size, heightMap, sedimentMap, bedrockMap, 
       dischargeTrack, momentumXTrack, momentumYTrack,
@@ -132,9 +132,9 @@ class Solver {
   }
 
   thermalErosion(x, y) {
-    const { terrain } = this.m;
+    const { terrain } = this.appcore;
     const { size, heightMap, sedimentMap, bedrockMap } = terrain;
-    const { maxHeightDiff, settlingRate } = this.m.params;
+    const { maxHeightDiff, settlingRate } = this.appcore.params;
 
     const cx = x | 0;
     const cy = y | 0;

@@ -554,7 +554,7 @@ class Renderer {
   PVector[][] pos; int cachedHash=0;
 
   void drawAll() {
-    drawHint(); drawGridLabel(); drawGrid(); drawNetwork(); ui.draw();
+    drawHint(); renderGridLabel(); renderGrid(); drawNetwork(); ui.draw();
   }
 
   void drawHint() {
@@ -563,11 +563,11 @@ class Renderer {
          W-10, 6);
   }
 
-  void drawGridLabel() {
+  void renderGridLabel() {
     fill(180); textSize(13); textAlign(LEFT,BASELINE); text("Input Grid",GRID_X,GRID_Y-11);
   }
 
-  void drawGrid() {
+  void renderGrid() {
     noFill(); stroke(48); strokeWeight(1);
     rect(GRID_X-1, GRID_Y-1, GRID_PX+2, GRID_PX+2);
     for (int r=0;r<GRID_SIZE;r++) for (int c=0;c<GRID_SIZE;c++) {

@@ -1,6 +1,6 @@
 class InputHandler {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
     this.keys = {
       up: false,
       down: false,
@@ -13,14 +13,14 @@ class InputHandler {
 
   handleWheel(event) {
     if (this.canvasInteraction(event)) {
-      this.m.camera.handleWheel(event);
+      this.appcore.camera.handleWheel(event);
       return false;
     }
   }
 
   handlePointer(event) {
     if (this.canvasInteraction(event)) {
-      this.m.camera.handlePointer(event);
+      this.appcore.camera.handlePointer(event);
       return false;
     }
   }
@@ -33,123 +33,123 @@ class InputHandler {
     const keyLower = (k || "").toLowerCase();
 
     if (k === "#") {
-      this.m.params.renderKeymapRef = !this.m.params.renderKeymapRef;
-      this.m.refreshGUI();
+      this.appcore.params.renderKeymapRef = !this.appcore.params.renderKeymapRef;
+      this.appcore.refreshGUI();
       return false;
     }
 
-    if (this.m.params.renderKeymapRef) {
+    if (this.appcore.params.renderKeymapRef) {
       return false;
     }
 
     if (keyLower === "h") {
-      this.m.gui.pane.hidden = !this.m.gui.pane.hidden;
+      this.appcore.gui.pane.hidden = !this.appcore.gui.pane.hidden;
       return false;
     }
 
     if (keyLower === " ") {
-      this.m.params.running = !this.m.params.running;
-      this.m.refreshGUI();
+      this.appcore.params.running = !this.appcore.params.running;
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "p") {
-      this.m.params.running = !this.m.params.running;
-      this.m.refreshGUI();
+      this.appcore.params.running = !this.appcore.params.running;
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "g") {
-      this.m.generate();
-      this.m.refreshGUI();
+      this.appcore.generate();
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "r") {
-      this.m.reset();
-      this.m.refreshGUI();
+      this.appcore.reset();
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "1") {
-      this.m.params.displayMethod = "2D";
-      this.m.refreshGUI();
+      this.appcore.params.displayMethod = "2D";
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "2") {
-      this.m.params.displayMethod = "3D";
-      this.m.refreshGUI();
+      this.appcore.params.displayMethod = "3D";
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "o") {
-      this.m.params.renderStats = !this.m.params.renderStats;
-      this.m.refreshGUI();
+      this.appcore.params.renderStats = !this.appcore.params.renderStats;
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "l") {
-      this.m.params.renderLegend = !this.m.params.renderLegend;
-      this.m.refreshGUI();
+      this.appcore.params.renderLegend = !this.appcore.params.renderLegend;
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "v") {
-      if (this.m.media.isRecording) {
-        this.m.media.stopRecording();
+      if (this.appcore.media.isRecording) {
+        this.appcore.media.stopRecording();
       } else {
-        this.m.media.startRecording();
+        this.appcore.media.startRecording();
       }
-      this.m.refreshGUI();
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "f") {
-      this.m.media.exportImage();
+      this.appcore.media.exportImage();
       return false;
     }
 
     if (keyLower === "u") {
-      this.m.media.openImportDialog();
+      this.appcore.media.openImportDialog();
       return false;
     }
 
     if (keyLower === "c") {
-      this.m.cycleColourMap(keyIsDown(SHIFT) ? -1 : 1);
-      this.m.refreshGUI();
+      this.appcore.cycleColourMap(keyIsDown(SHIFT) ? -1 : 1);
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "m") {
-      this.m.cycleSurfaceMap(keyIsDown(SHIFT) ? -1 : 1);
-      this.m.refreshGUI();
+      this.appcore.cycleSurfaceMap(keyIsDown(SHIFT) ? -1 : 1);
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "[" || keyLower === "{") {
       const delta = keyLower === "{" ? -16 : -4;
-      this.m.params.heightScale = constrain(this.m.params.heightScale + delta, 1, 256);
-      this.m.refreshGUI();
+      this.appcore.params.heightScale = constrain(this.appcore.params.heightScale + delta, 1, 256);
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "]" || keyLower === "}") {
       const delta = keyLower === "}" ? 16 : 4;
-      this.m.params.heightScale = constrain(this.m.params.heightScale + delta, 1, 256);
-      this.m.refreshGUI();
+      this.appcore.params.heightScale = constrain(this.appcore.params.heightScale + delta, 1, 256);
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "i") {
-      this.m.params.dropletsPerFrame = constrain(this.m.params.dropletsPerFrame + 16, 0, 512);
-      this.m.refreshGUI();
+      this.appcore.params.dropletsPerFrame = constrain(this.appcore.params.dropletsPerFrame + 16, 0, 512);
+      this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "k") {
-      this.m.params.dropletsPerFrame = constrain(this.m.params.dropletsPerFrame - 16, 0, 512);
-      this.m.refreshGUI();
+      this.appcore.params.dropletsPerFrame = constrain(this.appcore.params.dropletsPerFrame - 16, 0, 512);
+      this.appcore.refreshGUI();
       return false;
     }
 
@@ -191,7 +191,7 @@ class InputHandler {
   }
 
   handleContinuousInput() {
-    if (this.shouldIgnoreKeyboard() || this.m.params.renderKeymapRef || this.m.params.displayMethod !== "3D") {
+    if (this.shouldIgnoreKeyboard() || this.appcore.params.renderKeymapRef || this.appcore.params.displayMethod !== "3D") {
       return;
     }
 
@@ -199,18 +199,18 @@ class InputHandler {
     const pitchStep = keyIsDown(SHIFT) ? 0.03 : 0.015;
     const zoomStep = keyIsDown(SHIFT) ? 8 : 4;
 
-    if (this.keys.left) this.m.camera.target.yaw -= yawStep;
-    if (this.keys.right) this.m.camera.target.yaw += yawStep;
-    if (this.keys.up) this.m.camera.target.pitch = constrain(this.m.camera.target.pitch - pitchStep, -1.56, 1.56);
-    if (this.keys.down) this.m.camera.target.pitch = constrain(this.m.camera.target.pitch + pitchStep, -1.56, 1.56);
-    if (this.keys.zoomIn) this.m.camera.target.zoom = max(20, this.m.camera.target.zoom - zoomStep);
-    if (this.keys.zoomOut) this.m.camera.target.zoom = max(20, this.m.camera.target.zoom + zoomStep);
+    if (this.keys.left) this.appcore.camera.target.yaw -= yawStep;
+    if (this.keys.right) this.appcore.camera.target.yaw += yawStep;
+    if (this.keys.up) this.appcore.camera.target.pitch = constrain(this.appcore.camera.target.pitch - pitchStep, -1.56, 1.56);
+    if (this.keys.down) this.appcore.camera.target.pitch = constrain(this.appcore.camera.target.pitch + pitchStep, -1.56, 1.56);
+    if (this.keys.zoomIn) this.appcore.camera.target.zoom = max(20, this.appcore.camera.target.zoom - zoomStep);
+    if (this.keys.zoomOut) this.appcore.camera.target.zoom = max(20, this.appcore.camera.target.zoom + zoomStep);
   }
 
   canvasInteraction(event) {
     if (!event?.target || typeof event.target.closest !== "function") return false;
 
-    const { displayMethod } = this.m.params;
+    const { displayMethod } = this.appcore.params;
     const { target } = event;
 
     const is3D = displayMethod === "3D";

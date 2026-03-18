@@ -1,8 +1,8 @@
 class Terrain {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
     
-    const { terrainSize } = this.m.params;
+    const { terrainSize } = this.appcore.params;
     this.size = terrainSize;
     this.area = terrainSize * terrainSize;
 
@@ -90,7 +90,7 @@ class Terrain {
 
   getSurfaceNormal(x, y) {
     const { size, heightMap, sharedNormal } = this;
-    const { heightScale } = this.m.params;
+    const { heightScale } = this.appcore.params;
 
     const west  = x > 0 ? y * size + (x - 1) : y * size + x;
     const east  = x < size - 1 ? y * size + (x + 1) : y * size + x;
@@ -143,7 +143,7 @@ class Terrain {
   }
 
   generate() {
-    const { noiseScale, noiseOctaves, amplitudeFalloff } = this.m.params;
+    const { noiseScale, noiseOctaves, amplitudeFalloff } = this.appcore.params;
     const { size, area, heightMap, originalHeightMap, bedrockMap } = this;
 
     this.reset();
@@ -191,12 +191,12 @@ class Terrain {
       momentumXTrack, momentumYTrack 
     } = this;
 
-    [heightMap, bedrockMap].forEach(m => m.set(originalHeightMap));
+    [heightMap, bedrockMap].forEach(map => map.set(originalHeightMap));
     
     [
       sedimentMap, dischargeMap, dischargeTrack, 
       momentumX, momentumY, momentumXTrack, momentumYTrack
-    ].forEach(m => m.fill(0));
+    ].forEach(map => map.fill(0));
 
     this.updateBoundsCache();
   }

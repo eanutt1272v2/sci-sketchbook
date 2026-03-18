@@ -131,41 +131,47 @@ class InputHandler {
       return false;
     }
 
+    if (keyLower === "t") {
+      this.appcore.cycleColourMap(1);
+      console.log(`[Lenia] Colour map: ${this.appcore.params.colourMap}`);
+      return false;
+    }
+
     if (keyLower === "g") {
       const enabled = this.appcore.params.displayMode !== "kernel";
       if (enabled) {
-        this.appcore.params.showGrid = !this.appcore.params.showGrid;
+        this.appcore.params.renderGrid = !this.appcore.params.renderGrid;
         this.appcore.refreshGUI();
-        console.log(`[Lenia] Grid: ${this.appcore.params.showGrid}`);
+        console.log(`[Lenia] Grid: ${this.appcore.params.renderGrid}`);
       }
       return false;
     }
 
     if (keyLower === "l") {
-      this.appcore.params.showColourmap = !this.appcore.params.showColourmap;
+      this.appcore.params.renderLegend = !this.appcore.params.renderLegend;
       this.appcore.refreshGUI();
-      console.log(`[Lenia] Legend: ${this.appcore.params.showColourmap}`);
+      console.log(`[Lenia] Legend: ${this.appcore.params.renderLegend}`);
       return false;
     }
 
     if (keyLower === "o") {
-      this.appcore.params.showStats = !this.appcore.params.showStats;
+      this.appcore.params.renderStats = !this.appcore.params.renderStats;
       this.appcore.refreshGUI();
-      console.log(`[Lenia] Stats overlay: ${this.appcore.params.showStats}`);
+      console.log(`[Lenia] Stats overlay: ${this.appcore.params.renderStats}`);
       return false;
     }
 
     if (keyLower === "m") {
-      this.appcore.params.showMotionOverlay = !this.appcore.params.showMotionOverlay;
+      this.appcore.params.renderMotionOverlay = !this.appcore.params.renderMotionOverlay;
       this.appcore.refreshGUI();
-      console.log(`[Lenia] Motion overlay: ${this.appcore.params.showMotionOverlay}`);
+      console.log(`[Lenia] Motion overlay: ${this.appcore.params.renderMotionOverlay}`);
       return false;
     }
 
     if (keyLower === "b") {
-      this.appcore.params.showScale = !this.appcore.params.showScale;
+      this.appcore.params.renderScale = !this.appcore.params.renderScale;
       this.appcore.refreshGUI();
-      console.log(`[Lenia] Scale bar: ${this.appcore.params.showScale}`);
+      console.log(`[Lenia] Scale bar: ${this.appcore.params.renderScale}`);
       return false;
     }
 

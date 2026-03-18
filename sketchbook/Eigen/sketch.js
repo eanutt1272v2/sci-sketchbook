@@ -7,13 +7,13 @@ let colourMaps, font;
 
 const metadata = {
   name: "Eigen",
-  version: "v2.0.0",
+  version: "v2.3.2-dev",
   author: "@eanutt1272.v2"
 };
 
 function preload() {
+  font = loadFont("JetBrainsMono-Regular.ttf");
   colourMaps = loadJSON("colour-maps.json");
-  font = loadFont("monaco.ttf");
 }
 
 function setup() {

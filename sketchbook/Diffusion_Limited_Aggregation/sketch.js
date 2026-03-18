@@ -33,7 +33,7 @@ function draw() {
     updateWanderers();
   }
 
-  drawGrid();
+  renderGrid();
 }
 
 function updateWanderers() {
@@ -74,7 +74,7 @@ function updateWanderers() {
   }
 }
 
-function drawGrid() {
+function renderGrid() {
   for (let stuckWanderer of stuckWanderers) {
     let index = stuckWanderer.x + stuckWanderer.y * cols;
     fill(255);

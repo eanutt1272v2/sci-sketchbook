@@ -1,7 +1,7 @@
 p5.disableFriendlyErrors = true;
 
 let appcore;
-let monoFont;
+let font;
 
 const metadata = {
   name: "Julia Set",
@@ -10,13 +10,13 @@ const metadata = {
 };
 
 function preload() {
-  monoFont = loadFont("monaco.ttf");
+  font = loadFont("JetBrainsMono-Regular.ttf");
 }
 
 function setup() {
   const canvasSize = min(windowWidth, windowHeight);
   createCanvas(canvasSize, canvasSize);
-  textFont(monoFont);
+  textFont(font);
   pixelDensity(1);
   appcore = new AppCore();
   appcore.setup();

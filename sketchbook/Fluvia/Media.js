@@ -1,6 +1,6 @@
 class Media {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.m = appcore;
 
     this.mediaRecorder = null;
     this.recordedChunks = [];
@@ -37,7 +37,7 @@ class Media {
 
       loadImage(imgSrc, (img) => {
         try {
-          const { terrain } = this.m;
+          const { terrain } = this.appcore;
           const { size, area, heightMap, bedrockMap, originalHeightMap, sedimentMap } = terrain;
 
           if (!img) throw new Error("loadImage returned null");
@@ -119,7 +119,7 @@ class Media {
   }
 
   exportImage() {
-    const { imageFormat } = this.m.params;
+    const { imageFormat } = this.appcore.params;
     try {
       const filename = this._getFilename(imageFormat);
       save(_renderer, filename);
@@ -145,8 +145,8 @@ class Media {
   }
 
   _getFilename(extension) {
-    const { terrainSize, surfaceMap, displayMethod } = this.m.params;
-    const { name, version } = this.m.metadata;
+    const { terrainSize, surfaceMap, displayMethod } = this.appcore.params;
+    const { name, version } = this.appcore.metadata;
     const ts = Date.now();
     
     return `${name}_${version}_${displayMethod}_${surfaceMap}_${terrainSize}_${ts}.${extension}`;

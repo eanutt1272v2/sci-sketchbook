@@ -1,8 +1,21 @@
 class AppCore {
   constructor(assets) {
-    const { metadata, animalsData, font } = assets;
+    const { metadata, animalsData, colourMaps, font } = assets;
 
     this.metadata = metadata;
+    this.colourMaps = colourMaps || {};
+    this.colourMapKeys = Object.keys(this.colourMaps);
+
+    if (this.colourMapKeys.length === 0) {
+      this.colourMaps = {
+        greyscale: {
+          r: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+          g: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+          b: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        }
+      };
+      this.colourMapKeys = ["greyscale"];
+    }
 
     this.params = {
       running: true,
@@ -10,19 +23,21 @@ class AppCore {
 
       R: 13, T: 10, m: 0.15, s: 0.015,
       b: [1], kn: 1, gn: 1,
-
+      
       softClip: false,
       multiStep: false,
       addNoise: 0,
       maskRate: 0,
       paramP: 0,
-
+      
+      colourMap: this.colourMapKeys.includes("turbo") ? "turbo" : this.colourMapKeys[0],
       displayMode: "world",
-      showGrid: true,
-      showScale: true,
-      showColourmap: true,
-      showStats: true,
-      showMotionOverlay: false,
+
+      renderGrid: true,
+      renderScale: true,
+      renderLegend: true,
+      renderStats: true,
+      renderMotionOverlay: true,
       renderKeymapRef: false,
 
       selectedAnimal: "",
@@ -58,14 +73,14 @@ class AppCore {
     this.board = new Board(this.params.gridSize);
     this.automaton = new Automaton(this.params);
     this.analyser = new Analyser(this.statistics, this.displayData);
-    this.renderer = new Renderer(this.params.gridSize);
+    this.renderer = new Renderer(this.params.gridSize, this.colourMaps, this.params.colourMap);
     this.gui = new GUI(this.params, this.statistics, this.displayData, this.metadata, this.animalLibrary, this);
     this.input = new InputHandler(this);
   }
 
   setup() {
     if (this.gui && this.animalLibrary.loaded && this.animalLibrary.animals.length > 0) {
-      this.loadFirstAnimal();
+      this.loadInitialAnimal();
     }
 
     if (this.gui) {
@@ -81,30 +96,30 @@ class AppCore {
       this.analyser.updateStatistics(this.board, this.automaton, this.params);
     }
 
-    this.renderer.render(this.board, this.automaton, this.params.displayMode);
+    this.renderer.render(this.board, this.automaton, this.params.displayMode, this.params.colourMap);
 
-    if (this.params.showGrid && this.params.displayMode !== "kernel") {
-      this.renderer.drawGrid(this.params.R);
+    if (this.params.renderGrid && this.params.displayMode !== "kernel") {
+      this.renderer.renderGrid(this.params.R);
     }
 
-    if (this.params.showScale) {
-      this.renderer.drawScale(this.params.R);
+    if (this.params.renderScale) {
+      this.renderer.renderScale(this.params.R);
     }
 
-    if (this.params.showColourmap) {
-      this.renderer.drawLegend();
+    if (this.params.renderLegend) {
+      this.renderer.renderLegend();
     }
 
-    if (this.params.showStats) {
-      this.renderer.drawStats(this.statistics, this.params);
+    if (this.params.renderStats) {
+      this.renderer.renderStats(this.statistics, this.params);
     }
 
-    if (this.params.showMotionOverlay && this.params.displayMode !== "kernel") {
-      this.renderer.drawMotionOverlay(this.statistics, this.params);
+    if (this.params.renderMotionOverlay && this.params.displayMode !== "kernel") {
+      this.renderer.renderMotionOverlay(this.statistics, this.params);
     }
 
     if (this.params.renderKeymapRef) {
-      this.renderer.drawKeymapRef(this.metadata);
+      this.renderer.renderKeymapRef(this.metadata);
     }
 
     this.analyser.updateFps();
@@ -164,6 +179,34 @@ class AppCore {
     }
   }
 
+  loadAnimalParams(animal) {
+    if (!animal) return;
+
+    this.analyser.resetStatistics();
+    this.board.clear();
+
+    this.animalLibrary.applyAnimalParameters(animal);
+    this.automaton.updateParameters(this.params);
+
+    if (this.gui && this.gui.pane) {
+      this.gui.pane.refresh();
+    }
+  }
+
+
+  loadSelectedAnimalParams() {
+    const value = this.params.selectedAnimal;
+    if (!value || value === "") return;
+
+    const idx = parseInt(value);
+    if (isNaN(idx)) return;
+
+    const animal = this.animalLibrary.getAnimal(idx);
+    if (animal) {
+      this.loadAnimalParams(animal);
+    }
+  }
+
   placeAnimal(cellX, cellY) {
     if (!this.params.placeMode || !this.params.selectedAnimal) return;
 
@@ -176,7 +219,7 @@ class AppCore {
     this.board.placePattern(animal, cellX, cellY);
   }
 
-  loadFirstAnimal() {
+  loadInitialAnimal() {
     if (!this.animalLibrary.loaded || this.animalLibrary.animals.length === 0) return;
 
     const firstAnimal = this.animalLibrary.getAnimal(0);
@@ -211,6 +254,26 @@ class AppCore {
 
   handleKeyReleased(k, kCode) {
     return this.input.handleKeyReleased(k, kCode);
+  }
+
+  cycleColourMap(delta = 1) {
+    if (!this.colourMapKeys.length) return;
+
+    const currentIndex = this.colourMapKeys.indexOf(this.params.colourMap);
+    const baseIndex = currentIndex >= 0 ? currentIndex : 0;
+    const length = this.colourMapKeys.length;
+    const nextIndex = (baseIndex + delta + length) % length;
+
+    this.params.colourMap = this.colourMapKeys[nextIndex];
+    this.refreshGUI();
+  }
+
+  getColourMapOptions() {
+    return this.colourMapKeys.reduce((options, name) => {
+      const label = name.charAt(0).toUpperCase() + name.slice(1);
+      options[label] = name;
+      return options;
+    }, {});
   }
 
   refreshGUI() {

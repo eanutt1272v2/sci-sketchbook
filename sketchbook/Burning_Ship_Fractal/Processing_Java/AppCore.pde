@@ -36,7 +36,7 @@ class AppCore {
     }
     image(renderer.buffer, 0, 0);
     if (showUI) panel.draw();
-    if (showKeymapRef) panel.drawKeymapReference();
+    if (showKeymapRef) panel.renderKeymapReference();
     justPressed = false;
   }
 

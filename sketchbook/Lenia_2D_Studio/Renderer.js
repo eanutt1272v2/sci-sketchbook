@@ -1,7 +1,12 @@
 class Renderer {
-  constructor(size) {
+  constructor(size, colourMaps = {}, initialColourMap = "greyscale") {
     this.size = size;
     this.img = createImage(this.size, this.size);
+
+    this.colourMaps = colourMaps;
+    this.currentColourMap = "";
+    this.lut = new Uint8ClampedArray(256 * 3);
+    this.setColourMap(initialColourMap);
   }
 
   resize(size) {
@@ -9,7 +14,9 @@ class Renderer {
     this.img = createImage(this.size, this.size);
   }
 
-  render(board, automaton, displayMode) {
+  render(board, automaton, displayMode, colourMapName) {
+    this.setColourMap(colourMapName);
+
     let data = board.cells;
     let vmin = 0;
     let vmax = 1;
@@ -62,26 +69,47 @@ class Renderer {
     image(this.img, 0, 0, width, height);
   }
 
-  _valueToColour(val) {
-    const v = Math.max(0, Math.min(1, val));
-    let r, g, b;
-    if (v < 0.25) {
-      const t = v / 0.25;
-      r = 0; g = t * 128; b = 64 + t * 191;
-    } else if (v < 0.5) {
-      const t = (v - 0.25) / 0.25;
-      r = 0; g = 128 + t * 127; b = 255 - t * 127;
-    } else if (v < 0.75) {
-      const t = (v - 0.5) / 0.25;
-      r = t * 255; g = 255; b = 128 - t * 128;
-    } else {
-      const t = (v - 0.75) / 0.25;
-      r = 255; g = 255 - t * 255; b = 0;
-    }
-    return [Math.floor(r), Math.floor(g), Math.floor(b)];
+  setColourMap(name) {
+    const mapName = this.colourMaps[name] ? name : this._fallbackColourMapName();
+    if (!mapName || this.currentColourMap === mapName) return;
+
+    this.currentColourMap = mapName;
+    this._rebuildLUT(this.colourMaps[mapName]);
   }
 
-  drawGrid(R) {
+  _fallbackColourMapName() {
+    if (this.colourMaps.rocket) return "viridis";
+    const keys = Object.keys(this.colourMaps);
+    return keys.length ? keys[0] : "";
+  }
+
+  _rebuildLUT(colourMapData) {
+    if (!colourMapData) return;
+
+    const poly = (coeffs, t) => {
+      let val = 0;
+      for (let i = coeffs.length - 1; i >= 0; i--) {
+        val = val * t + coeffs[i];
+      }
+      return val;
+    };
+
+    for (let i = 0; i < 256; i++) {
+      const t = i / 255;
+      const idx = i * 3;
+      this.lut[idx] = constrain(Math.round(poly(colourMapData.r, t) * 255), 0, 255);
+      this.lut[idx + 1] = constrain(Math.round(poly(colourMapData.g, t) * 255), 0, 255);
+      this.lut[idx + 2] = constrain(Math.round(poly(colourMapData.b, t) * 255), 0, 255);
+    }
+  }
+
+  _valueToColour(val) {
+    const v = Math.max(0, Math.min(1, val));
+    const lutIndex = Math.min(255, Math.max(0, Math.round(v * 255))) * 3;
+    return [this.lut[lutIndex], this.lut[lutIndex + 1], this.lut[lutIndex + 2]];
+  }
+
+  renderGrid(R) {
     push();
 
     const pixelSpacing = width / this.size;
@@ -109,7 +137,7 @@ class Renderer {
     pop();
   }
 
-  drawScale(R) {
+  renderScale(R) {
     const scaleWidth = (R / this.size) * width;
     const x = width - scaleWidth - 20;
     const y = height - 20;
@@ -123,7 +151,7 @@ class Renderer {
     pop();
   }
 
-  drawLegend() {
+  renderLegend() {
     const x = width - 20;
     const y1 = 20;
     const y2 = height - 70;
@@ -174,7 +202,7 @@ class Renderer {
     pop();
   }
 
-  drawKeymapRef(metadata) {
+  renderKeymapRef(metadata) {
     const { name, version } = metadata;
 
     push();
@@ -214,6 +242,7 @@ class Renderer {
         title: "Display",
         entries: [
           ["Tab", "Cycle display mode"],
+          ["T", "Cycle colour map"],
           ["G", "Toggle grid"],
           ["L", "Toggle colour legend"],
           ["O", "Toggle stats overlay"],
@@ -230,8 +259,8 @@ class Renderer {
           ["; / '", "Decrease / increase time steps (T)"],
           [", / .", "Decrease / increase growth centre (m)"],
           ["- / +", "Decrease / increase growth width (s)"],
-          ["\u2190 / \u2192",  "Decrease / increase noise"],
-          ["\u2191 / \u2193",  "Decrease / increase mask rate"],
+          ["← / →",  "Decrease / increase noise"],
+          ["↑ / ↓",  "Decrease / increase mask rate"],
           ["K", "Cycle kernel function"],
           ["Y", "Cycle growth function"],
           ["U", "Toggle soft clipping"],
@@ -243,7 +272,7 @@ class Renderer {
         entries: [
           ["S", "Save canvas as PNG"],
           ["E", "Export world state (JSON)"],
-          ["C",  "Export statistics (CSV)"],
+          ["C", "Export statistics (CSV)"],
         ]
       },
       {
@@ -295,7 +324,7 @@ class Renderer {
     pop();
   }
 
-  drawMotionOverlay(statistics) {
+  renderMotionOverlay(statistics) {
     const { centerX, centerY, speed, angle } = statistics;
     if (centerX === 0 && centerY === 0 && speed === 0) return;
 
@@ -350,7 +379,7 @@ class Renderer {
     pop();
   }
 
-  drawStats(statistics, params) {
+  renderStats(statistics, params) {
     push();
 
     const x = 20, y = 20;

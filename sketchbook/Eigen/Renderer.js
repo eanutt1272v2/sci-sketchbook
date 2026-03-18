@@ -155,7 +155,7 @@ class Renderer {
   }
 
   render() {
-    const { pixelSmoothing, renderOverlay, renderKeymapRef } = this.m.params;
+    const { pixelSmoothing, renderOverlay, renderLegend, renderKeymapRef } = this.m.params;
     const { buffer } = this;
 
     background(0);
@@ -169,12 +169,14 @@ class Renderer {
     if (renderOverlay) {
       this.renderOverlay();
     }
+    
+    if (renderLegend) {
+      this.renderLegend();
+    }
 
     if (renderKeymapRef) {
       this.renderKeymapRef();
     }
-
-    this.renderLegend();
   }
 
   renderOverlay() {
@@ -256,7 +258,7 @@ class Renderer {
     y += 50;
 
     text("Keys", x, y);
-    text("Action", x + 210, y);
+    text("Action", x + 250, y);
 
     stroke(255, 50);
     line(x, y + 25, width - 50, y + 25);
@@ -264,18 +266,18 @@ class Renderer {
 
     const commands = [
       ["W/S, A/D, Q/E", "Increment n, l, m quantum numbers"],
-      ["1, 2, 3", "Switch Planes (XY, XZ, YZ)"],
-      ["L/R, U/D Arrow Keys", "Scan Slice / Zoom Radius"],
+      ["1, 2, 3", "Switch planes (XY, XZ, YZ)"],
+      ["← / →, ↑ / ↓ Arrow Keys", "Scan slice / zoom radius"],
       ["Shift + Arrow Keys", "Pan view within current slice plane"],
       ["Mouse Drag / Touch Drag", "Pan view"],
       ["Mouse Wheel / Pinch", "Zoom radius"],
-      ["Space", "Reset Slice Offset to 0 a₀"],
+      ["Space", "Reset slice offset to 0 a₀"],
       ["X", "Reset view center"],
-      ["[ / ]", "Adjust Exposure (Gamma)"],
-      ["+ / -", "Alter Resolution"],
-      ["M, C", "Toggle Smoothing / Cycle Colour Maps"],
-      ["H, O, P", "Toggle GUI / Toggle Overlay / Export"],
-      ["#", "Toggle Keymap Reference"]
+      ["[ / ]", "Adjust exposure (gamma)"],
+      ["+ / -", "Alter resolution"],
+      ["M, C, L", "Toggle smoothing / cycle colour maps / toggle legend"],
+      ["H, O, P", "Toggle GUI / toggle overlay / export"],
+      ["#", "Toggle keymap reference"]
     ];
 
     noStroke();
@@ -284,10 +286,15 @@ class Renderer {
       fill(255);
       text(command[0], x, y);
       fill(255, 150);
-      text(command[1], x + 210, y);
+      text(command[1], x + 250, y);
       y += lineH;
     }
 
+    fill(120);
+    textSize(11);
+    textAlign(CENTER, BOTTOM);
+    text("Press  #  to close", width / 2, height - 16);
+    
     pop();
   }
 }

@@ -18,11 +18,11 @@ class GUI {
 
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Simulation" },
-        { title: "Parameters" },
+        { title: "Sim" },
+        { title: "Params" },
         { title: "Animals" },
         { title: "Display" },
-        { title: "Statistics" },
+        { title: "Stats" },
         { title: "Export" }
       ],
     });
@@ -55,10 +55,9 @@ class GUI {
       max: 100,
     });
 
-    page.addBinding(statistics, "fps", {
-      label: "",
-      readonly: true
-    });
+    page.addBlade({ view: "separator" });
+
+    page.addBinding(statistics, "time", { readonly: true, label: "Time (s)" });
 
     page.addBlade({ view: "separator" });
 
@@ -140,20 +139,27 @@ class GUI {
     const { params } = this;
 
     this.animalBinding = page.addBinding(params, "selectedAnimal", {
-      label: "Lifeform",
+      label: "Selected Animal",
       options: this.animalLibrary ? this.animalLibrary.getAnimalList() : {}
-    });
+    }).on("change", () => this.appcore?.loadSelectedAnimalParams());
 
     page.addBlade({ view: "separator" });
 
     page.addBinding(params, "placeMode", { label: "Place Mode" });
 
-    page.addButton({ title: "Load Selected Animal" })
+    page.addButton({ title: "Load Selected Animal Pattern" })
     .on("click", () => this.appcore?.loadSelectedAnimal());
   }
 
   createDisplayTab(page) {
     const { params } = this;
+
+    page.addBinding(params, "colourMap", {
+      label: "Colour Map",
+      options: this.appcore ? this.appcore.getColourMapOptions() : { greyscale: "greyscale" }
+    }).on("change", () => this.appcore?.renderer?.setColourMap(params.colourMap));
+
+    page.addBlade({ view: "separator" });
 
     page.addBinding(params, "displayMode", {
       label: "Display Mode",
@@ -169,12 +175,11 @@ class GUI {
 
     const overlay = page.addFolder({ title: "Overlay Options" });
 
-    overlay.addBinding(params, "showGrid", { label: "Grid" });
-    overlay.addBinding(params, "showScale", { label: "Scale Bar" });
-    overlay.addBinding(params, "showColourmap", { label: "Legend" });
-    overlay.addBinding(params, "showStats", { label: "Statistics" });
-    overlay.addBinding(params, "showMotionOverlay", { label: "Motion Overlay" });
-    overlay.addBinding(params, "renderKeymapRef", { label: "Keymap Reference (#)" });
+    overlay.addBinding(params, "renderGrid", { label: "Grid" });
+    overlay.addBinding(params, "renderScale", { label: "Scale Bar" });
+    overlay.addBinding(params, "renderLegend", { label: "Legend" });
+    overlay.addBinding(params, "renderStats", { label: "Statistics" });
+    overlay.addBinding(params, "renderMotionOverlay", { label: "Motion Overlay" });
   }
 
   createStatisticsTab(page) {

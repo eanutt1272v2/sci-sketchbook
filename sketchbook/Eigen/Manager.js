@@ -17,6 +17,7 @@ class AppCore {
       resolution: 256,
       pixelSmoothing: true,
       renderOverlay: true,
+      renderLegend: true,
       renderKeymapRef: false,
 
       viewRadius: 32,
@@ -76,6 +77,10 @@ class AppCore {
 
   toggleOverlay() {
     this.params.renderOverlay = !this.params.renderOverlay;
+  }
+
+  toggleLegend() {
+    this.params.renderLegend = !this.params.renderLegend;
   }
 
   toggleSmoothing() {

@@ -47,7 +47,7 @@ class AppCore {
     }
 
     if (this.showKeymapRef) {
-      this.panel.drawKeymapReference();
+      this.panel.renderKeymapReference();
     }
 
     this.justPressed = false;

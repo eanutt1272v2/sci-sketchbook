@@ -1,7 +1,7 @@
 p5.disableFriendlyErrors = true;
 
 let appcore;
-let font, animalsData;
+let font, animalsData, colourMaps;
 let mainCanvas;
 
 const metadata = {
@@ -11,8 +11,9 @@ const metadata = {
 };
 
 function preload() {
-  font = loadFont("monaco.ttf");
+  font = loadFont("JetBrainsMono-Regular.ttf");
   animalsData = loadJSON("animals.json");
+  colourMaps = loadJSON("colour-maps.json");
 }
 
 function setup() {
@@ -24,6 +25,7 @@ function setup() {
   appcore = new AppCore({
     metadata,
     animalsData,
+    colourMaps,
     font
   });
 
@@ -76,8 +78,8 @@ function placeAnimal(cellX, cellY) {
   appcore.placeAnimal(cellX, cellY);
 }
 
-function loadFirstAnimal() {
-  appcore.loadFirstAnimal();
+function loadInitialAnimal() {
+  appcore.loadInitialAnimal();
 }
 
 function canvasInteraction(e) {

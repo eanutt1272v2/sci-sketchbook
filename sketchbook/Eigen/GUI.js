@@ -110,6 +110,10 @@ class GUI {
       label: "Render Overlay",
     }).on("change", () => this.m.renderer.update());
 
+    page.addBinding(this.m.params, "renderLegend", {
+      label: "Render Legend",
+    }).on("change", () => this.m.renderer.update());
+
     page.addBlade({ view: "separator" });
 
     this.bindings.viewRadius = page.addBinding(this.m.params, "viewRadius", {

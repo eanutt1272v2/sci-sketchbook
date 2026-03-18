@@ -1,14 +1,14 @@
 class Renderer {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
 
     this.canvas3D = createGraphics(width, height, WEBGL);
     this.terrainShader = this.canvas3D.createShader(
-      this.m.shaders.vert,
-      this.m.shaders.frag
+      this.appcore.shaders.vert,
+      this.appcore.shaders.frag
     );
 
-    const { size } = this.m.terrain;
+    const { size } = this.appcore.terrain;
     this.canvas2D = createImage(size, size);
     this.heightMapTexture = createImage(size, size);
 
@@ -22,7 +22,7 @@ class Renderer {
       { l: "Water", cKey: "waterColour" },
     ];
     this.keymapCommands = [
-      ["#", "Toggle Keymap Reference"],
+      ["#", "Toggle keymap reference"],
       ["H", "Toggle GUI panel"],
       ["P / Space", "Pause / Resume simulation"],
       ["G / R", "Generate / Reset terrain"],
@@ -42,7 +42,7 @@ class Renderer {
   }
 
   reinitialise() {
-    const { size } = this.m.terrain;
+    const { size } = this.appcore.terrain;
     this.canvas2D = createImage(size, size);
     this.heightMapTexture = createImage(size, size);
   }
@@ -50,7 +50,7 @@ class Renderer {
   updateLUT(colourMap) {
     if (this.currentColourMap === colourMap) return;
 
-    const colourData = this.m.colourMaps[colourMap];
+    const colourData = this.appcore.colourMaps[colourMap];
     if (!colourData) return;
 
     this.currentColourMap = colourMap;
@@ -73,13 +73,13 @@ class Renderer {
   }
 
   generateTextures(is3D) {
-    const { params, terrain, camera, statistics } = this.m;
+    const { params, terrain, camera } = this.appcore;
     const { 
       surfaceMap, lightDir, flatColour, steepColour, 
       sedimentColour, waterColour, skyColour, specularIntensity 
     } = params;
 
-    const { size, area, heightMap, originalHeightMap, sedimentMap, dischargeMap } = terrain;
+    const { size, area, heightMap, originalHeightMap, sedimentMap } = terrain;
 
     if (surfaceMap !== "composite") {
       this.updateLUT(params.colourMap || "viridis");
@@ -190,7 +190,7 @@ class Renderer {
   }
 
   calculateBounds(mode) {
-    const { terrain } = this.m;
+    const { terrain } = this.appcore;
 
     if (mode === "height") {
       const bounds = terrain.getMapBounds(terrain.heightMap);
@@ -211,7 +211,7 @@ class Renderer {
   }
 
   render() {
-    const is3D = (this.m.params.displayMethod === "3D");
+    const is3D = (this.appcore.params.displayMethod === "3D");
 
     this.generateTextures(is3D);
 
@@ -221,7 +221,7 @@ class Renderer {
       this.render2D();
     }
 
-	 this.renderOverlay();
+	  this.renderOverlay();
   }
 
   render2D() {
@@ -230,7 +230,7 @@ class Renderer {
 
   render3D() {
     const { canvas3D, terrainShader, heightMapTexture, canvas2D } = this;
-    const { terrain, params, camera } = this.m;
+    const { terrain, params, camera } = this.appcore;
     const eye = camera.getEyePosition();
     const up = camera.getUpVector();
 
@@ -241,7 +241,7 @@ class Renderer {
     canvas3D.perspective(PI / 3, width / height, 0.1, 30000);
     canvas3D.camera(eye.x, eye.y, eye.z, 0, 0, 0, up.x, up.y, up.z);
 
-	 canvas3D.noStroke();
+	  canvas3D.noStroke();
     canvas3D.shader(terrainShader);
     terrainShader.setUniform("uHeightMap", heightMapTexture);
     terrainShader.setUniform("uTexture", canvas2D);
@@ -255,14 +255,14 @@ class Renderer {
   }
 
   renderOverlay() {
-    if (this.m.params.renderStats) this.renderStats();
-    if (this.m.params.renderLegend) this.renderLegend();
-    if (this.m.params.renderKeymapRef) this.renderKeymapRef();
+    if (this.appcore.params.renderStats) this.renderStats();
+    if (this.appcore.params.renderLegend) this.renderLegend();
+    if (this.appcore.params.renderKeymapRef) this.renderKeymapRef();
   }
 
   renderStats() {
     push();
-    const { statistics, params } = this.m;
+    const { statistics, params } = this.appcore;
     
     fill(255);
     textSize(15);
@@ -271,9 +271,9 @@ class Renderer {
     const lines = [
       `FPS: ${statistics.fps.toFixed(2)}`,
       `Time: ${statistics.simulationTime.toFixed(2)}s`,
-	   `Display Method: ${params.displayMethod}`,
+	    `Display Method: ${params.displayMethod}`,
       `Surface Map: ${params.surfaceMap}`,
-	   `Colour Map: ${params.colourMap}`,
+	    `Colour Map: ${params.colourMap}`,
       `Elevation Range: ${statistics.heightBounds.min.toFixed(3)} - ${statistics.heightBounds.max.toFixed(3)}`,
       `Peak Discharge: ${statistics.peakDischarge.toFixed(3)}`,
       `Rugosity Index: ${statistics.rugosity.toFixed(3)}`
@@ -284,7 +284,7 @@ class Renderer {
   }
 
   renderLegend() {
-    if (this.m.params.surfaceMap === "composite") {
+    if (this.appcore.params.surfaceMap === "composite") {
       this.renderCompositeLegend();
     } else {
       this.renderDataLegend();
@@ -293,7 +293,7 @@ class Renderer {
 
   renderCompositeLegend() {
     push();
-    const params = this.m.params;
+    const params = this.appcore.params;
 
     textSize(14);
     textAlign(LEFT, CENTER);
@@ -315,7 +315,7 @@ class Renderer {
 
   renderDataLegend() {
     push();
-    const { surfaceMap, colourMap } = this.m.params;
+    const { surfaceMap, colourMap } = this.appcore.params;
     this.updateLUT(colourMap || "viridis");
 
     const x = width - 15;
@@ -331,7 +331,7 @@ class Renderer {
       grad.addColorStop(t, `rgb(${this.lut[idx]}, ${this.lut[idx+1]}, ${this.lut[idx+2]})`);
     }
 
-	 drawingContext.strokeStyle = 'rgba(255, 255, 255, 0.78)';
+	  drawingContext.strokeStyle = 'rgba(255, 255, 255, 0.78)';
     drawingContext.lineWidth = 1;
 
     drawingContext.fillStyle = grad;
@@ -359,7 +359,7 @@ class Renderer {
   }
 
   renderKeymapRef() {
-    const { name, version } = this.m.metadata;
+    const { name, version } = this.appcore.metadata;
 
     push();
     fill(0, 220);

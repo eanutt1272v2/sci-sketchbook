@@ -13,7 +13,7 @@ static final class Config {
 }
 
 AppCore appcore;
-PFont monoFont;
+PFont font;
 
 final String SKETCH_NAME = "Cellular Division";
 final String SKETCH_VERSION = "v2.5.8";
@@ -34,8 +34,8 @@ void setup() {
     }
   });
 
-  monoFont = createFont("monaco.ttf", 13, true);
-  textFont(monoFont);
+  font = createFont("monaco.ttf", 13, true);
+  textFont(font);
 
   appcore = new AppCore();
 }

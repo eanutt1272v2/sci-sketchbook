@@ -1,13 +1,12 @@
 class Analyser {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
     this.simulationStartTime = performance.now();
     this.reinitialise();
   }
 
   reinitialise() {
-    const { area } = this.m.terrain;
-    const stats = this.m.statistics;
+    const stats = this.appcore.statistics;
 
     this.simulationStartTime = performance.now();
     this.lastAnalysisTime = performance.now();
@@ -45,7 +44,7 @@ class Analyser {
   }
 
   update() {
-    const { statistics, params } = this.m;
+    const { statistics, params } = this.appcore;
     statistics.fps = frameRate();
     statistics.frameCounter++;
     statistics.simulationTime = (performance.now() - this.simulationStartTime) / 1000;
@@ -56,7 +55,7 @@ class Analyser {
   }
 
   runAnalysis() {
-    const { terrain, statistics, params } = this.m;
+    const { terrain, statistics, params } = this.appcore;
     const { area, size, heightMap, bedrockMap, sedimentMap, dischargeMap } = terrain;
     const { heightScale, evaporationRate } = params;
 
@@ -133,7 +132,7 @@ class Analyser {
   }
 
   _normaliseHistogram() {
-    const { heightHistogram, normHistogram } = this.m.statistics;
+    const { heightHistogram, normHistogram } = this.appcore.statistics;
     let maxBin = 0;
     for (let i = 0; i < 256; i++) if (heightHistogram[i] > maxBin) maxBin = heightHistogram[i];
     for (let i = 0; i < 256; i++) normHistogram[i] = maxBin > 0 ? heightHistogram[i] / maxBin : 0;
@@ -150,7 +149,7 @@ class Analyser {
   }
 
   getAverageHeightInRegion(nx, ny, nSize) {
-    const { size, heightMap } = this.m.terrain;
+    const { size, heightMap } = this.appcore.terrain;
     const startX = (nx * size) | 0, startY = (ny * size) | 0, edge = (nSize * size) | 0;
     let sum = 0, count = 0;
     for (let y = startY; y < startY + edge && y < size; y++) {
@@ -163,10 +162,10 @@ class Analyser {
   }
 
   getHypsometricIntegral(threshold = 0.5) {
-    const { heightHistogram } = this.m.statistics;
+    const { heightHistogram } = this.appcore.statistics;
     const startBin = (threshold * 255) | 0;
     let countAbove = 0;
     for (let i = startBin; i < 256; i++) countAbove += heightHistogram[i];
-    return (countAbove / this.m.terrain.area) * 100;
+    return (countAbove / this.appcore.terrain.area) * 100;
   }
 }
