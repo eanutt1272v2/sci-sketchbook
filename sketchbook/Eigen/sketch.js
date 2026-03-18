@@ -2,7 +2,7 @@
 
 p5.disableFriendlyErrors = true;
 
-let manager;
+let appcore;
 let colourMaps, font;
 
 const metadata = {
@@ -22,7 +22,7 @@ function setup() {
 
   setupCanvasProperties(mainCanvas);
 
-  manager = new Manager({
+  appcore = new AppCore({
     metadata,
     colourMaps,
     font
@@ -42,8 +42,8 @@ function setupCanvasProperties(canvas) {
 }
 
 function draw() {
-  manager.update();
-  manager.draw();
+  appcore.update();
+  appcore.draw();
 }
 
 function windowResized() {
@@ -52,33 +52,33 @@ function windowResized() {
 }
 
 function keyPressed() {
-  return manager.handleKeyPressed(key, keyCode);
+  return appcore.handleKeyPressed(key, keyCode);
 }
 
 function keyReleased() {
-  return manager.handleKeyReleased(key, keyCode);
+  return appcore.handleKeyReleased(key, keyCode);
 }
 
 function mouseWheel(event) {
-  return manager.handleWheel(event);
+  return appcore.handleWheel(event);
 }
 
 function mouseDragged(event) {
-  return manager.handlePointer(event);
+  return appcore.handlePointer(event);
 }
 
 function mouseReleased(event) {
-  return manager.handlePointerEnd(event);
+  return appcore.handlePointerEnd(event);
 }
 
 function touchStarted(event) {
-  return manager.handlePointer(event);
+  return appcore.handlePointer(event);
 }
 
 function touchMoved(event) {
-  return manager.handlePointer(event);
+  return appcore.handlePointer(event);
 }
 
 function touchEnded(event) {
-  return manager.handlePointerEnd(event);
+  return appcore.handlePointerEnd(event);
 }

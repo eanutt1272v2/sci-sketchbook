@@ -1,6 +1,6 @@
 p5.disableFriendlyErrors = true;
 
-let manager;
+let appcore;
 let vertShader, fragShader, colourMaps, monoFont;
 
 const metadata = {
@@ -24,28 +24,28 @@ function setup() {
   textFont(monoFont);
   pixelDensity(1);
 
-  manager = new Manager({
+  appcore = new AppCore({
     metadata,
     vertShader,
     fragShader,
     colourMaps,
-    monoFont
+    font: monoFont
   });
 }
 
 function draw() {
-  manager.update();
-  manager.draw();
+  appcore.update();
+  appcore.draw();
 }
 
-function keyPressed() { return manager.handleKeyPressed(key, keyCode); }
-function keyReleased() { return manager.handleKeyReleased(key, keyCode); }
-function mouseWheel(event) { return manager.handleWheel(event); }
-function mouseDragged(event) { return manager.handlePointer(event); }
-function touchStarted(event) { return manager.handlePointer(event); }
-function touchMoved(event) { return manager.handlePointer(event); }
-function touchEnded(event) { return manager.handlePointer(event); }
+function keyPressed() { return appcore.handleKeyPressed(key, keyCode); }
+function keyReleased() { return appcore.handleKeyReleased(key, keyCode); }
+function mouseWheel(event) { return appcore.handleWheel(event); }
+function mouseDragged(event) { return appcore.handlePointer(event); }
+function touchStarted(event) { return appcore.handlePointer(event); }
+function touchMoved(event) { return appcore.handlePointer(event); }
+function touchEnded(event) { return appcore.handlePointer(event); }
 
 function windowResized() {
-  manager.resize();
+  appcore.resize();
 }

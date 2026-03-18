@@ -1,4 +1,4 @@
-class Manager {
+class AppCore {
   constructor(assets) {
     const { metadata, vertShader, fragShader, colourMaps, font } = assets;
 
