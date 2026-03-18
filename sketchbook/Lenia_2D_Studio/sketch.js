@@ -123,7 +123,6 @@ function draw() {
 
   analyser.updateFps();
   
-  // Track history for export
   if (automaton.gen % 10 === 0) {
     analyser.series.push(analyser.getStatRow());
   }
