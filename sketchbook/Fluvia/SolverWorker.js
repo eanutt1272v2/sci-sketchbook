@@ -31,8 +31,8 @@ function updateTotalHeight(heightMap, bedrockMap, sedimentMap, index) {
 }
 
 function getSurfaceNormal(size, heightMap, heightScale, x, y) {
-  const west  = x > 0 ? y * size + (x - 1) : y * size + x;
-  const east  = x < size - 1 ? y * size + (x + 1) : y * size + x;
+  const west = x > 0 ? y * size + (x - 1) : y * size + x;
+  const east = x < size - 1 ? y * size + (x + 1) : y * size + x;
   const north = y > 0 ? (y - 1) * size + x : y * size + x;
   const south = y < size - 1 ? (y + 1) * size + x : y * size + x;
 
@@ -128,8 +128,8 @@ function updateDischargeMap(state) {
   const invLR = 1.0 - learningRate;
   for (let i = 0; i < area; i++) {
     dischargeMap[i] = invLR * dischargeMap[i] + learningRate * dischargeTrack[i];
-    momentumX[i]    = invLR * momentumX[i]    + learningRate * momentumXTrack[i];
-    momentumY[i]    = invLR * momentumY[i]    + learningRate * momentumYTrack[i];
+    momentumX[i] = invLR * momentumX[i] + learningRate * momentumXTrack[i];
+    momentumY[i] = invLR * momentumY[i] + learningRate * momentumYTrack[i];
   }
 }
 
