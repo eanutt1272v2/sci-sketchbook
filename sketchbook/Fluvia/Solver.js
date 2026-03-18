@@ -1,3 +1,5 @@
+// This is the solver script executed when SolverWorker.js cannot load properly - ie. A fallback
+
 class Solver {
   constructor(appcore) {
     this.appcore = appcore;
