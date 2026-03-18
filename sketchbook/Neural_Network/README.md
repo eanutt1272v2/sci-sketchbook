@@ -1,7 +1,7 @@
 # Neural Network
 
 ## Overview
-Processing sketch demonstrating a basic feedforward neural network and its training behaviour in a visual, interactive format.
+Processing sketch demonstrating a basic feedforward digit-recognition neural network and its training behaviour in a visual, interactive format.
 
 ## Implementation
 - `Neural_Network.pde`
