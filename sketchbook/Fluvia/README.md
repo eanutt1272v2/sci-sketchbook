@@ -1,9 +1,9 @@
 # Fluvia
 
 ## Overview
-Partially GPU-accelerated fluid and terrain simulation built with p5.js and GLSL.
+Fluvia is a fast web-based geomorphological simulation (due to various optimisations, a worker script, and partial GPU-acceleration via a GLSL shader). It utilises a Lagrangian particle-based solver in which water droplets traverse a dual-layer heightmap of bedrock and sediment. As a result of simulating momentum-based transport, deposition, and evaporation physics to a sufficient degree of accuracy, it generates realistic fluvial features like drainage basins, serpentine, meandering rivers, and alluvial fans.
 
-The project combines interactive rendering with solver components for flow and erosion-style effects.
+Algorithm by Nick McDonald: <https://www.nickmcd.me/2023/12/12/meandering-rivers-in-particle-based-hydraulic-erosion-simulations>
 
 ## Implementation
 - JavaScript modules (`AppCore`, `Solver`, `Renderer`, `Terrain`, `Analyser`)
