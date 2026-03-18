@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Slider.pde - Numeric range slider UI component
+ * @description Renders and handles interactive sliders for parameter adjustment
+ * @version 3.0.0
+ * @author @eanutt1272.v2
+ * @license MIT
+ * 
+ * @class Slider
+ * @description Interactive slider widget for numeric parameters
+ */
 class Slider {
   float x, y, w, h, min, max, val;
   boolean locked = false;

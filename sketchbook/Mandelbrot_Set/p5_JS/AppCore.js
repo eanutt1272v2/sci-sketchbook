@@ -1,3 +1,19 @@
+/**
+ * @fileoverview AppCore.js - Core application state for Mandelbrot explorer
+ * @description Manages zoom, pan, iteration depth, colour maps, and UI state
+ * @version 3.0.0
+ * @author @eanutt1272.v2
+ * @license MIT
+ * 
+ * @class AppCore
+ * @description Central controller for Mandelbrot exploration state
+ * @classdesc Features:
+ * - Zoom/pan management with smooth transitions
+ * - Iteration depth control
+ * - Colour map selection
+ * - UI state tracking (show/hide panels)
+ * - Keyboard shortcut handling
+ */
 class AppCore {
   constructor() {
     this.maxIterations = 128;

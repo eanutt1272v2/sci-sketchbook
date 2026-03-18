@@ -1,9 +1,26 @@
 
 /**
- * @file sketch.js
+ * @fileoverview Lenia2D Studio - Main p5.js sketch
+ * @description Interactive 2D Lenia cellular automaton explorer with full LeniaND feature parity
+ * @version 2.0.0
  * @author @eanutt1272.v2
- * @version 1.0.0
+ * @license MIT
+ * 
+ * @requires p5.js
+ * @requires Tweakpane v4.0+
+ * @requires Custom Lenia2D classes (Automaton, Board, Renderer, Analyser, GUI, AnimalLibrary, RLEParser)
+ * 
+ * @description
+ * Lenia is a 2D cellular automaton that simulates life-like behavior through continuous
+ * values and smooth kernels. This implementation provides all features from LeniaND.py
+ * including multiple kernel/growth functions, symmetry detection, statistics tracking, 
+ * and comprehensive export capabilities.
+ * 
+ * @example
+ * // Press S to save PNG, E to export JSON, C to export CSV, R to reset
+ * // Use GUI tabs to control simulation parameters
  */
+
 p5.disableFriendlyErrors = true;
 
 let automaton, board, renderer, analyser, animalLibrary, gui;
@@ -46,6 +63,13 @@ const statistics = {
   growth: 0,
   maxValue: 0,
   gyradius: 0,
+  centerX: 0,
+  centerY: 0,
+  massAsym: 0,
+  speed: 0,
+  angle: 0,
+  symmSides: 0,
+  symmStrength: 0,
   fps: 0
 };
 
@@ -76,7 +100,7 @@ function setup() {
 function draw() {
   if (params.running) {
     automaton.step(board);
-    analyser.updateStatistics(board, params);
+    analyser.updateStatistics(board, automaton, params);
   }
 
   renderer.render(board, automaton, params.displayMode);
@@ -98,6 +122,11 @@ function draw() {
   }
 
   analyser.updateFps();
+  
+  // Track history for export
+  if (automaton.gen % 10 === 0) {
+    analyser.series.push(analyser.getStatRow());
+  }
 }
 
 function initialiseClasses() {
@@ -131,6 +160,7 @@ function stepOnce() {
 function clearWorld() {
   board.clear();
   analyser.resetStatistics();
+  analyser.reset();
 }
 
 function randomiseWorld() {
@@ -217,4 +247,53 @@ function mouseClicked(e) {
 function windowResized() {
   const canvasSize = min(windowWidth, windowHeight);
   resizeCanvas(canvasSize, canvasSize);
+}
+
+function keyPressed() {
+  const pressedKey = key || event.key;
+
+  // Export world state as JSON
+  if (pressedKey === 'e' || pressedKey === 'E') {
+    const data = board.toJSON();
+    const json = JSON.stringify(data, null, 2);
+    console.log('Exporting world state...');
+    downloadFile(json, `lenia-world-${automaton.gen}.json`, 'application/json');
+    return false;
+  }
+
+  // Export statistics as CSV
+  if (pressedKey === 'c' || pressedKey === 'C') {
+    const csv = analyser.exportCSV();
+    console.log('Exporting statistics to CSV...');
+    downloadFile(csv, `lenia-stats-${automaton.gen}.csv`, 'text/csv');
+    return false;
+  }
+
+  // Export canvas as PNG
+  if (pressedKey === 's' || pressedKey === 'S') {
+    console.log('Saving canvas as PNG...');
+    saveCanvas(`lenia-frame-${automaton.gen}`, 'png');
+    return false;
+  }
+
+  // Reset parameters to defaults
+  if (pressedKey === 'r' || pressedKey === 'R') {
+    automaton.reset();
+    analyser.reset();
+    clearWorld();
+    console.log('Reset to defaults');
+    return false;
+  }
+
+  return false;
+}
+
+function downloadFile(content, filename, mimeType) {
+  const element = document.createElement('a');
+  element.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(content));
+  element.setAttribute('download', filename);
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
 }

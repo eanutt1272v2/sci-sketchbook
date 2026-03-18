@@ -1,8 +1,18 @@
 
 /**
- * @file RLEParser.js
- * @author @eanutt1272.v2
+ * @fileoverview RLEParser.js - Run-Length Encoding parser for Lenia patterns
+ * @description Parses and encodes RLE-formatted patterns (compatible with LeniaND and Life formats)
  * @version 1.0.0
+ * @author @eanutt1272.v2
+ * @license MIT
+ * 
+ * @class RLEParser
+ * @description Static parser for RLE pattern format
+ * @classdesc Features:
+ * - Parse RLE strings to 2D grids
+ * - Encode grids to RLE format
+ * - Support for multi-character notation (extended RLE)
+ * - Fraction parameter parsing for kernel specifications
  */
 class RLEParser {
   static parse(rleString) {

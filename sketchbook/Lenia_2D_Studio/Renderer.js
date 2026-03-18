@@ -1,8 +1,21 @@
 
 /**
- * @file Renderer.js
+ * @fileoverview Renderer.js - p5.js rendering engine for Lenia
+ * @description Handles visualization of world state, fields, kernel, and overlay graphics
+ * @version 2.0.0
  * @author @eanutt1272.v2
- * @version 1.0.0
+ * @license MIT
+ * 
+ * @requires p5.js (image, fill, stroke, text, etc.)
+ * 
+ * @class Renderer
+ * @description Renders Lenia world states to canvas with overlays
+ * @classdesc Features:
+ * - Multiple display modes (world, potential, field, kernel)
+ * - Smooth color mapping (blue→red→white)
+ * - Grid overlay with scale reference
+ * - Colour legend with value scales
+ * - Real-time statistics display
  */
 class Renderer {
   constructor(size) {
@@ -188,12 +201,27 @@ class Renderer {
     const RN = Math.pow(params.R, 2);
 
     fill(255);
-    textSize(20);
+    textSize(14);
     textAlign(LEFT, TOP);
+    textFont("Monaco, monospace");
 
-    const stats = `Generation: ${statistics.gen}\nTime: ${statistics.time.toFixed(2)}s\nMass: ${(statistics.mass / RN).toFixed(2)}\nGrowth: ${(statistics.growth / RN).toFixed(3)}\nPeak: ${statistics.maxValue.toFixed(3)}\nGyradius: ${statistics.gyradius.toFixed(2)}\nFPS: ${statistics.fps}`;
+    // Main statistics (LeniaND equivalent)
+    const stats = [
+      `Gen:    ${String(statistics.gen).padStart(6)} | T: ${statistics.time.toFixed(3)}s`,
+      `Mass:   ${(statistics.mass / RN).toFixed(3)} | Growth: ${(statistics.growth / RN).toFixed(4)}`,
+      `Peak:   ${statistics.maxValue.toFixed(3)} | Gyrad: ${statistics.gyradius.toFixed(2)}`,
+      `Center: (${statistics.centerX?.toFixed(1) || '0'}, ${statistics.centerY?.toFixed(1) || '0'})`,
+      `MassAsym: ${(statistics.massAsym || 0).toFixed(3)} | Speed: ${(statistics.speed || 0).toFixed(3)}`,
+      `Symmetry: ${statistics.symmSides || '?'}-fold (${((statistics.symmStrength || 0) * 100).toFixed(1)}%)`,
+      `FPS: ${statistics.fps}`
+    ];
 
-    text(stats, x, y);
+    let yOffset = y;
+    stats.forEach(line => {
+      text(line, x, yOffset);
+      yOffset += 16;
+    });
+
     pop();
   }
 }

@@ -1,3 +1,13 @@
+/**
+ * @fileoverview UILayout.js - Layout management for UI panels
+ * @description Handles positioning and layout calculations for UI components
+ * @version 3.0.0
+ * @author @eanutt1272.v2
+ * @license MIT
+ * 
+ * @class UILayout
+ * @description Grid-based layout system for UI elements
+ */
 class UILayout {
   constructor(x, y, w, padding, intraGap, interGap) {
     this.x = x;

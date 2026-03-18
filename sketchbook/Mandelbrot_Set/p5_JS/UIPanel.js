@@ -1,3 +1,18 @@
+/**
+ * @fileoverview UIPanel.js - Main UI control panel
+ * @description Renders parameter controls, colour map selector, and status display
+ * @version 3.0.0
+ * @author @eanutt1272.v2
+ * @license MIT
+ * 
+ * @class UIPanel
+ * @description Main UI panel for Mandelbrot controls
+ * @classdesc Features:
+ * - Parameter sliders (zoom, iterations, etc.)
+ * - Colour map dropdown
+ * - Status display (current coordinates, zoom level)
+ * - Responsive layout
+ */
 class UIPanel {
   constructor(appcore) {
     this.appcore = appcore;

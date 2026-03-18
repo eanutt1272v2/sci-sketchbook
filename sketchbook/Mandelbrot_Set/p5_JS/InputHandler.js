@@ -1,3 +1,18 @@
+/**
+ * @fileoverview InputHandler.js - Input event handling (keyboard, mouse, touch)
+ * @description Manages all user input including keyboard shortcuts, mouse zoom/pan, and pinch gestures
+ * @version 3.0.0
+ * @author @eanutt1272.v2
+ * @license MIT
+ * 
+ * @class InputHandler
+ * @description Central input management
+ * @classdesc Features:
+ * - Keyboard shortcut handling (S=save, R=reset, arrows=pan, +/-=zoom)
+ * - Mouse wheel zoom
+ * - Left-click pan
+ * - Pinch-to-zoom gesture (2-finger touch)
+ */
 class InputHandler {
   constructor(appcore) {
     this.appcore = appcore;

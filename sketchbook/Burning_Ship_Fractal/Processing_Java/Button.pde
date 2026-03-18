@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Button.pde - Clickable button UI component
+ * @description Renders and handles interactive buttons
+ * @version 3.0.0
+ * @author @eanutt1272.v2
+ * @license MIT
+ * 
+ * @class Button
+ * @description Interactive button widget
+ */
 class Button {
   float  x, y, w, h;
   String label;

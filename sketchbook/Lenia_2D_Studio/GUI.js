@@ -1,8 +1,23 @@
 
 /**
- * @file GUI.js
+ * @fileoverview GUI.js - Tweakpane interface for Lenia2D
+ * @description Interactive parameter tuning interface with 6 tabs: Simulation, Parameters,
+ * Animals, Display, Statistics, Export
+ * @version 2.0.0
  * @author @eanutt1272.v2
- * @version 1.0.0
+ * @license MIT
+ * 
+ * @requires Tweakpane v4.0+
+ * 
+ * @class GUI
+ * @description Manages Tweakpane-based user interface
+ * @classdesc Features:
+ * - Simulation controls (run, step, randomise)
+ * - Parameter tuning (all kernel/growth functions, integration options)
+ * - Animal library browser
+ * - Display mode selector
+ * - Real-time statistics monitoring
+ * - Export controls (JSON, CSV, PNG)
  */
 class GUI {
   constructor(params, statistics, displayData, metadata) {
@@ -26,6 +41,8 @@ class GUI {
         { title: "Parameters" },
         { title: "Animals" },
         { title: "Display" },
+        { title: "Statistics" },
+        { title: "Export" }
       ],
     });
 
@@ -33,6 +50,8 @@ class GUI {
     this.createParametersTab(tabs.pages[1]);
     this.createAnimalsTab(tabs.pages[2]);
     this.createDisplayTab(tabs.pages[3]);
+    this.createStatisticsTab(tabs.pages[4]);
+    this.createExportTab(tabs.pages[5]);
   }
 
   createSimulationTab(page) {
@@ -172,6 +191,73 @@ class GUI {
     overlay.addBinding(params, "showScale", { label: "Scale Bar" });
     overlay.addBinding(params, "showColourmap", { label: "Legend" });
     overlay.addBinding(params, "showStats", { label: "Statistics" });
+  }
+
+  createStatisticsTab(page) {
+    const { statistics } = this;
+
+    // Basic metrics
+    const metrics = page.addFolder({ title: "Metrics" });
+    metrics.addBinding(statistics, "gen", { readonly: true, label: "Generation" });
+    metrics.addBinding(statistics, "time", { readonly: true, label: "Time (s)" });
+    metrics.addBinding(statistics, "mass", { readonly: true, label: "Mass" });
+    metrics.addBinding(statistics, "growth", { readonly: true, label: "Growth" });
+    metrics.addBinding(statistics, "maxValue", { readonly: true, label: "Peak Value" });
+    metrics.addBinding(statistics, "gyradius", { readonly: true, label: "Gyradius" });
+
+    page.addBlade({ view: "separator" });
+
+    // Position and movement
+    const motion = page.addFolder({ title: "Position & Motion" });
+    motion.addBinding(statistics, "centerX", { readonly: true, label: "Center X" });
+    motion.addBinding(statistics, "centerY", { readonly: true, label: "Center Y" });
+    motion.addBinding(statistics, "speed", { readonly: true, label: "Speed" });
+    motion.addBinding(statistics, "angle", { readonly: true, label: "Angle (°)" });
+
+    page.addBlade({ view: "separator" });
+
+    // Symmetry detection
+    const symmetry = page.addFolder({ title: "Symmetry" });
+    symmetry.addBinding(statistics, "symmSides", { readonly: true, label: "Fold Order" });
+    symmetry.addBinding(statistics, "symmStrength", { readonly: true, label: "Strength" });
+    symmetry.addBinding(statistics, "massAsym", { readonly: true, label: "Mass Asymmetry" });
+
+    page.addBlade({ view: "separator" });
+
+    metrics.addBinding(statistics, "fps", { readonly: true, label: "FPS" });
+  }
+
+  createExportTab(page) {
+    page.addButton({ title: "Export World (JSON)" }).on("click", () => {
+      const data = board.toJSON();
+      const json = JSON.stringify(data, null, 2);
+      downloadFile(json, `lenia-world-${automaton.gen}.json`, 'application/json');
+    });
+
+    page.addButton({ title: "Export Statistics (CSV)" }).on("click", () => {
+      const csv = analyser.exportCSV();
+      downloadFile(csv, `lenia-stats-${automaton.gen}.csv`, 'text/csv');
+    });
+
+    page.addButton({ title: "Export Canvas (PNG)" }).on("click", () => {
+      saveCanvas(`lenia-frame-${automaton.gen}`, 'png');
+    });
+
+    page.addBlade({ view: "separator" });
+
+    page.addBinding(statistics, "gen", { readonly: true, label: "Current Gen" });
+    
+    page.addButton({ title: "Clear Statistics" }).on("click", () => {
+      analyser.series = [];
+      analyser.reset();
+    });
+
+    page.addBlade({ view: "separator" });
+
+    page.addButton({ title: "Print Statistics to Console" }).on("click", () => {
+      console.log('Statistics Series:', analyser.series);
+      console.log('Current Stats Row:', analyser.getStatRow());
+    });
   }
 
   dispose() {
