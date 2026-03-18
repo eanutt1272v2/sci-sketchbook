@@ -24,7 +24,7 @@ A public deployment is available at <https://sci-sketchbook.onrender.com/>.
 | [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | Burning Ship fractal explorer on the complex plane. | p5.js |
 | [Cellular Division](./sketchbook/Cellular_Division) | Particle-based emergent growth and division simulation based on PPS model. | p5.js |
 | [Eigen](./sketchbook/Eigen) | Hydrogen orbital visualiser mapping electron probability density using radial and angular wavefunctions. | p5.js |
-| [Fluvia](./sketchbook/Fluvia) | Fast Lagrangian hydraulic terrain erosion simulation with meandering river systems. | p5.js, GLSL |
+| [Fluvia](./sketchbook/Fluvia) | Fast Lagrangian hydraulic terrain erosion simulation with meandering river systems. | p5.js |
 | [Julia Set](./sketchbook/Julia_Set) | Interactive Julia set fractal explorer. | p5.js |
 | [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Lenia continuous cellular automata implementation with catalogue and statistics. | p5.js |
 | [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | Interactive Mandelbrot set fractal explorer. | p5.js |
