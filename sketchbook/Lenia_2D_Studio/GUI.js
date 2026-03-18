@@ -64,7 +64,7 @@ class GUI {
 
     page.addBinding(params, "gridSize", {
       label: "Grid Size",
-      options: { "64×64": 64, "128×128": 128, "256×256": 256 }
+      options: { "64×64": 64, "128×128": 128, "256×256": 256, "512×512": 512, "1024×1024": 1024 }
     }).on("change", () => this.appcore?.changeResolution());
   }
 
