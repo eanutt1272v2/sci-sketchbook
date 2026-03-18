@@ -10,14 +10,14 @@ A public instance is available at: [https://sci-sketchbook.onrender.com/](https:
 | :--- | :--- | :--- |
 | [Barnsley Fern](./sketchbook/Barnsley_Fern) | An iterated function system (IFS) that produces a fractal resembling the Black Spleenwort fern using affine transformations. | Processing (Java) & p5.js |
 | [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | A fractal first described by Michael Michelitsch and Otto E. Rössler, known for its resemblance to a ship on fire. | Processing (Java) & p5.js |
-| [Cellular Division](./sketchbook/Cellular_Division) | A particle-based simulation of emergent cellular behaviour and division. | Processing (Java & JS versions) |
+| [Cellular Division](./sketchbook/Cellular_Division) | A particle-based simulation of emergent cellular behaviour and division. | Processing (Java) & p5.js |
 | [Collatz Visualisation](./sketchbook/Collatz_Visualisation) | A visual representation of the Collatz conjecture paths (3n + 1 problem) as an organic tree-like structure. | p5.js |
 | [Diffusion Limited Aggregation (DLA)](./sketchbook/Diffusion_Limited_Aggregation) | Simulates the process where particles undergoing Brownian motion cluster together to form aggregate structures. | p5.js |
 | [Eigen](./sketchbook/Eigen) | A sophisticated visualisation tool for exploring linear transformations, eigenvalues, and eigenvectors. | p5.js |
 | [Fluvia](./sketchbook/Fluvia) | A high-performance terrain erosion simulation with advanced features. | p5.js & GLSL Shaders |
 | [Fluvia Lite](./sketchbook/Fluvia_Lite) | A lightweight version of the Fluvia erosion simulation optimised for ease of forking. | p5.js |
 | [GLSL Shader Exploration 01](./sketchbook/GLSL_Shader_Exploration_01) | A mini study sketch for experimenting with fragment shaders and procedural animations. | p5.js & GLSL Shaders |
-| [Julia Set](./sketchbook/Julia_Set) | Visualisation of the Julia set, a classic fractal associated with the Mandelbrot set | Processing (Java) |
+| [Julia Set](./sketchbook/Julia_Set) | Visualisation of the Julia set, a classic fractal associated with the Mandelbrot set | Processing (Java) & p5.js |
 | [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | An advanced but currently slow implementation of Lenia, a continuous cellular automata system (NEEDS UPGRADE) | p5.js |
 | [MandelBulber](./sketchbook/MandelBulber) | A 3D exploration of the Mandelbulb fractal as a point-cloud. | Processing (Java) |
 | [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | The iconic Mandelbrot set fractal, exploring the boundary of stability for z = z² + c. | Processing (Java) & p5.js |
