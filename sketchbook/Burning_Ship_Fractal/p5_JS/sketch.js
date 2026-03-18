@@ -1,16 +1,16 @@
-
+p5.disableFriendlyErrors = true;
 
 let appcore;
 let font;
 
 const metadata = {
-  name: "Burning Ship",
-  version: "v3.0.0",
+  name: "Burning Ship Fractal",
+  version: "v3.0.0-dev",
   author: "@eanutt1272.v2",
 };
 
 function preload() {
-  font = loadFont("monaco.ttf");
+  font = loadFont("JetBrainsMono-Regular.ttf");
 }
 
 function setup() {

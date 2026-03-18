@@ -1,4 +1,4 @@
-
+p5.disableFriendlyErrors = true;
 
 let x = 0;
 let y = 0;
@@ -81,6 +81,5 @@ function keyPressed() {
   }
 }
 
-function mouseClicked() {
-  background(10, 15, 10);
-}
+function mouseClicked() { background(10, 15, 10); }
+function touchStarted() { background(10, 15, 10); }

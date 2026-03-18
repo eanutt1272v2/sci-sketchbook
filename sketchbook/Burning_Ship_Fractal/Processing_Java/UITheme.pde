@@ -1,4 +1,3 @@
-
 class UITheme {
   color bgPanel = color(20, 20, 20, 210);
   color bgWidget = color(42, 42, 42, 220);

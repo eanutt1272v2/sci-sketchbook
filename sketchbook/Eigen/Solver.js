@@ -1,8 +1,6 @@
-
-
 class Solver {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
 
     this.cache = {
       key: "",

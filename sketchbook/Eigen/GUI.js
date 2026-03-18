@@ -1,12 +1,10 @@
-
-
 class GUI {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
 
     this.bindings = {};
     this.pane = new Tweakpane.Pane({
-      title: `${this.m.metadata.name} ${this.m.metadata.version} by ${this.m.metadata.author}`,
+      title: `${this.appcore.metadata.name} ${this.appcore.metadata.version} by ${this.appcore.metadata.author}`,
       expanded: true
     });
 
@@ -28,7 +26,7 @@ class GUI {
   }
 
   createGeneralTab(page) {
-    page.addBinding(this.m.statistics, "fps", {
+    page.addBinding(this.appcore.statistics, "fps", {
       readonly: true,
       label: "FPS",
       view: "graph",
@@ -37,35 +35,35 @@ class GUI {
       max: 100,
     });
 
-    page.addBinding(this.m.statistics, "fps", {
+    page.addBinding(this.appcore.statistics, "fps", {
       label: "",
       readonly: true
     });
 
     page.addBlade({ view: "separator" });
 
-    page.addBinding(this.m.params, "orbitalNotation", {
+    page.addBinding(this.appcore.params, "orbitalNotation", {
       label: "Orbital Notation",
       readonly: true
     });
 
     page.addBlade({ view: "separator" });
 
-    this.bindings.n = page.addBinding(this.m.params, "n", {
+    this.bindings.n = page.addBinding(this.appcore.params, "n", {
       label: "n (principal)",
       min: 1,
       max: 7,
       step: 1
     });
 
-    this.bindings.l = page.addBinding(this.m.params, "l", {
+    this.bindings.l = page.addBinding(this.appcore.params, "l", {
       label: "l (angular)",
       min: 0,
       max: 0,
       step: 1
     });
 
-    this.bindings.m = page.addBinding(this.m.params, "m", {
+    this.bindings.m = page.addBinding(this.appcore.params, "m", {
       label: "m (magnetic)",
       min: 0,
       max: 0,
@@ -78,45 +76,45 @@ class GUI {
   }
 
   createVisualisationTab(page) {
-    const colourMapOptions = Object.keys(this.m.colourMaps).reduce((obj, name) => {
+    const colourMapOptions = Object.keys(this.appcore.colourMaps).reduce((obj, name) => {
       obj[name.charAt(0).toUpperCase() + name.slice(1)] = name;
       return obj;
     }, {});
 
-    page.addBinding(this.m.params, "colourMap", {
+    page.addBinding(this.appcore.params, "colourMap", {
       label: "Colour Map",
       options: colourMapOptions
-    }).on("change", () => this.m.renderer.update());
+    }).on("change", () => this.appcore.renderer.update());
 
-    page.addBinding(this.m.params, "exposure", {
+    page.addBinding(this.appcore.params, "exposure", {
       label: "Exposure",
       min: 0,
       max: 2
-    }).on("change", () => this.m.renderer.update());
+    }).on("change", () => this.appcore.renderer.update());
 
     page.addBlade({ view: "separator" });
-    page.addBinding(this.m.params, "resolution", {
+    page.addBinding(this.appcore.params, "resolution", {
       label: "Resolution (px)",
       min: 64,
       max: 512,
       step: 2
-    }).on("change", () => this.m.renderer.update());
+    }).on("change", () => this.appcore.renderer.update());
 
-    page.addBinding(this.m.params, "pixelSmoothing", {
+    page.addBinding(this.appcore.params, "pixelSmoothing", {
       label: "Pixel Smoothing",
-    }).on("change", () => this.m.renderer.update());
+    }).on("change", () => this.appcore.renderer.update());
 
-    page.addBinding(this.m.params, "renderOverlay", {
+    page.addBinding(this.appcore.params, "renderOverlay", {
       label: "Render Overlay",
-    }).on("change", () => this.m.renderer.update());
+    }).on("change", () => this.appcore.renderer.update());
 
-    page.addBinding(this.m.params, "renderLegend", {
+    page.addBinding(this.appcore.params, "renderLegend", {
       label: "Render Legend",
-    }).on("change", () => this.m.renderer.update());
+    }).on("change", () => this.appcore.renderer.update());
 
     page.addBlade({ view: "separator" });
 
-    this.bindings.viewRadius = page.addBinding(this.m.params, "viewRadius", {
+    this.bindings.viewRadius = page.addBinding(this.appcore.params, "viewRadius", {
       label: "View Radius (a₀)",
       min: 1,
       max: 256
@@ -124,43 +122,43 @@ class GUI {
 
     page.addBlade({ view: "separator" });
 
-    page.addBinding(this.m.params, "slicePlane", {
+    page.addBinding(this.appcore.params, "slicePlane", {
       label: "Slice Plane",
       options: {
         "XY Plane (Slice Z)": "xy",
         "XZ Plane (Slice Y)": "xz",
         "YZ Plane (Slice X)": "yz"
       }
-    }).on("change", () => this.m.renderer.update());
+    }).on("change", () => this.appcore.renderer.update());
 
-    this.bindings.sliceOffset = page.addBinding(this.m.params, "sliceOffset", {
+    this.bindings.sliceOffset = page.addBinding(this.appcore.params, "sliceOffset", {
       label: "Slice Offset (a₀)",
       min: -250,
       max: 250
     });
 
     this.bindings.viewRadius.on("change", () => this.updateViewConstraints());
-    this.bindings.sliceOffset.on("change", () => this.m.renderer.update());
+    this.bindings.sliceOffset.on("change", () => this.appcore.renderer.update());
 
     page.addBlade({ view: "separator" });
 
-    page.addBinding(this.m.params.viewCenter, "x", {
+    page.addBinding(this.appcore.params.viewCenter, "x", {
       label: "Pan X (a₀)", min: -256, max: 256, step: 0.1
-    }).on("change", () => this.m.requestRender());
+    }).on("change", () => this.appcore.requestRender());
 
-    page.addBinding(this.m.params.viewCenter, "y", {
+    page.addBinding(this.appcore.params.viewCenter, "y", {
       label: "Pan Y (a₀)", min: -256, max: 256, step: 0.1
-    }).on("change", () => this.m.requestRender());
+    }).on("change", () => this.appcore.requestRender());
 
-    page.addBinding(this.m.params.viewCenter, "z", {
+    page.addBinding(this.appcore.params.viewCenter, "z", {
       label: "Pan Z (a₀)", min: -256, max: 256, step: 0.1
-    }).on("change", () => this.m.requestRender());
+    }).on("change", () => this.appcore.requestRender());
 
-    page.addButton({ title: "Reset View Center" }).on("click", () => this.m.resetViewCenter());
+    page.addButton({ title: "Reset View Center" }).on("click", () => this.appcore.resetViewCenter());
 
     page.addBlade({ view: "separator" });
 
-    page.addBinding(this.m.params, "exportFormat", {
+    page.addBinding(this.appcore.params, "exportFormat", {
       label: "Format",
       options: { PNG: "png", JPG: "jpg", WebP: "webp" }
     });
@@ -171,8 +169,8 @@ class GUI {
   }
 
   exportImage() {
-    const format = this.m.params.exportFormat || "png";
-    const filename = `orbital_${this.m.params.orbitalNotation.replace(/[\s=()]/g, "_")}.${format}`;
+    const format = this.appcore.params.exportFormat || "png";
+    const filename = `orbital_${this.appcore.params.orbitalNotation.replace(/[\s=()]/g, "_")}.${format}`;
 
     const canvas = document.querySelector("canvas");
     if (!canvas) return;
@@ -190,7 +188,7 @@ class GUI {
   }
 
   enforceConstraints() {
-    const params = this.m.params;
+    const params = this.appcore.params;
 
     this.bindings.l.max = params.n - 1;
 
@@ -205,11 +203,11 @@ class GUI {
     params.orbitalNotation = `${params.n}${shells[params.l] || "?"} (m=${params.m})`;
 
     this.pane.refresh();
-    this.m.renderer.update();
+    this.appcore.renderer.update();
   }
 
   updateViewConstraints() {
-    const params = this.m.params;
+    const params = this.appcore.params;
 
     this.bindings.sliceOffset.min = -params.viewRadius;
     this.bindings.sliceOffset.max = params.viewRadius;
@@ -217,7 +215,7 @@ class GUI {
     params.sliceOffset = Math.max(this.bindings.sliceOffset.min, Math.min(this.bindings.sliceOffset.max, params.sliceOffset));
 
     this.pane.refresh();
-    this.m.renderer.update();
+    this.appcore.renderer.update();
   }
 
   refresh() {

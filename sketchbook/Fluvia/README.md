@@ -6,7 +6,7 @@ GPU-accelerated fluid and terrain simulation built with p5.js and GLSL.
 The project combines interactive rendering with solver components for flow and erosion-style effects.
 
 ## Implementation
-- JavaScript modules (`Manager`, `Solver`, `Renderer`, `Terrain`, `Analyser`)
+- JavaScript modules (`AppCore`, `Solver`, `Renderer`, `Terrain`, `Analyser`)
 - Custom shaders (`vert.glsl`, `frag.glsl`)
 
 ## Controls

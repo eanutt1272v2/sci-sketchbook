@@ -49,59 +49,6 @@ function setupCanvasProperties() {
   pixelDensity(1);
 }
 
-
-function stepOnce() {
-  appcore.stepOnce();
-}
-
-function clearWorld() {
-  appcore.clearWorld();
-}
-
-function randomiseWorld() {
-  appcore.randomiseWorld();
-}
-
-function changeResolution() {
-  appcore.changeResolution();
-}
-
-function loadAnimal(animal) {
-  appcore.loadAnimal(animal);
-}
-
-function loadSelectedAnimal() {
-  appcore.loadSelectedAnimal();
-}
-
-function placeAnimal(cellX, cellY) {
-  appcore.placeAnimal(cellX, cellY);
-}
-
-function loadInitialAnimal() {
-  appcore.loadInitialAnimal();
-}
-
-function canvasInteraction(e) {
-  return appcore.canvasInteraction(e);
-}
-
-function mouseClicked(e) {
-  return appcore.handleMouseClicked(e);
-}
-
-function windowResized() {
-  appcore.windowResized();
-}
-
-function keyPressed() {
-  return appcore.handleKeyPressed(key || event.key, keyCode);
-}
-
-function keyReleased() {
-  return appcore.handleKeyReleased(key || event.key, keyCode);
-}
-
 function downloadFile(content, filename, mimeType) {
   const element = document.createElement('a');
   element.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(content));
@@ -111,3 +58,18 @@ function downloadFile(content, filename, mimeType) {
   element.click();
   document.body.removeChild(element);
 }
+
+function stepOnce() { appcore.stepOnce();}
+function clearWorld() { appcore.clearWorld();}
+function randomiseWorld() { appcore.randomiseWorld();}
+function changeResolution() { appcore.changeResolution();}
+function loadAnimal(animal) { appcore.loadAnimal(animal); }
+function loadSelectedAnimal() { appcore.loadSelectedAnimal(); }
+function placeAnimal(cellX, cellY) { appcore.placeAnimal(cellX, cellY); }
+function loadInitialAnimal() { appcore.loadInitialAnimal(); }
+function canvasInteraction(e) { return appcore.canvasInteraction(e); }
+function mouseClicked(e) { return appcore.handleMouseClicked(e); }
+function touchStarted(e) { return appcore.handleMouseClicked(e); }
+function windowResized() { appcore.windowResized(); }
+function keyPressed() { return appcore.handleKeyPressed(key || event.key, keyCode); }
+function keyReleased() { return appcore.handleKeyReleased(key || event.key, keyCode); }

@@ -1,6 +1,6 @@
 class Media {
   constructor(appcore) {
-    this.m = appcore;
+    this.appcore = appcore;
 
     this.mediaRecorder = null;
     this.recordedChunks = [];

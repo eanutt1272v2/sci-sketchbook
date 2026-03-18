@@ -207,7 +207,7 @@ class LeftPanel {
     float lineH = 28;
 
     textSize(28);
-    text("Cellular Division Keymap Reference", x, y);
+    text(SKETCH_NAME + " " + SKETCH_VERSION + " Keymap Reference", x, y);
 
     textSize(16);
     y += 50;

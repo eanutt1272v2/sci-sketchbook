@@ -216,7 +216,7 @@ class LeftPanel {
     const lineH = 28;
 
     textSize(28);
-    text("Cellular Division Keymap Reference", x, y);
+    text(`${metadata.name} ${metadata.version} Keymap Reference`, x, y);
 
     textSize(16);
     y += 50;

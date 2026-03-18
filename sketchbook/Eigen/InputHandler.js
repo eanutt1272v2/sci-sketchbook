@@ -1,6 +1,6 @@
 class InputHandler {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
     this.gesture = {
       pan: null,
       pinch: null,
@@ -8,11 +8,11 @@ class InputHandler {
   }
 
   handleContinuousInput() {
-    if (this.shouldIgnoreKeyboard() || this.m.params.renderKeymapRef) {
+    if (this.shouldIgnoreKeyboard() || this.appcore.params.renderKeymapRef) {
       return;
     }
 
-    const { params } = this.m;
+    const { params } = this.appcore;
     const shiftHeld = keyIsDown(SHIFT);
     let needsRender = false;
     let syncViewConstraints = false;
@@ -79,9 +79,9 @@ class InputHandler {
     }
 
     if (syncViewConstraints) {
-      this.m.syncViewConstraints();
+      this.appcore.syncViewConstraints();
     } else {
-      this.m.requestRender();
+      this.appcore.requestRender();
     }
   }
 
@@ -95,60 +95,60 @@ class InputHandler {
     const keyLower = (k || "").toLowerCase();
 
     if (keyLower === "w" || keyLower === "s") {
-      this.m.updateQuantumNumbers("n", keyLower === "w" ? 1 : -1);
-      logMsg = `n changed to ${this.m.params.n}`;
+      this.appcore.updateQuantumNumbers("n", keyLower === "w" ? 1 : -1);
+      logMsg = `n changed to ${this.appcore.params.n}`;
     } else if (keyLower === "d" || keyLower === "a") {
-      this.m.updateQuantumNumbers("l", keyLower === "d" ? 1 : -1);
-      logMsg = `l changed to ${this.m.params.l}`;
+      this.appcore.updateQuantumNumbers("l", keyLower === "d" ? 1 : -1);
+      logMsg = `l changed to ${this.appcore.params.l}`;
     } else if (keyLower === "e" || keyLower === "q") {
-      this.m.updateQuantumNumbers("m", keyLower === "e" ? 1 : -1);
-      logMsg = `m changed to ${this.m.params.m}`;
+      this.appcore.updateQuantumNumbers("m", keyLower === "e" ? 1 : -1);
+      logMsg = `m changed to ${this.appcore.params.m}`;
     }
 
     const planes = { 1: "xy", 2: "xz", 3: "yz" };
     if (planes[k]) {
-      this.m.changePlane(planes[k]);
-      logMsg = `Plane switched to ${this.m.params.slicePlane.toUpperCase()}`;
+      this.appcore.changePlane(planes[k]);
+      logMsg = `Plane switched to ${this.appcore.params.slicePlane.toUpperCase()}`;
     }
 
     switch (keyLower) {
       case "c":
-        this.m.cycleColourMap();
-        logMsg = `Map switched to ${this.m.params.colourMap}`;
+        this.appcore.cycleColourMap();
+        logMsg = `Map switched to ${this.appcore.params.colourMap}`;
         break;
       case "o":
-        this.m.toggleOverlay();
-        logMsg = `Overlay: ${this.m.params.renderOverlay}`;
+        this.appcore.toggleOverlay();
+        logMsg = `Overlay: ${this.appcore.params.renderOverlay}`;
         break;
       case "l":
-        this.m.toggleLegend();
-        logMsg = `Legend: ${this.m.params.renderLegend}`;
+        this.appcore.toggleLegend();
+        logMsg = `Legend: ${this.appcore.params.renderLegend}`;
         break;
       case "m":
-        this.m.toggleSmoothing();
-        logMsg = `Smoothing: ${this.m.params.pixelSmoothing}`;
+        this.appcore.toggleSmoothing();
+        logMsg = `Smoothing: ${this.appcore.params.pixelSmoothing}`;
         break;
       case "h":
-        this.m.toggleGUI();
+        this.appcore.toggleGUI();
         shouldRefreshGUI = false;
         break;
       case "p":
-        this.m.exportImage();
+        this.appcore.exportImage();
         shouldRefreshGUI = false;
         break;
       case "x":
-        this.m.resetViewCenter();
+        this.appcore.resetViewCenter();
         logMsg = "View center reset";
         break;
     }
 
     if (k === "#") {
-      this.m.toggleKeymapRef();
-      logMsg = `Keymap Reference: ${this.m.params.renderKeymapRef}`;
+      this.appcore.toggleKeymapRef();
+      logMsg = `Keymap Reference: ${this.appcore.params.renderKeymapRef}`;
     }
 
     if (k === " ") {
-      this.m.resetSliceOffset();
+      this.appcore.resetSliceOffset();
       logMsg = "Offset reset to 0";
     }
 
@@ -157,7 +157,7 @@ class InputHandler {
     }
 
     if (shouldRefreshGUI) {
-      this.m.refreshGUI();
+      this.appcore.refreshGUI();
     }
 
     return false;
@@ -168,7 +168,7 @@ class InputHandler {
   }
 
   handleWheel(event) {
-    if (!this.m.canvasInteraction(event)) {
+    if (!this.appcore.canvasInteraction(event)) {
       return;
     }
 
@@ -179,12 +179,12 @@ class InputHandler {
       zoomScale,
     );
 
-    this.m.syncViewConstraints();
+    this.appcore.syncViewConstraints();
     return false;
   }
 
   handlePointer(event) {
-    if (!this.m.canvasInteraction(event)) {
+    if (!this.appcore.canvasInteraction(event)) {
       return;
     }
 
@@ -209,7 +209,7 @@ class InputHandler {
   }
 
   handlePointerEnd(event) {
-    if (this.m.canvasInteraction(event)) {
+    if (this.appcore.canvasInteraction(event)) {
       this.resetGesture();
       return false;
     }
@@ -226,14 +226,14 @@ class InputHandler {
 
     const dx = pointer.x - this.gesture.pan.x;
     const dy = pointer.y - this.gesture.pan.y;
-    const worldScale = (this.m.params.viewRadius * 2) / max(1, width);
+    const worldScale = (this.appcore.params.viewRadius * 2) / max(1, width);
 
     this.panCurrentPlane(-dx * worldScale, -dy * worldScale);
 
     this.gesture.pan.x = pointer.x;
     this.gesture.pan.y = pointer.y;
 
-    this.m.requestRender();
+    this.appcore.requestRender();
   }
 
   handlePinch(t1, t2) {
@@ -256,11 +256,11 @@ class InputHandler {
     );
 
     this.gesture.pinch.distance = distance;
-    this.m.syncViewConstraints();
+    this.appcore.syncViewConstraints();
   }
 
   applyZoomAtNormalisedPoint(nx, ny, zoomScale) {
-    const { params } = this.m;
+    const { params } = this.appcore;
     const oldRadius = params.viewRadius;
     const newRadius = constrain(oldRadius * zoomScale, 1, 256);
 
@@ -270,7 +270,7 @@ class InputHandler {
 
     const clampedNx = constrain(nx, 0, 1);
     const clampedNy = constrain(ny, 0, 1);
-    const { axis1, axis2 } = this.m.getPlaneAxes();
+    const { axis1, axis2 } = this.appcore.getPlaneAxes();
     params.viewCenter[axis1] += (clampedNx - 0.5) * (oldRadius - newRadius) * 2;
     params.viewCenter[axis2] += (clampedNy - 0.5) * (oldRadius - newRadius) * 2;
     params.viewRadius = newRadius;
@@ -279,9 +279,9 @@ class InputHandler {
   }
 
   panCurrentPlane(delta1, delta2) {
-    const { axis1, axis2 } = this.m.getPlaneAxes();
-    this.m.params.viewCenter[axis1] += delta1;
-    this.m.params.viewCenter[axis2] += delta2;
+    const { axis1, axis2 } = this.appcore.getPlaneAxes();
+    this.appcore.params.viewCenter[axis1] += delta1;
+    this.appcore.params.viewCenter[axis2] += delta2;
   }
 
   resetGesture() {

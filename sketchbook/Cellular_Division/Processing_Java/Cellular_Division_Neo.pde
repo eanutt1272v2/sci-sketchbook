@@ -1,5 +1,3 @@
-
-
 static final class Config {
   static final int GRID_SIZE = 30;
   static final int CELLS_INTERVAL = 15;
@@ -16,7 +14,7 @@ AppCore appcore;
 PFont font;
 
 final String SKETCH_NAME = "Cellular Division";
-final String SKETCH_VERSION = "v2.5.8";
+final String SKETCH_VERSION = "v2.5.8-dev";
 final String SKETCH_AUTHOR = "@eanutt1272.v2";
 
 void settings() {
@@ -34,7 +32,7 @@ void setup() {
     }
   });
 
-  font = createFont("monaco.ttf", 13, true);
+  font = createFont("JetBrainsMono-Regular.ttf", 13, true);
   textFont(font);
 
   appcore = new AppCore();

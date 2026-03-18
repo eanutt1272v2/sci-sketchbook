@@ -1,7 +1,3 @@
-
-
-
-
 p5.displayFriendlyErrors = false;
 let terrain, solver, renderer;
 

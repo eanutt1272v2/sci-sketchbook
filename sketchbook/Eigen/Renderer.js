@@ -1,8 +1,6 @@
-
-
 class Renderer {
-  constructor(manager) {
-    this.m = manager;
+  constructor(appcore) {
+    this.appcore = appcore;
     this.buffer = null;
     this.grid = new Float32Array(0);
     this.axisSamples = new Float32Array(0);
@@ -40,7 +38,7 @@ class Renderer {
   updateLUT(colourMap) {
     if (this.currentColourMap === colourMap) return;
 
-    const colourData = this.m.colourMaps[colourMap];
+    const colourData = this.appcore.colourMaps[colourMap];
     if (!colourData) return;
 
     this.currentColourMap = colourMap;
@@ -69,8 +67,8 @@ class Renderer {
   }
 
   update() {
-    const { n, l, m, resolution: res, viewRadius, slicePlane, sliceOffset, colourMap, exposure, viewCenter } = this.m.params;
-    const { solver } = this.m;
+    const { n, l, m, resolution: res, viewRadius, slicePlane, sliceOffset, colourMap, exposure, viewCenter } = this.appcore.params;
+    const { solver } = this.appcore;
     let { buffer } = this;
 
     if (!buffer || buffer.width !== res || buffer.height !== res) {
@@ -127,7 +125,7 @@ class Renderer {
   }
 
   renderToBuffer(grid, peak, res, colourMap, exposure) {
-    const colourMapData = this.m.colourMaps[colourMap] || this.m.colourMaps.rocket;
+    const colourMapData = this.appcore.colourMaps[colourMap] || this.appcore.colourMaps.rocket;
     const { buffer } = this;
 
     const gamma = 1.0 / (1.0 + exposure);
@@ -155,7 +153,7 @@ class Renderer {
   }
 
   render() {
-    const { pixelSmoothing, renderOverlay, renderLegend, renderKeymapRef } = this.m.params;
+    const { pixelSmoothing, renderOverlay, renderLegend, renderKeymapRef } = this.appcore.params;
     const { buffer } = this;
 
     background(0);
@@ -180,9 +178,9 @@ class Renderer {
   }
 
   renderOverlay() {
-    const { n, l, m, viewRadius, sliceOffset, orbitalNotation, viewCenter } = this.m.params;
-    const { axis1, axis2, fixedLabel, axis1Label, axis2Label } = this.m.getPlaneAxes();
-    const fps = this.m.statistics.fps;
+    const { n, l, m, viewRadius, sliceOffset, orbitalNotation, viewCenter } = this.appcore.params;
+    const { axis1, axis2, fixedLabel, axis1Label, axis2Label } = this.appcore.getPlaneAxes();
+    const fps = this.appcore.statistics.fps;
     const overlay = `Orbital: ${orbitalNotation}\nn=${n}, l=${l}, m=${m}\nView Radius: ${viewRadius.toFixed(2)} a₀\nPan ${axis1Label}: ${viewCenter[axis1].toFixed(2)} a₀   ${axis2Label}: ${viewCenter[axis2].toFixed(2)} a₀\nSlice ${fixedLabel}: ${sliceOffset.toFixed(2)} a₀\nFPS: ${fps.toFixed(1)}`;
 
     fill(255);
@@ -195,7 +193,7 @@ class Renderer {
 
   renderLegend() {
     push();
-    const { colourMap } = this.m.params;
+    const { colourMap } = this.appcore.params;
     this.updateLUT(colourMap || "rocket");
 
     const x = width - 15;
@@ -238,7 +236,7 @@ class Renderer {
   }
 
   renderKeymapRef() {
-    const { name, version } = this.m.metadata;
+    const { name, version } = this.appcore.metadata;
 
     push();
     fill(0, 220);

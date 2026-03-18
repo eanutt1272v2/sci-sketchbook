@@ -4,7 +4,7 @@
 Interactive linear algebra visualisation focusing on matrix transformations, eigenvalues, and eigenvectors.
 
 ## Implementation
-- p5.js application (`sketch.js`, `Manager.js`, `Renderer.js`, `Solver.js`, `GUI.js`)
+- p5.js application (`sketch.js`, `AppCore.js`, `Renderer.js`, `Solver.js`, `GUI.js`)
 
 ## Controls
 - Manipulate transformation parameters in the GUI

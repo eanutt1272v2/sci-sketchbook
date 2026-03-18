@@ -1,10 +1,8 @@
-
-
 AppCore appcore;
 PFont font;
 
-final String SKETCH_NAME = "Burning Ship";
-final String SKETCH_VERSION = "v3.0.0";
+final String SKETCH_NAME = "Burning Ship Fractal";
+final String SKETCH_VERSION = "v3.0.0-dev";
 final String SKETCH_AUTHOR = "@eanutt1272.v2";
 
 void settings() {
@@ -23,7 +21,7 @@ void setup() {
     }
   });
 
-  font = createFont("monaco.ttf", 13, true);
+  font = createFont("JetBrainsMono-Regular.ttf", 13, true);
   textFont(font);
 
   appcore = new AppCore();

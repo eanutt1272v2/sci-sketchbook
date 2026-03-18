@@ -1,4 +1,4 @@
-
+p5.disableFriendlyErrors = true;
 
 const Config = {
   GRID_SIZE: 30,
@@ -14,7 +14,7 @@ const Config = {
 
 const metadata = {
   name: "Cellular Division",
-  version: "v2.5.8",
+  version: "v2.5.8-dev",
   author: "@eanutt1272.v2",
 };
 
@@ -22,7 +22,7 @@ let appcore;
 let font;
 
 function preload() {
-  font = loadFont("monaco.ttf");
+  font = loadFont("JetBrainsMono-Regular.ttf");
 }
 
 function setup() {

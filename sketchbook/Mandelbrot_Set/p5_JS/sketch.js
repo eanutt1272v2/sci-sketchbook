@@ -1,3 +1,5 @@
+p5.disableFriendlyErrors = true;
+
 let appcore;
 let font;
 
