@@ -184,13 +184,12 @@ class Renderer {
     fill(255);
     textSize(14);
     textAlign(LEFT, TOP);
-    textFont("Monaco, monospace");
     const stats = [
-      `Gen:    ${String(statistics.gen).padStart(6)} | T: ${statistics.time.toFixed(3)}s`,
-      `Mass:   ${(statistics.mass / RN).toFixed(3)} | Growth: ${(statistics.growth / RN).toFixed(4)}`,
-      `Peak:   ${statistics.maxValue.toFixed(3)} | Gyrad: ${statistics.gyradius.toFixed(2)}`,
-      `Center: (${statistics.centerX?.toFixed(1) || '0'}, ${statistics.centerY?.toFixed(1) || '0'})`,
-      `MassAsym: ${(statistics.massAsym || 0).toFixed(3)} | Speed: ${(statistics.speed || 0).toFixed(3)}`,
+      `Gen: ${String(statistics.gen).padStart(6)} | T: ${statistics.time.toFixed(3)}s`,
+      `Mass: ${(statistics.mass / RN).toFixed(3)} | Growth: ${(statistics.growth / RN).toFixed(4)}`,
+      `Peak: ${statistics.maxValue.toFixed(3)} | Gyrad: ${statistics.gyradius.toFixed(2)}`,
+      `Centre: (${statistics.centerX?.toFixed(1) || '0'}, ${statistics.centerY?.toFixed(1) || '0'})`,
+      `MassAsymmetry: ${(statistics.massAsym || 0).toFixed(3)} | Speed: ${(statistics.speed || 0).toFixed(3)}`,
       `Symmetry: ${statistics.symmSides || '?'}-fold (${((statistics.symmStrength || 0) * 100).toFixed(1)}%)`,
       `FPS: ${statistics.fps}`
     ];
