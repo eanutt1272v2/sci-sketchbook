@@ -5,7 +5,7 @@ class Solver {
     const SQRT2 = Math.SQRT2;
     this.neighbours = [
       { x: -1, y: -1, distance: SQRT2 }, { x: -1, y: 0, distance: 1 }, { x: -1, y: 1, distance: SQRT2 },
-      { x: 0, y: -1, distance: 1 },                                   { x: 0, y: 1, distance: 1 },
+      { x: 0, y: -1, distance: 1 },                                    { x: 0, y: 1, distance: 1 },
       { x: 1, y: -1, distance: SQRT2 },  { x: 1, y: 0, distance: 1 },  { x: 1, y: 1, distance: SQRT2 },
     ];
   }
@@ -21,8 +21,8 @@ class Solver {
 
     for (let i = 0; i < area; i++) {
       dischargeMap[i] = invLR * dischargeMap[i] + learningRate * dischargeTrack[i];
-      momentumX[i]    = invLR * momentumX[i]    + learningRate * momentumXTrack[i];
-      momentumY[i]    = invLR * momentumY[i]    + learningRate * momentumYTrack[i];
+      momentumX[i] = invLR * momentumX[i] + learningRate * momentumXTrack[i];
+      momentumY[i] = invLR * momentumY[i] + learningRate * momentumYTrack[i];
     }
   }
 
