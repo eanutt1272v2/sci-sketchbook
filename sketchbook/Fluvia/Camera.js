@@ -29,9 +29,9 @@ class Camera {
   update() {
     const { current, target, lerpWeight } = this;
 
-    current.yaw   = lerp(current.yaw,   target.yaw,   lerpWeight);
+    current.yaw = lerp(current.yaw, target.yaw, lerpWeight);
     current.pitch = lerp(current.pitch, target.pitch, lerpWeight);
-    current.zoom  = lerp(current.zoom,  target.zoom,  lerpWeight);
+    current.zoom = lerp(current.zoom, target.zoom, lerpWeight);
 
     this.quaternion = Quaternion.fromEuler(current.pitch, current.yaw).normalise();
   }
