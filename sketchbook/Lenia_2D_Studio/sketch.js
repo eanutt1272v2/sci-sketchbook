@@ -1,6 +1,3 @@
-
-
-
 p5.disableFriendlyErrors = true;
 
 let automaton, board, renderer, analyser, animalLibrary, gui;
@@ -9,7 +6,7 @@ let mainCanvas;
 
 const metadata = {
   name: "Lenia2D Studio (DEV)",
-  version: "v0.9.0",
+  version: "v1.0.0",
   author: "@eanutt1272.v2"
 };
 
