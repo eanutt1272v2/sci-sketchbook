@@ -1,7 +1,7 @@
 # Fluvia
 
 ## Overview
-GPU-accelerated fluid and terrain simulation built with p5.js and GLSL.
+Partially GPU-accelerated fluid and terrain simulation built with p5.js and GLSL.
 
 The project combines interactive rendering with solver components for flow and erosion-style effects.
 
