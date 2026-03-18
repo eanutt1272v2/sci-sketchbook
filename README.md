@@ -17,18 +17,15 @@ A public deployment is available at `https://sci-sketchbook.onrender.com/`.
 | [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | Burning Ship fractal explorer on the complex plane. | Processing (Java), p5.js |
 | [Cellular Division](./sketchbook/Cellular_Division) | Particle-based emergent growth and division simulation. | Processing (Java), p5.js |
 | [Collatz Visualisation](./sketchbook/Collatz_Visualisation) | Tree-like rendering of Collatz trajectories. | p5.js |
-| [Diffusion Limited Aggregation](./sketchbook/Diffusion_Limited_Aggregation) | Brownian walkers aggregating into branching structures. | p5.js |
 | [Eigen](./sketchbook/Eigen) | Matrix, eigenvalue, and eigenvector visualisation tools. | p5.js |
 | [Fluvia](./sketchbook/Fluvia) | Fluid and erosion simulation with GLSL acceleration. | p5.js, GLSL |
 | [Fluvia Lite](./sketchbook/Fluvia_Lite) | Lightweight, fork-friendly Fluvia variant. | p5.js |
-| [GLSL Shader Exploration 01](./sketchbook/GLSL_Shader_Exploration_01) | Experimental procedural shader ported from a shader by Xor. | p5.js, GLSL |
 | [Julia Set](./sketchbook/Julia_Set) | Interactive Julia set fractal explorer. | Processing (Java), p5.js |
 | [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous cellular automata playground inspired by Lenia. | p5.js |
 | [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | Interactive Mandelbrot set fractal explorer. | Processing (Java), p5.js |
 | [MandelBulber](./sketchbook/MandelBulber) | 3D Mandelbulb point-cloud exploration in Processing. | Processing (Java) |
-| [Mandelbulb GLSL Shader](./sketchbook/Mandelbulb_GLSL_Shader) | Real-time Mandelbulb raymarching with GLSL. | p5.js, GLSL |
 | [Neural Network](./sketchbook/Neural_Network) | Visual and functional feedforward digit-recognition neural network demonstration. | Processing (Java) |
-| [Slime Mold Growth](./sketchbook/Slime_Mold_Growth) | Agent-based Physarum-style growth simulation. | JavaScript |
+| [Slime Mold Growth](./sketchbook/Slime_Mold_Growth) | Agent-based Physarum-style growth simulation. | p5.js |
 
 ## Running Locally
 
