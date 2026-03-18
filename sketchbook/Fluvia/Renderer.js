@@ -5,7 +5,7 @@ class Renderer {
     this.canvas3D = createGraphics(width, height, WEBGL);
     this.terrainShader = this.canvas3D.createShader(
       this.appcore.shaders.vert,
-      this.appcore.shaders.frag
+      this.appcore.shaders.frag,
     );
 
     const { size } = this.appcore.terrain;
@@ -129,9 +129,15 @@ class Renderer {
 
   generateTextures(is3D) {
     const { params, terrain, camera } = this.appcore;
-    const { 
-      surfaceMap, lightDir, flatColour, steepColour, 
-      sedimentColour, waterColour, skyColour, specularIntensity 
+    const {
+      surfaceMap,
+      lightDir,
+      flatColour,
+      steepColour,
+      sedimentColour,
+      waterColour,
+      skyColour,
+      specularIntensity,
     } = params;
 
     const { size, area, heightMap, originalHeightMap, sedimentMap } = terrain;
@@ -140,15 +146,20 @@ class Renderer {
       this.updateLUT(params.colourMap || "viridis");
     }
 
-    const lightMag = Math.sqrt(lightDir.x ** 2 + lightDir.y ** 2 + lightDir.z ** 2) || 1;
+    const lightMag =
+      Math.sqrt(lightDir.x ** 2 + lightDir.y ** 2 + lightDir.z ** 2) || 1;
     const lX = lightDir.x / lightMag;
     const lY = lightDir.y / lightMag;
     const lZ = lightDir.z / lightMag;
 
-    let vX = 0, vY = 1, vZ = 0;
+    let vX = 0,
+      vY = 1,
+      vZ = 0;
     if (is3D) {
       const v = camera.getViewDirection();
-      vX = v.x; vY = v.y; vZ = v.z;
+      vX = v.x;
+      vY = v.y;
+      vZ = v.z;
     }
 
     const bounds = this.calculateBounds(surfaceMap);
@@ -177,9 +188,9 @@ class Renderer {
         const diffuse = Math.max(0, dot);
         const sW = normal.y * 0.5 + 0.5;
 
-        const shR = diffuse + (skyColour.r * 0.000588) * sW;
-        const shG = diffuse + (skyColour.g * 0.000588) * sW;
-        const shB = diffuse + (skyColour.b * 0.000588) * sW;
+        const shR = diffuse + skyColour.r * 0.000588 * sW;
+        const shG = diffuse + skyColour.g * 0.000588 * sW;
+        const shB = diffuse + skyColour.b * 0.000588 * sW;
 
         const steep = 1 - normal.y;
         r = (normal.y * flatColour.r + steep * steepColour.r) * shR;
@@ -204,9 +215,14 @@ class Renderer {
           b = (1 - a) * b + a * waterColour.b * s * shB;
 
           if (is3D) {
-            const hX = lX + vX, hY = lY + vY, hZ = lZ + vZ;
+            const hX = lX + vX,
+              hY = lY + vY,
+              hZ = lZ + vZ;
             const hM = Math.sqrt(hX * hX + hY * hY + hZ * hZ) || 1;
-            const ndotH = Math.max(0, (normal.x * hX + normal.y * hY + normal.z * hZ) / hM);
+            const ndotH = Math.max(
+              0,
+              (normal.x * hX + normal.y * hY + normal.z * hZ) / hM,
+            );
             const spec = Math.pow(ndotH, 120) * (specularIntensity || 255) * a;
 
             r = Math.min(255, r + spec);
@@ -249,39 +265,44 @@ class Renderer {
 
     if (mode === "height") {
       const bounds = terrain.getMapBounds(terrain.heightMap);
-      return { min: bounds.min, range: (bounds.max - bounds.min) || 1 };
+      return { min: bounds.min, range: bounds.max - bounds.min || 1 };
     }
 
     if (mode === "discharge") {
       const bounds = terrain.getDischargeBounds();
-      return { min: bounds.min, range: (bounds.max - bounds.min) || 1 };
+      return { min: bounds.min, range: bounds.max - bounds.min || 1 };
     }
 
     if (mode === "sediment") {
       const bounds = terrain.getMapBounds(terrain.sedimentMap);
-      return { min: bounds.min, range: (bounds.max - bounds.min) || 1 };
+      return { min: bounds.min, range: bounds.max - bounds.min || 1 };
     }
 
     return { min: 0, range: 1 };
   }
 
   render() {
-     const terrain = this.appcore.terrain;
-     if (!terrain || !terrain.heightMap || !terrain.sedimentMap || !terrain.dischargeMap) {
-       if (this.appcore.params.displayMethod === "3D") {
-         image(this.canvas3D, 0, 0, width, height);
-       } else {
-         image(this.canvas2D, 0, 0, width, height);
-       }
-       this.renderOverlay();
-       return;
-     }
+    const terrain = this.appcore.terrain;
+    if (
+      !terrain ||
+      !terrain.heightMap ||
+      !terrain.sedimentMap ||
+      !terrain.dischargeMap
+    ) {
+      if (this.appcore.params.displayMethod === "3D") {
+        image(this.canvas3D, 0, 0, width, height);
+      } else {
+        image(this.canvas2D, 0, 0, width, height);
+      }
+      this.renderOverlay();
+      return;
+    }
 
-    const is3D = (this.appcore.params.displayMethod === "3D");
+    const is3D = this.appcore.params.displayMethod === "3D";
     const nowMs = performance.now();
     const shouldUpdateTexture =
       this.textureDirty ||
-      (nowMs - this.lastTextureUpdateMs) >= this.textureUpdateIntervalMs;
+      nowMs - this.lastTextureUpdateMs >= this.textureUpdateIntervalMs;
 
     if (shouldUpdateTexture) {
       const startMs = performance.now();
@@ -298,7 +319,7 @@ class Renderer {
       this.render2D();
     }
 
-	  this.renderOverlay();
+    this.renderOverlay();
   }
 
   render2D() {
@@ -311,14 +332,18 @@ class Renderer {
     const eye = camera.getEyePosition();
     const up = camera.getUpVector();
 
-    canvas3D.background(params.skyColour.r, params.skyColour.g, params.skyColour.b);
-    
+    canvas3D.background(
+      params.skyColour.r,
+      params.skyColour.g,
+      params.skyColour.b,
+    );
+
     canvas3D.push();
     canvas3D.resetMatrix();
     canvas3D.perspective(PI / 3, width / height, 0.1, 30000);
     canvas3D.camera(eye.x, eye.y, eye.z, 0, 0, 0, up.x, up.y, up.z);
 
-	  canvas3D.noStroke();
+    canvas3D.noStroke();
     canvas3D.shader(terrainShader);
     terrainShader.setUniform("uHeightMap", heightMapTexture);
     terrainShader.setUniform("uTexture", canvas2D);
@@ -340,7 +365,7 @@ class Renderer {
   renderStats() {
     push();
     const { statistics, params } = this.appcore;
-    
+
     fill(255);
     textSize(15);
     textAlign(LEFT, TOP);
@@ -348,15 +373,15 @@ class Renderer {
     const lines = [
       `FPS: ${statistics.fps.toFixed(2)}`,
       `Time: ${statistics.simulationTime.toFixed(2)}s`,
-	    `Display Method: ${params.displayMethod}`,
+      `Display Method: ${params.displayMethod}`,
       `Surface Map: ${params.surfaceMap}`,
-	    `Colour Map: ${params.colourMap}`,
+      `Colour Map: ${params.colourMap}`,
       `Elevation Range: ${statistics.heightBounds.min.toFixed(3)} - ${statistics.heightBounds.max.toFixed(3)}`,
       `Peak Discharge: ${statistics.peakDischarge.toFixed(3)}`,
-      `Rugosity Index: ${statistics.rugosity.toFixed(3)}`
+      `Rugosity Index: ${statistics.rugosity.toFixed(3)}`,
     ];
 
-    text(lines.join('\n'), 20, 20);
+    text(lines.join("\n"), 20, 20);
     pop();
   }
 
@@ -379,12 +404,12 @@ class Renderer {
       const c = params[item.cKey];
       const y = 15 + i * 28;
       fill(c.r, c.g, c.b);
-		stroke(255, 200);
-		strokeWeight(1);
+      stroke(255, 200);
+      strokeWeight(1);
       rect(width - 110, y, 20, 20);
-      
+
       fill(255);
-		noStroke();
+      noStroke();
       text(item.l, width - 82, y + 10);
     });
     pop();
@@ -405,10 +430,13 @@ class Renderer {
     for (let i = 0; i <= 10; i++) {
       const t = i / 10;
       const idx = (((1 - t) * 255) | 0) * 3;
-      grad.addColorStop(t, `rgb(${this.lut[idx]}, ${this.lut[idx+1]}, ${this.lut[idx+2]})`);
+      grad.addColorStop(
+        t,
+        `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
+      );
     }
 
-	  drawingContext.strokeStyle = 'rgba(255, 255, 255, 0.78)';
+    drawingContext.strokeStyle = "rgba(255, 255, 255, 0.78)";
     drawingContext.lineWidth = 1;
 
     drawingContext.fillStyle = grad;
@@ -420,14 +448,14 @@ class Renderer {
     const labels = [
       { v: b.min + b.range, y: y1 },
       { v: b.min + b.range / 2, y: y1 + h / 2 },
-      { v: b.min, y: y2 }
+      { v: b.min, y: y2 },
     ];
 
     fill(255);
     textSize(11);
     textAlign(RIGHT, CENTER);
 
-    labels.forEach(l => {
+    labels.forEach((l) => {
       text(l.v.toFixed(3), x - w - 6, l.y);
       stroke(255, 100);
       line(x - w - 3, l.y, x - w, l.y);
