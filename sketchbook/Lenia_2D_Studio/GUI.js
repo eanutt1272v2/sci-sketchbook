@@ -1,11 +1,11 @@
 class GUI {
-  constructor(params, statistics, displayData, metadata, animalLibrary = null, appCore = null) {
+  constructor(params, statistics, displayData, metadata, animalLibrary = null, appcore = null) {
     this.params = params;
     this.statistics = statistics;
     this.displayData = displayData;
     this.metadata = metadata;
     this.animalLibrary = animalLibrary;
-    this.appCore = appCore;
+    this.appcore = appcore;
     this.pane = null;
     this.animalBinding = null;
   }
@@ -40,9 +40,9 @@ class GUI {
 
     page.addBinding(params, "running", { label: "Running" });
 
-    page.addButton({ title: "Step Once" }).on("click", () => this.appCore?.stepOnce());
-    page.addButton({ title: "Clear World" }).on("click", () => this.appCore?.clearWorld());
-    page.addButton({ title: "Randomise" }).on("click", () => this.appCore?.randomiseWorld());
+    page.addButton({ title: "Step Once" }).on("click", () => this.appcore?.stepOnce());
+    page.addButton({ title: "Clear World" }).on("click", () => this.appcore?.clearWorld());
+    page.addButton({ title: "Randomise" }).on("click", () => this.appcore?.randomiseWorld());
 
     page.addBlade({ view: "separator" });
 
@@ -65,12 +65,12 @@ class GUI {
     page.addBinding(params, "gridSize", {
       label: "Grid Size",
       options: { "64×64": 64, "128×128": 128, "256×256": 256 }
-    }).on("change", () => this.appCore?.changeResolution());
+    }).on("change", () => this.appcore?.changeResolution());
   }
 
   createParametersTab(page) {
     const { params } = this;
-    const automaton = this.appCore?.automaton;
+    const automaton = this.appcore?.automaton;
 
     const growth = page.addFolder({ title: "Growth Function", expanded: true });
 
@@ -149,7 +149,7 @@ class GUI {
     page.addBinding(params, "placeMode", { label: "Place Mode" });
 
     page.addButton({ title: "Load Selected Animal" })
-    .on("click", () => this.appCore?.loadSelectedAnimal());
+    .on("click", () => this.appcore?.loadSelectedAnimal());
   }
 
   createDisplayTab(page) {
@@ -173,6 +173,8 @@ class GUI {
     overlay.addBinding(params, "showScale", { label: "Scale Bar" });
     overlay.addBinding(params, "showColourmap", { label: "Legend" });
     overlay.addBinding(params, "showStats", { label: "Statistics" });
+    overlay.addBinding(params, "showMotionOverlay", { label: "Motion Overlay" });
+    overlay.addBinding(params, "renderKeymapRef", { label: "Keymap Reference (#)" });
   }
 
   createStatisticsTab(page) {
@@ -205,9 +207,9 @@ class GUI {
 
   createExportTab(page) {
     const { statistics } = this;
-    const board = this.appCore?.board;
-    const automaton = this.appCore?.automaton;
-    const analyser = this.appCore?.analyser;
+    const board = this.appcore?.board;
+    const automaton = this.appcore?.automaton;
+    const analyser = this.appcore?.analyser;
 
     page.addButton({ title: "Export World (JSON)" }).on("click", () => {
       const data = board?.toJSON();

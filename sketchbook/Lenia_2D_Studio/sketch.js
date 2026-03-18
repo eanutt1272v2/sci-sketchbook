@@ -5,8 +5,8 @@ let font, animalsData;
 let mainCanvas;
 
 const metadata = {
-  name: "Lenia2D Studio (DEV)",
-  version: "v1.0.0",
+  name: "Lenia2D Studio",
+  version: "v1.0.0-dev",
   author: "@eanutt1272.v2"
 };
 
@@ -93,8 +93,11 @@ function windowResized() {
 }
 
 function keyPressed() {
-  const pressedKey = key || event.key;
-  return appcore.handleKeyPressed(pressedKey);
+  return appcore.handleKeyPressed(key || event.key, keyCode);
+}
+
+function keyReleased() {
+  return appcore.handleKeyReleased(key || event.key, keyCode);
 }
 
 function downloadFile(content, filename, mimeType) {

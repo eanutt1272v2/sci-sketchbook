@@ -13,6 +13,15 @@ Continuous cellular automata studio inspired by Lenia, designed for experimentin
 - Adjust kernel and growth parameters
 - Tune simulation speed and visualisation settings
 
+### Keyboard Shortcuts
+| Key | Action |
+|-----|--------|
+| `M` | Toggle motion overlay (centre dot + direction arrow) |
+| `S` | Save canvas as PNG |
+| `E` | Export world state (JSON) |
+| `C` | Export statistics (CSV) |
+| `R` | Reset simulation to defaults |
+
 ## How to Run
 
 ### Browser (p5.js/WebGL)

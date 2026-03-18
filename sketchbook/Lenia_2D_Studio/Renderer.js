@@ -174,6 +174,170 @@ class Renderer {
     pop();
   }
 
+  drawKeymapRef(metadata) {
+    const { name, version } = metadata;
+
+    push();
+    fill(0, 215);
+    noStroke();
+    rect(0, 0, width, height);
+
+    fill(255);
+    textAlign(LEFT, TOP);
+    let x = 50;
+    let y = 50;
+    const lh = 26;
+
+    textSize(24);
+    text(`${name} ${version}  —  Keyboard Reference`, x, y);
+
+    y += 48;
+    textSize(14);
+
+    const colW = (width - 100) / 2;
+
+    const sections = [
+      {
+        title: "Simulation",
+        entries: [
+          ["Space",  "Pause / Resume"],
+          ["N",      "Step once"],
+          ["Z",      "Randomise world"],
+          ["X",      "Clear world"],
+          ["R",      "Full reset (clear + defaults)"],
+        ]
+      },
+      {
+        title: "Display",
+        entries: [
+          ["Tab",    "Cycle display mode  (world → potential → field → kernel)"],
+          ["G",      "Toggle grid"],
+          ["L",      "Toggle colour legend"],
+          ["O",      "Toggle stats overlay"],
+          ["M",      "Toggle motion overlay  (dot + direction arrow)"],
+          ["B",      "Toggle scale bar"],
+          ["H",      "Hide / show GUI panel"],
+        ]
+      },
+      {
+        title: "Parameters",
+        entries: [
+          ["[ / ]",  "Decrease / increase kernel radius (R)"],
+          ["; / '",  "Decrease / increase time steps (T)"],
+        ]
+      },
+      {
+        title: "Export",
+        entries: [
+          ["S",      "Save canvas as PNG"],
+          ["E",      "Export world state (JSON)"],
+          ["C",      "Export statistics (CSV)"],
+        ]
+      },
+      {
+        title: "Reference",
+        entries: [
+          ["#",      "Toggle this keymap reference"],
+        ]
+      }
+    ];
+
+    let col = 0;
+    let cx = x;
+    let cy = y;
+
+    for (const section of sections) {
+      if (cy + (section.entries.length + 2) * lh > height - 30 && col === 0) {
+        col = 1;
+        cx = x + colW;
+        cy = y;
+      }
+
+      fill(180, 220, 255);
+      textSize(13);
+      text(section.title.toUpperCase(), cx, cy);
+      cy += lh - 4;
+
+      stroke(255, 40);
+      line(cx, cy, cx + colW - 20, cy);
+      noStroke();
+      cy += 8;
+
+      for (const [k, desc] of section.entries) {
+        fill(255);
+        textSize(13);
+        text(k, cx, cy);
+        fill(200);
+        text(desc, cx + 130, cy);
+        cy += lh;
+      }
+
+      cy += 14;
+    }
+
+    fill(120);
+    textSize(11);
+    textAlign(CENTER, BOTTOM);
+    text("Press  #  to close", width / 2, height - 16);
+
+    pop();
+  }
+
+  drawMotionOverlay(statistics) {
+    const { centerX, centerY, speed, angle } = statistics;
+    if (centerX === 0 && centerY === 0 && speed === 0) return;
+
+    const cx = (centerX / this.size) * width;
+    const cy = (centerY / this.size) * height;
+    const cellPx = width / this.size;
+
+    const arrowLen = Math.max(24, speed * cellPx * 8);
+    const rad = angle * Math.PI / 180;
+    const tx = cx + Math.cos(rad) * arrowLen;
+    const ty = cy + Math.sin(rad) * arrowLen;
+
+    const headLen = Math.max(8, arrowLen * 0.25);
+    const headAngle = 0.42;
+    const ax1 = tx - headLen * Math.cos(rad - headAngle);
+    const ay1 = ty - headLen * Math.sin(rad - headAngle);
+    const ax2 = tx - headLen * Math.cos(rad + headAngle);
+    const ay2 = ty - headLen * Math.sin(rad + headAngle);
+
+    push();
+    stroke(0, 0, 0, 160);
+    strokeWeight(3);
+    noFill();
+    line(cx, cy, tx, ty);
+    line(tx, ty, ax1, ay1);
+    line(tx, ty, ax2, ay2);
+
+    stroke(220, 220, 220, 230);
+    strokeWeight(1.5);
+    line(cx, cy, tx, ty);
+    line(tx, ty, ax1, ay1);
+    line(tx, ty, ax2, ay2);
+
+    noStroke();
+    fill(0, 0, 0, 160);
+    const dotR = Math.max(5, cellPx * 0.6);
+    ellipse(cx, cy, (dotR + 2) * 2, (dotR + 2) * 2);
+    fill(220, 220, 220, 230);
+    ellipse(cx, cy, dotR * 2, dotR * 2);
+
+    fill(220, 220, 220, 210);
+    noStroke();
+    textSize(10);
+    textAlign(LEFT, TOP);
+    const labelX = cx + dotR + 4;
+    const labelY = cy - 10;
+    fill(0, 150);
+    rect(labelX - 2, labelY - 1, 115, 20, 3);
+    fill(255, 230);
+    text(`${angle.toFixed(1)}°  spd: ${speed.toFixed(3)}`, labelX + 2, labelY + 3);
+
+    pop();
+  }
+
   drawStats(statistics, params) {
     push();
 
@@ -185,11 +349,11 @@ class Renderer {
     textSize(14);
     textAlign(LEFT, TOP);
     const stats = [
-      `Gen: ${String(statistics.gen).padStart(6)} | T: ${statistics.time.toFixed(3)}s`,
+      `Gen: ${String(statistics.gen)} | T: ${statistics.time.toFixed(3)}s`,
       `Mass: ${(statistics.mass / RN).toFixed(3)} | Growth: ${(statistics.growth / RN).toFixed(4)}`,
       `Peak: ${statistics.maxValue.toFixed(3)} | Gyrad: ${statistics.gyradius.toFixed(2)}`,
       `Centre: (${statistics.centerX?.toFixed(1) || '0'}, ${statistics.centerY?.toFixed(1) || '0'})`,
-      `MassAsymmetry: ${(statistics.massAsym || 0).toFixed(3)} | Speed: ${(statistics.speed || 0).toFixed(3)}`,
+      `MassAsym: ${(statistics.massAsym || 0).toFixed(3)} | Speed: ${(statistics.speed || 0).toFixed(3)}`,
       `Symmetry: ${statistics.symmSides || '?'}-fold (${((statistics.symmStrength || 0) * 100).toFixed(1)}%)`,
       `FPS: ${statistics.fps}`
     ];

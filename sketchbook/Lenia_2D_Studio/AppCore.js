@@ -22,6 +22,8 @@ class AppCore {
       showScale: true,
       showColourmap: true,
       showStats: true,
+      showMotionOverlay: false,
+      renderKeymapRef: false,
 
       selectedAnimal: "",
       placeMode: true
@@ -51,7 +53,6 @@ class AppCore {
 
     this.font = font;
 
-    // Initialize components
     this.animalLibrary = new AnimalLibrary(this.params);
     this.animalLibrary.loadFromData(animalsData);
     this.board = new Board(this.params.gridSize);
@@ -59,6 +60,7 @@ class AppCore {
     this.analyser = new Analyser(this.statistics, this.displayData);
     this.renderer = new Renderer(this.params.gridSize);
     this.gui = new GUI(this.params, this.statistics, this.displayData, this.metadata, this.animalLibrary, this);
+    this.input = new InputHandler(this);
   }
 
   setup() {
@@ -93,6 +95,10 @@ class AppCore {
 
     if (this.params.showStats) {
       this.renderer.drawStats(this.statistics, this.params);
+    }
+
+    if (this.params.showMotionOverlay && this.params.displayMode !== "kernel") {
+      this.renderer.drawMotionOverlay(this.statistics, this.params);
     }
 
     this.analyser.updateFps();
@@ -193,37 +199,16 @@ class AppCore {
     }
   }
 
-  handleKeyPressed(pressedKey) {
-    if (pressedKey === 'e' || pressedKey === 'E') {
-      const data = this.board.toJSON();
-      const json = JSON.stringify(data, null, 2);
-      console.log('Exporting world state...');
-      downloadFile(json, `lenia-world-${this.automaton.gen}.json`, 'application/json');
-      return false;
-    }
+  handleKeyPressed(k, kCode) {
+    return this.input.handleKeyPressed(k, kCode);
+  }
 
-    if (pressedKey === 'c' || pressedKey === 'C') {
-      const csv = this.analyser.exportCSV();
-      console.log('Exporting statistics to CSV...');
-      downloadFile(csv, `lenia-stats-${this.automaton.gen}.csv`, 'text/csv');
-      return false;
-    }
+  handleKeyReleased(k, kCode) {
+    return this.input.handleKeyReleased(k, kCode);
+  }
 
-    if (pressedKey === 's' || pressedKey === 'S') {
-      console.log('Saving canvas as PNG...');
-      saveCanvas(`lenia-frame-${this.automaton.gen}`, 'png');
-      return false;
-    }
-
-    if (pressedKey === 'r' || pressedKey === 'R') {
-      this.automaton.reset();
-      this.analyser.reset();
-      this.clearWorld();
-      console.log('Reset to defaults');
-      return false;
-    }
-
-    return false;
+  refreshGUI() {
+    if (this.gui && this.gui.pane) this.gui.pane.refresh();
   }
 
   windowResized() {
