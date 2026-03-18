@@ -1,6 +1,3 @@
-// FluviaWorker.js — Hydraulic erosion worker
-// Runs erosion and discharge update off the main thread.
-
 "use strict";
 
 const SQRT2 = Math.SQRT2;
@@ -10,7 +7,6 @@ const neighbours = [
   { x: 1, y: -1, distance: SQRT2 },  { x: 1, y: 0, distance: 1 },  { x: 1, y: 1, distance: SQRT2 },
 ];
 
-// Fast seeded RNG for worker-side deterministic randomness.
 function mulberry32(seed) {
   let t = seed >>> 0;
   return function () {
@@ -255,7 +251,6 @@ self.onmessage = function (e) {
     area: data.size * data.size,
     randomSeed: data.randomSeed,
 
-    // Parameters
     dropletsPerFrame: data.params.dropletsPerFrame,
     maxAge: data.params.maxAge,
     minVolume: data.params.minVolume,
@@ -272,7 +267,6 @@ self.onmessage = function (e) {
     learningRate: data.params.learningRate,
     heightScale: data.params.heightScale,
 
-    // Terrain maps
     heightMap: new Float32Array(data.heightMap),
     bedrockMap: new Float32Array(data.bedrockMap),
     sedimentMap: new Float32Array(data.sedimentMap),
