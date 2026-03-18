@@ -5,7 +5,7 @@ let vertShader, fragShader, colourMaps, font;
 
 const metadata = {
   name: "Fluvia",
-  version: "v4.8.0-dev",
+  version: "v5.1.1-dev",
   author: "@eanutt1272.v2"
 };
 
