@@ -1,9 +1,11 @@
 class GUI {
-  constructor(params, statistics, displayData, metadata) {
+  constructor(params, statistics, displayData, metadata, animalLibrary = null, appCore = null) {
     this.params = params;
     this.statistics = statistics;
     this.displayData = displayData;
     this.metadata = metadata;
+    this.animalLibrary = animalLibrary;
+    this.appCore = appCore;
     this.pane = null;
     this.animalBinding = null;
   }
@@ -38,9 +40,9 @@ class GUI {
 
     page.addBinding(params, "running", { label: "Running" });
 
-    page.addButton({ title: "Step Once" }).on("click", () => stepOnce());
-    page.addButton({ title: "Clear World" }).on("click", () => clearWorld());
-    page.addButton({ title: "Randomise" }).on("click", () => randomiseWorld());
+    page.addButton({ title: "Step Once" }).on("click", () => this.appCore?.stepOnce());
+    page.addButton({ title: "Clear World" }).on("click", () => this.appCore?.clearWorld());
+    page.addButton({ title: "Randomise" }).on("click", () => this.appCore?.randomiseWorld());
 
     page.addBlade({ view: "separator" });
 
@@ -63,21 +65,22 @@ class GUI {
     page.addBinding(params, "gridSize", {
       label: "Grid Size",
       options: { "64×64": 64, "128×128": 128, "256×256": 256 }
-    }).on("change", () => changeResolution());
+    }).on("change", () => this.appCore?.changeResolution());
   }
 
   createParametersTab(page) {
     const { params } = this;
+    const automaton = this.appCore?.automaton;
 
     const growth = page.addFolder({ title: "Growth Function", expanded: true });
 
     growth.addBinding(params, "m", {
       min: 0, max: 0.5, step: 0.001, label: "Centre (μ)"
-    }).on("change", () => automaton.updateParameters(params));
+    }).on("change", () => automaton?.updateParameters(params));
 
     growth.addBinding(params, "s", {
       min: 0.001, max: 0.1, step: 0.0001, label: "Width (σ)"
-    }).on("change", () => automaton.updateParameters(params));
+    }).on("change", () => automaton?.updateParameters(params));
 
     this.growthBinding = growth.addBinding(params, "gn", {
       label: "Type",
@@ -86,7 +89,7 @@ class GUI {
         "Exponential": 2,
         "Step": 3
       }
-    }).on("change", () => automaton.updateParameters(params));
+    }).on("change", () => automaton?.updateParameters(params));
 
     page.addBlade({ view: "separator" });
 
@@ -94,7 +97,7 @@ class GUI {
 
     kernel.addBinding(params, "R", {
       min: 2, max: 50, step: 1, label: "Radius (R)"
-    }).on("change", () => automaton.updateParameters(params));
+    }).on("change", () => automaton?.updateParameters(params));
 
     this.kernelBinding = kernel.addBinding(params, "kn", {
       label: "Type",
@@ -104,7 +107,7 @@ class GUI {
         "Step": 3,
         "Staircase": 4
       }
-    }).on("change", () => automaton.updateParameters(params));
+    }).on("change", () => automaton?.updateParameters(params));
 
     page.addBlade({ view: "separator" });
 
@@ -112,25 +115,25 @@ class GUI {
 
     time.addBinding(params, "T", {
       min: 1, max: 50, step: 1, label: "Steps (T)"
-    }).on("change", () => automaton.updateParameters(params));
+    }).on("change", () => automaton?.updateParameters(params));
 
     time.addBinding(params, "softClip", { label: "Soft Clipping" })
-    .on("change", () => automaton.updateParameters(params));
+    .on("change", () => automaton?.updateParameters(params));
 
     time.addBinding(params, "multiStep", { label: "Multi-Step" })
-    .on("change", () => automaton.updateParameters(params));
+    .on("change", () => automaton?.updateParameters(params));
 
     time.addBinding(params, "addNoise", {
       min: 0, max: 10, step: 0.1, label: "Noise"
-    }).on("change", () => automaton.updateParameters(params));
+    }).on("change", () => automaton?.updateParameters(params));
 
     time.addBinding(params, "maskRate", {
       min: 0, max: 10, step: 0.1, label: "Mask Rate"
-    }).on("change", () => automaton.updateParameters(params));
+    }).on("change", () => automaton?.updateParameters(params));
 
     time.addBinding(params, "paramP", {
       min: 0, max: 64, step: 1, label: "Quantisation P"
-    }).on("change", () => automaton.updateParameters(params));
+    }).on("change", () => automaton?.updateParameters(params));
   }
 
   createAnimalsTab(page) {
@@ -138,7 +141,7 @@ class GUI {
 
     this.animalBinding = page.addBinding(params, "selectedAnimal", {
       label: "Lifeform",
-      options: animalLibrary.getAnimalList()
+      options: this.animalLibrary ? this.animalLibrary.getAnimalList() : {}
     });
 
     page.addBlade({ view: "separator" });
@@ -146,7 +149,7 @@ class GUI {
     page.addBinding(params, "placeMode", { label: "Place Mode" });
 
     page.addButton({ title: "Load Selected Animal" })
-    .on("click", () => loadSelectedAnimal());
+    .on("click", () => this.appCore?.loadSelectedAnimal());
   }
 
   createDisplayTab(page) {
@@ -201,19 +204,26 @@ class GUI {
   }
 
   createExportTab(page) {
+    const { statistics } = this;
+    const board = this.appCore?.board;
+    const automaton = this.appCore?.automaton;
+    const analyser = this.appCore?.analyser;
+
     page.addButton({ title: "Export World (JSON)" }).on("click", () => {
-      const data = board.toJSON();
+      const data = board?.toJSON();
+      if (!data) return;
       const json = JSON.stringify(data, null, 2);
       downloadFile(json, `lenia-world-${automaton.gen}.json`, 'application/json');
     });
 
     page.addButton({ title: "Export Statistics (CSV)" }).on("click", () => {
-      const csv = analyser.exportCSV();
+      const csv = analyser?.exportCSV();
+      if (!csv) return;
       downloadFile(csv, `lenia-stats-${automaton.gen}.csv`, 'text/csv');
     });
 
     page.addButton({ title: "Export Canvas (PNG)" }).on("click", () => {
-      saveCanvas(`lenia-frame-${automaton.gen}`, 'png');
+      saveCanvas(`lenia-frame-${automaton?.gen || 0}`, 'png');
     });
 
     page.addBlade({ view: "separator" });
@@ -221,6 +231,7 @@ class GUI {
     page.addBinding(statistics, "gen", { readonly: true, label: "Current Gen" });
     
     page.addButton({ title: "Clear Statistics" }).on("click", () => {
+      if (!analyser) return;
       analyser.series = [];
       analyser.reset();
     });
@@ -228,6 +239,7 @@ class GUI {
     page.addBlade({ view: "separator" });
 
     page.addButton({ title: "Print Statistics to Console" }).on("click", () => {
+      if (!analyser) return;
       console.log('Statistics Series:', analyser.series);
       console.log('Current Stats Row:', analyser.getStatRow());
     });

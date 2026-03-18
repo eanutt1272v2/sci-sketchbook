@@ -1,5 +1,3 @@
-
-
 class Analyser {
   static STAT_NAMES = {
     'p_m': 'Param m', 'p_s': 'Param s', 'n': 'Gen (#)', 't': 'Time (s)',
@@ -11,11 +9,31 @@ class Analyser {
 
   static STAT_HEADERS = Object.keys(Analyser.STAT_NAMES);
 
-  constructor() {
+  constructor(statistics = null, displayData = null) {
     this.epsilon = 1e-10;
     this.series = [];
     this.segmentInit = 128;
     this.segmentLen = 512;
+    this.statistics = statistics || {
+      gen: 0,
+      time: 0,
+      mass: 0,
+      growth: 0,
+      maxValue: 0,
+      gyradius: 0,
+      centerX: 0,
+      centerY: 0,
+      massAsym: 0,
+      speed: 0,
+      angle: 0,
+      symmSides: 0,
+      symmStrength: 0,
+      fps: 0
+    };
+    this.displayData = displayData || {
+      frameCount: 0,
+      lastTime: 0
+    };
 
     this.reset();
   }
@@ -187,7 +205,8 @@ class Analyser {
     this.lastAngles = angles;
   }
 
-  updateStatistics(board, automaton, params) {
+  updateStatistics(board, automaton) {
+    const statistics = this.statistics;
     const stats = this.analyse(board, automaton);
 
     statistics.gen = automaton.gen || 0;
@@ -206,6 +225,7 @@ class Analyser {
   }
 
   resetStatistics() {
+    const statistics = this.statistics;
     statistics.gen = 0;
     statistics.time = 0;
     statistics.mass = 0;
@@ -219,9 +239,12 @@ class Analyser {
     statistics.angle = 0;
     statistics.symmSides = 0;
     statistics.symmStrength = 0;
+    statistics.fps = 0;
   }
 
   updateFps() {
+    const displayData = this.displayData;
+    const statistics = this.statistics;
     displayData.frameCount++;
     const now = millis();
 
@@ -234,6 +257,7 @@ class Analyser {
     }
   }
   getStatRow() {
+    const statistics = this.statistics;
     return [
       statistics.fps || 0,
       statistics.gen || 0,

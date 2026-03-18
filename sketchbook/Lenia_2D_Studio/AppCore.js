@@ -52,13 +52,13 @@ class AppCore {
     this.font = font;
 
     // Initialize components
-    this.animalLibrary = new AnimalLibrary();
+    this.animalLibrary = new AnimalLibrary(this.params);
     this.animalLibrary.loadFromData(animalsData);
     this.board = new Board(this.params.gridSize);
     this.automaton = new Automaton(this.params);
-    this.analyser = new Analyser();
+    this.analyser = new Analyser(this.statistics, this.displayData);
     this.renderer = new Renderer(this.params.gridSize);
-    this.gui = new GUI(this.params, this.statistics, this.displayData, this.metadata);
+    this.gui = new GUI(this.params, this.statistics, this.displayData, this.metadata, this.animalLibrary, this);
   }
 
   setup() {
@@ -104,7 +104,7 @@ class AppCore {
 
   stepOnce() {
     this.automaton.step(this.board);
-    this.analyser.updateStatistics(this.board, this.params);
+    this.analyser.updateStatistics(this.board, this.automaton, this.params);
   }
 
   clearWorld() {

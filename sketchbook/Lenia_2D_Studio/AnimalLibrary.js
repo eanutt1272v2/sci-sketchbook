@@ -1,7 +1,6 @@
-
-
 class AnimalLibrary {
-  constructor() {
+  constructor(params = null) {
+    this.params = params;
     this.animals = [];
     this.loaded = false;
   }
@@ -25,7 +24,9 @@ class AnimalLibrary {
   }
 
   applyAnimalParameters(animal) {
-    if (!animal?.params) return;
+    if (!animal?.params || !this.params) return;
+
+    const params = this.params;
 
     const { b, ...standardParams } = animal.params;
 

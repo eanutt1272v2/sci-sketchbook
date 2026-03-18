@@ -1,5 +1,3 @@
-
-
 class Automaton {
   static KERNEL_CORE = [
     (r) => Math.pow(4 * r * (1 - r), 4),  
