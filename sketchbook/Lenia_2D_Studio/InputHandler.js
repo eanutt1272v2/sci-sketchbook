@@ -3,6 +3,56 @@ class InputHandler {
     this.appcore = appcore;
   }
 
+  handleContinuousInput() {
+    if (this.shouldIgnoreKeyboard() || this.appcore.params.renderKeymapRef) {
+      return;
+    }
+
+    if (frameCount % 6 !== 0) {
+      return;
+    }
+
+    const { params } = this.appcore;
+    let shouldUpdateAutomaton = false;
+
+    if (keyIsDown(219) || keyIsDown(221)) {
+      params.R = constrain(params.R + (keyIsDown(221) ? 1 : -1), 2, 50);
+      shouldUpdateAutomaton = true;
+    }
+
+    if (keyIsDown(186) || keyIsDown(222)) {
+      params.T = constrain(params.T + (keyIsDown(222) ? 1 : -1), 1, 50);
+      shouldUpdateAutomaton = true;
+    }
+
+    if (keyIsDown(188) || keyIsDown(190)) {
+      params.m = constrain(params.m + (keyIsDown(190) ? 0.002 : -0.002), 0, 0.5);
+      shouldUpdateAutomaton = true;
+    }
+
+    const minusHeld = keyIsDown(189) || keyIsDown(173) || keyIsDown(109);
+    const plusHeld = keyIsDown(187) || keyIsDown(61) || keyIsDown(107);
+    if (minusHeld || plusHeld) {
+      params.s = constrain(params.s + (plusHeld ? 0.0005 : -0.0005), 0.001, 0.1);
+      shouldUpdateAutomaton = true;
+    }
+
+    if (keyIsDown(LEFT_ARROW) || keyIsDown(RIGHT_ARROW)) {
+      params.addNoise = constrain(params.addNoise + (keyIsDown(RIGHT_ARROW) ? 0.1 : -0.1), 0, 10);
+      shouldUpdateAutomaton = true;
+    }
+
+    if (keyIsDown(UP_ARROW) || keyIsDown(DOWN_ARROW)) {
+      params.maskRate = constrain(params.maskRate + (keyIsDown(UP_ARROW) ? 0.1 : -0.1), 0, 10);
+      shouldUpdateAutomaton = true;
+    }
+
+    if (shouldUpdateAutomaton) {
+      this.appcore.automaton.updateParameters(params);
+      this.appcore.refreshGUI();
+    }
+  }
+
   handleKeyPressed(k, kCode) {
     if (this.shouldIgnoreKeyboard()) return false;
 
@@ -25,6 +75,23 @@ class InputHandler {
 
     if (keyLower === "n") {
       this.appcore.stepOnce();
+      return false;
+    }
+
+    if (keyLower === "a") {
+      this._cycleAnimal(-1);
+      return false;
+    }
+
+    if (keyLower === "d") {
+      this._cycleAnimal(1);
+      return false;
+    }
+
+    if (keyLower === "f") {
+      this.appcore.loadSelectedAnimal();
+      this.appcore.refreshGUI();
+      console.log("[Lenia] Loaded selected animal");
       return false;
     }
 
@@ -51,7 +118,14 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "tab" || kCode === 9) {
+    if (keyLower === "p") {
+      this.appcore.params.placeMode = !this.appcore.params.placeMode;
+      this.appcore.refreshGUI();
+      console.log(`[Lenia] Place mode: ${this.appcore.params.placeMode}`);
+      return false;
+    }
+
+    if (kCode === 9) {
       this._cycleDisplayMode();
       this.appcore.refreshGUI();
       return false;
@@ -99,6 +173,43 @@ class InputHandler {
       if (this.appcore.gui && this.appcore.gui.pane) {
         this.appcore.gui.pane.hidden = !this.appcore.gui.pane.hidden;
       }
+      return false;
+    }
+
+    if (keyLower === "k") {
+      this.appcore.params.kn = this._cycleInt(this.appcore.params.kn, 1, 4, 1);
+      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.refreshGUI();
+      console.log(`[Lenia] Kernel type: ${this.appcore.params.kn}`);
+      return false;
+    }
+
+    if (keyLower === "y") {
+      this.appcore.params.gn = this._cycleInt(this.appcore.params.gn, 1, 3, 1);
+      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.refreshGUI();
+      console.log(`[Lenia] Growth type: ${this.appcore.params.gn}`);
+      return false;
+    }
+
+    if (keyLower === "u") {
+      this.appcore.params.softClip = !this.appcore.params.softClip;
+      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.refreshGUI();
+      console.log(`[Lenia] Soft clip: ${this.appcore.params.softClip}`);
+      return false;
+    }
+
+    if (keyLower === "i") {
+      this.appcore.params.multiStep = !this.appcore.params.multiStep;
+      this.appcore.automaton.updateParameters(this.appcore.params);
+      this.appcore.refreshGUI();
+      console.log(`[Lenia] Multi-step: ${this.appcore.params.multiStep}`);
+      return false;
+    }
+
+    if (keyLower === "v") {
+      this._cycleGridSize();
       return false;
     }
 
@@ -167,6 +278,42 @@ class InputHandler {
     const idx = modes.indexOf(this.appcore.params.displayMode);
     this.appcore.params.displayMode = modes[(idx + 1) % modes.length];
     console.log(`[Lenia] Display: ${this.appcore.params.displayMode}`);
+  }
+
+  _cycleGridSize() {
+    const sizes = [64, 128, 256];
+    const current = this.appcore.params.gridSize;
+    const idx = sizes.indexOf(current);
+    this.appcore.params.gridSize = sizes[(idx + 1) % sizes.length];
+    this.appcore.changeResolution();
+    this.appcore.refreshGUI();
+    console.log(`[Lenia] Grid size: ${this.appcore.params.gridSize}`);
+  }
+
+  _cycleAnimal(delta) {
+    const lib = this.appcore.animalLibrary;
+    if (!lib || !lib.animals || lib.animals.length === 0) return;
+
+    const total = lib.animals.length;
+    const current = parseInt(this.appcore.params.selectedAnimal, 10);
+    const base = Number.isNaN(current) ? 0 : current;
+    const next = (base + delta + total) % total;
+
+    this.appcore.params.selectedAnimal = String(next);
+    this.appcore.loadSelectedAnimal();
+    this.appcore.refreshGUI();
+
+    const animal = lib.getAnimal(next);
+    if (animal && animal.name) {
+      console.log(`[Lenia] Animal: ${animal.name}`);
+    }
+  }
+
+  _cycleInt(value, minValue, maxValue, step) {
+    const next = value + step;
+    if (next > maxValue) return minValue;
+    if (next < minValue) return maxValue;
+    return next;
   }
 
   shouldIgnoreKeyboard() {

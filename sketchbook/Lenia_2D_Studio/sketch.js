@@ -5,7 +5,7 @@ let font, animalsData;
 let mainCanvas;
 
 const metadata = {
-  name: "Lenia2D Studio",
+  name: "Lenia 2D Studio",
   version: "v1.0.0-dev",
   author: "@eanutt1272.v2"
 };

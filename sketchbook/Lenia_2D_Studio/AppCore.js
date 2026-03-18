@@ -74,6 +74,8 @@ class AppCore {
   }
 
   draw() {
+    this.input.handleContinuousInput();
+
     if (this.params.running) {
       this.automaton.step(this.board);
       this.analyser.updateStatistics(this.board, this.automaton, this.params);
@@ -99,6 +101,10 @@ class AppCore {
 
     if (this.params.showMotionOverlay && this.params.displayMode !== "kernel") {
       this.renderer.drawMotionOverlay(this.statistics, this.params);
+    }
+
+    if (this.params.renderKeymapRef) {
+      this.renderer.drawKeymapRef(this.metadata);
     }
 
     this.analyser.updateFps();

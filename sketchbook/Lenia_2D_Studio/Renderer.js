@@ -189,7 +189,7 @@ class Renderer {
     const lh = 26;
 
     textSize(24);
-    text(`${name} ${version}  —  Keyboard Reference`, x, y);
+    text(`${name} ${version} Keymap Reference`, x, y);
 
     y += 48;
     textSize(14);
@@ -200,44 +200,56 @@ class Renderer {
       {
         title: "Simulation",
         entries: [
-          ["Space",  "Pause / Resume"],
-          ["N",      "Step once"],
-          ["Z",      "Randomise world"],
-          ["X",      "Clear world"],
-          ["R",      "Full reset (clear + defaults)"],
+          ["Space", "Pause / Resume"],
+          ["N", "Step once"],
+          ["A / D", "Previous / next animal"],
+          ["F", "Load selected animal"],
+          ["P", "Toggle place mode"],
+          ["Z", "Randomise world"],
+          ["X", "Clear world"],
+          ["R", "Reset simulation state"],
         ]
       },
       {
         title: "Display",
         entries: [
-          ["Tab",    "Cycle display mode  (world → potential → field → kernel)"],
-          ["G",      "Toggle grid"],
-          ["L",      "Toggle colour legend"],
-          ["O",      "Toggle stats overlay"],
-          ["M",      "Toggle motion overlay  (dot + direction arrow)"],
-          ["B",      "Toggle scale bar"],
-          ["H",      "Hide / show GUI panel"],
+          ["Tab", "Cycle display mode"],
+          ["G", "Toggle grid"],
+          ["L", "Toggle colour legend"],
+          ["O", "Toggle stats overlay"],
+          ["M", "Toggle motion overlay"],
+          ["B", "Toggle scale bar"],
+          ["V", "Cycle grid size"],
+          ["H", "Hide / show GUI panel"],
         ]
       },
       {
         title: "Parameters",
         entries: [
-          ["[ / ]",  "Decrease / increase kernel radius (R)"],
-          ["; / '",  "Decrease / increase time steps (T)"],
+          ["[ / ]", "Decrease / increase kernel radius (R)"],
+          ["; / '", "Decrease / increase time steps (T)"],
+          [", / .", "Decrease / increase growth centre (m)"],
+          ["- / +", "Decrease / increase growth width (s)"],
+          ["\u2190 / \u2192",  "Decrease / increase noise"],
+          ["\u2191 / \u2193",  "Decrease / increase mask rate"],
+          ["K", "Cycle kernel function"],
+          ["Y", "Cycle growth function"],
+          ["U", "Toggle soft clipping"],
+          ["I", "Toggle multi-step integration"],
         ]
       },
       {
         title: "Export",
         entries: [
-          ["S",      "Save canvas as PNG"],
-          ["E",      "Export world state (JSON)"],
-          ["C",      "Export statistics (CSV)"],
+          ["S", "Save canvas as PNG"],
+          ["E", "Export world state (JSON)"],
+          ["C",  "Export statistics (CSV)"],
         ]
       },
       {
         title: "Reference",
         entries: [
-          ["#",      "Toggle this keymap reference"],
+          ["#", "Toggle keymap reference"],
         ]
       }
     ];
