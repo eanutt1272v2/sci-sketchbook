@@ -151,26 +151,18 @@ class Terrain {
 
     this.reset();
 
-    const offsets = Array.from({ length: noiseOctaves }, () => ({
-      x: random(100000), 
-      y: random(100000)
-    }));
+    noiseDetail(Math.max(1, noiseOctaves | 0), constrain(amplitudeFalloff, 0, 1));
+    const offsetX = random(100000);
+    const offsetY = random(100000);
+    const freq = noiseScale / 100;
 
     for (let i = 0; i < area; i++) {
       const x = i % size;
       const y = (i / size) | 0;
 
-      let amp = 1;
-      let freq = noiseScale / 100;
-      let noiseVal = 0;
-
-      for (let o = 0; o < noiseOctaves; o++) {
-        const sx = x * freq + offsets[o].x;
-        const sy = y * freq + offsets[o].y;
-        noiseVal += noise(sx, sy) * amp;
-        freq *= 2;
-        amp *= amplitudeFalloff;
-      }
+      const sx = x * freq + offsetX;
+      const sy = y * freq + offsetY;
+      const noiseVal = noise(sx, sy);
       heightMap[i] = Math.pow(noiseVal, 1.2);
     }
 

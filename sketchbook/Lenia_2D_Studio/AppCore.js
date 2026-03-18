@@ -90,6 +90,8 @@ class AppCore {
     this._pendingPlacement = null;
     this._pendingMutations = [];
     this._lastPlacement = { cellX: null, cellY: null, atMs: 0 };
+    this._skipNextAnimalParamsLoad = false;
+    this._lastAnimalParamsSelection = null;
     this._initWorker();
   }
 
@@ -446,6 +448,19 @@ class AppCore {
 
 
   loadSelectedAnimalParams() {
+    const currentSelection = this.params.selectedAnimal || "";
+
+    if (this._skipNextAnimalParamsLoad) {
+      this._skipNextAnimalParamsLoad = false;
+      this._lastAnimalParamsSelection = currentSelection;
+      return;
+    }
+
+    if (currentSelection === this._lastAnimalParamsSelection) {
+      return;
+    }
+
+    this._lastAnimalParamsSelection = currentSelection;
     const animal = this.getSelectedAnimal();
     if (animal) {
       this.loadAnimalParams(animal);
@@ -505,6 +520,8 @@ class AppCore {
 
     const firstAnimal = this.animalLibrary.getAnimal(0);
     if (firstAnimal) {
+      this._skipNextAnimalParamsLoad = true;
+      this._lastAnimalParamsSelection = "0";
       this.params.selectedAnimal = "0";
       this.loadAnimal(firstAnimal);
       this.refreshGUI();
