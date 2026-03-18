@@ -1,4 +1,4 @@
-// This is the solver script executed when SolverWorker.js cannot load properly - ie. A fallback
+// This is the solver script executed when SolverWorker.js cannot load properly - ie. A fallback. I plan to rename Solver.js, the class name, and references to it to FallbackSolver or fallbacksolver when I get round to it.
 
 class Solver {
   constructor(appcore) {
