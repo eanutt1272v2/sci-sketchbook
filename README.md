@@ -12,10 +12,10 @@ A collection of scientific and mathematical creative-coding sketches, simulation
 
 The repository includes projects built with:
 - `p5.js`
-- `Processing (Java)`
+- `Processing (Java)` (soon to be discontinued)
 - `GLSL` shaders (via p5.js/WebGL)
 
-A public deployment is available at `https://sci-sketchbook.onrender.com/`.
+A public deployment is available at <https://sci-sketchbook.onrender.com/>.
 
 ## Sketch Index
 
