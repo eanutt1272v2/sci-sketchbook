@@ -1,24 +1,5 @@
 
-/**
- * @fileoverview GUI.js - Tweakpane interface for Lenia2D
- * @description Interactive parameter tuning interface with 6 tabs: Simulation, Parameters,
- * Animals, Display, Statistics, Export
- * @version 2.0.0
- * @author @eanutt1272.v2
- * @license MIT
- * 
- * @requires Tweakpane v4.0+
- * 
- * @class GUI
- * @description Manages Tweakpane-based user interface
- * @classdesc Features:
- * - Simulation controls (run, step, randomise)
- * - Parameter tuning (all kernel/growth functions, integration options)
- * - Animal library browser
- * - Display mode selector
- * - Real-time statistics monitoring
- * - Export controls (JSON, CSV, PNG)
- */
+
 class GUI {
   constructor(params, statistics, displayData, metadata) {
     this.params = params;
@@ -195,8 +176,6 @@ class GUI {
 
   createStatisticsTab(page) {
     const { statistics } = this;
-
-    // Basic metrics
     const metrics = page.addFolder({ title: "Metrics" });
     metrics.addBinding(statistics, "gen", { readonly: true, label: "Generation" });
     metrics.addBinding(statistics, "time", { readonly: true, label: "Time (s)" });
@@ -206,8 +185,6 @@ class GUI {
     metrics.addBinding(statistics, "gyradius", { readonly: true, label: "Gyradius" });
 
     page.addBlade({ view: "separator" });
-
-    // Position and movement
     const motion = page.addFolder({ title: "Position & Motion" });
     motion.addBinding(statistics, "centerX", { readonly: true, label: "Center X" });
     motion.addBinding(statistics, "centerY", { readonly: true, label: "Center Y" });
@@ -215,8 +192,6 @@ class GUI {
     motion.addBinding(statistics, "angle", { readonly: true, label: "Angle (°)" });
 
     page.addBlade({ view: "separator" });
-
-    // Symmetry detection
     const symmetry = page.addFolder({ title: "Symmetry" });
     symmetry.addBinding(statistics, "symmSides", { readonly: true, label: "Fold Order" });
     symmetry.addBinding(statistics, "symmStrength", { readonly: true, label: "Strength" });

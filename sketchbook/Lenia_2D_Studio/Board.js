@@ -1,10 +1,5 @@
 
-/**
- * @file Board.js
- * @description Lenia world board - fully ported from LeniaND.py with transforms, crop, and serialization
- * @author @eanutt1272.v2
- * @version 2.0.0 (LeniaND port)
- */
+
 class Board {
   constructor(size) {
     this.size = size;
@@ -12,9 +7,7 @@ class Board {
     this.potential = this._createGrid();
     this.field = this._createGrid();
     this.fieldOld = null;
-    
-    // Metadata (LeniaND port)
-    this.names = ['', '', ''];  // [code, name, cname]
+    this.names = ['', '', ''];  
     this.params = {
       R: 13,
       T: 10,
@@ -107,8 +100,6 @@ class Board {
     this.field = this._createGrid();
     this.fieldOld = null;
   }
-
-  // LeniaND port: advanced transforms
   add(board, shift = [0, 0], isCentered = true) {
     const shift0 = shift[0] || 0;
     const shift1 = shift[1] || 0;
@@ -134,8 +125,6 @@ class Board {
     }
     return this;
   }
-
-  // Rotate the board 2D (angle in degrees)
   rotate(angle, order = 0) {
     if (angle % 360 === 0) return this;
 
@@ -163,8 +152,6 @@ class Board {
     this.cells.set(newCells);
     return this;
   }
-
-  // Scale/zoom the board
   scale(factor) {
     if (factor === 1) return this;
 
@@ -188,27 +175,22 @@ class Board {
     this.field = this._createGrid();
     return this;
   }
-
-  // Flip the board (flip_mode: 0=horizontal, 1=vertical, 2=diagonal)
   flip(flipMode = 0) {
     const newCells = this._createGrid();
 
     if (flipMode === 0) {
-      // Horizontal flip
       for (let y = 0; y < this.size; y++) {
         for (let x = 0; x < this.size; x++) {
           newCells[y * this.size + x] = this.cells[y * this.size + (this.size - 1 - x)];
         }
       }
     } else if (flipMode === 1) {
-      // Vertical flip
       for (let y = 0; y < this.size; y++) {
         for (let x = 0; x < this.size; x++) {
           newCells[y * this.size + x] = this.cells[(this.size - 1 - y) * this.size + x];
         }
       }
     } else if (flipMode === 2) {
-      // Transpose (main diagonal)
       for (let y = 0; y < this.size; y++) {
         for (let x = 0; x < this.size; x++) {
           newCells[y * this.size + x] = this.cells[x * this.size + y];
@@ -219,8 +201,6 @@ class Board {
     this.cells.set(newCells);
     return this;
   }
-
-  // Shift the board (wrap-around)
   shift(shiftX, shiftY) {
     const newCells = this._createGrid();
 
@@ -235,8 +215,6 @@ class Board {
     this.cells.set(newCells);
     return this;
   }
-
-  // Crop to non-empty region
   crop() {
     const EPSILON = 1e-10;
     let minX = this.size;
@@ -279,8 +257,6 @@ class Board {
     this.field = this._createGrid();
     return this;
   }
-
-  // Get statistics about the board
   getStats() {
     let mass = 0;
     let max = 0;
@@ -293,8 +269,6 @@ class Board {
 
     return { mass, max };
   }
-
-  // Export to JSON with RLE encoding (LeniaND compatible)
   toJSON() {
     const stats = this.getStats();
     return {
@@ -305,8 +279,6 @@ class Board {
       names: this.names
     };
   }
-
-  // Import from JSON
   static fromJSON(data) {
     const board = new Board(data.size || 128);
     if (data.params) {
@@ -322,7 +294,6 @@ class Board {
   }
 
   _cellsToRLE() {
-    // Simple RLE encoding: value,count pairs
     let rle = '';
     let lastVal = -1;
     let count = 0;

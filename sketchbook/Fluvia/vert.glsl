@@ -1,4 +1,3 @@
-// displacing vertices on the plane with the input heightmap texture
 
 attribute vec3 aPosition;
 attribute vec2 aTexCoord;

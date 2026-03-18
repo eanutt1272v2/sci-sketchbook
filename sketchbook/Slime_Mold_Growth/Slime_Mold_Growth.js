@@ -1,13 +1,6 @@
 
-/**
- * @file Slime_Mold_Growth.js
- * @author @eanutt1272.v2
- * @version 1.0.0
- */
-/*
-Name: Slime Molds (Physarum)
-Url: https://youtu.be/VyXxSNcgDtg
-*/
+
+
 
 let molds = []; 
 let num = 10000;
@@ -42,11 +35,9 @@ function draw() {
 class Mold {
    constructor() {
       this.size = initialSize * world_scale;
-      let rad = random(0, initialSize); // radius of spawn circle
-      
-      // Uniform random point in a circle using polar coordinates
+      let rad = random(0, initialSize); 
       let angle = random(360);
-      let r = rad * sqrt(random()); // sqrt ensures uniform density
+      let r = rad * sqrt(random()); 
       let x = r * cos(angle);
       let y = r * sin(angle);
       
@@ -58,8 +49,6 @@ class Mold {
       this.vx = cos(this.heading);
       this.vy = sin(this.heading);
       this.rotAngle = rotAngle + random(-45, 45);
-      
-      // Sensor variables
       this.rSensorPos = createVector(0, 0);
       this.lSensorPos = createVector(0, 0);
       this.fSensorPos = createVector(0, 0);
@@ -70,17 +59,11 @@ class Mold {
    update() {           
       this.vx = cos(this.heading);
       this.vy = sin(this.heading);
-      
-      // Wrap around canvas
       this.x = (this.x + this.vx + width) % width;
       this.y = (this.y + this.vy + height) % height;
-      
-      // Get sensor positions
       this.getSensorPos(this.rSensorPos, this.heading + this.sensorAngle);
       this.getSensorPos(this.lSensorPos, this.heading - this.sensorAngle);
       this.getSensorPos(this.fSensorPos, this.heading);
-      
-      // Read pixel brightness at sensor positions
       let index, l, r, f;
       index = 4*(d * floor(this.rSensorPos.y)) * (d * width) + 4*(d * floor(this.rSensorPos.x));
       r = pixels[index];
@@ -90,8 +73,6 @@ class Mold {
       
       index = 4*(d * floor(this.fSensorPos.y)) * (d * width) + 4*(d * floor(this.fSensorPos.x));
       f = pixels[index];
-      
-      // Movement decision
       if (f > l && f > r) {
          this.heading += 0;
       } else if (f < l && f < r) {

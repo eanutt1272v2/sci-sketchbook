@@ -1,13 +1,4 @@
-/**
- * @fileoverview Dropdown.pde - Dropdown menu UI component
- * @description Renders and handles selection from dropdown menus
- * @version 3.0.0
- * @author @eanutt1272.v2
- * @license MIT
- * 
- * @class Dropdown
- * @description Dropdown menu widget for selecting from multiple options
- */
+
 class Dropdown {
   float x, y, w, h;
   String[] items;

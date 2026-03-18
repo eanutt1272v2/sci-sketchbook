@@ -1,11 +1,21 @@
 # Fluvia Lite
 
-## Concept
-A lightweight version of the Fluvia fluid simulator optimized for web performance.
-Simplified fluid simulation focused on visual aesthetics and stable frame rates.
+## Overview
+A streamlined Fluvia variant designed for faster loading and simpler experimentation in the browser.
+
+## Implementation
+- `index.html`
+- `sketch.js`
+- `style.css`
 
 ## Controls
-Basic fluid interaction and visualization settings.
+Includes lightweight interactive controls for visual exploration.
 
-## Technology
-- **Tech Stack:** p5.js
+## How to Run
+
+### Browser (p5.js/WebGL)
+```bash
+cd sketchbook/Fluvia_Lite
+python3 -m http.server 8080
+```
+Open `http://localhost:8080`.

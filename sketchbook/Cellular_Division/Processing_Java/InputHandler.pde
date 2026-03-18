@@ -146,8 +146,6 @@ class InputHandler {
       ui.toggleSimulationPause();
       return;
     }
-
-    // Full keyboard parameter control mirrors all panel controls without mouse.
     float stepBoost = keyPressed && keyEvent != null && keyEvent.isShiftDown() ? 10 : 1;
     switch (key) {
       case '1': adjustParam(0, -getStepSize(0) * stepBoost); break;

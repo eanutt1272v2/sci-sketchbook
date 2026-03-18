@@ -1,11 +1,21 @@
 # GLSL Shader Exploration 01
 
-## Concept
-A sandbox for experimenting with fragment shaders and procedural generation.
-Demonstrates GPU-accelerated rendering techniques and mathematical art via GLSL.
+## Overview
+Shader experimentation sandbox for procedural visuals and animation using p5.js + WebGL.
+
+## Implementation
+- `sketch.js` host application
+- `vert.glsl` and `frag.glsl` shader programs
 
 ## Controls
-Real-time shader updates; mouse interaction mapped to shader uniforms.
+- Real-time shader-driven animation
+- Mouse input mapped to shader uniforms
 
-## Technology
-- **Tech Stack:** p5.js & GLSL Shaders
+## How to Run
+
+### Browser (p5.js/WebGL)
+```bash
+cd sketchbook/GLSL_Shader_Exploration_01
+python3 -m http.server 8080
+```
+Open `http://localhost:8080`.

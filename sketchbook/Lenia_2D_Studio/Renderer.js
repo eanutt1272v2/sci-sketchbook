@@ -1,22 +1,3 @@
-
-/**
- * @fileoverview Renderer.js - p5.js rendering engine for Lenia
- * @description Handles visualization of world state, fields, kernel, and overlay graphics
- * @version 2.0.0
- * @author @eanutt1272.v2
- * @license MIT
- * 
- * @requires p5.js (image, fill, stroke, text, etc.)
- * 
- * @class Renderer
- * @description Renders Lenia world states to canvas with overlays
- * @classdesc Features:
- * - Multiple display modes (world, potential, field, kernel)
- * - Smooth color mapping (blue→red→white)
- * - Grid overlay with scale reference
- * - Colour legend with value scales
- * - Real-time statistics display
- */
 class Renderer {
   constructor(size) {
     this.size = size;
@@ -204,8 +185,6 @@ class Renderer {
     textSize(14);
     textAlign(LEFT, TOP);
     textFont("Monaco, monospace");
-
-    // Main statistics (LeniaND equivalent)
     const stats = [
       `Gen:    ${String(statistics.gen).padStart(6)} | T: ${statistics.time.toFixed(3)}s`,
       `Mass:   ${(statistics.mass / RN).toFixed(3)} | Growth: ${(statistics.growth / RN).toFixed(4)}`,

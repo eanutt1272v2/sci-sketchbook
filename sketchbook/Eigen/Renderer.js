@@ -1,9 +1,5 @@
 
-/**
- * @file Renderer.js
- * @author @eanutt1272.v2
- * @version 1.0.0
- */
+
 class Renderer {
   constructor(manager) {
     this.m = manager;

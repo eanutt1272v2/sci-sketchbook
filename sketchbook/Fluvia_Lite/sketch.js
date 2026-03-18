@@ -1,14 +1,6 @@
 
-/**
- * @file sketch.js
- * @author @eanutt1272.v2
- * @version 1.0.0
- */
-/**
- * @file Fluvia Lite
- * @description A stripped-down derivative of an older Fluvia branch.
- * @deprecated This version is no longer maintained and will not be updated.
- */
+
+
 
 p5.displayFriendlyErrors = false;
 let terrain, solver, renderer;

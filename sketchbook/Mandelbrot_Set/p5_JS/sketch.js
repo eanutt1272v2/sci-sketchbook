@@ -1,23 +1,4 @@
-/**
- * @fileoverview sketch.js - Mandelbrot Set p5.js Explorer (Main Entry)
- * @description Interactive p5.js Mandelbrot set explorer with pinch zoom, pan, multiple colour maps,
- * custom UI controls, keyboard shortcuts, and PNG export
- * @version 3.0.0
- * @author @eanutt1272.v2
- * @license MIT
- * 
- * @requires p5.js
- * @requires Custom UI classes (AppCore, FractalRenderer, UILayout, UIPanel, UITheme, etc.)
- * 
- * @description
- * Provides interactive exploration of the Mandelbrot set with:
- * - Real-time iteration rendering
- * - Smooth zoom/pan transitions
- * - Pinch-to-zoom gesture support
- * - Multiple colour rendering modes
- * - Keyboard shortcuts (S=save PNG, R=reset, +/-=zoom, arrow keys=pan)
- * - Custom UI parameter controls
- */
+
 
 let appcore;
 let monoFont;

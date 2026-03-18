@@ -1,8 +1,4 @@
-/**
- * @file InputHandler.js
- * @author @eanutt1272.v2
- * @version 1.0.0
- */
+
 
 class InputHandler {
   constructor(manager) {

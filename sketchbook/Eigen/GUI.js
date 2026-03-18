@@ -1,9 +1,5 @@
 
-/**
- * @file GUI.js
- * @author @eanutt1272.v2
- * @version 1.0.0
- */
+
 class GUI {
   constructor(manager) {
     this.m = manager;
@@ -99,8 +95,6 @@ class GUI {
     }).on("change", () => this.m.renderer.update());
 
     page.addBlade({ view: "separator" });
-
-    // Resolution control
     page.addBinding(this.m.params, "resolution", {
       label: "Resolution (px)",
       min: 64,

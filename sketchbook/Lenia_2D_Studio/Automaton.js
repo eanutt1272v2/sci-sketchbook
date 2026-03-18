@@ -1,24 +1,16 @@
 
-/**
- * @file Automaton.js
- * @description Lenia cellular automaton - fully ported from LeniaND.py
- * @author @eanutt1272.v2
- * @version 2.0.0 (LeniaND port)
- */
-class Automaton {
-  // Kernel functions: polynomial (quad4), exponential (bump4), step (stpz1/4), staircase (life)
-  static KERNEL_CORE = [
-    (r) => Math.pow(4 * r * (1 - r), 4),  // 0: polynomial (quad4)
-    (r) => Math.exp(4 - 1 / (r * (1 - r))),  // 1: exponential / gaussian bump (bump4)
-    (r, q = 0.25) => (r >= q && r <= 1 - q) ? 1 : 0,  // 2: step (stpz1/4)
-    (r, q = 0.25) => ((r >= q && r <= 1 - q) ? 1 : 0) + (r < q ? 0.5 : 0)  // 3: staircase (life)
-  ];
 
-  // Growth functions: polynomial (quad4), exponential/gaussian (gaus), step (stpz)
+class Automaton {
+  static KERNEL_CORE = [
+    (r) => Math.pow(4 * r * (1 - r), 4),  
+    (r) => Math.exp(4 - 1 / (r * (1 - r))),  
+    (r, q = 0.25) => (r >= q && r <= 1 - q) ? 1 : 0,  
+    (r, q = 0.25) => ((r >= q && r <= 1 - q) ? 1 : 0) + (r < q ? 0.5 : 0)  
+  ];
   static GROWTH_FUNC = [
-    (n, m, s) => Math.max(0, Math.pow(1 - Math.pow((n - m) / (9 * s), 2), 4)) * 2 - 1,  // 0: polynomial (quad4)
-    (n, m, s) => Math.exp(-Math.pow((n - m) / (Math.sqrt(2) * s), 2)) * 2 - 1,  // 1: exponential / gaussian (gaus)
-    (n, m, s) => (Math.abs(n - m) <= s) ? 1 : -1  // 2: step (stpz)
+    (n, m, s) => Math.max(0, Math.pow(1 - Math.pow((n - m) / (9 * s), 2), 4)) * 2 - 1,  
+    (n, m, s) => Math.exp(-Math.pow((n - m) / (Math.sqrt(2) * s), 2)) * 2 - 1,  
+    (n, m, s) => (Math.abs(n - m) <= s) ? 1 : -1  
   ];
 
   constructor(params) {
@@ -30,8 +22,6 @@ class Automaton {
     this.kernelDY = new Int16Array(0);
     this.kernelValues = new Float32Array(0);
     this.kernelSum = 1;
-    
-    // Statistics tracking (LeniaND port)
     this.gen = 0;
     this.time = 0;
     this.change = null;
@@ -47,14 +37,14 @@ class Automaton {
     this.T = params.T;
     this.m = params.m;
     this.s = params.s;
-    this.b = Array.isArray(params.b) ? params.b : [params.b];  // Support multi-kernel (converted to array if scalar)
-    this.kn = params.kn || 1;  // kernel function index (1-4)
-    this.gn = params.gn || 1;  // growth function index (1-3)
+    this.b = Array.isArray(params.b) ? params.b : [params.b];  
+    this.kn = params.kn || 1;  
+    this.gn = params.gn || 1;  
     this.softClip = params.softClip || false;
     this.multiStep = params.multiStep || false;
     this.addNoise = params.addNoise || 0;
     this.maskRate = params.maskRate || 0;
-    this.paramP = params.paramP || 0;  // Parameter precision (quantization)
+    this.paramP = params.paramP || 0;  
 
     this._calculateKernel();
   }

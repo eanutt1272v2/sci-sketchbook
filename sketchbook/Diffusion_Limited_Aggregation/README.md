@@ -1,11 +1,20 @@
 # Diffusion Limited Aggregation (DLA)
 
-## Concept
-Simulates the process where particles undergoing Brownian motion cluster together to form aggregate structures.
-Models physical phenomena like mineral deposits, coral growth, and lightning discharge.
+## Overview
+Simulation of diffusion-limited aggregation: random walkers diffuse until they contact a cluster and stick, creating branching fractal structures.
+
+## Implementation
+- `sketch.js` (p5.js)
 
 ## Controls
-Real-time growth visualisation; adjustable particle count and step size.
+- Real-time growth visualisation
+- Particle and motion settings are configurable in code
 
-## Technology
-- **Tech Stack:** p5.js
+## How to Run
+
+### Browser (p5.js/WebGL)
+```bash
+cd sketchbook/Diffusion_Limited_Aggregation
+python3 -m http.server 8080
+```
+Open `http://localhost:8080`.

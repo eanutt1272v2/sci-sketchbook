@@ -1,14 +1,26 @@
 # Barnsley Fern
 
-## Concept
-An iterated function system (IFS) that produces a fractal resembling the Black Spleenwort fern using affine transformations.
-Uses four affine maps with specific probabilities to simulate self-similar growth patterns found in nature.
+## Overview
+Classic Barnsley fern generation using an iterated function system (IFS). The sketch applies four affine transformations with weighted probabilities to produce the fern structure.
+
+## Implementations
+- `Processing_Java/Barnsley_Fern.pde`
+- `p5_JS/sketch.js`
 
 ## Controls
-Automatic generation of points; parameters typically adjusted in source code (points per frame).
-
-## Technology
-- **Tech Stack:** Processing (Java) & p5.js
+The sketch auto-renders points continuously. Render speed and density are configured in code.
 
 ## Preview
 ![Barnsley Fern](Fern_202631_153327.png)
+
+## How to Run
+
+### Browser (p5.js)
+```bash
+cd sketchbook/Barnsley_Fern/p5_JS
+python3 -m http.server 8080
+```
+Open `http://localhost:8080`.
+
+### Processing (Java)
+Open `sketchbook/Barnsley_Fern/Processing_Java/Barnsley_Fern.pde` in Processing 4.x and click Run.

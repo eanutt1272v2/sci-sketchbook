@@ -1,9 +1,5 @@
 
-/**
- * @file Collatz_Visualisation.js
- * @author @eanutt1272.v2
- * @version 1.0.0
- */
+
 
 const NUM_STARTS = 5000;
 const MAX_START = 1000000;

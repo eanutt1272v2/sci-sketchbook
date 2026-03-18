@@ -1,11 +1,24 @@
 # Fluvia
 
-## Concept
-A high-performance fluid dynamics and terrain erosion simulator.
-Uses GLSL shaders to solve Navier-Stokes equations for fluid flow and hydraulic erosion models.
+## Overview
+GPU-accelerated fluid and terrain simulation built with p5.js and GLSL.
+
+The project combines interactive rendering with solver components for flow and erosion-style effects.
+
+## Implementation
+- JavaScript modules (`Manager`, `Solver`, `Renderer`, `Terrain`, `Analyser`)
+- Custom shaders (`vert.glsl`, `frag.glsl`)
 
 ## Controls
-Comprehensive GUI for controlling fluid viscosity, erosion rates, and camera perspective.
+- GUI controls for simulation parameters
+- Camera controls for scene inspection
+- Visual analysis overlays and render settings
 
-## Technology
-- **Tech Stack:** p5.js & GLSL Shaders
+## How to Run
+
+### Browser (p5.js/WebGL)
+```bash
+cd sketchbook/Fluvia
+python3 -m http.server 8080
+```
+Open `http://localhost:8080`.

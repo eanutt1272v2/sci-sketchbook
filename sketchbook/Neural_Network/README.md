@@ -1,11 +1,15 @@
 # Neural Network
 
-## Concept
-A visualization of a simple feedforward neural network's learning process.
-Demonstrates backpropagation and decision boundaries in 2D space for classification tasks.
+## Overview
+Processing sketch demonstrating a basic feedforward neural network and its training behaviour in a visual, interactive format.
+
+## Implementation
+- `Neural_Network.pde`
 
 ## Controls
-Interactive drawing of training samples; real-time training and weight visualization.
+Training and visual parameters are controlled within the Processing sketch interface and source settings.
 
-## Technology
-- **Tech Stack:** Processing (Java)
+## How to Run
+
+### Processing (Java)
+Open `sketchbook/Neural_Network/Neural_Network.pde` in Processing 4.x and click Run.

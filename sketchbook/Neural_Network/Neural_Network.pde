@@ -1,41 +1,16 @@
-// @file  Neural_Network.pde
-// @author @eanutt1272.v2
-// @version 7.0.0
-//
-// v7 CHANGES
-//  ─ Bento-box layout: grid+controls top-left | network diagram top-right
-//    bottom strip split into Prediction | Statistics | Log panels
-//  ─ Deduplication: each training sample is hashed; duplicate grids are
-//    rejected at input time with a log warning
-//  ─ Export filename stamped with date-time: nn_weights_YYYYMMDD_HHMMSS.json
-//  ─ Prediction results, statistics, and log each in their own labelled box
 
 import java.util.concurrent.*;
 import java.util.HashSet;
-
-// ─────────────────────────────────────────────────────────────
-//  LAYOUT CONSTANTS  (all set in setup())
-// ─────────────────────────────────────────────────────────────
 int GRID_SIZE, CELL_SIZE;
 int GRID_X, GRID_Y, GRID_PX;
-
-// Left panel (controls column)
 int LP_X, LP_W;
-
-// Network diagram area
 int NET_X0, NET_X1, NET_Y0, NET_Y1;
-
-// Bottom strip
 int BOT_Y, BOT_H;
 int PRED_X, PRED_W;
 int STATS_X, STATS_W;
 int LOG_X, LOG_W;
 
 int W, H;
-
-// ─────────────────────────────────────────────────────────────
-//  GLOBALS
-// ─────────────────────────────────────────────────────────────
 NeuralNetwork   nn;
 Trainer         trainer;
 Renderer        renderer;
@@ -44,10 +19,6 @@ AppLog          appLog;
 Stats           stats;
 ExecutorService executor;
 float[][]       gridData;
-
-// ─────────────────────────────────────────────────────────────
-//  SETUP
-// ─────────────────────────────────────────────────────────────
 void setup() {
   size(1360, 900, P2D);
   frameRate(120);
@@ -58,13 +29,10 @@ void setup() {
   CELL_SIZE = 13;
   GRID_X    = 18;
   GRID_Y    = 52;
-  GRID_PX   = GRID_SIZE * CELL_SIZE;   // 364
+  GRID_PX   = GRID_SIZE * CELL_SIZE;   
 
   LP_X = GRID_X;
-  LP_W = GRID_PX;                      // 364
-
-  // Network fills the space to the right of the left panel
-  // down to the bottom strip
+  LP_W = GRID_PX;                      
   int NET_MARGIN = 14;
   BOT_H  = 240;
   BOT_Y  = H - BOT_H - 10;
@@ -73,8 +41,6 @@ void setup() {
   NET_X1 = W - 12;
   NET_Y0 = 30;
   NET_Y1 = BOT_Y - 8;
-
-  // Bottom strip: three equal panels
   int STRIP_X   = 10;
   int STRIP_W   = W - 20;
   int PANEL_GAP = 10;
@@ -100,20 +66,12 @@ void setup() {
   clearGrid();
   appLog.info("Ready — architecture 784→128→64→10");
 }
-
-// ─────────────────────────────────────────────────────────────
-//  DRAW
-// ─────────────────────────────────────────────────────────────
 void draw() {
   background(15, 18, 24);
   trainer.poll(ui, appLog, stats);
   try { renderer.drawAll(); }
   catch (Exception e) { appLog.error("Render: " + e.getMessage()); }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  INPUT
-// ─────────────────────────────────────────────────────────────
 void mouseDragged() { if (!ui.busy) paintGrid(mouseX, mouseY); }
 void mousePressed() { if (mouseButton == LEFT) handleClick(); }
 
@@ -153,10 +111,6 @@ void keyPressed() {
     addSample(key - '0');
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  SAMPLE ADDITION WITH DEDUPLICATION
-// ─────────────────────────────────────────────────────────────
 void addSample(int label) {
   float[] vec = gridToVec();
   String  key = hashVec(vec, label);
@@ -169,22 +123,15 @@ void addSample(int label) {
   ui.activeLabel = label;
   appLog.info("Label " + label + " added — total " + trainer.count());
 }
-
-// Simple but effective hash: round each float to 1 dp, concatenate with label
 String hashVec(float[] v, int label) {
   StringBuilder sb = new StringBuilder();
   sb.append(label).append(':');
   for (float f : v) {
-    // Only encode non-zero cells to keep the string compact
     if (f > 0.05) { sb.append((int)(f * 10)); }
     sb.append(',');
   }
   return sb.toString();
 }
-
-// ─────────────────────────────────────────────────────────────
-//  ACTIONS
-// ─────────────────────────────────────────────────────────────
 void doPredict() {
   if (ui.busy) { appLog.warn("Cannot predict while training."); return; }
   float[] out = nn.forward(gridToVec());
@@ -282,10 +229,6 @@ void onImportFile(File f) {
     appLog.info("Imported: " + f.getName());
   } catch (Exception e) { appLog.error("Import: " + e.getMessage()); }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  GRID UTILITIES
-// ─────────────────────────────────────────────────────────────
 void paintGrid(int mx, int my) {
   int c = (mx - GRID_X) / CELL_SIZE, r = (my - GRID_Y) / CELL_SIZE;
   if (c<0||c>=GRID_SIZE||r<0||r>=GRID_SIZE) return;
@@ -309,10 +252,6 @@ float[] gridToVec() {
 }
 
 int argmax(float[] a) { int b=0; for(int i=1;i<a.length;i++) if(a[i]>a[b]) b=i; return b; }
-
-// ─────────────────────────────────────────────────────────────
-//  STATISTICS
-// ─────────────────────────────────────────────────────────────
 class Stats {
   int[]  samplesPerLabel = new int[10];
   int    totalPredictions = 0;
@@ -337,16 +276,12 @@ class Stats {
   }
 
   void drawInBox(int bx, int by, int bw, int bh) {
-    // Box
     fill(11,15,21); stroke(52,63,78); strokeWeight(1); rect(bx,by,bw,bh,4);
-    // Pill label
     noStroke(); fill(48,68,92); rect(bx+1,by+1,70,15,3);
     fill(135); textSize(10); textAlign(LEFT,CENTER); text("STATISTICS",bx+6,by+8);
 
     int px=bx+8, py=by+24, lh=15;
     textSize(11);
-
-    // Helper closures can't exist in Processing; use inline draws
     drawStatRow(px,py,bx+bw-8,"Total samples",""+trainer.count()); py+=lh;
     drawStatRow(px,py,bx+bw-8,"Training runs",""+trainRuns); py+=lh;
     if (ui.trained) {
@@ -363,7 +298,6 @@ class Stats {
     }
 
     py += 4;
-    // Per-digit bar chart
     fill(82); textAlign(LEFT,BASELINE); text("Samples per digit:",px,py); py+=lh;
     int chartW = bw - 16;
     int maxC = 1;
@@ -385,10 +319,6 @@ class Stats {
     fill(195); textAlign(RIGHT,BASELINE); text(val,rx,y);
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  SEQUENTIAL LAYOUT HELPER
-// ─────────────────────────────────────────────────────────────
 class Layout {
   int x, w, cursor, gap;
   Layout(int x, int startY, int w, int gap) {
@@ -398,10 +328,6 @@ class Layout {
   void skip(int px) { cursor+=px; }
   int peek() { return cursor; }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  LOGGER
-// ─────────────────────────────────────────────────────────────
 class AppLog {
   int CAP; String[] msgs; int[] lvl; int head=0, cnt=0;
   AppLog(int cap) { CAP=cap; msgs=new String[cap]; lvl=new int[cap]; }
@@ -432,10 +358,6 @@ class AppLog {
     textAlign(LEFT,BASELINE);
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  UI STATE
-// ─────────────────────────────────────────────────────────────
 class UIState {
   Btn predictBtn, trainBtn, clearBtn, cleanBtn, exportBtn, importBtn;
   Btn[] dBtn = new Btn[10];
@@ -452,8 +374,6 @@ class UIState {
   void buildLayout() {
     int gap=7;
     Layout L = new Layout(LP_X, GRID_Y + GRID_PX + 12, LP_W, gap);
-
-    // Action buttons: 3 per row, two rows
     int bh=32, bgap=6;
     int bw3 = (LP_W - 2*bgap) / 3;
     int bw2 = (LP_W - bgap) / 2;
@@ -467,14 +387,10 @@ class UIState {
     exportBtn = new Btn(LP_X,          rowB, bw3, bh, "Export [E]");
     importBtn = new Btn(LP_X+bw3+bgap, rowB, bw3, bh, "Import [I]");
     cleanBtn  = new Btn(LP_X+2*(bw3+bgap), rowB, bw3, bh, "Clean [X]");
-
-    // Digit buttons
     int dw = (LP_W - 4*bgap) / 5, dh=30;
     int dr1 = L.next(dh), dr2 = L.next(dh);
     for (int d=0;d<5;d++)  dBtn[d]   = new Btn(LP_X+d*(dw+bgap),     dr1, dw, dh, ""+d);
     for (int d=5;d<10;d++) dBtn[d]   = new Btn(LP_X+(d-5)*(dw+bgap), dr2, dw, dh, ""+d);
-
-    // Spinner rows: [Label ......  −  val  +]
     int sh=28, sbw=26, sval=42;
     int trio = sbw + 4 + sval + 4 + sbw;
     int right = LP_X + LP_W;
@@ -488,11 +404,8 @@ class UIState {
   }
 
   void draw() {
-    // Buttons
     predictBtn.draw(false); trainBtn.draw(busy); clearBtn.draw(false);
     exportBtn.draw(false);  importBtn.draw(false); cleanBtn.draw(false);
-
-    // Digit buttons
     for (int d=0;d<10;d++) {
       dBtn[d].draw(false);
       if (d==activeLabel) {
@@ -500,8 +413,6 @@ class UIState {
         rect(dBtn[d].x,dBtn[d].y,dBtn[d].w,dBtn[d].h,4); noStroke();
       }
     }
-
-    // Spinners
     lrMinus.draw(false); lrPlus.draw(false);
     epMinus.draw(false); epPlus.draw(false);
 
@@ -518,15 +429,11 @@ class UIState {
     text("Epochs", LP_X, (int)epMinus.y+sh/2);
     fill(255,215,50); textAlign(CENTER,CENTER);
     text(""+trainer.epochs, valCx, (int)epMinus.y+sh/2);
-
-    // Training progress bar (shows during training)
     if (busy) {
       int py = (int)epMinus.y + sh + 8;
       fill(255,145,30); textSize(11); textAlign(LEFT,BASELINE);
       text(progress, LP_X, py);
     }
-
-    // Bottom strip panels
     drawPredPanel(PRED_X, BOT_Y, PRED_W, BOT_H);
     stats.drawInBox(STATS_X, BOT_Y, STATS_W, BOT_H);
     appLog.drawInBox(LOG_X, BOT_Y, LOG_W, BOT_H);
@@ -545,18 +452,12 @@ class UIState {
       textAlign(LEFT,BASELINE);
       return;
     }
-
-    // Large digit display
     fill(60,215,100); textSize(52); textAlign(LEFT,BASELINE);
     text(""+predResult, bx+16, by+72);
-
-    // Confidence label
     float conf = predOut[predResult];
     color confCol = conf>0.7?color(60,205,90):conf>0.4?color(225,170,40):color(210,65,65);
     fill(confCol); textSize(13); textAlign(LEFT,BASELINE);
     text(nf(conf*100,1,1)+"% confident", bx+16, by+90);
-
-    // Bar chart for all 10 digits
     int barPad = 8;
     int chartW  = bw - 2*barPad;
     int barGap  = 2;
@@ -571,11 +472,9 @@ class UIState {
       int byi = chartY + (maxBarH - bhi);
       fill(i==predResult?color(55,185,85):color(35,52,75)); noStroke();
       rect(bxi, byi, barW, bhi, 2);
-      // digit label below
       fill(i==predResult?color(55,185,85):color(100));
       textSize(10); textAlign(CENTER,TOP);
       text(""+i, bxi+barW/2, chartY+maxBarH+3);
-      // percent above bar
       if (c>0.02) {
         fill(i==predResult?color(60,215,100):color(95));
         textSize(9); textAlign(CENTER,BASELINE);
@@ -585,10 +484,6 @@ class UIState {
     textAlign(LEFT,BASELINE);
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  TRAINER  (with deduplication)
-// ─────────────────────────────────────────────────────────────
 class Trainer {
   NeuralNetwork       nn;
   ArrayList<float[]>  inputs   = new ArrayList<float[]>();
@@ -606,17 +501,10 @@ class Trainer {
   synchronized void add(float[] inp, int label, String key) {
     float[] t=new float[10]; t[label]=1.0;
     if (inputs.size()>=maxSamples) {
-      // Remove oldest — also remove its key (we don't store keys per-entry,
-      // so oldest removal just evicts from list; keySet retains the key,
-      // which is conservative: duplicate of an evicted sample is still blocked.
-      // This is intentional to prevent re-adding the same drawing.)
       inputs.remove(0); targets.remove(0);
     }
     inputs.add(inp.clone()); targets.add(t); keySet.add(key);
   }
-
-  // Post-hoc duplicate removal: rebuilds lists keeping only first occurrence
-  // of each (vec, label) pair.
   synchronized int removeDuplicates() {
     HashSet<String> seen = new HashSet<String>();
     ArrayList<float[]> newIn  = new ArrayList<float[]>();
@@ -662,10 +550,6 @@ class Trainer {
     }
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  RENDERER
-// ─────────────────────────────────────────────────────────────
 class Renderer {
   PVector[][] pos; int cachedHash=0;
 
@@ -689,7 +573,7 @@ class Renderer {
     for (int r=0;r<GRID_SIZE;r++) for (int c=0;c<GRID_SIZE;c++) {
       float v=gridData[r][c];
       fill(v*255);
-      stroke(42); strokeWeight(0.5);           // thin grey grid lines always visible
+      stroke(42); strokeWeight(0.5);           
       rect(GRID_X+c*CELL_SIZE, GRID_Y+r*CELL_SIZE, CELL_SIZE, CELL_SIZE);
     }
   }
@@ -712,8 +596,6 @@ class Renderer {
 
   void drawNetwork() {
     PVector[][] p=neuronPositions(); int nL=nn.L.length;
-
-    // Edges
     strokeWeight(0.6);
     for(int l=0;l<nL-1;l++){
       int sn=p[l].length, dn=p[l+1].length;
@@ -726,16 +608,12 @@ class Renderer {
         line(p[l][i].x,p[l][i].y,p[l+1][j].x,p[l+1][j].y);
       }
     }
-
-    // Neurons
     for(int l=0;l<nL;l++) for(int i=0;i<p[l].length;i++){
       int ai=p[l].length>1?(int)map(i,0,p[l].length-1,0,nn.L[l]-1):0;
       float act=nn.A[l][ai];
       fill(map(act,0,1,22,255)); stroke(82); strokeWeight(0.5);
       ellipse(p[l][i].x,p[l][i].y,9,9);
     }
-
-    // Output labels
     int outL=nL-1;
     float lx=p[outL][0].x+12; textSize(12); textAlign(LEFT,CENTER);
     for(int i=0;i<nn.L[outL];i++){
@@ -743,8 +621,6 @@ class Renderer {
       fill((ui.showPred&&i==ui.predResult)?color(65,220,100):color(155));
       text(i+"  "+nf(act*100,1,1)+"%", lx, p[outL][i].y);
     }
-
-    // Layer labels: 32px above first neuron of each column
     String[] names={"Input","Hidden 1","Hidden 2","Output"};
     textAlign(CENTER,BASELINE);
     for(int l=0;l<nL;l++){
@@ -756,10 +632,6 @@ class Renderer {
     textAlign(LEFT,BASELINE);
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  NEURAL NETWORK
-// ─────────────────────────────────────────────────────────────
 class NeuralNetwork {
   int[] L; float[][] A,B,E; float[][][] W,Wm; float[][] Bm; float lr;
   final float MOM=0.9;
@@ -816,10 +688,6 @@ class NeuralNetwork {
     for(int i=0;i<v.length;i++) v[i]/=s;
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-//  BUTTON
-// ─────────────────────────────────────────────────────────────
 class Btn {
   float x,y,w,h; String label;
   Btn(float x,float y,float w,float h,String label){this.x=x;this.y=y;this.w=w;this.h=h;this.label=label;}

@@ -1,11 +1,21 @@
-# Collatz Visualization
+# Collatz Visualisation
 
-## Concept
-A visual representation of the Collatz conjecture paths (3n + 1 problem) as an organic tree-like structure.
-Maps even numbers to a rotation in one direction and odd numbers to another, creating a branching path for each sequence.
+## Overview
+Visual rendering of Collatz trajectories (the `3n + 1` process) as branching geometric paths.
+
+Each integer sequence is transformed into turns and segment lengths, producing tree-like forms from arithmetic behaviour.
+
+## Implementation
+- `sketch.js` (p5.js)
 
 ## Controls
-Visualises thousands of paths automatically; configurable angles and scaling in the script.
+The sketch runs automatically; visual tuning values are configured in source.
 
-## Technology
-- **Tech Stack:** p5.js
+## How to Run
+
+### Browser (p5.js/WebGL)
+```bash
+cd sketchbook/Collatz_Visualisation
+python3 -m http.server 8080
+```
+Open `http://localhost:8080`.

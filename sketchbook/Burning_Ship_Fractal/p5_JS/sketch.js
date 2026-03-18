@@ -1,9 +1,4 @@
-/**
- * @file sketch.js
- * @description A p5.js implementation of a Burning Ship fractal explorer with a custom UI for adjusting parameters and colour maps.
- * @author @eanutt1272.v2
- * @version 3.0.0
- */
+
 
 let appcore;
 let monoFont;

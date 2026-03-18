@@ -1,11 +1,21 @@
 # Eigen
 
-## Concept
-A sophisticated visualisation tool for exploring linear transformations, eigenvalues, and eigenvectors.
-Focuses on the geometric interpretation of matrices and their action on vector spaces.
+## Overview
+Interactive linear algebra visualisation focusing on matrix transformations, eigenvalues, and eigenvectors.
+
+## Implementation
+- p5.js application (`sketch.js`, `Manager.js`, `Renderer.js`, `Solver.js`, `GUI.js`)
 
 ## Controls
-Interactive GUI for matrix manipulation and vector field exploration.
+- Manipulate transformation parameters in the GUI
+- Inspect resulting vector and basis behaviour
+- Explore colour-map-driven render modes
 
-## Technology
-- **Tech Stack:** p5.js
+## How to Run
+
+### Browser (p5.js/WebGL)
+```bash
+cd sketchbook/Eigen
+python3 -m http.server 8080
+```
+Open `http://localhost:8080`.

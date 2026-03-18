@@ -1,13 +1,4 @@
-/**
- * @fileoverview UITheme.js - Visual styling and theming utilities
- * @description Color schemes, fonts, and styling constants for UI components
- * @version 3.0.0
- * @author @eanutt1272.v2
- * @license MIT
- * 
- * @class UITheme
- * @description Centralized theme configuration for UI aesthetics
- */
+
 class UITheme {
   constructor() {
     this.bgPanel = color(20, 20, 20, 210);

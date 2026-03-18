@@ -1,13 +1,4 @@
-/**
- * @fileoverview Button.js - Clickable button UI component
- * @description Renders and handles interactive buttons
- * @version 3.0.0
- * @author @eanutt1272.v2
- * @license MIT
- * 
- * @class Button
- * @description Interactive button widget
- */
+
 class Button {
   constructor(x, y, w, h, label, theme) {
     this.x = x;

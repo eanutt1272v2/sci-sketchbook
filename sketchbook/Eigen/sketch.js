@@ -1,9 +1,5 @@
 
-/**
- * @file sketch.js
- * @author @eanutt1272.v2
- * @version 1.0.0
- */
+
 p5.disableFriendlyErrors = true;
 
 let manager;

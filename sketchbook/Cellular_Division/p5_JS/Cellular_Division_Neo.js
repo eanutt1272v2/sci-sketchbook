@@ -1,8 +1,4 @@
-/**
- * @file Cellular_Division_Neo.js
- * @author @eanutt1272.v2
- * @version 2.5.8
- */
+
 
 const Config = {
   GRID_SIZE: 30,

@@ -1,20 +1,31 @@
 # Julia Set
 
-## Concept
-Visualisation of the Julia set, a classic fractal associated with the Mandelbrot set.
-Iterates z = z² + c for a fixed c across the complex plane to determine boundary stability.
+## Overview
+Interactive Julia set explorer for the recurrence:
+
+`z_{n+1} = z_n^2 + c`
+
+with fixed complex parameter `c` and per-pixel iteration over the complex plane.
+
+## Implementations
+- `Processing_Java/` (modular Processing version)
+- `p5_JS/` (modular browser version)
 
 ## Controls
-- Pan: `W/A/S/D` or arrow keys, mouse/touch drag
-- Zoom: `Q/E`, mouse wheel, two-finger pinch
-- Iterations: slider, `[`/`]`, `{`/`}`
-- Colour maps: dropdown, `1..9`, `X/C`
-- Other: `R` reset, `H` toggle UI, `#` keymap overlay
+- Pan: arrow keys or drag
+- Zoom: keyboard and mouse wheel
+- Iteration depth: UI slider/controls
+- Palette: selectable colour maps
+- UI visibility/reset shortcuts available in-app
 
-## Variants
-- `Processing_Java`: upgraded multi-file Processing sketch (parity with Mandelbrot/Burning Ship)
-- `Julia_Set.pde`: legacy single-file Processing sketch
-- `p5_JS`: upgraded explorer matching Mandelbrot/Burning Ship UI architecture
+## How to Run
 
-## Technology
-- **Tech Stack:** Processing (Java), p5.js (JavaScript)
+### Browser (p5.js)
+```bash
+cd sketchbook/Julia_Set/p5_JS
+python3 -m http.server 8080
+```
+Open `http://localhost:8080`.
+
+### Processing (Java)
+Open `sketchbook/Julia_Set/Processing_Java/Julia_Set.pde` in Processing 4.x and click Run.

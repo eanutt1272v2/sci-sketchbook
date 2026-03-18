@@ -1,8 +1,4 @@
-/**
- * @file Barnsley_Fern.pde
- * @author @eanutt1272.v2
- * @version 2.1.0
- */
+
 
 float x = 0, y = 0;
 int pointsPerFrame = 8000;

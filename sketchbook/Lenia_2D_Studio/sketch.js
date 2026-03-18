@@ -1,25 +1,5 @@
 
-/**
- * @fileoverview Lenia2D Studio - Main p5.js sketch
- * @description Interactive 2D Lenia cellular automaton explorer with full LeniaND feature parity
- * @version 2.0.0
- * @author @eanutt1272.v2
- * @license MIT
- * 
- * @requires p5.js
- * @requires Tweakpane v4.0+
- * @requires Custom Lenia2D classes (Automaton, Board, Renderer, Analyser, GUI, AnimalLibrary, RLEParser)
- * 
- * @description
- * Lenia is a 2D cellular automaton that simulates life-like behavior through continuous
- * values and smooth kernels. This implementation provides all features from LeniaND.py
- * including multiple kernel/growth functions, symmetry detection, statistics tracking, 
- * and comprehensive export capabilities.
- * 
- * @example
- * // Press S to save PNG, E to export JSON, C to export CSV, R to reset
- * // Use GUI tabs to control simulation parameters
- */
+
 
 p5.disableFriendlyErrors = true;
 
@@ -251,7 +231,6 @@ function windowResized() {
 function keyPressed() {
   const pressedKey = key || event.key;
 
-  // Export world state as JSON
   if (pressedKey === 'e' || pressedKey === 'E') {
     const data = board.toJSON();
     const json = JSON.stringify(data, null, 2);
@@ -260,7 +239,6 @@ function keyPressed() {
     return false;
   }
 
-  // Export statistics as CSV
   if (pressedKey === 'c' || pressedKey === 'C') {
     const csv = analyser.exportCSV();
     console.log('Exporting statistics to CSV...');
@@ -268,14 +246,12 @@ function keyPressed() {
     return false;
   }
 
-  // Export canvas as PNG
   if (pressedKey === 's' || pressedKey === 'S') {
     console.log('Saving canvas as PNG...');
     saveCanvas(`lenia-frame-${automaton.gen}`, 'png');
     return false;
   }
 
-  // Reset parameters to defaults
   if (pressedKey === 'r' || pressedKey === 'R') {
     automaton.reset();
     analyser.reset();

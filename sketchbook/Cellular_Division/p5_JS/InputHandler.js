@@ -145,8 +145,6 @@ class InputHandler {
       this.ui.toggleSimulationPause();
       return;
     }
-
-    // Full keyboard parameter control mirrors all panel controls without mouse.
     const stepBoost = keyIsDown(SHIFT) ? 10 : 1;
     switch (key) {
       case "1":

@@ -1,19 +1,4 @@
-/**
- * @fileoverview FractalRenderer.js - Mandelbrot set rendering engine
- * @description High-performance fractal calculation and visualization with colour LUT mapping
- * @version 3.0.0
- * @author @eanutt1272.v2
- * @license MIT
- * 
- * @class FractalRenderer
- * @description Computes and renders Mandelbrot set
- * @classdesc Features:
- * - Efficient iteration calculation
- * - Multiple colour mapping modes
- * - LUT-based smooth colour gradients
- * - Zoom/pan rendering
- * - Smooth iteration counting
- */
+
 class FractalRenderer {
   constructor(appcore) {
     this.appcore = appcore;

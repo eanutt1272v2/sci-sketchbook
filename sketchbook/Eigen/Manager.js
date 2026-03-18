@@ -1,9 +1,5 @@
 
-/**
- * @file Manager.js
- * @author @eanutt1272.v2
- * @version 1.0.0
- */
+
 class Manager {
   constructor(assets) {
     this.metadata = assets.metadata;

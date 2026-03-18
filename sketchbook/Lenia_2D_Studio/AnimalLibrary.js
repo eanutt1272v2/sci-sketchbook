@@ -1,19 +1,5 @@
 
-/**
- * @fileoverview AnimalLibrary.js - Lenia creature pattern library management
- * @description Manages loading, indexing, and parameter application of Lenia patterns
- * @version 1.0.0
- * @author @eanutt1272.v2
- * @license MIT
- * 
- * @class AnimalLibrary
- * @description Handles Lenia creature/pattern database
- * @classdesc Features:
- * - Load creatures from JSON data
- * - Index-based retrieval
- * - Parameter extraction and application
- * - Creature name/code display
- */
+
 class AnimalLibrary {
   constructor() {
     this.animals = [];

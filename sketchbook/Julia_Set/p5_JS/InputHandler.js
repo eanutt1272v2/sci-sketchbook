@@ -150,7 +150,6 @@ class InputHandler {
 
   onMouseReleased() {
     this.appcore.panel.slider.locked = false;
-    // ! Watch this flag carefully to avoid issues with click-drag interactions on the UI
     this.appcore.justPressed = false;
     this.pinchDistance = null;
   }

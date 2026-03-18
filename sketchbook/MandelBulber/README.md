@@ -1,11 +1,15 @@
 # MandelBulber
 
-## Concept
-A 3D exploration of the Mandelbulb fractal.
-A 3D analogue of the Mandelbrot set using spherical coordinates and high-power iterations.
+## Overview
+Processing-based 3D Mandelbulb exploration using iterative fractal distance/escape behaviour and point-cloud style rendering.
+
+## Implementation
+- `MandelBulber.pde`
 
 ## Controls
-Camera controls for 3D navigation through the fractal structure.
+Keyboard and mouse camera/navigation controls are defined in sketch code.
 
-## Technology
-- **Tech Stack:** Processing (Java)
+## How to Run
+
+### Processing (Java)
+Open `sketchbook/MandelBulber/MandelBulber.pde` in Processing 4.x and click Run.

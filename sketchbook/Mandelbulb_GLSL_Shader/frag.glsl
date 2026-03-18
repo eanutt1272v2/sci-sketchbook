@@ -1,7 +1,3 @@
-
-// @file frag.glsl
-// @author @eanutt1272.v2
-// @version 1.0.0
 precision highp float;
     
 uniform vec2 u_resolution;

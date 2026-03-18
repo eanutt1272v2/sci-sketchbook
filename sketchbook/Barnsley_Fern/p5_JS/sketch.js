@@ -1,8 +1,4 @@
-/**
- * @file sketch.js
- * @author @eanutt1272.v2
- * @version 2.1.0
- */
+
 
 let x = 0;
 let y = 0;

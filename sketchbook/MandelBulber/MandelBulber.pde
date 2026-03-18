@@ -1,8 +1,4 @@
-/**
- * @file MandelBulber.pde
- * @author @eanutt1272.v2
- * @version 3.7.0
- */
+
 
 AppCore appcore;
 

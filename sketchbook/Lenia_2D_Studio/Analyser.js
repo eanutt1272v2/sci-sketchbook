@@ -1,10 +1,5 @@
 
-/**
- * @file Analyser.js
- * @description Lenia statistics analysis - fully ported from LeniaND.py with symmetry & advanced metrics
- * @author @eanutt1272.v2
- * @version 2.0.0 (LeniaND port)
- */
+
 class Analyser {
   static STAT_NAMES = {
     'p_m': 'Param m', 'p_s': 'Param s', 'n': 'Gen (#)', 't': 'Time (s)',
@@ -47,8 +42,6 @@ class Analyser {
     const cells = board.cells;
     const field = board.field;
     const count = size * size;
-
-    // Basic mass and growth
     stats.mass = 0;
     stats.growth = 0;
     stats.maxValue = 0;
@@ -66,8 +59,6 @@ class Analyser {
       mx += val * x;
       my += val * y;
     }
-
-    // Center of mass and gyradius
     stats.centerX = stats.mass > this.epsilon ? mx / stats.mass : 0;
     stats.centerY = stats.mass > this.epsilon ? my / stats.mass : 0;
 
@@ -86,8 +77,6 @@ class Analyser {
     }
 
     stats.gyradius = stats.mass > this.epsilon ? Math.sqrt(inertia / stats.mass) : 0;
-
-    // Mass asymmetry (left-right by movement direction)
     if (this.lastCenterX !== null && stats.mass > this.epsilon) {
       const dx = stats.centerX - this.lastCenterX;
       const dy = stats.centerY - this.lastCenterY;
@@ -116,8 +105,6 @@ class Analyser {
         stats.massAsym = massRight - massLeft;
       }
     }
-
-    // Lyapunov exponent (approximate)
     if (automaton && automaton.change && stats.maxValue > this.epsilon) {
       const sum = Array.from(automaton.change).reduce((a, b) => a + Math.abs(b), 0);
       if (sum > this.epsilon) {
@@ -125,11 +112,7 @@ class Analyser {
         this.lyapunov += l / Math.max(1, (automaton.gen || 1));
       }
     }
-
-    // Symmetry detection via polar FFT (simplified version for p5.js)
     this._detectSymmetry(cells, size, stats);
-
-    // Movement tracking
     if (this.lastCenterX !== null) {
       const dx = stats.centerX - this.lastCenterX;
       const dy = stats.centerY - this.lastCenterY;
@@ -147,19 +130,14 @@ class Analyser {
   }
 
   _detectSymmetry(cells, size, stats) {
-    // Full harmonic FFT-based symmetry detection (100% LeniaND equivalent)
     const center = size / 2;
     const radius = Math.min(center * 0.8, 64);
-    const angularBins = 64;  // High resolution angular sampling
-    
-    // Sample polar coordinates at high resolution
+    const angularBins = 64;  
     const angles = new Float32Array(angularBins);
     for (let theta = 0; theta < angularBins; theta++) {
       const angle = (theta / angularBins) * 2 * Math.PI;
       let sum = 0;
       let count = 0;
-      
-      // Radial integration
       for (let r = 1; r < radius; r += 1) {
         const x = Math.round(center + r * Math.cos(angle));
         const y = Math.round(center + r * Math.sin(angle));
@@ -172,8 +150,6 @@ class Analyser {
       
       angles[theta] = count > 0 ? sum / count : 0;
     }
-    
-    // Discrete Fourier Transform (simplified but complete)
     const harmonics = new Float32Array(angularBins / 2);
     for (let k = 0; k < angularBins / 2; k++) {
       let cosSum = 0;
@@ -184,31 +160,20 @@ class Analyser {
         cosSum += angles[n] * Math.cos(phase);
         sinSum += angles[n] * Math.sin(phase);
       }
-      
-      // Power spectrum
       harmonics[k] = Math.sqrt(cosSum * cosSum + sinSum * sinSum) / angularBins;
     }
-    
-    // Find dominant harmonics (symmetry orders)
     let maxHarmonic = 0;
     let maxIndex = 0;
-    
-    // Skip DC component (k=0), start from k=2 (2-fold symmetry)
     for (let k = 2; k < Math.min(16, angularBins / 2); k++) {
       if (harmonics[k] > maxHarmonic) {
         maxHarmonic = harmonics[k];
         maxIndex = k;
       }
     }
-    
-    // Normalize by max to get strength (0-1)
     let maxAll = Math.max(...harmonics);
     const symmStrength = maxAll > this.epsilon ? maxHarmonic / maxAll : 0;
-    
-    // Calculate rotational speed (angle change per generation)
     let rotSpeed = 0;
     if (this.lastCenterX !== null) {
-      // Phase shift between frames indicates rotation
       const angleOffset = Math.atan2(
         angles[angularBins / 4],
         angles[0]
@@ -219,8 +184,6 @@ class Analyser {
     stats.symmSides = maxIndex > 0 ? maxIndex : 0;
     stats.symmStrength = symmStrength;
     stats.rotationSpeed = rotSpeed;
-    
-    // Store for next frame
     this.lastAngles = angles;
   }
 
@@ -270,8 +233,6 @@ class Analyser {
       displayData.lastTime = now;
     }
   }
-
-  // Export statistics as CSV row (LeniaND compatible)
   getStatRow() {
     return [
       statistics.fps || 0,
@@ -289,8 +250,6 @@ class Analyser {
       statistics.symmStrength || 0
     ];
   }
-
-  // Export all statistics to CSV format
   exportCSV() {
     const headers = 'FPS,Gen,Time,Mass,Growth,Gyradius,CenterX,CenterY,MassAsym,Speed,Angle,SymmSides,SymmStrength\n';
     let csv = headers;
@@ -301,8 +260,6 @@ class Analyser {
 
     return csv;
   }
-
-  // Import statistics from CSV
   importCSV(csvText) {
     const lines = csvText.trim().split('\n');
     this.series = [];

@@ -1,11 +1,15 @@
 # Slime Mold Growth
 
-## Concept
-A simulation of Physarum polycephalum (slime mold) growth patterns using agent-based modelling.
-Agents follow chemoattractant gradients (pheromones) to form complex, efficient networks.
+## Overview
+Agent-based simulation inspired by *Physarum polycephalum*, where simple sensing and trail-following rules produce complex transport-network patterns.
+
+## Implementation
+- `Slime_Mold_Growth.js`
 
 ## Controls
-Adjustable parameters for sensor angle, rotation speed, and decay rates.
+Key behavioural parameters (sensor angle, turn rate, decay, deposition) are configurable in code.
 
-## Technology
-- **Tech Stack:** p5.js
+## How to Run
+
+### Browser (p5.js)
+This folder currently contains script-only source. Create a minimal `index.html` host (or use the p5.js web editor) before serving locally.
