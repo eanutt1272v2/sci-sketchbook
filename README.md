@@ -22,11 +22,11 @@ A public deployment is available at <https://sci-sketchbook.onrender.com/>.
 | Sketch | Summary | Implementations |
 | :-- | :-- | :-- |
 | [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | Burning Ship fractal explorer on the complex plane. | p5.js |
-| [Cellular Division](./sketchbook/Cellular_Division) | Particle-based emergent growth and division simulation. | p5.js |
-| [Eigen](./sketchbook/Eigen) | Matrix, eigenvalue, and eigenvector visualisation tools. | p5.js |
-| [Fluvia](./sketchbook/Fluvia) | Fluid and erosion simulation with GLSL acceleration. | p5.js, GLSL |
+| [Cellular Division](./sketchbook/Cellular_Division) | Particle-based emergent growth and division simulation based on PPS model. | p5.js |
+| [Eigen](./sketchbook/Eigen) | Hydrogen orbital visualiser mapping electron probability density using radial and angular wavefunctions. | p5.js |
+| [Fluvia](./sketchbook/Fluvia) | Fast Lagrangian hydraulic terrain erosion simulation with meandering river systems. | p5.js, GLSL |
 | [Julia Set](./sketchbook/Julia_Set) | Interactive Julia set fractal explorer. | Processing (Java), p5.js |
-| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous cellular automata playground inspired by Lenia. | p5.js |
+| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Lenia continuous cellular automata implementation with catalogue and statistics. | p5.js |
 | [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | Interactive Mandelbrot set fractal explorer. | Processing (Java), p5.js |
 | [MandelBulber](./sketchbook/MandelBulber) | 3D Mandelbulb point-cloud exploration in Processing. | Processing (Java) |
 | [Neural Network](./sketchbook/Neural_Network) | Visual and functional feedforward digit-recognition neural network demonstration. | Processing (Java) |
