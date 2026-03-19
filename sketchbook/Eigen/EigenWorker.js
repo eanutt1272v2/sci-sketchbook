@@ -103,27 +103,27 @@ function computeGrid(
   viewRadius,
   slicePlane,
   sliceOffset,
-  viewCenter,
+  viewCentre,
 ) {
   const grid = new Float32Array(res * res);
   const step = res === 1 ? 0 : (viewRadius * 2) / (res - 1);
 
   const { c1, c2, cFixed } = getSliceAxes(slicePlane);
-  const centerX = viewCenter.x || 0;
-  const centerY = viewCenter.y || 0;
-  const centerZ = viewCenter.z || 0;
+  const centerX = viewCentre.x || 0;
+  const centerY = viewCentre.y || 0;
+  const centerZ = viewCentre.z || 0;
 
-  const axisCenter1 = c1 === 0 ? centerX : c1 === 1 ? centerY : centerZ;
-  const axisCenter2 = c2 === 0 ? centerX : c2 === 1 ? centerY : centerZ;
+  const axisCentre1 = c1 === 0 ? centerX : c1 === 1 ? centerY : centerZ;
+  const axisCentre2 = c2 === 0 ? centerX : c2 === 1 ? centerY : centerZ;
 
   let peak = 1e-10;
 
   for (let v = 0; v < res; v++) {
-    const p2 = -viewRadius + v * step + axisCenter2;
+    const p2 = -viewRadius + v * step + axisCentre2;
     const rowOffset = v * res;
 
     for (let u = 0; u < res; u++) {
-      const p1 = -viewRadius + u * step + axisCenter1;
+      const p1 = -viewRadius + u * step + axisCentre1;
 
       let x = 0,
         y = 0,
@@ -151,7 +151,7 @@ self.onmessage = function (e) {
   const { type } = e.data;
 
   if (type === "render") {
-    const { n, l, m, res, viewRadius, slicePlane, sliceOffset, viewCenter } =
+    const { n, l, m, res, viewRadius, slicePlane, sliceOffset, viewCentre } =
       e.data;
     const { grid, peak } = computeGrid(
       n,
@@ -161,7 +161,7 @@ self.onmessage = function (e) {
       viewRadius,
       slicePlane,
       sliceOffset,
-      viewCenter,
+      viewCentre,
     );
     self.postMessage({ type: "result", grid: grid.buffer, peak }, [
       grid.buffer,

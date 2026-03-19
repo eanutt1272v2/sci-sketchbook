@@ -42,7 +42,7 @@ class Media {
 
     const sourceCanvas = _renderer?.elt;
     if (!sourceCanvas) {
-      console.error("No valid canvas found");
+      console.error("[Lenia] No valid canvas found");
       return;
     }
 
@@ -51,7 +51,7 @@ class Media {
     const supportedType = types.find((t) => MediaRecorder.isTypeSupported(t));
 
     if (!supportedType) {
-      console.error("No supported video format found");
+      console.error("[Lenia] No supported video format found");
       return;
     }
 
@@ -78,9 +78,9 @@ class Media {
       this.mediaRecorder.start();
       this.isRecording = true;
       this.appcore.refreshGUI();
-      console.log(`Recording: ${supportedType}`);
+      console.log(`[Lenia] Recording: ${supportedType}`);
     } catch (err) {
-      console.error("Recording failed:", err);
+      console.error("[Lenia] Recording failed:", err);
       this.stopRecording();
     }
   }
@@ -115,7 +115,7 @@ class Media {
     this.openDataImportDialog((file) => {
       this._readJSONFile(file, (data) => {
         if (!data || typeof data !== "object" || !data.cells) {
-          throw new Error("Invalid world JSON payload");
+          throw new Error("[Lenia] Invalid world JSON payload");
         }
 
         const payload = this._normaliseWorldPayload(data);
@@ -125,25 +125,16 @@ class Media {
   }
 
   _normaliseWorldPayload(data) {
-    const rawSize = Number(data.size) || Number(data?.params?.gridSize);
-    const size = this.appcore._normaliseGridSize(rawSize || this.appcore.params.gridSize);
-
-    let cells = null;
-    if (typeof data.cells === "string") {
-      cells = RLECodec.decode(data.cells, size, size);
-    } else if (Array.isArray(data.cells)) {
-      const out = new Float32Array(size * size);
-      const n = Math.min(data.cells.length, out.length);
-      for (let i = 0; i < n; i++) {
-        const v = Number(data.cells[i]);
-        out[i] = Number.isFinite(v) ? constrain(v, 0, 1) : 0;
-      }
-      cells = out;
+    const rawSize = Number(data.size);
+    if (!Number.isFinite(rawSize) || rawSize <= 0) {
+      throw new Error("[Lenia] Invalid world JSON: missing or invalid size");
     }
+    const size = this.appcore._normaliseGridSize(rawSize);
 
-    if (!cells) {
-      throw new Error("Invalid world JSON: unsupported cells encoding");
+    if (typeof data.cells !== "string") {
+      throw new Error("[Lenia] Invalid world JSON: cells must be RLE string");
     }
+    const cells = RLECodec.decode(data.cells, size, size);
 
     return {
       size,
@@ -191,11 +182,11 @@ class Media {
     this.openDataImportDialog((file) => {
       this._readJSONFile(file, (data) => {
         if (!data || typeof data !== "object") {
-          throw new Error("Invalid params JSON payload");
+          throw new Error("[Lenia] Invalid params JSON payload");
         }
 
         if (!data.params || typeof data.params !== "object") {
-          throw new Error("Invalid params JSON format");
+          throw new Error("[Lenia] Invalid params JSON format");
         }
 
         const incoming = data.params;
@@ -252,10 +243,10 @@ class Media {
         const parsed = JSON.parse(String(reader.result || "{}"));
         onSuccess(parsed);
       } catch (err) {
-        console.error("JSON import failed:", err);
+        console.error("[Lenia] JSON import failed:", err);
       }
     };
-    reader.onerror = () => console.error("File read failed");
+    reader.onerror = () => console.error("[Lenia] File read failed");
     reader.readAsText(file);
   }
 

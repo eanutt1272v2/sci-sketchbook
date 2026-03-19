@@ -32,7 +32,7 @@ class Media {
 
     const sourceCanvas = _renderer?.elt;
     if (!sourceCanvas) {
-      console.error("No valid canvas found");
+      console.error("[Eigen] No valid canvas found");
       return;
     }
 
@@ -41,7 +41,7 @@ class Media {
     const supportedType = types.find((t) => MediaRecorder.isTypeSupported(t));
 
     if (!supportedType) {
-      console.error("No supported video format found");
+      console.error("[Eigen] No supported video format found");
       return;
     }
 
@@ -68,9 +68,9 @@ class Media {
       this.mediaRecorder.start();
       this.isRecording = true;
       this.appcore.refreshGUI();
-      console.log(`Recording: ${supportedType}`);
+      console.log(`[Eigen] Recording: ${supportedType}`);
     } catch (err) {
-      console.error("Recording failed:", err);
+      console.error("[Eigen] Recording failed:", err);
       this.stopRecording();
     }
   }
@@ -88,7 +88,7 @@ class Media {
       save(_renderer, this._getFilename(this.appcore.params.imageFormat));
       console.log("[Eigen] Exported image");
     } catch (err) {
-      console.error("Export failed:", err);
+      console.error("[Eigen] Export failed:", err);
     }
   }
 
@@ -106,7 +106,7 @@ class Media {
     this.openDataImportDialog((file) => {
       this._readJSONFile(file, (data) => {
         if (!data || typeof data !== "object" || !data.params) {
-          throw new Error("Invalid params JSON payload");
+          throw new Error("[Eigen] Invalid params JSON payload");
         }
 
         const allowed = [
@@ -123,7 +123,7 @@ class Media {
           "viewRadius",
           "slicePlane",
           "sliceOffset",
-          "viewCenter",
+          "viewCentre",
           "imageFormat",
         ];
 
@@ -131,14 +131,14 @@ class Media {
           if (!(key in data.params)) continue;
 
           if (
-            key === "viewCenter" &&
-            data.params.viewCenter &&
-            typeof data.params.viewCenter === "object"
+            key === "viewCentre" &&
+            data.params.viewCentre &&
+            typeof data.params.viewCentre === "object"
           ) {
-            const vc = data.params.viewCenter;
-            this.appcore.params.viewCenter.x = Number(vc.x) || 0;
-            this.appcore.params.viewCenter.y = Number(vc.y) || 0;
-            this.appcore.params.viewCenter.z = Number(vc.z) || 0;
+            const vc = data.params.viewCentre;
+            this.appcore.params.viewCentre.x = Number(vc.x) || 0;
+            this.appcore.params.viewCentre.y = Number(vc.y) || 0;
+            this.appcore.params.viewCentre.z = Number(vc.z) || 0;
           } else {
             this.appcore.params[key] = data.params[key];
           }
@@ -215,10 +215,10 @@ class Media {
   _serialiseParams(params) {
     return {
       ...params,
-      viewCenter: {
-        x: Number(params.viewCenter.x) || 0,
-        y: Number(params.viewCenter.y) || 0,
-        z: Number(params.viewCenter.z) || 0,
+      viewCentre: {
+        x: Number(params.viewCentre.x) || 0,
+        y: Number(params.viewCentre.y) || 0,
+        z: Number(params.viewCentre.z) || 0,
       },
     };
   }
@@ -230,10 +230,10 @@ class Media {
         const parsed = JSON.parse(String(reader.result || "{}"));
         onSuccess(parsed);
       } catch (err) {
-        console.error("JSON import failed:", err);
+        console.error("[Eigen] JSON import failed:", err);
       }
     };
-    reader.onerror = () => console.error("File read failed");
+    reader.onerror = () => console.error("[Eigen] File read failed");
     reader.readAsText(file);
   }
 

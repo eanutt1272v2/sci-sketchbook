@@ -84,7 +84,7 @@ class Renderer {
       sliceOffset,
       colourMap,
       exposure,
-      viewCenter,
+      viewCentre,
     } = this.appcore.params;
     const { fallbacksolver } = this.appcore;
     let { buffer } = this;
@@ -102,19 +102,19 @@ class Renderer {
     const { c1, c2, cFixed } = this.getSliceAxes(slicePlane);
     let peak = 1e-10;
 
-    const centerX = viewCenter.x;
-    const centerY = viewCenter.y;
-    const centerZ = viewCenter.z;
+    const centerX = viewCentre.x;
+    const centerY = viewCentre.y;
+    const centerZ = viewCentre.z;
 
-    const axisCenter1 = c1 === 0 ? centerX : c1 === 1 ? centerY : centerZ;
-    const axisCenter2 = c2 === 0 ? centerX : c2 === 1 ? centerY : centerZ;
+    const axisCentre1 = c1 === 0 ? centerX : c1 === 1 ? centerY : centerZ;
+    const axisCentre2 = c2 === 0 ? centerX : c2 === 1 ? centerY : centerZ;
 
     for (let v = 0; v < res; v++) {
-      const p2 = axisSamples[v] + axisCenter2;
+      const p2 = axisSamples[v] + axisCentre2;
       const rowOffset = v * res;
 
       for (let u = 0; u < res; u++) {
-        const p1 = axisSamples[u] + axisCenter1;
+        const p1 = axisSamples[u] + axisCentre1;
 
         let x = 0;
         let y = 0;
@@ -211,12 +211,12 @@ class Renderer {
   }
 
   renderOverlay() {
-    const { n, l, m, viewRadius, sliceOffset, orbitalNotation, viewCenter } =
+    const { n, l, m, viewRadius, sliceOffset, orbitalNotation, viewCentre } =
       this.appcore.params;
     const { axis1, axis2, fixedLabel, axis1Label, axis2Label } =
       this.appcore.getPlaneAxes();
     const fps = this.appcore.statistics.fps;
-    const overlay = `Orbital: ${orbitalNotation}\nn=${n}, l=${l}, m=${m}\nView Radius: ${viewRadius.toFixed(2)} a₀\nPan ${axis1Label}: ${viewCenter[axis1].toFixed(2)} a₀   ${axis2Label}: ${viewCenter[axis2].toFixed(2)} a₀\nSlice ${fixedLabel}: ${sliceOffset.toFixed(2)} a₀\nFPS: ${fps.toFixed(1)}`;
+    const overlay = `Orbital: ${orbitalNotation}\nn=${n}, l=${l}, m=${m}\nView Radius: ${viewRadius.toFixed(2)} a₀\nPan ${axis1Label}: ${viewCentre[axis1].toFixed(2)} a₀   ${axis2Label}: ${viewCentre[axis2].toFixed(2)} a₀\nSlice ${fixedLabel}: ${sliceOffset.toFixed(2)} a₀\nFPS: ${fps.toFixed(1)}`;
 
     fill(255);
     noStroke();

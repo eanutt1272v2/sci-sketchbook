@@ -60,8 +60,8 @@ class Analyser {
     this.lyapunov = 0;
     this.symmSides = 0;
     this.symmRotate = 0;
-    this.lastCenterX = null;
-    this.lastCenterY = null;
+    this.lastCentreX = null;
+    this.lastCentreY = null;
     this.totalShift = [0, 0];
   }
 
@@ -126,9 +126,9 @@ class Analyser {
 
     stats.gyradius =
       stats.mass > this.epsilon ? Math.sqrt(inertia / stats.mass) : 0;
-    if (this.lastCenterX !== null && stats.mass > this.epsilon) {
-      const dx = this._torusDelta(stats.centerX, this.lastCenterX, size);
-      const dy = this._torusDelta(stats.centerY, this.lastCenterY, size);
+    if (this.lastCentreX !== null && stats.mass > this.epsilon) {
+      const dx = this._torusDelta(stats.centerX, this.lastCentreX, size);
+      const dy = this._torusDelta(stats.centerY, this.lastCentreY, size);
       const norm = Math.sqrt(dx * dx + dy * dy);
 
       if (norm > this.epsilon) {
@@ -165,9 +165,9 @@ class Analyser {
       }
     }
     this._detectSymmetry(cells, size, stats);
-    if (this.lastCenterX !== null) {
-      const dx = this._torusDelta(stats.centerX, this.lastCenterX, size);
-      const dy = this._torusDelta(stats.centerY, this.lastCenterY, size);
+    if (this.lastCentreX !== null) {
+      const dx = this._torusDelta(stats.centerX, this.lastCentreX, size);
+      const dy = this._torusDelta(stats.centerY, this.lastCentreY, size);
       stats.speed = Math.sqrt(dx * dx + dy * dy);
       stats.angle = (Math.atan2(dy, dx) * 180) / Math.PI;
     } else {
@@ -175,8 +175,8 @@ class Analyser {
       stats.angle = 0;
     }
 
-    this.lastCenterX = stats.centerX;
-    this.lastCenterY = stats.centerY;
+    this.lastCentreX = stats.centerX;
+    this.lastCentreY = stats.centerY;
 
     return stats;
   }
@@ -233,7 +233,7 @@ class Analyser {
     let maxAll = Math.max(...harmonics);
     const symmStrength = maxAll > this.epsilon ? maxHarmonic / maxAll : 0;
     let rotSpeed = 0;
-    if (this.lastCenterX !== null) {
+    if (this.lastCentreX !== null) {
       const angleOffset = Math.atan2(angles[angularBins / 4], angles[0]);
       rotSpeed = (angleOffset * 180) / Math.PI;
     }
@@ -315,7 +315,7 @@ class Analyser {
   }
   exportCSV() {
     const headers =
-      "FPS,Gen,Time,Mass,Growth,Gyradius,CenterX,CenterY,MassAsym,Speed,Angle,SymmSides,SymmStrength\n";
+      "FPS,Gen,Time,Mass,Growth,Gyradius,CentreX,CentreY,MassAsym,Speed,Angle,SymmSides,SymmStrength\n";
     let csv = headers;
 
     for (const row of this.series) {

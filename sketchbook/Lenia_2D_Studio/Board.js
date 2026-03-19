@@ -168,7 +168,7 @@ class Board {
     this.field = this._createGrid();
     this.fieldOld = null;
   }
-  add(board, shift = [0, 0], isCentered = true) {
+  add(board, shift = [0, 0], isCentred = true) {
     const shift0 = shift[0] || 0;
     const shift1 = shift[1] || 0;
     const size0 = this.size;
@@ -177,8 +177,8 @@ class Board {
 
     for (let iy = 0; iy < size_min; iy++) {
       for (let ix = 0; ix < size_min; ix++) {
-        const start0 = isCentered ? (size0 - size_min) / 2 + shift0 : shift0;
-        const start1 = isCentered ? (size1 - size_min) / 2 : 0;
+        const start0 = isCentred ? (size0 - size_min) / 2 + shift0 : shift0;
+        const start1 = isCentred ? (size1 - size_min) / 2 : 0;
 
         const idx0 = (((start0 + ix) % size0) + size0) % size0;
         const idx1 = (start1 + ix) % size1;

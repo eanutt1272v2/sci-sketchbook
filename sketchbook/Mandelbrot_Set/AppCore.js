@@ -60,7 +60,7 @@ class AppCore {
       this._worker = new Worker("FractalWorker.js");
     } catch (e) {
       console.warn(
-        "[Mandelbrot] Worker unavailable — falling back to sync render.",
+        "[Mandelbrot Set] Worker unavailable — falling back to sync render.",
         e,
       );
       this._worker = null;
@@ -69,7 +69,7 @@ class AppCore {
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
     this._workerLutVersion = -1;
     this._worker.onerror = (e) => {
-      console.error("[Mandelbrot] Worker error:", e);
+      console.error("[Mandelbrot Set] Worker error:", e);
       this._workerBusy = false;
       this.renderer.render();
     };

@@ -23,7 +23,7 @@ class AppCore {
       viewRadius: 32,
       slicePlane: "xz",
       sliceOffset: 0,
-      viewCenter: { x: 0, y: 0, z: 0 },
+      viewCentre: { x: 0, y: 0, z: 0 },
 
       imageFormat: "png",
     };
@@ -122,11 +122,11 @@ class AppCore {
     this.requestRender();
   }
 
-  resetViewCenter() {
-    const { viewCenter } = this.params;
-    viewCenter.x = 0;
-    viewCenter.y = 0;
-    viewCenter.z = 0;
+  resetViewCentre() {
+    const { viewCentre } = this.params;
+    viewCentre.x = 0;
+    viewCentre.y = 0;
+    viewCentre.z = 0;
     this.requestRender();
   }
 
@@ -266,7 +266,7 @@ class AppCore {
       this._worker = new Worker("EigenWorker.js");
     } catch (e) {
       console.warn(
-        "[Eigen] Worker unavailable — falling back to synchronous render.",
+        "[Eigen] Worker unavailable, falling back to synchronous render.",
         e,
       );
       this._worker = null;
@@ -293,7 +293,7 @@ class AppCore {
       viewRadius,
       slicePlane,
       sliceOffset,
-      viewCenter,
+      viewCentre,
     } = this.params;
     this._workerBusy = true;
     this._renderPending = false;
@@ -306,7 +306,7 @@ class AppCore {
       viewRadius,
       slicePlane,
       sliceOffset,
-      viewCenter: { x: viewCenter.x, y: viewCenter.y, z: viewCenter.z },
+      viewCentre: { x: viewCentre.x, y: viewCentre.y, z: viewCentre.z },
     });
   }
 

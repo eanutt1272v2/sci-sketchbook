@@ -322,11 +322,11 @@ class GUI {
     const motion = page.addFolder({ title: "Position & Motion" });
     motion.addBinding(statistics, "centerX", {
       readonly: true,
-      label: "Center X",
+      label: "Centre X",
     });
     motion.addBinding(statistics, "centerY", {
       readonly: true,
-      label: "Center Y",
+      label: "Centre Y",
     });
     motion.addBinding(statistics, "speed", { readonly: true, label: "Speed" });
     motion.addBinding(statistics, "angle", {
@@ -425,8 +425,8 @@ class GUI {
 
     page.addButton({ title: "Print Statistics to Console" }).on("click", () => {
       if (!analyser) return;
-      console.log("Statistics Series:", analyser.series);
-      console.log("Current Stats Row:", analyser.getStatRow());
+      console.log("[Lenia] Statistics Series:", analyser.series);
+      console.log("[Lenia] Current Stats Row:", analyser.getStatRow());
     });
   }
 

@@ -143,7 +143,7 @@ class InputHandler {
         break;
 
       case "x":
-        this.appcore.resetViewCenter();
+        this.appcore.resetViewCentre();
         logMsg = "View center reset";
         break;
     }
@@ -286,8 +286,8 @@ class InputHandler {
     const clampedNx = constrain(nx, 0, 1);
     const clampedNy = constrain(ny, 0, 1);
     const { axis1, axis2 } = this.appcore.getPlaneAxes();
-    params.viewCenter[axis1] += (clampedNx - 0.5) * (oldRadius - newRadius) * 2;
-    params.viewCenter[axis2] += (clampedNy - 0.5) * (oldRadius - newRadius) * 2;
+    params.viewCentre[axis1] += (clampedNx - 0.5) * (oldRadius - newRadius) * 2;
+    params.viewCentre[axis2] += (clampedNy - 0.5) * (oldRadius - newRadius) * 2;
     params.viewRadius = newRadius;
 
     return true;
@@ -295,8 +295,8 @@ class InputHandler {
 
   panCurrentPlane(delta1, delta2) {
     const { axis1, axis2 } = this.appcore.getPlaneAxes();
-    this.appcore.params.viewCenter[axis1] += delta1;
-    this.appcore.params.viewCenter[axis2] += delta2;
+    this.appcore.params.viewCentre[axis1] += delta1;
+    this.appcore.params.viewCentre[axis2] += delta2;
   }
 
   resetGesture() {

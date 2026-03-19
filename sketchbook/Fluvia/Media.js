@@ -48,7 +48,7 @@ class Media {
 
   handleHeightmapImport(file) {
     if (!file?.type.startsWith("image")) {
-      console.error("Import failed: provided file is not an image");
+      console.error("[Fluvia] Import failed: provided file is not an image");
       return;
     }
 
@@ -70,14 +70,14 @@ class Media {
               sedimentMap,
             } = terrain;
 
-            if (!img) throw new Error("loadImage returned null");
+            if (!img) throw new Error("[Fluvia] loadImage returned null");
 
             img.resize(size, size);
             img.loadPixels();
 
             const { pixels } = img;
             if (!pixels || pixels.length < area * 4)
-              throw new Error("pixel buffer incomplete");
+              throw new Error("[Fluvia] Pixel buffer incomplete");
 
             for (let i = 0; i < area; i++) {
               const idx = i << 2;
@@ -93,12 +93,12 @@ class Media {
 
             terrain.reset();
             this.appcore.refreshGUI();
-            console.log(`Heightmap imported: ${size}x${size}`);
+            console.log(`[Fluvia] Heightmap imported: ${size}x${size}`);
           } catch (err) {
-            console.error("Import failed during processing:", err);
+            console.error("[Fluvia] Import failed during processing:", err);
           }
         },
-        (err) => console.error("Import failed: load error", err),
+        (err) => console.error("[Fluvia] Import failed: load error", err),
       );
     };
 
@@ -109,14 +109,14 @@ class Media {
     if (this.isRecording) return;
 
     const sourceCanvas = _renderer?.elt;
-    if (!sourceCanvas) return console.error("No valid canvas found");
+    if (!sourceCanvas) return console.error("[Fluvia] No valid canvas found");
 
     this.recordedChunks = [];
 
     const types = ["video/webm;codecs=vp8", "video/mp4", "video/webm"];
     const supportedType = types.find((t) => MediaRecorder.isTypeSupported(t));
 
-    if (!supportedType) return console.error("No supported video format found");
+    if (!supportedType) return console.error("[Fluvia] No supported video format found");
 
     try {
       const stream = sourceCanvas.captureStream(60);
@@ -141,9 +141,9 @@ class Media {
       this.mediaRecorder.start();
       this.isRecording = true;
       this.appcore.refreshGUI();
-      console.log(`Recording: ${supportedType}`);
+      console.log(`[Fluvia] Recording: ${supportedType}`);
     } catch (err) {
-      console.error("Recording failed:", err);
+      console.error("[Fluvia] Recording failed:", err);
       this.stopRecording();
     }
   }
@@ -162,7 +162,7 @@ class Media {
       save(_renderer, this._getFilename(imageFormat));
       console.log("[Fluvia] Exported image");
     } catch (err) {
-      console.error(`Export failed: ${err}`);
+      console.error(`[Fluvia] Export failed: ${err}`);
     }
   }
 
@@ -180,7 +180,7 @@ class Media {
     this.openDataImportDialog((file) => {
       this._readJSONFile(file, (data) => {
         if (!data || typeof data !== "object" || !data.params) {
-          throw new Error("Invalid params JSON payload");
+          throw new Error("[Fluvia] Invalid params JSON payload");
         }
 
         const oldSize = this.appcore.params.terrainSize;
@@ -323,12 +323,32 @@ class Media {
           !data.maps ||
           !data.terrainSize
         ) {
-          throw new Error("Invalid world JSON payload");
+          throw new Error("[Fluvia] Invalid world JSON payload");
         }
 
-        const incomingSize =
-          Number(data.terrainSize) || this.appcore.params.terrainSize;
-        // Stop worker and ensure terrain buffers are available for writing
+        const requiredMaps = [
+          "heightMap",
+          "originalHeightMap",
+          "bedrockMap",
+          "sedimentMap",
+          "dischargeMap",
+          "dischargeTrack",
+          "momentumX",
+          "momentumY",
+          "momentumXTrack",
+          "momentumYTrack",
+        ];
+        for (const key of requiredMaps) {
+          if (!Array.isArray(data.maps[key])) {
+            throw new Error(`[Fluvia] Invalid world JSON: missing maps.${key}`);
+          }
+        }
+
+        const incomingSize = Number(data.terrainSize);
+        if (!Number.isFinite(incomingSize) || incomingSize <= 0) {
+          throw new Error("[Fluvia] Invalid world JSON: invalid terrainSize");
+        }
+
         this.appcore._terminateWorker();
         if (incomingSize !== this.appcore.params.terrainSize) {
           this.appcore.params.terrainSize = incomingSize;
@@ -401,10 +421,19 @@ class Media {
   }
 
   _copyArrayInto(target, source) {
-    if (!target || !source || !Array.isArray(source)) return;
-    const n = Math.min(target.length, source.length);
-    for (let i = 0; i < n; i++) target[i] = Number(source[i]) || 0;
-    for (let i = n; i < target.length; i++) target[i] = 0;
+    if (!target || !Array.isArray(source)) {
+      throw new Error("[Fluvia] Invalid map buffer during world import");
+    }
+    if (source.length !== target.length) {
+      throw new Error(
+        `[Fluvia] Invalid map length during world import: expected ${target.length}, got ${source.length}`,
+      );
+    }
+
+    for (let i = 0; i < target.length; i++) {
+      const value = Number(source[i]);
+      target[i] = Number.isFinite(value) ? value : 0;
+    }
   }
 
   _assignColour(srcRoot, dstRoot, key) {
@@ -448,10 +477,10 @@ class Media {
         const parsed = JSON.parse(String(reader.result || "{}"));
         onSuccess(parsed);
       } catch (err) {
-        console.error("JSON import failed:", err);
+        console.error("[Fluvia] JSON import failed:", err);
       }
     };
-    reader.onerror = () => console.error("File read failed");
+    reader.onerror = () => console.error("[Fluvia] File read failed");
     reader.readAsText(file);
   }
 

@@ -173,7 +173,7 @@ class GUI {
     page.addBlade({ view: "separator" });
 
     page
-      .addBinding(this.appcore.params.viewCenter, "x", {
+      .addBinding(this.appcore.params.viewCentre, "x", {
         label: "Pan X (a₀)",
         min: -256,
         max: 256,
@@ -182,7 +182,7 @@ class GUI {
       .on("change", () => this.appcore.requestRender());
 
     page
-      .addBinding(this.appcore.params.viewCenter, "y", {
+      .addBinding(this.appcore.params.viewCentre, "y", {
         label: "Pan Y (a₀)",
         min: -256,
         max: 256,
@@ -191,7 +191,7 @@ class GUI {
       .on("change", () => this.appcore.requestRender());
 
     page
-      .addBinding(this.appcore.params.viewCenter, "z", {
+      .addBinding(this.appcore.params.viewCentre, "z", {
         label: "Pan Z (a₀)",
         min: -256,
         max: 256,
@@ -200,8 +200,8 @@ class GUI {
       .on("change", () => this.appcore.requestRender());
 
     page
-      .addButton({ title: "Reset View Center" })
-      .on("click", () => this.appcore.resetViewCenter());
+      .addButton({ title: "Reset View Centre" })
+      .on("click", () => this.appcore.resetViewCentre());
 
     page.addBlade({ view: "separator" });
   }
