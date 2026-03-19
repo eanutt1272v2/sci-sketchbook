@@ -5,10 +5,9 @@ Interactive explorer for the Burning Ship fractal:
 
 `z_{n+1} = (|Re(z_n)| + i|Im(z_n)|)^2 + c`
 
-This variant is known for its flame-like geometry and sharp filament detail.
+This variant is known for its flame-like geometry and sharp 'filament-like' details.
 
 ## Implementations
-- `Processing_Java/`
 - `p5_JS/`
 
 Both implementations use the same modular UI architecture (`AppCore`, `FractalRenderer`, input handling, and reusable UI widgets).
