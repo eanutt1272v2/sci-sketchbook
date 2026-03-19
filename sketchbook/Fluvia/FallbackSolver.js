@@ -1,5 +1,3 @@
-// This is the fallbacksolver script executed when FallbackSolverWorker.js cannot load properly - ie. A fallback. I plan to rename FallbackSolver.js, the class name, and references to it to FallbackFallbackSolver or fallbackfallbacksolver when I get round to it.
-
 class FallbackSolver {
   constructor(appcore) {
     this.appcore = appcore;
