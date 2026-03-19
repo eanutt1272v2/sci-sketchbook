@@ -1,4 +1,6 @@
-# sci-sketchbook <img src="logo.png" alt="sci-sketchbook logo" align="right" width="175">
+# sci-sketchbook
+
+![sci-sketchbook logo](logo.png)
 
 > [!IMPORTANT]
 > **Major Migration and Refactor Notice**

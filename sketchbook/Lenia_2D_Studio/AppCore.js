@@ -49,7 +49,7 @@ class AppCore {
 
       selectedAnimal: "",
       placeMode: true,
-      placeScale: 1,
+      placeScale: 2,
       autoScaleSimParams: true,
 
       imageFormat: "png",
@@ -311,6 +311,13 @@ class AppCore {
         this.renderer.renderGrid(this.params.R);
       }
 
+      if (
+        this.params.renderMotionOverlay &&
+        this.params.renderMode !== "kernel"
+      ) {
+        this.renderer.renderMotionOverlay(this.statistics, this.params);
+      }
+
       if (this.params.renderScale) {
         this.renderer.renderScale(this.params.R);
       }
@@ -321,13 +328,6 @@ class AppCore {
 
       if (this.params.renderStats) {
         this.renderer.renderStats(this.statistics, this.params);
-      }
-
-      if (
-        this.params.renderMotionOverlay &&
-        this.params.renderMode !== "kernel"
-      ) {
-        this.renderer.renderMotionOverlay(this.statistics, this.params);
       }
     }
 

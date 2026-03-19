@@ -83,7 +83,6 @@ class GUI {
           "128×128": 128,
           "256×256": 256,
           "512×512": 512,
-          "1024×1024": 1024,
         },
       })
       .on("change", () => this.appcore?.changeResolution());
@@ -190,6 +189,10 @@ class GUI {
       })
       .on("change", () => this.appcore?.loadSelectedAnimalParams());
 
+    page
+      .addButton({ title: "Load Selected Animal" })
+      .on("click", () => this.appcore?.loadSelectedAnimal());
+
     page.addBlade({ view: "separator" });
 
     page.addBinding(params, "placeMode", { label: "Place Mode" });
@@ -197,13 +200,13 @@ class GUI {
     page.addBlade({ view: "separator" });
 
     const scaleFolder = page.addFolder({
-      title: "Placement Scale",
+      title: "Placement Scale (animals may not tolerate scaling well)",
       expanded: true,
     });
 
     scaleFolder
       .addBinding(params, "placeScale", {
-        label: "Scale ×",
+        label: "Scale",
         min: 0.25,
         max: 4,
         step: 0.05,
@@ -215,7 +218,7 @@ class GUI {
 
     scaleFolder
       .addBinding(params, "autoScaleSimParams", {
-        label: "Auto-scale Params",
+        label: "Auto-scale Sim Params to Scale",
       })
       .on("change", () => {
         if (!this.appcore || !params.autoScaleSimParams) return;
@@ -227,7 +230,7 @@ class GUI {
       });
 
     scaleFolder
-      .addButton({ title: "Auto-scale Sim Params to Scale" })
+      .addButton({ title: "Manually Scale Sim Params to Scale" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
@@ -235,11 +238,11 @@ class GUI {
         this.appcore.applyScaledAnimalParams(animal, params.placeScale);
         this.appcore.updateAutomatonParams();
         this.appcore.refreshGUI();
-        console.log(`[Lenia] Auto-scaled params: R=${params.R}, T=${params.T}`);
+        console.log(`[Lenia] Manually scaled params: R=${params.R}, T=${params.T}`);
       });
 
     scaleFolder
-      .addButton({ title: "Reset Sim Params from Animal" })
+      .addButton({ title: "Reset to Sim Params from Animal" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
@@ -249,12 +252,6 @@ class GUI {
           this.appcore.refreshGUI();
         }
       });
-
-    page.addBlade({ view: "separator" });
-
-    page
-      .addButton({ title: "Load Selected Animal Pattern" })
-      .on("click", () => this.appcore?.loadSelectedAnimal());
   }
 
   createRenderTab(page) {
