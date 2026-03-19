@@ -29,7 +29,7 @@ function preload() {
 function setup() {
   mainCanvas = createCanvas(1100, 800);
   setupCanvasProperties(mainCanvas);
-  appcore = new AppCore();
+  appcore = new AppCore({ metadata });
 }
 
 function setupCanvasProperties(canvas) {
@@ -53,4 +53,8 @@ function draw() {
 
 function keyPressed() {
   appcore.onKeyPressed();
+}
+
+function windowResized() {
+  if (appcore !== null) appcore.windowResized();
 }

@@ -1,5 +1,8 @@
 class AppCore {
-  constructor() {
+  constructor(assets = {}) {
+    const { metadata = null } = assets;
+
+    this.metadata = metadata;
     this.theme = new Theme();
     this.sim = new Simulation();
     this.ui = new UIManager(this);
@@ -20,6 +23,11 @@ class AppCore {
 
   onKeyPressed() {
     this.ui.onKeyPressed();
+  }
+
+  windowResized() {
+    // Keep the fixed-layout UI canvas dimensions on resize.
+    resizeCanvas(1100, 800);
   }
 
   restartSimulation() {
