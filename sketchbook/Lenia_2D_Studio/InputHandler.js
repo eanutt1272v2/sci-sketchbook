@@ -19,36 +19,60 @@ class InputHandler {
     let shouldUpdateAutomaton = false;
 
     if (keyIsDown(219) || keyIsDown(221)) {
-      params.R = constrain(params.R + (keyIsDown(221) ? 1 : -1) * dtScale, 2, 50);
+      params.R = constrain(
+        params.R + (keyIsDown(221) ? 1 : -1) * dtScale,
+        2,
+        50,
+      );
       params.R = Math.round(params.R);
       shouldUpdateAutomaton = true;
     }
 
     if (keyIsDown(186) || keyIsDown(222)) {
-      params.T = constrain(params.T + (keyIsDown(222) ? 1 : -1) * dtScale, 1, 50);
+      params.T = constrain(
+        params.T + (keyIsDown(222) ? 1 : -1) * dtScale,
+        1,
+        50,
+      );
       params.T = Math.round(params.T);
       shouldUpdateAutomaton = true;
     }
 
     if (keyIsDown(188) || keyIsDown(190)) {
-      params.m = constrain(params.m + (keyIsDown(190) ? 0.002 : -0.002) * dtScale, 0, 0.5);
+      params.m = constrain(
+        params.m + (keyIsDown(190) ? 0.002 : -0.002) * dtScale,
+        0,
+        0.5,
+      );
       shouldUpdateAutomaton = true;
     }
 
     const minusHeld = keyIsDown(189) || keyIsDown(173) || keyIsDown(109);
     const plusHeld = keyIsDown(187) || keyIsDown(61) || keyIsDown(107);
     if (minusHeld || plusHeld) {
-      params.s = constrain(params.s + (plusHeld ? 0.0005 : -0.0005) * dtScale, 0.001, 0.1);
+      params.s = constrain(
+        params.s + (plusHeld ? 0.0005 : -0.0005) * dtScale,
+        0.001,
+        0.1,
+      );
       shouldUpdateAutomaton = true;
     }
 
     if (keyIsDown(LEFT_ARROW) || keyIsDown(RIGHT_ARROW)) {
-      params.addNoise = constrain(params.addNoise + (keyIsDown(RIGHT_ARROW) ? 0.1 : -0.1) * dtScale, 0, 10);
+      params.addNoise = constrain(
+        params.addNoise + (keyIsDown(RIGHT_ARROW) ? 0.1 : -0.1) * dtScale,
+        0,
+        10,
+      );
       shouldUpdateAutomaton = true;
     }
 
     if (keyIsDown(UP_ARROW) || keyIsDown(DOWN_ARROW)) {
-      params.maskRate = constrain(params.maskRate + (keyIsDown(UP_ARROW) ? 0.1 : -0.1) * dtScale, 0, 10);
+      params.maskRate = constrain(
+        params.maskRate + (keyIsDown(UP_ARROW) ? 0.1 : -0.1) * dtScale,
+        0,
+        10,
+      );
       shouldUpdateAutomaton = true;
     }
 
@@ -68,7 +92,8 @@ class InputHandler {
     const keyLower = (k || "").toLowerCase();
 
     if (k === "#") {
-      this.appcore.params.renderKeymapRef = !this.appcore.params.renderKeymapRef;
+      this.appcore.params.renderKeymapRef =
+        !this.appcore.params.renderKeymapRef;
       this.appcore.refreshGUI();
       return false;
     }
@@ -78,7 +103,9 @@ class InputHandler {
     if (k === " ") {
       this.appcore.params.running = !this.appcore.params.running;
       this.appcore.refreshGUI();
-      console.log(`[Lenia] ${this.appcore.params.running ? "Running" : "Paused"}`);
+      console.log(
+        `[Lenia] ${this.appcore.params.running ? "Running" : "Paused"}`,
+      );
       return false;
     }
 
@@ -171,9 +198,12 @@ class InputHandler {
     }
 
     if (keyLower === "m") {
-      this.appcore.params.renderMotionOverlay = !this.appcore.params.renderMotionOverlay;
+      this.appcore.params.renderMotionOverlay =
+        !this.appcore.params.renderMotionOverlay;
       this.appcore.refreshGUI();
-      console.log(`[Lenia] Motion overlay: ${this.appcore.params.renderMotionOverlay}`);
+      console.log(
+        `[Lenia] Motion overlay: ${this.appcore.params.renderMotionOverlay}`,
+      );
       return false;
     }
 
@@ -352,7 +382,7 @@ class InputHandler {
   _cyclePlaceScale(delta) {
     const scales = [0.25, 0.5, 1, 2, 3, 4];
     const current = this.appcore.params.placeScale || 1;
-    const idx = scales.findIndex(s => Math.abs(s - current) < 0.01);
+    const idx = scales.findIndex((s) => Math.abs(s - current) < 0.01);
     const base = idx >= 0 ? idx : 2;
     const next = (base + delta + scales.length) % scales.length;
     this.appcore.params.placeScale = scales[next];
@@ -366,16 +396,23 @@ class InputHandler {
     const baseT = animal?.params?.T ?? this.appcore.params.T;
     const s = this.appcore.params.placeScale || 1;
     this.appcore.params.R = Math.round(Math.min(50, Math.max(2, baseR * s)));
-    this.appcore.params.T = Math.round(Math.min(50, Math.max(1,  baseT * s)));
+    this.appcore.params.T = Math.round(Math.min(50, Math.max(1, baseT * s)));
     this.appcore.updateAutomatonParams();
     this.appcore.refreshGUI();
-    console.log(`[Lenia] Auto-scaled: R=${this.appcore.params.R}, T=${this.appcore.params.T}`);
+    console.log(
+      `[Lenia] Auto-scaled: R=${this.appcore.params.R}, T=${this.appcore.params.T}`,
+    );
   }
 
   shouldIgnoreKeyboard() {
     const el = document.activeElement;
     if (!el) return false;
     const tag = (el.tagName || "").toUpperCase();
-    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !!el.isContentEditable;
+    return (
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      tag === "SELECT" ||
+      !!el.isContentEditable
+    );
   }
 }

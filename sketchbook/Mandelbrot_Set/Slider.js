@@ -27,13 +27,22 @@ class Slider {
 
   update() {
     if (this.locked) {
-      this.val = constrain(map(mouseX, this.x, this.x + this.w, this.min, this.max), this.min, this.max);
+      this.val = constrain(
+        map(mouseX, this.x, this.x + this.w, this.min, this.max),
+        this.min,
+        this.max,
+      );
       return true;
     }
     return false;
   }
 
   isMouseOver() {
-    return mouseX > this.x && mouseX < this.x + this.w && mouseY > this.y && mouseY < this.y + this.h;
+    return (
+      mouseX > this.x &&
+      mouseX < this.x + this.w &&
+      mouseY > this.y &&
+      mouseY < this.y + this.h
+    );
   }
 }

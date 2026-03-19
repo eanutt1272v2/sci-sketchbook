@@ -20,16 +20,30 @@ const metadata = {
 
 let appcore;
 let font;
+let mainCanvas;
 
 function preload() {
   font = loadFont("JetBrainsMono-Regular.ttf");
 }
 
 function setup() {
-  createCanvas(1100, 800);
-  frameRate(60);
-  textFont(font);
+  mainCanvas = createCanvas(1100, 800);
+  setupCanvasProperties(mainCanvas);
   appcore = new AppCore();
+}
+
+function setupCanvasProperties(canvas) {
+  const canvasEl = canvas.elt;
+
+  canvasEl.setAttribute("tabindex", "0");
+  setTimeout(() => {
+    canvasEl.focus();
+  }, 100);
+
+  noSmooth();
+  textFont(font);
+  pixelDensity(1);
+  frameRate(60);
 }
 
 function draw() {

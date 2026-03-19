@@ -6,10 +6,10 @@ class ParameterSet {
     this.labels = [
       "Alpha",
       "Beta",
-      "Gamma", 
+      "Gamma",
       "Radius",
       "Trail Alpha",
-      "Density Threshold"
+      "Density Threshold",
     ];
     this.mins = [0, 0, 0, 5, 0, 1];
     this.maxes = [360, 90, 50, 50, 255, 60];
@@ -54,12 +54,27 @@ class ParameterSet {
         this.mins[p],
         this.maxes[p],
         values[p],
-        this.theme
+        this.theme,
       );
-      this.minusButtons[p] = new Button(sx, by, btnSize, btnSize, "-", this.theme);
-      this.plusButtons[p] = new Button(sx + 38, by, btnSize, btnSize, "+", this.theme);
+      this.minusButtons[p] = new Button(
+        sx,
+        by,
+        btnSize,
+        btnSize,
+        "-",
+        this.theme,
+      );
+      this.plusButtons[p] = new Button(
+        sx + 38,
+        by,
+        btnSize,
+        btnSize,
+        "+",
+        this.theme,
+      );
 
-      this.valueX[p] = panel.x + panel.w - panel.padding - Config.VALUE_BOX_WIDTH;
+      this.valueX[p] =
+        panel.x + panel.w - panel.padding - Config.VALUE_BOX_WIDTH;
       this.valueY[p] = vy;
     }
   }
@@ -80,7 +95,8 @@ class ParameterSet {
       this.plusButtons[p].x = sx + 38;
       this.plusButtons[p].y = by;
 
-      this.valueX[p] = panel.x + panel.w - panel.padding - Config.VALUE_BOX_WIDTH;
+      this.valueX[p] =
+        panel.x + panel.w - panel.padding - Config.VALUE_BOX_WIDTH;
       this.valueY[p] = panel.getY(`val${p}`);
     }
   }
@@ -106,13 +122,21 @@ class ParameterSet {
       fill(isTyping ? this.theme.bgActive : this.theme.bgWidget);
       stroke(isTyping ? this.theme.strokeFocus : this.theme.strokeWidget);
       strokeWeight(isTyping ? this.theme.swWidget : 0.8);
-      rect(this.valueX[p], vy, Config.VALUE_BOX_WIDTH, Config.VALUE_BOX_HEIGHT, 3);
+      rect(
+        this.valueX[p],
+        vy,
+        Config.VALUE_BOX_WIDTH,
+        Config.VALUE_BOX_HEIGHT,
+        3,
+      );
 
       fill(isTyping ? this.theme.textPrimary : this.theme.textSecondary);
       textSize(this.theme.textSizeCaption);
       textAlign(RIGHT, TOP);
       const display =
-        input !== null && isTyping ? `${input.getTypingBuffer()}_` : nf(values[p], 1, 1);
+        input !== null && isTyping
+          ? `${input.getTypingBuffer()}_`
+          : nf(values[p], 1, 1);
       text(display, this.valueX[p] + Config.VALUE_BOX_WIDTH - 5, vy + 2);
 
       this.sliders[p].val = constrain(values[p], this.mins[p], this.maxes[p]);

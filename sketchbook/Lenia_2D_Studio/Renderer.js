@@ -70,7 +70,9 @@ class Renderer {
   }
 
   setColourMap(name) {
-    const mapName = this.colourMaps[name] ? name : this._fallbackColourMapName();
+    const mapName = this.colourMaps[name]
+      ? name
+      : this._fallbackColourMapName();
     if (!mapName || this.currentColourMap === mapName) return;
 
     this.currentColourMap = mapName;
@@ -97,9 +99,21 @@ class Renderer {
     for (let i = 0; i < 256; i++) {
       const t = i / 255;
       const idx = i * 3;
-      this.lut[idx] = constrain(Math.round(poly(colourMapData.r, t) * 255), 0, 255);
-      this.lut[idx + 1] = constrain(Math.round(poly(colourMapData.g, t) * 255), 0, 255);
-      this.lut[idx + 2] = constrain(Math.round(poly(colourMapData.b, t) * 255), 0, 255);
+      this.lut[idx] = constrain(
+        Math.round(poly(colourMapData.r, t) * 255),
+        0,
+        255,
+      );
+      this.lut[idx + 1] = constrain(
+        Math.round(poly(colourMapData.g, t) * 255),
+        0,
+        255,
+      );
+      this.lut[idx + 2] = constrain(
+        Math.round(poly(colourMapData.b, t) * 255),
+        0,
+        255,
+      );
     }
   }
 
@@ -188,10 +202,10 @@ class Renderer {
       { val: "0.75", y: y1 + h * 0.25 },
       { val: "0.5", y: y1 + h * 0.5 },
       { val: "0.25", y: y1 + h * 0.75 },
-      { val: "0.0", y: y2 }
+      { val: "0.0", y: y2 },
     ];
 
-    labels.forEach(label => {
+    labels.forEach((label) => {
       text(label.val, x - w - 6, label.y);
 
       stroke(255, 255, 255, 150);
@@ -236,7 +250,7 @@ class Renderer {
           ["Z", "Randomise world"],
           ["X", "Clear world"],
           ["R", "Reset simulation state"],
-        ]
+        ],
       },
       {
         title: "Display",
@@ -250,7 +264,7 @@ class Renderer {
           ["B", "Toggle scale bar"],
           ["V", "Cycle grid size"],
           ["H", "Hide / show GUI panel"],
-        ]
+        ],
       },
       {
         title: "Parameters",
@@ -259,15 +273,15 @@ class Renderer {
           ["; / '", "Decrease / increase time steps (T)"],
           [", / .", "Decrease / increase growth centre (m)"],
           ["- / +", "Decrease / increase growth width (s)"],
-          ["← / →",  "Decrease / increase noise"],
-          ["↑ / ↓",  "Decrease / increase mask rate"],
+          ["← / →", "Decrease / increase noise"],
+          ["↑ / ↓", "Decrease / increase mask rate"],
           ["K", "Cycle kernel function"],
           ["Y", "Cycle growth function"],
           ["U", "Toggle soft clipping"],
           ["I", "Toggle multi-step integration"],
-           ["Q / Shift+Q", "Cycle placement scale ↑ / ↓"],
-           ["` (backtick)", "Auto-scale R & T to placement scale"],
-        ]
+          ["Q / Shift+Q", "Cycle placement scale ↑ / ↓"],
+          ["` (backtick)", "Auto-scale R & T to placement scale"],
+        ],
       },
       {
         title: "Data",
@@ -276,14 +290,12 @@ class Renderer {
           ["E", "Export world state (JSON)"],
           ["W", "Import world state (JSON)"],
           ["C", "Export statistics (CSV)"],
-        ]
+        ],
       },
       {
         title: "Reference",
-        entries: [
-          ["#", "Toggle keymap reference"],
-        ]
-      }
+        entries: [["#", "Toggle keymap reference"]],
+      },
     ];
 
     let col = 0;
@@ -336,7 +348,7 @@ class Renderer {
     const cellPx = width / this.size;
 
     const arrowLen = Math.max(24, speed * cellPx * 8);
-    const rad = angle * Math.PI / 180;
+    const rad = (angle * Math.PI) / 180;
     const tx = cx + Math.cos(rad) * arrowLen;
     const ty = cy + Math.sin(rad) * arrowLen;
 
@@ -377,7 +389,11 @@ class Renderer {
     fill(0, 150);
     rect(labelX - 2, labelY - 1, 115, 20, 3);
     fill(255, 230);
-    text(`${angle.toFixed(1)}°  spd: ${speed.toFixed(3)}`, labelX + 2, labelY + 3);
+    text(
+      `${angle.toFixed(1)}°  spd: ${speed.toFixed(3)}`,
+      labelX + 2,
+      labelY + 3,
+    );
 
     pop();
   }
@@ -385,7 +401,8 @@ class Renderer {
   renderStats(statistics, params) {
     push();
 
-    const x = 20, y = 20;
+    const x = 20,
+      y = 20;
     const dt = 1 / params.T;
     const RN = Math.pow(params.R, 2);
 
@@ -396,14 +413,14 @@ class Renderer {
       `Gen: ${String(statistics.gen)} | T: ${statistics.time.toFixed(3)}s`,
       `Mass: ${(statistics.mass / RN).toFixed(3)} | Growth: ${(statistics.growth / RN).toFixed(4)}`,
       `Peak: ${statistics.maxValue.toFixed(3)} | Gyrad: ${statistics.gyradius.toFixed(2)}`,
-      `Centre: (${statistics.centerX?.toFixed(1) || '0'}, ${statistics.centerY?.toFixed(1) || '0'})`,
+      `Centre: (${statistics.centerX?.toFixed(1) || "0"}, ${statistics.centerY?.toFixed(1) || "0"})`,
       `MassAsym: ${(statistics.massAsym || 0).toFixed(3)} | Speed: ${(statistics.speed || 0).toFixed(3)}`,
-      `Symmetry: ${statistics.symmSides || '?'}-fold (${((statistics.symmStrength || 0) * 100).toFixed(1)}%)`,
-      `FPS: ${statistics.fps}`
+      `Symmetry: ${statistics.symmSides || "?"}-fold (${((statistics.symmStrength || 0) * 100).toFixed(1)}%)`,
+      `FPS: ${statistics.fps}`,
     ];
 
     let yOffset = y;
-    stats.forEach(line => {
+    stats.forEach((line) => {
       text(line, x, yOffset);
       yOffset += 16;
     });

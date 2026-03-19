@@ -180,11 +180,13 @@ class InputHandler {
 
     const wheelDelta = constrain(event.delta || 0, -80, 80);
     const zoomScale = Math.exp(wheelDelta * 0.001);
-    if (!this.applyZoomAtNormalisedPoint(
-      mouseX / max(1, width),
-      mouseY / max(1, height),
-      zoomScale,
-    )) {
+    if (
+      !this.applyZoomAtNormalisedPoint(
+        mouseX / max(1, width),
+        mouseY / max(1, height),
+        zoomScale,
+      )
+    ) {
       return false;
     }
 
@@ -258,11 +260,13 @@ class InputHandler {
 
     const ratio = distance / this.gesture.pinch.distance;
     const zoomScale = 1 / max(ratio, 1e-6);
-    if (!this.applyZoomAtNormalisedPoint(
-      cx / max(1, width),
-      cy / max(1, height),
-      zoomScale,
-    )) {
+    if (
+      !this.applyZoomAtNormalisedPoint(
+        cx / max(1, width),
+        cy / max(1, height),
+        zoomScale,
+      )
+    ) {
       return;
     }
 

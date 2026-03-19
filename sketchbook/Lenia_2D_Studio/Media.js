@@ -5,13 +5,18 @@ class Media {
     this.recordedChunks = [];
     this.isRecording = false;
 
-    this.importInput = this._createHiddenInput("image/*", (file) => this.handleImageImport(file));
-    this.dataImportInput = this._createHiddenInput(".json,application/json,text/plain", (file) => {
-      if (this.pendingDataImportHandler) {
-        this.pendingDataImportHandler(file);
-        this.pendingDataImportHandler = null;
-      }
-    });
+    this.importInput = this._createHiddenInput("image/*", (file) =>
+      this.handleImageImport(file),
+    );
+    this.dataImportInput = this._createHiddenInput(
+      ".json,application/json,text/plain",
+      (file) => {
+        if (this.pendingDataImportHandler) {
+          this.pendingDataImportHandler(file);
+          this.pendingDataImportHandler = null;
+        }
+      },
+    );
     this.pendingDataImportHandler = null;
   }
 
@@ -67,11 +72,11 @@ class Media {
 
           for (let i = 0; i < area; i++) {
             const idx = i << 2;
-            const brightness = (
-              0.2126 * pixels[idx] +
-              0.7152 * pixels[idx + 1] +
-              0.0722 * pixels[idx + 2]
-            ) / 255;
+            const brightness =
+              (0.2126 * pixels[idx] +
+                0.7152 * pixels[idx + 1] +
+                0.0722 * pixels[idx + 2]) /
+              255;
             board.cells[i] = brightness;
           }
 
@@ -125,7 +130,10 @@ class Media {
       this.mediaRecorder.onstop = () => {
         const blob = new Blob(this.recordedChunks, { type: supportedType });
         const ext = supportedType.includes("mp4") ? "mp4" : "webm";
-        this._triggerDownload(URL.createObjectURL(blob), this._getFilename(ext));
+        this._triggerDownload(
+          URL.createObjectURL(blob),
+          this._getFilename(ext),
+        );
       };
 
       this.mediaRecorder.start();
@@ -154,7 +162,7 @@ class Media {
     const data = this.appcore.board.toJSON();
     if (!data) return;
     this._downloadJSON(data, this._getFilename("world.json"));
-     console.log(`[Lenia] Exported world JSON: size=${this.appcore.board.size}`);
+    console.log(`[Lenia] Exported world JSON: size=${this.appcore.board.size}`);
   }
 
   importWorldJSON() {
@@ -172,8 +180,10 @@ class Media {
           this.appcore.changeResolution();
         }
 
-         this.appcore._ensureBuffers();
-         this.appcore.board.cells.set(importedBoard.cells.subarray(0, this.appcore.board.cells.length));
+        this.appcore._ensureBuffers();
+        this.appcore.board.cells.set(
+          importedBoard.cells.subarray(0, this.appcore.board.cells.length),
+        );
         this.appcore.board.potential.fill(0);
         this.appcore.board.field.fill(0);
         if (this.appcore.board.fieldOld) this.appcore.board.fieldOld.fill(0);
@@ -182,8 +192,8 @@ class Media {
         this.appcore.analyser.reset();
         this.appcore.automaton.reset();
         this.appcore.refreshGUI();
-         this.appcore._workerSendKernel();
-         console.log(`[Lenia] Imported world JSON: size=${newSize}`);
+        this.appcore._workerSendKernel();
+        console.log(`[Lenia] Imported world JSON: size=${newSize}`);
       });
     });
   }
@@ -192,18 +202,22 @@ class Media {
     const csv = this.appcore.analyser.exportCSV();
     if (!csv) return;
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
-     console.log(`[Lenia] Exported statistics CSV`);
+    console.log(`[Lenia] Exported statistics CSV`);
   }
 
   exportStatisticsJSON() {
     const payload = {
       metadata: this.appcore.metadata,
       statistics: { ...this.appcore.statistics },
-      series: Array.isArray(this.appcore.analyser.series) ? this.appcore.analyser.series : [],
+      series: Array.isArray(this.appcore.analyser.series)
+        ? this.appcore.analyser.series
+        : [],
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("stats.json"));
-     console.log(`[Lenia] Exported statistics JSON: ${this.appcore.analyser.series.length} rows`);
+    console.log(
+      `[Lenia] Exported statistics JSON: ${this.appcore.analyser.series.length} rows`,
+    );
   }
 
   exportParamsJSON() {
@@ -213,7 +227,7 @@ class Media {
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("params.json"));
-     console.log(`[Lenia] Exported params JSON`);
+    console.log(`[Lenia] Exported params JSON`);
   }
 
   importParamsJSON() {
@@ -228,10 +242,31 @@ class Media {
         const oldSize = target.gridSize;
 
         const allowed = [
-          "running", "gridSize", "R", "T", "m", "s", "b", "kn", "gn",
-          "softClip", "multiStep", "addNoise", "maskRate", "paramP", "colourMap",
-          "displayMode", "renderGrid", "renderScale", "renderLegend", "renderStats",
-          "renderMotionOverlay", "renderKeymapRef", "selectedAnimal", "placeMode", "imageFormat",
+          "running",
+          "gridSize",
+          "R",
+          "T",
+          "m",
+          "s",
+          "b",
+          "kn",
+          "gn",
+          "softClip",
+          "multiStep",
+          "addNoise",
+          "maskRate",
+          "paramP",
+          "colourMap",
+          "displayMode",
+          "renderGrid",
+          "renderScale",
+          "renderLegend",
+          "renderStats",
+          "renderMotionOverlay",
+          "renderKeymapRef",
+          "selectedAnimal",
+          "placeMode",
+          "imageFormat",
         ];
 
         for (const key of allowed) {
@@ -264,7 +299,9 @@ class Media {
   }
 
   _downloadJSON(payload, filename) {
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
     this._triggerDownload(URL.createObjectURL(blob), filename);
   }
 

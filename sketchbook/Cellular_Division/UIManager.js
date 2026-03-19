@@ -6,7 +6,12 @@ class UIManager {
 
     this.leftPanel = new LeftPanel(appcore);
     this.rightPanel = new RightPanel(appcore);
-    this.inputHandler = new InputHandler(this, appcore.sim, this.leftPanel, this.rightPanel);
+    this.inputHandler = new InputHandler(
+      this,
+      appcore.sim,
+      this.leftPanel,
+      this.rightPanel,
+    );
 
     this.leftPanel.setInputHandler(this.inputHandler);
     this.rightPanel.setInputHandler(this.inputHandler);

@@ -25,13 +25,18 @@ class SliderComponent {
         ? this.theme.accentHandle
         : this.isMouseOver()
           ? this.theme.textPrimary
-          : this.theme.textSecondary
+          : this.theme.textSecondary,
     );
     ellipse(handleX, trackY, this.h * 0.5, this.h * 0.5);
   }
 
   isPressed(mx, my) {
-    return mx > this.x - 5 && mx < this.x + this.w + 5 && my > this.y && my < this.y + this.h;
+    return (
+      mx > this.x - 5 &&
+      mx < this.x + this.w + 5 &&
+      my > this.y &&
+      my < this.y + this.h
+    );
   }
 
   isMouseOver() {

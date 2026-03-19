@@ -38,7 +38,11 @@ class AccordionPanel {
     }
 
     this.totalHeight =
-      cursor - this.y - AccordionPanel.INTRA_GAP - AccordionPanel.INTER_GAP + this.padding;
+      cursor -
+      this.y -
+      AccordionPanel.INTRA_GAP -
+      AccordionPanel.INTER_GAP +
+      this.padding;
   }
 
   getY(row) {
@@ -72,7 +76,12 @@ class AccordionPanel {
         continue;
       }
       const hy = this.headerY.get(g.name);
-      if (mx > this.x && mx < this.x + this.w && my > hy && my < hy + AccordionPanel.HEADER_HEIGHT) {
+      if (
+        mx > this.x &&
+        mx < this.x + this.w &&
+        my > hy &&
+        my < hy + AccordionPanel.HEADER_HEIGHT
+      ) {
         g.collapsed = !g.collapsed;
         return true;
       }
@@ -101,15 +110,29 @@ class AccordionPanel {
       fill(hovered ? this.theme.bgHover : this.theme.bgWidget);
       stroke(this.theme.strokeSeparator);
       strokeWeight(this.theme.swSeparator);
-      rect(this.x + this.padding, hy, this.w - this.padding * 2, AccordionPanel.HEADER_HEIGHT, 4);
+      rect(
+        this.x + this.padding,
+        hy,
+        this.w - this.padding * 2,
+        AccordionPanel.HEADER_HEIGHT,
+        4,
+      );
 
       noStroke();
       fill(g.collapsed ? this.theme.textMuted : this.theme.textSecondary);
       textSize(12);
       textAlign(LEFT, CENTER);
-      text(g.name, this.x + this.padding * 2, hy + AccordionPanel.HEADER_HEIGHT / 2);
+      text(
+        g.name,
+        this.x + this.padding * 2,
+        hy + AccordionPanel.HEADER_HEIGHT / 2,
+      );
 
-      this.drawCollapseIndicator(this.x + this.w - this.padding * 2, hy + AccordionPanel.HEADER_HEIGHT / 2, g.collapsed);
+      this.drawCollapseIndicator(
+        this.x + this.w - this.padding * 2,
+        hy + AccordionPanel.HEADER_HEIGHT / 2,
+        g.collapsed,
+      );
     }
   }
 

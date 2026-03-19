@@ -33,7 +33,8 @@ class InputHandler {
     const keyLower = (k || "").toLowerCase();
 
     if (k === "#") {
-      this.appcore.params.renderKeymapRef = !this.appcore.params.renderKeymapRef;
+      this.appcore.params.renderKeymapRef =
+        !this.appcore.params.renderKeymapRef;
       this.appcore.refreshGUI();
       return false;
     }
@@ -129,26 +130,42 @@ class InputHandler {
 
     if (keyLower === "[" || keyLower === "{") {
       const delta = keyLower === "{" ? -16 : -4;
-      this.appcore.params.heightScale = constrain(this.appcore.params.heightScale + delta, 1, 256);
+      this.appcore.params.heightScale = constrain(
+        this.appcore.params.heightScale + delta,
+        1,
+        256,
+      );
       this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "]" || keyLower === "}") {
       const delta = keyLower === "}" ? 16 : 4;
-      this.appcore.params.heightScale = constrain(this.appcore.params.heightScale + delta, 1, 256);
+      this.appcore.params.heightScale = constrain(
+        this.appcore.params.heightScale + delta,
+        1,
+        256,
+      );
       this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "i") {
-      this.appcore.params.dropletsPerFrame = constrain(this.appcore.params.dropletsPerFrame + 16, 0, 512);
+      this.appcore.params.dropletsPerFrame = constrain(
+        this.appcore.params.dropletsPerFrame + 16,
+        0,
+        512,
+      );
       this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "k") {
-      this.appcore.params.dropletsPerFrame = constrain(this.appcore.params.dropletsPerFrame - 16, 0, 512);
+      this.appcore.params.dropletsPerFrame = constrain(
+        this.appcore.params.dropletsPerFrame - 16,
+        0,
+        512,
+      );
       this.appcore.refreshGUI();
       return false;
     }
@@ -184,11 +201,22 @@ class InputHandler {
   handleKeyReleased(k, kCode) {
     const keyLower = (k || "").toLowerCase();
 
-    if (keyLower === "e" || keyLower === "=" || keyLower === "+" || kCode === 187 || kCode === 107) {
+    if (
+      keyLower === "e" ||
+      keyLower === "=" ||
+      keyLower === "+" ||
+      kCode === 187 ||
+      kCode === 107
+    ) {
       this.keys.zoomIn = false;
     }
 
-    if (keyLower === "q" || keyLower === "-" || kCode === 189 || kCode === 109) {
+    if (
+      keyLower === "q" ||
+      keyLower === "-" ||
+      kCode === 189 ||
+      kCode === 109
+    ) {
       this.keys.zoomOut = false;
     }
 
@@ -201,7 +229,11 @@ class InputHandler {
   }
 
   handleContinuousInput() {
-    if (this.shouldIgnoreKeyboard() || this.appcore.params.renderKeymapRef || this.appcore.params.displayMethod !== "3D") {
+    if (
+      this.shouldIgnoreKeyboard() ||
+      this.appcore.params.renderKeymapRef ||
+      this.appcore.params.displayMethod !== "3D"
+    ) {
       return;
     }
 
@@ -211,14 +243,33 @@ class InputHandler {
 
     if (this.keys.left) this.appcore.camera.target.yaw -= yawStep;
     if (this.keys.right) this.appcore.camera.target.yaw += yawStep;
-    if (this.keys.up) this.appcore.camera.target.pitch = constrain(this.appcore.camera.target.pitch - pitchStep, -1.56, 1.56);
-    if (this.keys.down) this.appcore.camera.target.pitch = constrain(this.appcore.camera.target.pitch + pitchStep, -1.56, 1.56);
-    if (this.keys.zoomIn) this.appcore.camera.target.zoom = max(20, this.appcore.camera.target.zoom - zoomStep);
-    if (this.keys.zoomOut) this.appcore.camera.target.zoom = max(20, this.appcore.camera.target.zoom + zoomStep);
+    if (this.keys.up)
+      this.appcore.camera.target.pitch = constrain(
+        this.appcore.camera.target.pitch - pitchStep,
+        -1.56,
+        1.56,
+      );
+    if (this.keys.down)
+      this.appcore.camera.target.pitch = constrain(
+        this.appcore.camera.target.pitch + pitchStep,
+        -1.56,
+        1.56,
+      );
+    if (this.keys.zoomIn)
+      this.appcore.camera.target.zoom = max(
+        20,
+        this.appcore.camera.target.zoom - zoomStep,
+      );
+    if (this.keys.zoomOut)
+      this.appcore.camera.target.zoom = max(
+        20,
+        this.appcore.camera.target.zoom + zoomStep,
+      );
   }
 
   canvasInteraction(event) {
-    if (!event?.target || typeof event.target.closest !== "function") return false;
+    if (!event?.target || typeof event.target.closest !== "function")
+      return false;
 
     const { displayMethod } = this.appcore.params;
     const { target } = event;
@@ -234,6 +285,11 @@ class InputHandler {
     const el = document.activeElement;
     if (!el) return false;
     const tag = (el.tagName || "").toUpperCase();
-    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !!el.isContentEditable;
+    return (
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      tag === "SELECT" ||
+      !!el.isContentEditable
+    );
   }
 }

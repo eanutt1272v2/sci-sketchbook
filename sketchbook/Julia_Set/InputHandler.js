@@ -99,8 +99,10 @@ class InputHandler {
 
     const lay = p.layout;
     if (
-      mouseX > lay.contentX() && mouseX < lay.contentX() + 250 &&
-      mouseY > lay.getY("iterLabel") && mouseY < lay.getY("iterLabel") + 20
+      mouseX > lay.contentX() &&
+      mouseX < lay.contentX() + 250 &&
+      mouseY > lay.getY("iterLabel") &&
+      mouseY < lay.getY("iterLabel") + 20
     ) {
       this.isTypingIter = true;
       this.typingBuffer = "";
@@ -112,9 +114,15 @@ class InputHandler {
     if (p.slider.isMouseOver()) {
       p.slider.locked = true;
       p.slider.val = constrain(
-        map(mouseX, p.slider.x, p.slider.x + p.slider.w, p.slider.min, p.slider.max),
+        map(
+          mouseX,
+          p.slider.x,
+          p.slider.x + p.slider.w,
+          p.slider.min,
+          p.slider.max,
+        ),
         p.slider.min,
-        p.slider.max
+        p.slider.max,
       );
       this.appcore.maxIterations = int(p.slider.val);
       this.appcore.needsRedraw = true;
@@ -123,7 +131,11 @@ class InputHandler {
     const amounts = [-64, -16, 16, 64];
     for (let i = 0; i < 4; i++) {
       if (p.stepButtons[i].isMouseOver() && !this.appcore.justPressed) {
-        this.appcore.maxIterations = constrain(this.appcore.maxIterations + amounts[i], int(p.slider.min), int(p.slider.max));
+        this.appcore.maxIterations = constrain(
+          this.appcore.maxIterations + amounts[i],
+          int(p.slider.min),
+          int(p.slider.max),
+        );
         p.slider.val = this.appcore.maxIterations;
         this.appcore.needsRedraw = true;
         this.appcore.justPressed = true;
@@ -203,9 +215,15 @@ class InputHandler {
     const p = this.appcore.panel;
     if (p.slider.locked) {
       p.slider.val = constrain(
-        map(mouseX, p.slider.x, p.slider.x + p.slider.w, p.slider.min, p.slider.max),
+        map(
+          mouseX,
+          p.slider.x,
+          p.slider.x + p.slider.w,
+          p.slider.min,
+          p.slider.max,
+        ),
         p.slider.min,
-        p.slider.max
+        p.slider.max,
       );
       this.appcore.maxIterations = int(p.slider.val);
       this.appcore.needsRedraw = true;
@@ -215,13 +233,18 @@ class InputHandler {
     if (this.appcore.showUI && (p.dropdown.isOpen || this.isTypingIter)) {
       return;
     }
-    if (this.appcore.showUI && (p.zoomInBtn.isMouseOver() || p.zoomOutBtn.isMouseOver())) {
+    if (
+      this.appcore.showUI &&
+      (p.zoomInBtn.isMouseOver() || p.zoomOutBtn.isMouseOver())
+    ) {
       return;
     }
 
     const ar = width / height;
-    this.appcore.offsetX -= (mouseX - pmouseX) * (3.2 * ar) / width / this.appcore.zoom;
-    this.appcore.offsetY -= (mouseY - pmouseY) * 3.2 / height / this.appcore.zoom;
+    this.appcore.offsetX -=
+      ((mouseX - pmouseX) * (3.2 * ar)) / width / this.appcore.zoom;
+    this.appcore.offsetY -=
+      ((mouseY - pmouseY) * 3.2) / height / this.appcore.zoom;
     this.appcore.needsRedraw = true;
   }
 
@@ -238,10 +261,17 @@ class InputHandler {
       if (key >= "0" && key <= "9") {
         this.typingBuffer += key;
       } else if (keyCode === BACKSPACE && this.typingBuffer.length > 0) {
-        this.typingBuffer = this.typingBuffer.substring(0, this.typingBuffer.length - 1);
+        this.typingBuffer = this.typingBuffer.substring(
+          0,
+          this.typingBuffer.length - 1,
+        );
       } else if (keyCode === ENTER || keyCode === RETURN) {
         if (this.typingBuffer.length > 0) {
-          this.appcore.maxIterations = constrain(int(this.typingBuffer), int(this.appcore.panel.slider.min), int(this.appcore.panel.slider.max));
+          this.appcore.maxIterations = constrain(
+            int(this.typingBuffer),
+            int(this.appcore.panel.slider.min),
+            int(this.appcore.panel.slider.max),
+          );
           this.appcore.panel.slider.val = this.appcore.maxIterations;
           this.appcore.needsRedraw = true;
         }
@@ -274,13 +304,21 @@ class InputHandler {
       return;
     }
     if (key === "[" || key === "{") {
-      this.appcore.maxIterations = constrain(this.appcore.maxIterations - (key === "{" ? 64 : 16), int(this.appcore.panel.slider.min), int(this.appcore.panel.slider.max));
+      this.appcore.maxIterations = constrain(
+        this.appcore.maxIterations - (key === "{" ? 64 : 16),
+        int(this.appcore.panel.slider.min),
+        int(this.appcore.panel.slider.max),
+      );
       this.appcore.panel.slider.val = this.appcore.maxIterations;
       this.appcore.needsRedraw = true;
       return;
     }
     if (key === "]" || key === "}") {
-      this.appcore.maxIterations = constrain(this.appcore.maxIterations + (key === "}" ? 64 : 16), int(this.appcore.panel.slider.min), int(this.appcore.panel.slider.max));
+      this.appcore.maxIterations = constrain(
+        this.appcore.maxIterations + (key === "}" ? 64 : 16),
+        int(this.appcore.panel.slider.min),
+        int(this.appcore.panel.slider.max),
+      );
       this.appcore.panel.slider.val = this.appcore.maxIterations;
       this.appcore.needsRedraw = true;
       return;
@@ -296,19 +334,27 @@ class InputHandler {
     }
 
     if (key === "w" || key === "W" || keyCode === UP_ARROW) this.keyUp = true;
-    if (key === "s" || key === "S" || keyCode === DOWN_ARROW) this.keyDown = true;
-    if (key === "a" || key === "A" || keyCode === LEFT_ARROW) this.keyLeft = true;
-    if (key === "d" || key === "D" || keyCode === RIGHT_ARROW) this.keyRight = true;
-    if (key === "e" || key === "E" || key === "=" || key === "+") this.keyZoomIn = true;
+    if (key === "s" || key === "S" || keyCode === DOWN_ARROW)
+      this.keyDown = true;
+    if (key === "a" || key === "A" || keyCode === LEFT_ARROW)
+      this.keyLeft = true;
+    if (key === "d" || key === "D" || keyCode === RIGHT_ARROW)
+      this.keyRight = true;
+    if (key === "e" || key === "E" || key === "=" || key === "+")
+      this.keyZoomIn = true;
     if (key === "q" || key === "Q" || key === "-") this.keyZoomOut = true;
   }
 
   onKeyReleased() {
     if (key === "w" || key === "W" || keyCode === UP_ARROW) this.keyUp = false;
-    if (key === "s" || key === "S" || keyCode === DOWN_ARROW) this.keyDown = false;
-    if (key === "a" || key === "A" || keyCode === LEFT_ARROW) this.keyLeft = false;
-    if (key === "d" || key === "D" || keyCode === RIGHT_ARROW) this.keyRight = false;
-    if (key === "e" || key === "E" || key === "=" || key === "+") this.keyZoomIn = false;
+    if (key === "s" || key === "S" || keyCode === DOWN_ARROW)
+      this.keyDown = false;
+    if (key === "a" || key === "A" || keyCode === LEFT_ARROW)
+      this.keyLeft = false;
+    if (key === "d" || key === "D" || keyCode === RIGHT_ARROW)
+      this.keyRight = false;
+    if (key === "e" || key === "E" || key === "=" || key === "+")
+      this.keyZoomIn = false;
     if (key === "q" || key === "Q" || key === "-") this.keyZoomOut = false;
   }
 }

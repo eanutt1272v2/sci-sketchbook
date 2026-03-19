@@ -106,7 +106,7 @@ class AppCore {
 
   initialiseModules() {
     this.terrain = new Terrain(this);
-    this.solver = new Solver(this);
+    this.fallbacksolver = new FallbackSolver(this);
     this.camera = new Camera(this);
     this.renderer = new Renderer(this);
     this.analyser = new Analyser(this);
@@ -122,14 +122,14 @@ class AppCore {
   }
 
   update() {
-    const { solver, camera, analyser, params } = this;
+    const { fallbacksolver, camera, analyser, params } = this;
 
     this.input.handleContinuousInput();
 
     if (params.running) {
       if (!this._worker) {
-        solver.hydraulicErosion();
-        solver.updateDischargeMap();
+        fallbacksolver.hydraulicErosion();
+        fallbacksolver.updateDischargeMap();
       }
     }
 
@@ -142,7 +142,7 @@ class AppCore {
       this._worker = new Worker("SolverWorker.js");
     } catch (e) {
       console.warn(
-        "[Fluvia] Worker unavailable, falling back to main-thread solver.",
+        "[Fluvia] Worker unavailable, falling back to main-thread fallback solver.",
         e,
       );
       this._worker = null;
@@ -296,7 +296,7 @@ class AppCore {
   _reinitialiseNow() {
     this._terminateWorker();
     this.terrain = new Terrain(this);
-    this.solver = new Solver(this);
+    this.fallbacksolver = new FallbackSolver(this);
     this.renderer.reinitialise();
     this.terrain.generate();
     this.analyser.reinitialise();
@@ -312,7 +312,9 @@ class AppCore {
   }
 
   _queueAction(name, handler) {
-    this._pendingActions = this._pendingActions.filter((action) => action.name !== name);
+    this._pendingActions = this._pendingActions.filter(
+      (action) => action.name !== name,
+    );
     this._pendingActions.push({ name, handler });
   }
 
@@ -326,15 +328,19 @@ class AppCore {
     const { terrain } = this;
     const { area } = terrain;
     if (!terrain.heightMap) terrain.heightMap = new Float32Array(area);
-    if (!terrain.originalHeightMap) terrain.originalHeightMap = new Float32Array(area);
+    if (!terrain.originalHeightMap)
+      terrain.originalHeightMap = new Float32Array(area);
     if (!terrain.bedrockMap) terrain.bedrockMap = new Float32Array(area);
     if (!terrain.sedimentMap) terrain.sedimentMap = new Float32Array(area);
     if (!terrain.dischargeMap) terrain.dischargeMap = new Float32Array(area);
-    if (!terrain.dischargeTrack) terrain.dischargeTrack = new Float32Array(area);
+    if (!terrain.dischargeTrack)
+      terrain.dischargeTrack = new Float32Array(area);
     if (!terrain.momentumX) terrain.momentumX = new Float32Array(area);
     if (!terrain.momentumY) terrain.momentumY = new Float32Array(area);
-    if (!terrain.momentumXTrack) terrain.momentumXTrack = new Float32Array(area);
-    if (!terrain.momentumYTrack) terrain.momentumYTrack = new Float32Array(area);
+    if (!terrain.momentumXTrack)
+      terrain.momentumXTrack = new Float32Array(area);
+    if (!terrain.momentumYTrack)
+      terrain.momentumYTrack = new Float32Array(area);
   }
 
   handleWheel(event) {

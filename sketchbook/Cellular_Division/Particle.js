@@ -63,15 +63,26 @@ class Particle {
 
   move(species) {
     const turnDirection =
-      this.rightCount > this.leftCount ? 1 : this.rightCount < this.leftCount ? -1 : 0;
-    const turn = species.alphaRad + species.betaRad * this.neighbourCount * turnDirection;
+      this.rightCount > this.leftCount
+        ? 1
+        : this.rightCount < this.leftCount
+          ? -1
+          : 0;
+    const turn =
+      species.alphaRad + species.betaRad * this.neighbourCount * turnDirection;
 
     this.heading = (this.heading + turn) % TWO_PI;
     this.headingSin = sin(this.heading);
     this.headingCos = cos(this.heading);
 
-    this.x = this.wrapCoordinate(this.x + species.velocity * this.headingCos, width);
-    this.y = this.wrapCoordinate(this.y + species.velocity * this.headingSin, height);
+    this.x = this.wrapCoordinate(
+      this.x + species.velocity * this.headingCos,
+      width,
+    );
+    this.y = this.wrapCoordinate(
+      this.y + species.velocity * this.headingSin,
+      height,
+    );
   }
 
   display() {

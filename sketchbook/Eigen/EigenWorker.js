@@ -36,7 +36,8 @@ function assocLegendre(l, m, x) {
   if (l === absM + 1) return pmmp1;
   let pll = 0;
   for (let ll = absM + 2; ll <= l; ll++) {
-    pll = (x * (2.0 * ll - 1.0) * pmmp1 - (ll + absM - 1.0) * pmm) / (ll - absM);
+    pll =
+      (x * (2.0 * ll - 1.0) * pmmp1 - (ll + absM - 1.0) * pmm) / (ll - absM);
     pmm = pmmp1;
     pmmp1 = pll;
   }
@@ -49,10 +50,12 @@ function _updateCache(n, l, m) {
   const key = `${n}-${l}-${m}`;
   if (_cache.key === key) return;
   const absM = Math.abs(m);
-  const logNormR = 1.5 * Math.log(2.0 / n) +
+  const logNormR =
+    1.5 * Math.log(2.0 / n) +
     0.5 * (logFact(n - l - 1) - Math.log(2.0 * n) - logFact(n + l));
   const normY = Math.sqrt(
-    ((2 * l + 1) * Math.exp(logFact(l - absM) - logFact(l + absM))) / (4 * Math.PI)
+    ((2 * l + 1) * Math.exp(logFact(l - absM) - logFact(l + absM))) /
+      (4 * Math.PI),
   );
   _cache = { key, logNormR, normY };
 }
@@ -69,7 +72,8 @@ function getProbabilityDensity(x, y, z, n, l, m) {
   const phi = Math.atan2(y, x);
   const absM = Math.abs(m);
 
-  const R_nl = Math.exp(logNormR) *
+  const R_nl =
+    Math.exp(logNormR) *
     Math.exp(-rho / 2.0) *
     Math.pow(rho, l) *
     genLaguerre(n - l - 1, 2 * l + 1, rho);
@@ -82,7 +86,7 @@ function getProbabilityDensity(x, y, z, n, l, m) {
   }
 
   const Y_lm = normY * assocLegendre(l, absM, cosTheta) * azimuthal;
-  return (R_nl * Y_lm) * (R_nl * Y_lm);
+  return R_nl * Y_lm * (R_nl * Y_lm);
 }
 
 function getSliceAxes(slicePlane) {
@@ -91,7 +95,16 @@ function getSliceAxes(slicePlane) {
   return { c1: 0, c2: 2, cFixed: 1 };
 }
 
-function computeGrid(n, l, m, res, viewRadius, slicePlane, sliceOffset, viewCenter) {
+function computeGrid(
+  n,
+  l,
+  m,
+  res,
+  viewRadius,
+  slicePlane,
+  sliceOffset,
+  viewCenter,
+) {
   const grid = new Float32Array(res * res);
   const step = res === 1 ? 0 : (viewRadius * 2) / (res - 1);
 
@@ -106,15 +119,21 @@ function computeGrid(n, l, m, res, viewRadius, slicePlane, sliceOffset, viewCent
   let peak = 1e-10;
 
   for (let v = 0; v < res; v++) {
-    const p2 = (-viewRadius + v * step) + axisCenter2;
+    const p2 = -viewRadius + v * step + axisCenter2;
     const rowOffset = v * res;
 
     for (let u = 0; u < res; u++) {
-      const p1 = (-viewRadius + u * step) + axisCenter1;
+      const p1 = -viewRadius + u * step + axisCenter1;
 
-      let x = 0, y = 0, z = 0;
-      if (c1 === 0) x = p1; else if (c1 === 1) y = p1; else z = p1;
-      if (c2 === 0) x = p2; else if (c2 === 1) y = p2; else z = p2;
+      let x = 0,
+        y = 0,
+        z = 0;
+      if (c1 === 0) x = p1;
+      else if (c1 === 1) y = p1;
+      else z = p1;
+      if (c2 === 0) x = p2;
+      else if (c2 === 1) y = p2;
+      else z = p2;
       if (cFixed === 0) x = sliceOffset;
       else if (cFixed === 1) y = sliceOffset;
       else z = sliceOffset;
@@ -132,8 +151,20 @@ self.onmessage = function (e) {
   const { type } = e.data;
 
   if (type === "render") {
-    const { n, l, m, res, viewRadius, slicePlane, sliceOffset, viewCenter } = e.data;
-    const { grid, peak } = computeGrid(n, l, m, res, viewRadius, slicePlane, sliceOffset, viewCenter);
-    self.postMessage({ type: "result", grid: grid.buffer, peak }, [grid.buffer]);
+    const { n, l, m, res, viewRadius, slicePlane, sliceOffset, viewCenter } =
+      e.data;
+    const { grid, peak } = computeGrid(
+      n,
+      l,
+      m,
+      res,
+      viewRadius,
+      slicePlane,
+      sliceOffset,
+      viewCenter,
+    );
+    self.postMessage({ type: "result", grid: grid.buffer, peak }, [
+      grid.buffer,
+    ]);
   }
 };

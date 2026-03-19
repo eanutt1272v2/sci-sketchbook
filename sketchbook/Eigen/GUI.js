@@ -168,9 +168,7 @@ class GUI {
     );
 
     this.bindings.viewRadius.on("change", () => this.updateViewConstraints());
-    this.bindings.sliceOffset.on("change", () =>
-      this.appcore.requestRender(),
-    );
+    this.bindings.sliceOffset.on("change", () => this.appcore.requestRender());
 
     page.addBlade({ view: "separator" });
 

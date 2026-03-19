@@ -26,7 +26,8 @@ class UILayout {
   finish() {
     this.gaps = [];
     for (let i = 0; i < this.names.length; i++) {
-      const lastInGroup = i === this.names.length - 1 || this.groups[i] !== this.groups[i + 1];
+      const lastInGroup =
+        i === this.names.length - 1 || this.groups[i] !== this.groups[i + 1];
       this.gaps.push(lastInGroup ? this.interGap : this.intraGap);
     }
 

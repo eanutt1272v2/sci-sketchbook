@@ -7,7 +7,7 @@ class AnimalLibrary {
 
   loadFromData(data) {
     const dataArray = Array.isArray(data) ? data : Object.values(data);
-    this.animals = dataArray.filter(a => a?.name && !a.code?.startsWith(">"));
+    this.animals = dataArray.filter((a) => a?.name && !a.code?.startsWith(">"));
     this.loaded = true;
   }
 
@@ -17,7 +17,8 @@ class AnimalLibrary {
 
   getAnimalList() {
     return this.animals.reduce((options, animal, idx) => {
-      const name = `${animal.code || ""} ${animal.name || ""} ${(animal.cname) || ""}`.trim();
+      const name =
+        `${animal.code || ""} ${animal.name || ""} ${animal.cname || ""}`.trim();
       options[name.substring(0, 35)] = String(idx);
       return options;
     }, {});
@@ -33,7 +34,10 @@ class AnimalLibrary {
     Object.assign(params, standardParams);
 
     if (b !== undefined) {
-      params.b = typeof b === "string" ? b.split(",").map(val => RLEParser.parseFraction(val)) : b;
+      params.b =
+        typeof b === "string"
+          ? b.split(",").map((val) => RLEParser.parseFraction(val))
+          : b;
     }
   }
 }

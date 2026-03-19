@@ -24,14 +24,14 @@ class Analyser {
     stats.sedimentFlux = 0;
     stats.erosionRate = 0;
     stats.hydraulicResidence = 0;
-    
+
     stats.totalWater = 0;
     stats.totalSediment = 0;
     stats.totalBedrock = 0;
 
     stats.avgElevation = 0;
     stats.elevationStdDev = 0;
-    
+
     stats.peakDischarge = 0;
     stats.activeWaterCover = 0;
     stats.slopeComplexity = 0;
@@ -48,7 +48,8 @@ class Analyser {
     const { statistics, params } = this.appcore;
     statistics.fps = frameRate();
     statistics.frameCounter++;
-    statistics.simulationTime = (performance.now() - this.simulationStartTime) / 1000;
+    statistics.simulationTime =
+      (performance.now() - this.simulationStartTime) / 1000;
 
     if (!this._hasTerrainBuffers()) {
       return;
@@ -56,33 +57,39 @@ class Analyser {
 
     if (params.running) {
       const now = performance.now();
-      if ((now - this.lastAnalysisTime) >= this.analysisIntervalMs) {
+      if (now - this.lastAnalysisTime >= this.analysisIntervalMs) {
         this.runAnalysis();
       }
     }
   }
 
- _hasTerrainBuffers() {
-   const t = this.appcore.terrain;
-   return !!(
-     t &&
-     t.heightMap &&
-     t.bedrockMap &&
-     t.sedimentMap &&
-     t.dischargeMap
-   );
- }
+  _hasTerrainBuffers() {
+    const t = this.appcore.terrain;
+    return !!(
+      t &&
+      t.heightMap &&
+      t.bedrockMap &&
+      t.sedimentMap &&
+      t.dischargeMap
+    );
+  }
 
   runAnalysis() {
     const { terrain, statistics, params } = this.appcore;
-    const { area, size, heightMap, bedrockMap, sedimentMap, dischargeMap } = terrain;
+    const { area, size, heightMap, bedrockMap, sedimentMap, dischargeMap } =
+      terrain;
     if (!heightMap || !bedrockMap || !sedimentMap || !dischargeMap) return;
     const { heightScale, evaporationRate } = params;
 
-    let totalW = 0, totalS = 0, totalB = 0, riverCells = 0, totalSA = 0;
-    let sumE = 0, sumSqE = 0;
+    let totalW = 0,
+      totalS = 0,
+      totalB = 0,
+      riverCells = 0,
+      totalSA = 0;
+    let sumE = 0,
+      sumSqE = 0;
     let slopeSum = 0;
-    
+
     statistics.heightHistogram.fill(0);
 
     const currentTime = performance.now();
@@ -110,7 +117,7 @@ class Analyser {
       if (x < size - 1 && y < size - 1) {
         const sa = this._calcCellSA(x, y, terrain, heightScale);
         totalSA += sa;
-        slopeSum += (sa - 1.0);
+        slopeSum += sa - 1.0;
       }
     }
 
@@ -128,13 +135,13 @@ class Analyser {
     statistics.peakDischarge = dBounds.max;
 
     statistics.avgElevation = sumE / area;
-    const variance = (sumSqE / area) - (statistics.avgElevation ** 2);
+    const variance = sumSqE / area - statistics.avgElevation ** 2;
     statistics.elevationStdDev = Math.sqrt(Math.max(0, variance));
 
     statistics.totalWater = totalW;
     statistics.totalSediment = totalS;
     statistics.totalBedrock = totalB;
-    
+
     statistics.rugosity = totalSA / area;
     statistics.slopeComplexity = slopeSum / area;
     statistics.drainageDensity = (riverCells / area) * 100;
@@ -154,15 +161,19 @@ class Analyser {
   _normaliseHistogram() {
     const { heightHistogram, normHistogram } = this.appcore.statistics;
     let maxBin = 0;
-    for (let i = 0; i < 256; i++) if (heightHistogram[i] > maxBin) maxBin = heightHistogram[i];
-    for (let i = 0; i < 256; i++) normHistogram[i] = maxBin > 0 ? heightHistogram[i] / maxBin : 0;
+    for (let i = 0; i < 256; i++)
+      if (heightHistogram[i] > maxBin) maxBin = heightHistogram[i];
+    for (let i = 0; i < 256; i++)
+      normHistogram[i] = maxBin > 0 ? heightHistogram[i] / maxBin : 0;
   }
 
   _calcCellSA(x, y, terrain, scale) {
     const { size, heightMap } = terrain;
     const i = y * size + x;
-    const h00 = heightMap[i] * scale, h10 = heightMap[i+1] * scale;
-    const h01 = heightMap[i+size] * scale, h11 = heightMap[i+size+1] * scale;
+    const h00 = heightMap[i] * scale,
+      h10 = heightMap[i + 1] * scale;
+    const h01 = heightMap[i + size] * scale,
+      h11 = heightMap[i + size + 1] * scale;
     const dx = (h10 - h00 + h11 - h01) * 0.5;
     const dy = (h01 - h00 + h11 - h10) * 0.5;
     return Math.sqrt(1 + dx * dx + dy * dy);
@@ -170,8 +181,11 @@ class Analyser {
 
   getAverageHeightInRegion(nx, ny, nSize) {
     const { size, heightMap } = this.appcore.terrain;
-    const startX = (nx * size) | 0, startY = (ny * size) | 0, edge = (nSize * size) | 0;
-    let sum = 0, count = 0;
+    const startX = (nx * size) | 0,
+      startY = (ny * size) | 0,
+      edge = (nSize * size) | 0;
+    let sum = 0,
+      count = 0;
     for (let y = startY; y < startY + edge && y < size; y++) {
       for (let x = startX; x < startX + edge && x < size; x++) {
         sum += heightMap[y * size + x];

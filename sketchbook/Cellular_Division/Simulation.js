@@ -45,7 +45,10 @@ class Simulation {
   _buildParticlesChunk() {
     if (!this.isRestarting) return;
 
-    const target = min(this.restartCursor + this.restartChunkSize, this.particleCount);
+    const target = min(
+      this.restartCursor + this.restartChunkSize,
+      this.particleCount,
+    );
     for (let i = this.restartCursor; i < target; i++) {
       this.particles.push(new Particle());
     }
@@ -169,7 +172,11 @@ class Simulation {
   }
 
   setParticleCount(value) {
-    this.particleCount = constrain(value, Config.MIN_PARTICLES, Config.MAX_PARTICLES);
+    this.particleCount = constrain(
+      value,
+      Config.MIN_PARTICLES,
+      Config.MAX_PARTICLES,
+    );
   }
 
   requestRestart() {

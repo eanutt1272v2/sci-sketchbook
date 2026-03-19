@@ -14,19 +14,63 @@ class UIPanel {
     this.layout.add("colorMap", 28, "panel");
     this.layout.finish();
 
-    this.slider = new Slider(this.layout.contentX(), this.layout.getY("iterSlider"), this.layout.contentW(), 18, 1, 512, this.appcore.maxIterations, this.appcore.theme);
+    this.slider = new Slider(
+      this.layout.contentX(),
+      this.layout.getY("iterSlider"),
+      this.layout.contentW(),
+      18,
+      1,
+      512,
+      this.appcore.maxIterations,
+      this.appcore.theme,
+    );
 
     const stepLabels = ["--", "-", "+", "++"];
     const stepY = this.layout.getY("stepButtons");
     this.stepButtons = new Array(4);
     for (let i = 0; i < 4; i++) {
-      this.stepButtons[i] = new Button(this.layout.contentX() + i * 36, stepY, 28, 28, stepLabels[i], this.appcore.theme);
+      this.stepButtons[i] = new Button(
+        this.layout.contentX() + i * 36,
+        stepY,
+        28,
+        28,
+        stepLabels[i],
+        this.appcore.theme,
+      );
     }
 
-    this.dropdown = new Dropdown(this.layout.contentX(), this.layout.getY("colorMap"), 180, 26, this.appcore.renderer.mapNames, this.appcore.theme);
-    this.exportBtn = new Button(width - 80, height - 220, 56, 56, "PNG", this.appcore.theme);
-    this.zoomInBtn = new Button(width - 80, height - 150, 56, 56, "+", this.appcore.theme);
-    this.zoomOutBtn = new Button(width - 80, height - 80, 56, 56, "-", this.appcore.theme);
+    this.dropdown = new Dropdown(
+      this.layout.contentX(),
+      this.layout.getY("colorMap"),
+      180,
+      26,
+      this.appcore.renderer.mapNames,
+      this.appcore.theme,
+    );
+    this.exportBtn = new Button(
+      width - 80,
+      height - 220,
+      56,
+      56,
+      "PNG",
+      this.appcore.theme,
+    );
+    this.zoomInBtn = new Button(
+      width - 80,
+      height - 150,
+      56,
+      56,
+      "+",
+      this.appcore.theme,
+    );
+    this.zoomOutBtn = new Button(
+      width - 80,
+      height - 80,
+      56,
+      56,
+      "-",
+      this.appcore.theme,
+    );
   }
 
   draw() {
@@ -36,18 +80,31 @@ class UIPanel {
     fill(t.bgPanel);
     stroke(t.strokePanel);
     strokeWeight(t.swPanel);
-    rect(this.layout.x, this.layout.y, this.PANEL_W, this.layout.totalHeight, 4);
+    rect(
+      this.layout.x,
+      this.layout.y,
+      this.PANEL_W,
+      this.layout.totalHeight,
+      4,
+    );
 
     for (const sy of this.layout.separatorYs()) {
       stroke(t.strokeSeparator);
       strokeWeight(t.swSeparator);
-      line(this.layout.contentX(), sy, this.layout.x + this.PANEL_W - this.layout.padding, sy);
+      line(
+        this.layout.contentX(),
+        sy,
+        this.layout.x + this.PANEL_W - this.layout.padding,
+        sy,
+      );
     }
 
     const px = this.layout.contentX();
 
     const inp = this.appcore.input;
-    const iterText = inp.isTypingIter ? `Input: ${inp.typingBuffer}_` : `Iterations: ${this.appcore.maxIterations}`;
+    const iterText = inp.isTypingIter
+      ? `Input: ${inp.typingBuffer}_`
+      : `Iterations: ${this.appcore.maxIterations}`;
     noStroke();
     fill(t.textPrimary);
     textSize(t.textSizePrimary);
@@ -78,11 +135,19 @@ class UIPanel {
     const ci = this.format3dp(this.appcore.juliaCy);
 
     text(`Zoom: ${zr}x`, px, this.layout.getY("zoomInfo"));
-    text(`Position: X=${xr}, Y=${yr} | c=${cr}${this.appcore.juliaCy >= 0 ? "+" : ""}${ci}i`, px, this.layout.getY("posInfo"));
+    text(
+      `Position: X=${xr}, Y=${yr} | c=${cr}${this.appcore.juliaCy >= 0 ? "+" : ""}${ci}i`,
+      px,
+      this.layout.getY("posInfo"),
+    );
 
     fill(t.textMuted);
     textSize(t.textSizeCaption);
-    text("[WASD/Arrows]: Pan, [Q/E, Scroll]: Zoom, [P]: PNG, [#]: Keymap", px, this.layout.getY("hints"));
+    text(
+      "[WASD/Arrows]: Pan, [Q/E, Scroll]: Zoom, [P]: PNG, [#]: Keymap",
+      px,
+      this.layout.getY("hints"),
+    );
 
     this.dropdown.display(this.appcore.renderer.currentMapIndex);
 
@@ -163,7 +228,11 @@ class UIPanel {
     fill(255, 170);
     textSize(12);
     textAlign(LEFT, BOTTOM);
-    text(`${metadata.name} ${metadata.version} by ${metadata.author}`, 12, height - 12);
+    text(
+      `${metadata.name} ${metadata.version} by ${metadata.author}`,
+      12,
+      height - 12,
+    );
     pop();
   }
 }

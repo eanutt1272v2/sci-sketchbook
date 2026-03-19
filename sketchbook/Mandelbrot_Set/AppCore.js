@@ -82,7 +82,10 @@ class AppCore {
 
   exportImagePNG() {
     const timestamp = `${year()}${nf(month(), 2)}${nf(day(), 2)}_${nf(hour(), 2)}${nf(minute(), 2)}${nf(second(), 2)}`;
-    const slug = (metadata.name || "fractal").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    const slug = (metadata.name || "fractal")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
     save(this.renderer.buffer, `${slug}_${timestamp}.png`);
   }
 }

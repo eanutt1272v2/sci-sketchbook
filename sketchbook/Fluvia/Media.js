@@ -6,13 +6,18 @@ class Media {
     this.recordedChunks = [];
     this.isRecording = false;
 
-    this.importInput = this._createHiddenInput("image/*", (file) => this.handleHeightmapImport(file));
-    this.dataImportInput = this._createHiddenInput(".json,application/json,text/plain", (file) => {
-      if (this.pendingDataImportHandler) {
-        this.pendingDataImportHandler(file);
-        this.pendingDataImportHandler = null;
-      }
-    });
+    this.importInput = this._createHiddenInput("image/*", (file) =>
+      this.handleHeightmapImport(file),
+    );
+    this.dataImportInput = this._createHiddenInput(
+      ".json,application/json,text/plain",
+      (file) => {
+        if (this.pendingDataImportHandler) {
+          this.pendingDataImportHandler(file);
+          this.pendingDataImportHandler = null;
+        }
+      },
+    );
     this.pendingDataImportHandler = null;
   }
 
@@ -51,38 +56,50 @@ class Media {
     reader.onload = (event) => {
       const imgSrc = event.target.result;
 
-      loadImage(imgSrc, (img) => {
-        try {
-          const { terrain } = this.appcore;
-          const { size, area, heightMap, bedrockMap, originalHeightMap, sedimentMap } = terrain;
+      loadImage(
+        imgSrc,
+        (img) => {
+          try {
+            const { terrain } = this.appcore;
+            const {
+              size,
+              area,
+              heightMap,
+              bedrockMap,
+              originalHeightMap,
+              sedimentMap,
+            } = terrain;
 
-          if (!img) throw new Error("loadImage returned null");
+            if (!img) throw new Error("loadImage returned null");
 
-          img.resize(size, size);
-          img.loadPixels();
+            img.resize(size, size);
+            img.loadPixels();
 
-          const { pixels } = img;
-          if (!pixels || pixels.length < area * 4) throw new Error("pixel buffer incomplete");
+            const { pixels } = img;
+            if (!pixels || pixels.length < area * 4)
+              throw new Error("pixel buffer incomplete");
 
-          for (let i = 0; i < area; i++) {
-            const idx = i << 2;
-            const brightness = (
-              0.2126 * pixels[idx] +
-              0.7152 * pixels[idx + 1] +
-              0.0722 * pixels[idx + 2]
-            ) / 255;
+            for (let i = 0; i < area; i++) {
+              const idx = i << 2;
+              const brightness =
+                (0.2126 * pixels[idx] +
+                  0.7152 * pixels[idx + 1] +
+                  0.0722 * pixels[idx + 2]) /
+                255;
 
-            heightMap[i] = bedrockMap[i] = originalHeightMap[i] = brightness;
-            sedimentMap[i] = 0;
+              heightMap[i] = bedrockMap[i] = originalHeightMap[i] = brightness;
+              sedimentMap[i] = 0;
+            }
+
+            terrain.reset();
+            this.appcore.refreshGUI();
+            console.log(`Heightmap imported: ${size}x${size}`);
+          } catch (err) {
+            console.error("Import failed during processing:", err);
           }
-
-          terrain.reset();
-          this.appcore.refreshGUI();
-          console.log(`Heightmap imported: ${size}x${size}`);
-        } catch (err) {
-          console.error("Import failed during processing:", err);
-        }
-      }, (err) => console.error("Import failed: load error", err));
+        },
+        (err) => console.error("Import failed: load error", err),
+      );
     };
 
     reader.readAsDataURL(file);
@@ -115,7 +132,10 @@ class Media {
       this.mediaRecorder.onstop = () => {
         const blob = new Blob(this.recordedChunks, { type: supportedType });
         const ext = supportedType.includes("mp4") ? "mp4" : "webm";
-        this._triggerDownload(URL.createObjectURL(blob), this._getFilename(ext));
+        this._triggerDownload(
+          URL.createObjectURL(blob),
+          this._getFilename(ext),
+        );
       };
 
       this.mediaRecorder.start();
@@ -140,7 +160,7 @@ class Media {
     const { imageFormat } = this.appcore.params;
     try {
       save(_renderer, this._getFilename(imageFormat));
-       console.log("[Fluvia] Exported image");
+      console.log("[Fluvia] Exported image");
     } catch (err) {
       console.error(`Export failed: ${err}`);
     }
@@ -153,7 +173,7 @@ class Media {
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("params.json"));
-     console.log("[Fluvia] Exported params JSON");
+    console.log("[Fluvia] Exported params JSON");
   }
 
   importParamsJSON() {
@@ -168,14 +188,34 @@ class Media {
         const target = this.appcore.params;
 
         const scalarKeys = [
-          "running", "dropletsPerFrame", "maxAge", "minVolume",
-          "terrainSize", "noiseScale", "noiseOctaves", "amplitudeFalloff",
-          "sedimentErosionRate", "bedrockErosionRate", "depositionRate", "evaporationRate",
-          "precipitationRate", "entrainment", "gravity", "momentumTransfer",
-          "learningRate", "maxHeightDiff", "settlingRate",
-          "renderStats", "renderLegend", "renderKeymapRef",
-          "displayMethod", "heightScale", "surfaceMap", "colourMap",
-          "specularIntensity", "imageFormat",
+          "running",
+          "dropletsPerFrame",
+          "maxAge",
+          "minVolume",
+          "terrainSize",
+          "noiseScale",
+          "noiseOctaves",
+          "amplitudeFalloff",
+          "sedimentErosionRate",
+          "bedrockErosionRate",
+          "depositionRate",
+          "evaporationRate",
+          "precipitationRate",
+          "entrainment",
+          "gravity",
+          "momentumTransfer",
+          "learningRate",
+          "maxHeightDiff",
+          "settlingRate",
+          "renderStats",
+          "renderLegend",
+          "renderKeymapRef",
+          "displayMethod",
+          "heightScale",
+          "surfaceMap",
+          "colourMap",
+          "specularIntensity",
+          "imageFormat",
         ];
 
         for (const key of scalarKeys) {
@@ -194,7 +234,7 @@ class Media {
         }
 
         this.appcore.refreshGUI();
-         console.log("[Fluvia] Imported params JSON");
+        console.log("[Fluvia] Imported params JSON");
       });
     });
   }
@@ -206,36 +246,50 @@ class Media {
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("stats.json"));
-     console.log("[Fluvia] Exported stats JSON");
+    console.log("[Fluvia] Exported stats JSON");
   }
 
-   exportStatisticsCSV() {
-     const stats = this.appcore.statistics;
-     const rows = [["key", "value"]];
-     const scalarKeys = [
-       "fps", "frameCounter", "simulationTime", "avgElevation", "elevationStdDev",
-       "totalWater", "totalSediment", "totalBedrock", "peakDischarge", "activeWaterCover",
-       "drainageDensity", "hydraulicResidence", "rugosity", "slopeComplexity",
-       "sedimentFlux", "erosionRate",
-     ];
+  exportStatisticsCSV() {
+    const stats = this.appcore.statistics;
+    const rows = [["key", "value"]];
+    const scalarKeys = [
+      "fps",
+      "frameCounter",
+      "simulationTime",
+      "avgElevation",
+      "elevationStdDev",
+      "totalWater",
+      "totalSediment",
+      "totalBedrock",
+      "peakDischarge",
+      "activeWaterCover",
+      "drainageDensity",
+      "hydraulicResidence",
+      "rugosity",
+      "slopeComplexity",
+      "sedimentFlux",
+      "erosionRate",
+    ];
 
-     for (const k of scalarKeys) rows.push([k, Number(stats[k]) || 0]);
-     rows.push(["heightBounds.min", Number(stats.heightBounds?.min) || 0]);
-     rows.push(["heightBounds.max", Number(stats.heightBounds?.max) || 0]);
-     rows.push(["sedimentBounds.min", Number(stats.sedimentBounds?.min) || 0]);
-     rows.push(["sedimentBounds.max", Number(stats.sedimentBounds?.max) || 0]);
-     rows.push(["dischargeBounds.min", Number(stats.dischargeBounds?.min) || 0]);
-     rows.push(["dischargeBounds.max", Number(stats.dischargeBounds?.max) || 0]);
+    for (const k of scalarKeys) rows.push([k, Number(stats[k]) || 0]);
+    rows.push(["heightBounds.min", Number(stats.heightBounds?.min) || 0]);
+    rows.push(["heightBounds.max", Number(stats.heightBounds?.max) || 0]);
+    rows.push(["sedimentBounds.min", Number(stats.sedimentBounds?.min) || 0]);
+    rows.push(["sedimentBounds.max", Number(stats.sedimentBounds?.max) || 0]);
+    rows.push(["dischargeBounds.min", Number(stats.dischargeBounds?.min) || 0]);
+    rows.push(["dischargeBounds.max", Number(stats.dischargeBounds?.max) || 0]);
 
-     const csv = rows.map((r) => `${r[0]},${r[1]}`).join("\n");
-     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
-     console.log("[Fluvia] Exported stats CSV");
+    const csv = rows.map((r) => `${r[0]},${r[1]}`).join("\n");
+    this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
+    console.log("[Fluvia] Exported stats CSV");
   }
 
   exportWorldJSON() {
     const { terrain } = this.appcore;
     if (!terrain.heightMap) {
-      console.warn("[Fluvia] Cannot export world while worker holds terrain buffers.");
+      console.warn(
+        "[Fluvia] Cannot export world while worker holds terrain buffers.",
+      );
       return;
     }
     const payload = {
@@ -257,17 +311,23 @@ class Media {
     };
 
     this._downloadJSON(payload, this._getFilename("world.json"));
-     console.log(`[Fluvia] Exported world JSON: size=${terrain.size}`);
+    console.log(`[Fluvia] Exported world JSON: size=${terrain.size}`);
   }
 
   importWorldJSON() {
     this.openDataImportDialog((file) => {
       this._readJSONFile(file, (data) => {
-        if (!data || typeof data !== "object" || !data.maps || !data.terrainSize) {
+        if (
+          !data ||
+          typeof data !== "object" ||
+          !data.maps ||
+          !data.terrainSize
+        ) {
           throw new Error("Invalid world JSON payload");
         }
 
-        const incomingSize = Number(data.terrainSize) || this.appcore.params.terrainSize;
+        const incomingSize =
+          Number(data.terrainSize) || this.appcore.params.terrainSize;
         // Stop worker and ensure terrain buffers are available for writing
         this.appcore._terminateWorker();
         if (incomingSize !== this.appcore.params.terrainSize) {
@@ -279,7 +339,10 @@ class Media {
 
         const { terrain } = this.appcore;
         this._copyArrayInto(terrain.heightMap, data.maps.heightMap);
-        this._copyArrayInto(terrain.originalHeightMap, data.maps.originalHeightMap);
+        this._copyArrayInto(
+          terrain.originalHeightMap,
+          data.maps.originalHeightMap,
+        );
         this._copyArrayInto(terrain.bedrockMap, data.maps.bedrockMap);
         this._copyArrayInto(terrain.sedimentMap, data.maps.sedimentMap);
         this._copyArrayInto(terrain.dischargeMap, data.maps.dischargeMap);
@@ -298,41 +361,44 @@ class Media {
     });
   }
 
-   exportHeightmapPNG() {
-     const { terrain } = this.appcore;
-     if (!terrain || !terrain.heightMap) return;
+  exportHeightmapPNG() {
+    const { terrain } = this.appcore;
+    if (!terrain || !terrain.heightMap) return;
 
-     const size = terrain.size;
-     const bounds = terrain.getMapBounds(terrain.heightMap);
-     const range = Math.max(1e-9, bounds.max - bounds.min);
+    const size = terrain.size;
+    const bounds = terrain.getMapBounds(terrain.heightMap);
+    const range = Math.max(1e-9, bounds.max - bounds.min);
 
-     const canvas = document.createElement("canvas");
-     canvas.width = size;
-     canvas.height = size;
-     const ctx = canvas.getContext("2d");
-     const imageData = ctx.createImageData(size, size);
-     const pixels = imageData.data;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const imageData = ctx.createImageData(size, size);
+    const pixels = imageData.data;
 
-     for (let i = 0; i < terrain.heightMap.length; i++) {
-       const v = (terrain.heightMap[i] - bounds.min) / range;
-       const g = Math.max(0, Math.min(255, Math.round(v * 255)));
-       const p = i * 4;
-       pixels[p] = g;
-       pixels[p + 1] = g;
-       pixels[p + 2] = g;
-       pixels[p + 3] = 255;
-     }
+    for (let i = 0; i < terrain.heightMap.length; i++) {
+      const v = (terrain.heightMap[i] - bounds.min) / range;
+      const g = Math.max(0, Math.min(255, Math.round(v * 255)));
+      const p = i * 4;
+      pixels[p] = g;
+      pixels[p + 1] = g;
+      pixels[p + 2] = g;
+      pixels[p + 3] = 255;
+    }
 
-     ctx.putImageData(imageData, 0, 0);
-     canvas.toBlob((blob) => {
-       if (!blob) {
-         console.error("[Fluvia] Failed to export heightmap PNG blob");
-         return;
-       }
-       this._triggerDownload(URL.createObjectURL(blob), this._getFilename("heightmap.png"));
-       console.log(`[Fluvia] Exported heightmap PNG: ${size}x${size}`);
-     }, "image/png");
-   }
+    ctx.putImageData(imageData, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        console.error("[Fluvia] Failed to export heightmap PNG blob");
+        return;
+      }
+      this._triggerDownload(
+        URL.createObjectURL(blob),
+        this._getFilename("heightmap.png"),
+      );
+      console.log(`[Fluvia] Exported heightmap PNG: ${size}x${size}`);
+    }, "image/png");
+  }
 
   _copyArrayInto(target, source) {
     if (!target || !source || !Array.isArray(source)) return;
@@ -390,14 +456,16 @@ class Media {
   }
 
   _downloadJSON(payload, filename) {
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
     this._triggerDownload(URL.createObjectURL(blob), filename);
   }
 
-   _downloadText(content, filename, mimeType) {
-     const blob = new Blob([content], { type: mimeType });
-     this._triggerDownload(URL.createObjectURL(blob), filename);
-   }
+  _downloadText(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    this._triggerDownload(URL.createObjectURL(blob), filename);
+  }
 
   _triggerDownload(url, filename) {
     const anchor = document.createElement("a");

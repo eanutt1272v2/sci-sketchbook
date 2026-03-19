@@ -1,28 +1,39 @@
-// This is the solver script executed when SolverWorker.js cannot load properly - ie. A fallback. I plan to rename Solver.js, the class name, and references to it to FallbackSolver or fallbacksolver when I get round to it.
+// This is the fallbacksolver script executed when FallbackSolverWorker.js cannot load properly - ie. A fallback. I plan to rename FallbackSolver.js, the class name, and references to it to FallbackFallbackSolver or fallbackfallbacksolver when I get round to it.
 
-class Solver {
+class FallbackSolver {
   constructor(appcore) {
     this.appcore = appcore;
 
     const SQRT2 = Math.SQRT2;
     this.neighbours = [
-      { x: -1, y: -1, distance: SQRT2 }, { x: -1, y: 0, distance: 1 }, { x: -1, y: 1, distance: SQRT2 },
-      { x: 0, y: -1, distance: 1 },                                    { x: 0, y: 1, distance: 1 },
-      { x: 1, y: -1, distance: SQRT2 },  { x: 1, y: 0, distance: 1 },  { x: 1, y: 1, distance: SQRT2 },
+      { x: -1, y: -1, distance: SQRT2 },
+      { x: -1, y: 0, distance: 1 },
+      { x: -1, y: 1, distance: SQRT2 },
+      { x: 0, y: -1, distance: 1 },
+      { x: 0, y: 1, distance: 1 },
+      { x: 1, y: -1, distance: SQRT2 },
+      { x: 1, y: 0, distance: 1 },
+      { x: 1, y: 1, distance: SQRT2 },
     ];
   }
 
   updateDischargeMap() {
     const { learningRate } = this.appcore.params;
-    const { 
-      area, dischargeMap, dischargeTrack, 
-      momentumX, momentumXTrack, momentumY, momentumYTrack 
+    const {
+      area,
+      dischargeMap,
+      dischargeTrack,
+      momentumX,
+      momentumXTrack,
+      momentumY,
+      momentumYTrack,
     } = this.appcore.terrain;
 
     const invLR = 1.0 - learningRate;
 
     for (let i = 0; i < area; i++) {
-      dischargeMap[i] = invLR * dischargeMap[i] + learningRate * dischargeTrack[i];
+      dischargeMap[i] =
+        invLR * dischargeMap[i] + learningRate * dischargeTrack[i];
       momentumX[i] = invLR * momentumX[i] + learningRate * momentumXTrack[i];
       momentumY[i] = invLR * momentumY[i] + learningRate * momentumYTrack[i];
     }
@@ -30,16 +41,31 @@ class Solver {
 
   hydraulicErosion() {
     const {
-      dropletsPerFrame, maxAge, minVolume, precipitationRate,
-      gravity, momentumTransfer, entrainment, depositionRate,
-      evaporationRate, sedimentErosionRate, bedrockErosionRate
+      dropletsPerFrame,
+      maxAge,
+      minVolume,
+      precipitationRate,
+      gravity,
+      momentumTransfer,
+      entrainment,
+      depositionRate,
+      evaporationRate,
+      sedimentErosionRate,
+      bedrockErosionRate,
     } = this.appcore.params;
 
     const { terrain } = this.appcore;
-    const { 
-      size, heightMap, sedimentMap, bedrockMap, 
-      dischargeTrack, momentumXTrack, momentumYTrack,
-      momentumX, momentumY, dischargeMap
+    const {
+      size,
+      heightMap,
+      sedimentMap,
+      bedrockMap,
+      dischargeTrack,
+      momentumXTrack,
+      momentumYTrack,
+      momentumX,
+      momentumY,
+      dischargeMap,
     } = terrain;
 
     dischargeTrack.fill(0);
@@ -52,7 +78,10 @@ class Solver {
 
       if (terrain.getHeight(x, y) < 0.1) continue;
 
-      let vx = 0, vy = 0, sediment = 0, age = 0;
+      let vx = 0,
+        vy = 0,
+        sediment = 0,
+        age = 0;
       let volume = precipitationRate;
 
       while (age < maxAge && volume >= minVolume) {
@@ -76,7 +105,8 @@ class Solver {
           const speed = Math.sqrt(vx * vx + vy * vy);
           if (speed > 0) {
             const alignment = (pmX * vx + pmY * vy) / (pmMag * speed);
-            const transfer = (momentumTransfer * alignment) / (volume + dischargeMap[index]);
+            const transfer =
+              (momentumTransfer * alignment) / (volume + dischargeMap[index]);
             vx += transfer * pmX;
             vy += transfer * pmY;
           }
@@ -85,27 +115,38 @@ class Solver {
         const finalSpeed = Math.sqrt(vx * vx + vy * vy);
         if (finalSpeed > 0) {
           const mag = Math.SQRT2 / finalSpeed;
-          vx *= mag; vy *= mag;
+          vx *= mag;
+          vy *= mag;
         }
 
-        x += vx; y += vy;
+        x += vx;
+        y += vy;
 
         dischargeTrack[index] += volume;
         momentumXTrack[index] += volume * vx;
         momentumYTrack[index] += volume * vy;
 
-        const isOut = (x < 0 || x >= size || y < 0 || y >= size);
-        const heightEnd = isOut ? heightStart - 0.002 : terrain.getHeight(x | 0, y | 0);
+        const isOut = x < 0 || x >= size || y < 0 || y >= size;
+        const heightEnd = isOut
+          ? heightStart - 0.002
+          : terrain.getHeight(x | 0, y | 0);
 
-        const transportCapacity = Math.max(0, (1 + entrainment * terrain.getDischarge(index)) * (heightStart - heightEnd));
+        const transportCapacity = Math.max(
+          0,
+          (1 + entrainment * terrain.getDischarge(index)) *
+            (heightStart - heightEnd),
+        );
         const deficit = transportCapacity - sediment;
 
         if (deficit > 0) {
-          const fromSed = Math.min(sedimentMap[index], deficit * sedimentErosionRate);
+          const fromSed = Math.min(
+            sedimentMap[index],
+            deficit * sedimentErosionRate,
+          );
           sedimentMap[index] -= fromSed;
 
           let actualEroded = fromSed;
-          const remainingDeficit = deficit - (fromSed / sedimentErosionRate);
+          const remainingDeficit = deficit - fromSed / sedimentErosionRate;
 
           if (remainingDeficit > 0) {
             const fromBed = remainingDeficit * bedrockErosionRate;
@@ -121,7 +162,7 @@ class Solver {
 
         terrain.updateTotalHeight(index);
 
-        const evap = (1 - evaporationRate);
+        const evap = 1 - evaporationRate;
         volume *= evap;
         sediment *= evap;
 
@@ -171,7 +212,7 @@ class Solver {
 
       let remaining = transfer;
       const fromSed = Math.min(remaining, sedimentMap[srcIdx]);
-      
+
       sedimentMap[srcIdx] -= fromSed;
       remaining -= fromSed;
 

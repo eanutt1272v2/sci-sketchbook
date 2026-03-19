@@ -20,15 +20,27 @@ class Dropdown {
     fill(this.theme.textPrimary);
     textSize(this.theme.textSizeSecondary);
     textAlign(LEFT, CENTER);
-    text(`Map: ${this.items[currentIndex].charAt(0).toUpperCase() + this.items[currentIndex].slice(1)}`, this.x + 8, this.y + this.h / 2);
+    text(
+      `Map: ${this.items[currentIndex].charAt(0).toUpperCase() + this.items[currentIndex].slice(1)}`,
+      this.x + 8,
+      this.y + this.h / 2,
+    );
 
     if (this.isOpen) {
       for (let i = 0; i < this.items.length; i++) {
-        const over = mouseX > this.x && mouseX < this.x + this.w && mouseY > this.y + this.h + i * this.h && mouseY < this.y + 2 * this.h + i * this.h;
+        const over =
+          mouseX > this.x &&
+          mouseX < this.x + this.w &&
+          mouseY > this.y + this.h + i * this.h &&
+          mouseY < this.y + 2 * this.h + i * this.h;
         fill(over ? this.theme.bgActive : this.theme.bgHover);
         rect(this.x, this.y + this.h + i * this.h, this.w, this.h);
         fill(this.theme.textPrimary);
-        text(this.items[i].charAt(0).toUpperCase() + this.items[i].slice(1), this.x + 8, this.y + this.h + i * this.h + this.h / 2);
+        text(
+          this.items[i].charAt(0).toUpperCase() + this.items[i].slice(1),
+          this.x + 8,
+          this.y + this.h + i * this.h + this.h / 2,
+        );
       }
     }
   }
@@ -38,12 +50,22 @@ class Dropdown {
   }
 
   isHeaderOver() {
-    return mouseX > this.x && mouseX < this.x + this.w && mouseY > this.y && mouseY < this.y + this.h;
+    return (
+      mouseX > this.x &&
+      mouseX < this.x + this.w &&
+      mouseY > this.y &&
+      mouseY < this.y + this.h
+    );
   }
 
   getClickedIndex() {
     for (let i = 0; i < this.items.length; i++) {
-      if (mouseX > this.x && mouseX < this.x + this.w && mouseY > this.y + this.h + i * this.h && mouseY < this.y + 2 * this.h + i * this.h) {
+      if (
+        mouseX > this.x &&
+        mouseX < this.x + this.w &&
+        mouseY > this.y + this.h + i * this.h &&
+        mouseY < this.y + 2 * this.h + i * this.h
+      ) {
         return i;
       }
     }

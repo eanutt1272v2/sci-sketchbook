@@ -5,7 +5,7 @@ class Board {
     this.potential = this._createGrid();
     this.field = this._createGrid();
     this.fieldOld = null;
-    this.names = ['', '', ''];  
+    this.names = ["", "", ""];
     this.params = {
       R: 13,
       T: 10,
@@ -13,7 +13,7 @@ class Board {
       m: 0.15,
       s: 0.015,
       kn: 1,
-      gn: 1
+      gn: 1,
     };
   }
 
@@ -73,7 +73,12 @@ class Board {
       for (let x = 0; x < w; x++) {
         const targetY = sy + y;
         const targetX = sx + x;
-        if (targetY >= 0 && targetY < this.size && targetX >= 0 && targetX < this.size) {
+        if (
+          targetY >= 0 &&
+          targetY < this.size &&
+          targetX >= 0 &&
+          targetX < this.size
+        ) {
           this.cells[this._index(targetX, targetY)] = grid[y][x];
         }
       }
@@ -112,7 +117,10 @@ class Board {
 
   placePatternScaled(pattern, cellX, cellY, scale) {
     if (!pattern || !pattern.cells) return;
-    if (scale === 1) { this.placePattern(pattern, cellX, cellY); return; }
+    if (scale === 1) {
+      this.placePattern(pattern, cellX, cellY);
+      return;
+    }
 
     const grid = this._getPatternGrid(pattern);
     if (!grid) return;
@@ -127,8 +135,8 @@ class Board {
 
     for (let dy = 0; dy < dstH; dy++) {
       for (let dx = 0; dx < dstW; dx++) {
-        const srcXf = (dx / scale);
-        const srcYf = (dy / scale);
+        const srcXf = dx / scale;
+        const srcYf = dy / scale;
 
         const x0 = Math.floor(srcXf);
         const y0 = Math.floor(srcYf);
@@ -137,12 +145,13 @@ class Board {
         const fx = srcXf - x0;
         const fy = srcYf - y0;
 
-        const v = (x0 < srcW && y0 < srcH)
-          ? (grid[y0][x0] || 0) * (1 - fx) * (1 - fy)
-          + (grid[y0][x1] || 0) * fx       * (1 - fy)
-          + (grid[y1][x0] || 0) * (1 - fx) * fy
-          + (grid[y1][x1] || 0) * fx       * fy
-          : 0;
+        const v =
+          x0 < srcW && y0 < srcH
+            ? (grid[y0][x0] || 0) * (1 - fx) * (1 - fy) +
+              (grid[y0][x1] || 0) * fx * (1 - fy) +
+              (grid[y1][x0] || 0) * (1 - fx) * fy +
+              (grid[y1][x1] || 0) * fx * fy
+            : 0;
 
         if (v <= 1e-10) continue;
 
@@ -172,10 +181,10 @@ class Board {
         const start0 = isCentered ? (size0 - size_min) / 2 + shift0 : shift0;
         const start1 = isCentered ? (size1 - size_min) / 2 : 0;
 
-        const idx0 = ((start0 + ix) % size0 + size0) % size0;
+        const idx0 = (((start0 + ix) % size0) + size0) % size0;
         const idx1 = (start1 + ix) % size1;
 
-        const iy0 = ((start0 + iy) % size0 + size0) % size0;
+        const iy0 = (((start0 + iy) % size0) + size0) % size0;
         const iy1 = (start1 + iy) % size1;
 
         if (board.cells[iy1 * size1 + idx1] > 1e-10) {
@@ -241,13 +250,15 @@ class Board {
     if (flipMode === 0) {
       for (let y = 0; y < this.size; y++) {
         for (let x = 0; x < this.size; x++) {
-          newCells[y * this.size + x] = this.cells[y * this.size + (this.size - 1 - x)];
+          newCells[y * this.size + x] =
+            this.cells[y * this.size + (this.size - 1 - x)];
         }
       }
     } else if (flipMode === 1) {
       for (let y = 0; y < this.size; y++) {
         for (let x = 0; x < this.size; x++) {
-          newCells[y * this.size + x] = this.cells[(this.size - 1 - y) * this.size + x];
+          newCells[y * this.size + x] =
+            this.cells[(this.size - 1 - y) * this.size + x];
         }
       }
     } else if (flipMode === 2) {
@@ -306,7 +317,8 @@ class Board {
     for (let y = 0; y < newH; y++) {
       for (let x = 0; x < newW; x++) {
         if (minX + x < this.size && minY + y < this.size) {
-          newCells[y * newSize + x] = this.cells[(minY + y) * this.size + (minX + x)];
+          newCells[y * newSize + x] =
+            this.cells[(minY + y) * this.size + (minX + x)];
         }
       }
     }
@@ -336,7 +348,7 @@ class Board {
       params: this.params,
       cells: this._cellsToRLE(),
       stats: stats,
-      names: this.names
+      names: this.names,
     };
   }
   static fromJSON(data) {
@@ -354,7 +366,7 @@ class Board {
   }
 
   _cellsToRLE() {
-    let rle = '';
+    let rle = "";
     let lastVal = -1;
     let count = 0;
 
@@ -365,7 +377,7 @@ class Board {
         count++;
       } else {
         if (count > 0) {
-          rle += (count > 1 ? count : '') + Board.val2ch(lastVal) + ' ';
+          rle += (count > 1 ? count : "") + Board.val2ch(lastVal) + " ";
         }
         lastVal = val;
         count = 1;
@@ -373,7 +385,7 @@ class Board {
     }
 
     if (count > 0) {
-      rle += (count > 1 ? count : '') + Board.val2ch(lastVal) + '!';
+      rle += (count > 1 ? count : "") + Board.val2ch(lastVal) + "!";
     }
 
     return rle;
@@ -381,14 +393,14 @@ class Board {
 
   _cellsFromRLE(rle) {
     let idx = 0;
-    let count = '';
+    let count = "";
 
     for (let i = 0; i < rle.length; i++) {
       const ch = rle[i];
 
-      if (ch >= '0' && ch <= '9') {
+      if (ch >= "0" && ch <= "9") {
         count += ch;
-      } else if (ch === '!' || ch === ' ') {
+      } else if (ch === "!" || ch === " ") {
         continue;
       } else {
         const n = count ? parseInt(count) : 1;
@@ -399,22 +411,28 @@ class Board {
             this.cells[idx++] = val;
           }
         }
-        count = '';
+        count = "";
       }
     }
   }
 
   static ch2val(c) {
-    if (c === '.' || c === 'b') return 0;
-    if (c === 'o') return 255;
-    if (c.length === 1) return Math.min(255, ord(c) - ord('A') + 1);
-    return Math.min(255, (ord(c[0]) - ord('p')) * 24 + (ord(c[1]) - ord('A') + 25));
+    if (c === "." || c === "b") return 0;
+    if (c === "o") return 255;
+    if (c.length === 1) return Math.min(255, ord(c) - ord("A") + 1);
+    return Math.min(
+      255,
+      (ord(c[0]) - ord("p")) * 24 + (ord(c[1]) - ord("A") + 25),
+    );
   }
 
   static val2ch(v) {
-    if (v === 0) return '.';
+    if (v === 0) return ".";
     if (v < 25) return String.fromCharCode(65 + v - 1);
-    return String.fromCharCode(112 + Math.floor((v - 25) / 24)) + String.fromCharCode(65 + ((v - 25) % 24));
+    return (
+      String.fromCharCode(112 + Math.floor((v - 25) / 24)) +
+      String.fromCharCode(65 + ((v - 25) % 24))
+    );
   }
 
   static get EPSILON() {

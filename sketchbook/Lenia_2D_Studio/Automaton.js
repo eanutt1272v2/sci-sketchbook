@@ -1,14 +1,15 @@
 class Automaton {
   static KERNEL_CORE = [
-    (r) => Math.pow(4 * r * (1 - r), 4),  
-    (r) => Math.exp(4 - 1 / (r * (1 - r))),  
-    (r, q = 0.25) => (r >= q && r <= 1 - q) ? 1 : 0,  
-    (r, q = 0.25) => ((r >= q && r <= 1 - q) ? 1 : 0) + (r < q ? 0.5 : 0)  
+    (r) => Math.pow(4 * r * (1 - r), 4),
+    (r) => Math.exp(4 - 1 / (r * (1 - r))),
+    (r, q = 0.25) => (r >= q && r <= 1 - q ? 1 : 0),
+    (r, q = 0.25) => (r >= q && r <= 1 - q ? 1 : 0) + (r < q ? 0.5 : 0),
   ];
   static GROWTH_FUNC = [
-    (n, m, s) => Math.max(0, Math.pow(1 - Math.pow((n - m) / (9 * s), 2), 4)) * 2 - 1,  
-    (n, m, s) => Math.exp(-Math.pow((n - m) / (Math.sqrt(2) * s), 2)) * 2 - 1,  
-    (n, m, s) => (Math.abs(n - m) <= s) ? 1 : -1  
+    (n, m, s) =>
+      Math.max(0, Math.pow(1 - Math.pow((n - m) / (9 * s), 2), 4)) * 2 - 1,
+    (n, m, s) => Math.exp(-Math.pow((n - m) / (Math.sqrt(2) * s), 2)) * 2 - 1,
+    (n, m, s) => (Math.abs(n - m) <= s ? 1 : -1),
   ];
 
   constructor(params) {
@@ -26,27 +27,20 @@ class Automaton {
     this.field = null;
     this.fieldOld = null;
     this.potential = null;
-
-    // Set when the worker returns kernel-ready data so the renderer can display
-    // the kernel and the worker skips re-computing it on every step.
     this.kernelReady = false;
-    
+
     this.updateParameters(params);
   }
 
-  /**
-   * Called by AppCore when the worker posts a "kernelReady" message.
-   * Replaces the locally-computed kernel with the one built in the worker.
-   */
   applyWorkerKernel(data) {
-    this.kernel        = new Float32Array(data.kernel);
-    this.kernelSize    = data.kernelSize;
-    this.kernelRadius  = Math.floor(data.kernelSize / 2);
-    this.kernelMax     = data.kernelMax;
-    this.kernelDX      = new Int16Array(data.kernelDX);
-    this.kernelDY      = new Int16Array(data.kernelDY);
-    this.kernelValues  = new Float32Array(data.kernelValues);
-    this.kernelReady   = true;
+    this.kernel = new Float32Array(data.kernel);
+    this.kernelSize = data.kernelSize;
+    this.kernelRadius = Math.floor(data.kernelSize / 2);
+    this.kernelMax = data.kernelMax;
+    this.kernelDX = new Int16Array(data.kernelDX);
+    this.kernelDY = new Int16Array(data.kernelDY);
+    this.kernelValues = new Float32Array(data.kernelValues);
+    this.kernelReady = true;
   }
 
   updateParameters(params) {
@@ -54,14 +48,14 @@ class Automaton {
     this.T = params.T;
     this.m = params.m;
     this.s = params.s;
-    this.b = Array.isArray(params.b) ? params.b : [params.b];  
-    this.kn = params.kn || 1;  
-    this.gn = params.gn || 1;  
+    this.b = Array.isArray(params.b) ? params.b : [params.b];
+    this.kn = params.kn || 1;
+    this.gn = params.gn || 1;
     this.softClip = params.softClip || false;
     this.multiStep = params.multiStep || false;
     this.addNoise = params.addNoise || 0;
     this.maskRate = params.maskRate || 0;
-    this.paramP = params.paramP || 0;  
+    this.paramP = params.paramP || 0;
 
     this._calculateKernel();
   }
@@ -148,7 +142,7 @@ class Automaton {
       return r < 1 && r > 0 ? Math.exp(4 - 1 / (r * (1 - r))) : 0;
     } else if (kn === 2) {
       const q = 1 / 4;
-      return (r >= q && r <= 1 - q) ? 1 : 0;
+      return r >= q && r <= 1 - q ? 1 : 0;
     } else if (kn === 3) {
       const q = 1 / 4;
       if (r >= q && r <= 1 - q) return 1;
@@ -163,15 +157,15 @@ class Automaton {
     const gn = this.gn - 1;
 
     if (gn === 0) {
-      const val = Math.max(0, 1 - ((n - this.m) ** 2) / (9 * (this.s ** 2)));
+      const val = Math.max(0, 1 - (n - this.m) ** 2 / (9 * this.s ** 2));
       return Math.pow(val, 4) * 2 - 1;
     } else if (gn === 1) {
-      return Math.exp(-((n - this.m) ** 2) / (2 * (this.s ** 2))) * 2 - 1;
+      return Math.exp(-((n - this.m) ** 2) / (2 * this.s ** 2)) * 2 - 1;
     } else if (gn === 2) {
-      return (Math.abs(n - this.m) <= this.s) ? 1 : -1;
+      return Math.abs(n - this.m) <= this.s ? 1 : -1;
     }
 
-    const val = Math.max(0, 1 - ((n - this.m) ** 2) / (9 * (this.s ** 2)));
+    const val = Math.max(0, 1 - (n - this.m) ** 2 / (9 * this.s ** 2));
     return Math.pow(val, 4) * 2 - 1;
   }
 
@@ -259,7 +253,7 @@ class Automaton {
     }
 
     this.gen++;
-    this.time = Math.round((this.time + (1 / this.T)) * 10000) / 10000;
+    this.time = Math.round((this.time + 1 / this.T) * 10000) / 10000;
   }
 
   static softClip(x, minVal, maxVal, k) {

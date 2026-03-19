@@ -11,7 +11,12 @@ class RightPanel {
 
     for (let col = 0; col < 2; col++) {
       const x = startX + col * (Config.RIGHT_COLUMN_WIDTH + Config.COLUMN_GAP);
-      this.columns[col] = new AccordionPanel(x, 15, Config.RIGHT_COLUMN_WIDTH, this.theme);
+      this.columns[col] = new AccordionPanel(
+        x,
+        15,
+        Config.RIGHT_COLUMN_WIDTH,
+        this.theme,
+      );
 
       for (let pi = col * 3; pi < col * 3 + 3; pi++) {
         const grp = new AccordionGroup(this.params.getLabel(pi), false);

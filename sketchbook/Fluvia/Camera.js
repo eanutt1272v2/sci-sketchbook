@@ -5,20 +5,20 @@ class Camera {
     this.target = {
       yaw: 0,
       pitch: 0.8,
-      zoom: 750
+      zoom: 750,
     };
 
     this.current = {
       yaw: 0,
       pitch: 0.8,
-      zoom: 750
+      zoom: 750,
     };
 
     this.quaternion = new Quaternion();
 
     this.gesture = {
       orbit: null,
-      pinch: null
+      pinch: null,
     };
 
     this.singlePointer = { x: 0, y: 0 };
@@ -33,7 +33,10 @@ class Camera {
     current.pitch = lerp(current.pitch, target.pitch, lerpWeight);
     current.zoom = lerp(current.zoom, target.zoom, lerpWeight);
 
-    this.quaternion = Quaternion.fromEuler(current.pitch, current.yaw).normalise();
+    this.quaternion = Quaternion.fromEuler(
+      current.pitch,
+      current.yaw,
+    ).normalise();
   }
 
   getEyePosition() {
@@ -109,7 +112,7 @@ class Camera {
 
     const ratio = distance / gesture.pinch.distance;
     target.zoom = max(20, target.zoom / ratio);
-    
+
     gesture.pinch.distance = distance;
   }
 }

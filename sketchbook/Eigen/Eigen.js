@@ -6,7 +6,7 @@ let colourMaps, font;
 const metadata = {
   name: "Eigen",
   version: "v2.3.2-dev",
-  author: "@eanutt1272.v2"
+  author: "@eanutt1272.v2",
 };
 
 function preload() {
@@ -23,7 +23,7 @@ function setup() {
   appcore = new AppCore({
     metadata,
     colourMaps,
-    font
+    font,
   });
 }
 
@@ -45,38 +45,12 @@ function draw() {
   appcore.draw();
 }
 
-function windowResized() {
-  appcore.resize();
-}
-
-function keyPressed() {
-  return appcore.handleKeyPressed(key, keyCode);
-}
-
-function keyReleased() {
-  return appcore.handleKeyReleased(key, keyCode);
-}
-
-function mouseWheel(event) {
-  return appcore.handleWheel(event);
-}
-
-function mouseDragged(event) {
-  return appcore.handlePointer(event);
-}
-
-function mouseReleased(event) {
-  return appcore.handlePointerEnd(event);
-}
-
-function touchStarted(event) {
-  return appcore.handlePointer(event);
-}
-
-function touchMoved(event) {
-  return appcore.handlePointer(event);
-}
-
-function touchEnded(event) {
-  return appcore.handlePointerEnd(event);
-}
+function windowResized() { appcore.resize(); }
+function keyPressed() { return appcore.handleKeyPressed(key, keyCode); }
+function keyReleased() { return appcore.handleKeyReleased(key, keyCode); }
+function mouseWheel(event) { return appcore.handleWheel(event); }
+function mouseDragged(event) { return appcore.handlePointer(event); }
+function mouseReleased(event) { return appcore.handlePointerEnd(event); }
+function touchStarted(event) { return appcore.handlePointer(event); }
+function touchMoved(event) { return appcore.handlePointer(event); }
+function touchEnded(event) { return appcore.handlePointerEnd(event); }

@@ -1,7 +1,7 @@
 class Terrain {
   constructor(appcore) {
     this.appcore = appcore;
-    
+
     const { terrainSize } = this.appcore.params;
     this.size = terrainSize;
     this.area = terrainSize * terrainSize;
@@ -124,18 +124,52 @@ class Terrain {
     let result;
     if (absX <= 0.84375) {
       const xSq = x * x;
-      const p = [3.1611237438705656, 113.86415415105016, 377.485237685302, 3209.3775891384695, 0.18577770618460315];
-      const q = [23.601290953873412, 244.55303442692948, 1287.1751860847748, 2844.2368334391706];
+      const p = [
+        3.1611237438705656, 113.86415415105016, 377.485237685302,
+        3209.3775891384695, 0.18577770618460315,
+      ];
+      const q = [
+        23.601290953873412, 244.55303442692948, 1287.1751860847748,
+        2844.2368334391706,
+      ];
 
-      const num = (((p[4] * xSq + p[0]) * xSq + p[1]) * xSq + p[2]) * xSq + p[3];
+      const num =
+        (((p[4] * xSq + p[0]) * xSq + p[1]) * xSq + p[2]) * xSq + p[3];
       const den = (((xSq + q[0]) * xSq + q[1]) * xSq + q[2]) * xSq + q[3];
       result = x * (num / den);
     } else if (absX <= 4.0) {
-      const p = [0.5641884969886701, 8.883149794388376, 66.11542093743808, 298.63513819740013, 881.9522212417691, 1712.0476126340706, 2051.0783778260715, 1230.3393547979972, 2.1531153547440385e-8];
-      const q = [15.744926110709835, 117.6939508913125, 537.1811018620099, 1621.3895745386784, 3290.7992357334596, 4362.61909014206, 3439.3676741437216, 1230.3393548037443];
+      const p = [
+        0.5641884969886701, 8.883149794388376, 66.11542093743808,
+        298.63513819740013, 881.9522212417691, 1712.0476126340706,
+        2051.0783778260715, 1230.3393547979972, 2.1531153547440385e-8,
+      ];
+      const q = [
+        15.744926110709835, 117.6939508913125, 537.1811018620099,
+        1621.3895745386784, 3290.7992357334596, 4362.61909014206,
+        3439.3676741437216, 1230.3393548037443,
+      ];
 
-      const n = (((((((p[8] * absX + p[0]) * absX + p[1]) * absX + p[2]) * absX + p[3]) * absX + p[4]) * absX + p[5]) * absX + p[6]) * absX + p[7];
-      const d = (((((((absX + q[0]) * absX + q[1]) * absX + q[2]) * absX + q[3]) * absX + q[4]) * absX + q[5]) * absX + q[6]) * absX + q[7];
+      const n =
+        (((((((p[8] * absX + p[0]) * absX + p[1]) * absX + p[2]) * absX +
+          p[3]) *
+          absX +
+          p[4]) *
+          absX +
+          p[5]) *
+          absX +
+          p[6]) *
+          absX +
+        p[7];
+      const d =
+        (((((((absX + q[0]) * absX + q[1]) * absX + q[2]) * absX + q[3]) *
+          absX +
+          q[4]) *
+          absX +
+          q[5]) *
+          absX +
+          q[6]) *
+          absX +
+        q[7];
 
       result = 1.0 - Math.exp(-x * x) * (n / d);
       if (x < 0) result = -result;
@@ -151,7 +185,10 @@ class Terrain {
 
     this.reset();
 
-    noiseDetail(Math.max(1, noiseOctaves | 0), constrain(amplitudeFalloff, 0, 1));
+    noiseDetail(
+      Math.max(1, noiseOctaves | 0),
+      constrain(amplitudeFalloff, 0, 1),
+    );
     const offsetX = random(100000);
     const offsetY = random(100000);
     const freq = noiseScale / 100;
@@ -180,18 +217,30 @@ class Terrain {
   }
 
   reset() {
-    const { 
-      heightMap, bedrockMap, originalHeightMap, sedimentMap, 
-      dischargeMap, dischargeTrack, momentumX, momentumY, 
-      momentumXTrack, momentumYTrack 
+    const {
+      heightMap,
+      bedrockMap,
+      originalHeightMap,
+      sedimentMap,
+      dischargeMap,
+      dischargeTrack,
+      momentumX,
+      momentumY,
+      momentumXTrack,
+      momentumYTrack,
     } = this;
 
-    [heightMap, bedrockMap].forEach(map => map.set(originalHeightMap));
-    
+    [heightMap, bedrockMap].forEach((map) => map.set(originalHeightMap));
+
     [
-      sedimentMap, dischargeMap, dischargeTrack, 
-      momentumX, momentumY, momentumXTrack, momentumYTrack
-    ].forEach(map => map.fill(0));
+      sedimentMap,
+      dischargeMap,
+      dischargeTrack,
+      momentumX,
+      momentumY,
+      momentumXTrack,
+      momentumYTrack,
+    ].forEach((map) => map.fill(0));
 
     this.updateBoundsCache();
   }

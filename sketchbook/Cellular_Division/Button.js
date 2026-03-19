@@ -23,12 +23,17 @@ class Button {
   }
 
   isPressed(mx, my) {
-    return mx > this.x && mx < this.x + this.w && my > this.y && my < this.y + this.h;
+    return (
+      mx > this.x && mx < this.x + this.w && my > this.y && my < this.y + this.h
+    );
   }
 
   isMouseOver() {
     return (
-      mouseX > this.x && mouseX < this.x + this.w && mouseY > this.y && mouseY < this.y + this.h
+      mouseX > this.x &&
+      mouseX < this.x + this.w &&
+      mouseY > this.y &&
+      mouseY < this.y + this.h
     );
   }
 }

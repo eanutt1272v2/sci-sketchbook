@@ -5,7 +5,7 @@ class RLEParser {
     let currentPos = 0;
 
     while (currentPos < cleanString.length) {
-      let lineEnd = cleanString.indexOf('$', currentPos);
+      let lineEnd = cleanString.indexOf("$", currentPos);
       if (lineEnd === -1) lineEnd = cleanString.length;
 
       const lineContent = cleanString.substring(currentPos, lineEnd);
@@ -14,7 +14,10 @@ class RLEParser {
 
       currentPos = lineEnd + 1;
 
-      while (currentPos < cleanString.length && cleanString[currentPos] === '$') {
+      while (
+        currentPos < cleanString.length &&
+        cleanString[currentPos] === "$"
+      ) {
         grid.push([]);
         currentPos++;
       }
@@ -53,8 +56,9 @@ class RLEParser {
     }
 
     if (chars.length === 2) {
-      const v = (chars.charCodeAt(0) - "p".charCodeAt(0)) * 24 +
-      (chars.charCodeAt(1) - "A".charCodeAt(0) + 25);
+      const v =
+        (chars.charCodeAt(0) - "p".charCodeAt(0)) * 24 +
+        (chars.charCodeAt(1) - "A".charCodeAt(0) + 25);
       return v / 255;
     }
 
@@ -63,8 +67,8 @@ class RLEParser {
 
   static _normaliseGrid(grid) {
     if (grid.length === 0) return [[]];
-    const maxLen = Math.max(...grid.map(r => r.length));
-    return grid.map(row => {
+    const maxLen = Math.max(...grid.map((r) => r.length));
+    return grid.map((row) => {
       while (row.length < maxLen) row.push(0);
       return row;
     });
@@ -72,6 +76,8 @@ class RLEParser {
 
   static parseFraction(str) {
     const parts = str.split("/");
-    return parts.length === 1 ? parseFloat(parts[0]) : parseFloat(parts[0]) / parseFloat(parts[1]);
+    return parts.length === 1
+      ? parseFloat(parts[0])
+      : parseFloat(parts[0]) / parseFloat(parts[1]);
   }
 }

@@ -1,11 +1,11 @@
-class Solver {
+class FallbackSolver {
   constructor(appcore) {
     this.appcore = appcore;
 
     this.cache = {
       key: "",
       logNormR: 0,
-      normY: 0
+      normY: 0,
     };
   }
 
@@ -56,7 +56,8 @@ class Solver {
 
     let pll = 0;
     for (let ll = absM + 2; ll <= l; ll++) {
-      pll = (x * (2.0 * ll - 1.0) * pmmp1 - (ll + absM - 1.0) * pmm) / (ll - absM);
+      pll =
+        (x * (2.0 * ll - 1.0) * pmmp1 - (ll + absM - 1.0) * pmm) / (ll - absM);
       pmm = pmmp1;
       pmmp1 = pll;
     }
@@ -70,10 +71,15 @@ class Solver {
 
     let absM = Math.abs(m);
 
-    let logNormR = 1.5 * Math.log(2.0 / n) +
-    0.5 * (this.logFact(n - l - 1) - Math.log(2.0 * n) - this.logFact(n + l));
+    let logNormR =
+      1.5 * Math.log(2.0 / n) +
+      0.5 * (this.logFact(n - l - 1) - Math.log(2.0 * n) - this.logFact(n + l));
 
-    let normY = Math.sqrt(((2 * l + 1) * Math.exp(this.logFact(l - absM) - this.logFact(l + absM))) / (4 * Math.PI));
+    let normY = Math.sqrt(
+      ((2 * l + 1) *
+        Math.exp(this.logFact(l - absM) - this.logFact(l + absM))) /
+        (4 * Math.PI),
+    );
 
     this.cache = { key, logNormR, normY };
   }
@@ -91,7 +97,11 @@ class Solver {
     let phi = Math.atan2(y, x);
     let absM = Math.abs(m);
 
-    let R_nl = Math.exp(logNormR) * Math.exp(-rho / 2.0) * Math.pow(rho, l) * this.genLaguerre(n - l - 1, 2 * l + 1, rho);
+    let R_nl =
+      Math.exp(logNormR) *
+      Math.exp(-rho / 2.0) *
+      Math.pow(rho, l) *
+      this.genLaguerre(n - l - 1, 2 * l + 1, rho);
 
     let azimuthal = 1.0;
     if (m > 0) {

@@ -2,7 +2,12 @@ class LeftPanel {
   constructor(appcore) {
     this.sim = appcore.sim;
     this.theme = appcore.theme;
-    this.panel = new AccordionPanel(15, 15, Config.LEFT_PANEL_WIDTH, this.theme);
+    this.panel = new AccordionPanel(
+      15,
+      15,
+      Config.LEFT_PANEL_WIDTH,
+      this.theme,
+    );
 
     const stats = new AccordionGroup("Statistics", false);
     stats.addRow("fps", 20);
@@ -25,7 +30,7 @@ class LeftPanel {
       this.panel.contentW(),
       28,
       "Restart Simulation",
-      this.theme
+      this.theme,
     );
 
     this.pauseButton = new Button(
@@ -34,7 +39,7 @@ class LeftPanel {
       this.panel.contentW(),
       28,
       "Pause Simulation",
-      this.theme
+      this.theme,
     );
 
     this.particleInputX = 0;
@@ -54,7 +59,9 @@ class LeftPanel {
     this.cacheHitBoxes();
     this.restartButton.y = this.panel.getY("restart");
     this.pauseButton.y = this.panel.getY("pause");
-    this.pauseButton.label = this.sim.isPaused() ? "Play Simulation" : "Pause Simulation";
+    this.pauseButton.label = this.sim.isPaused()
+      ? "Play Simulation"
+      : "Pause Simulation";
 
     this.panel.drawBackground();
     const px = this.panel.contentX();
@@ -77,10 +84,18 @@ class LeftPanel {
     textSize(this.theme.textSizeSecondary);
     textAlign(LEFT, TOP);
     text(`FPS: ${nf(frameRate(), 1, 1)}`, px, this.panel.getY("fps"));
-    text(`Time Elapsed: ${this.formatTime(elapsed)}`, px, this.panel.getY("time"));
+    text(
+      `Time Elapsed: ${this.formatTime(elapsed)}`,
+      px,
+      this.panel.getY("time"),
+    );
 
     fill(this.theme.textPrimary);
-    text(`Cell Population: ${this.sim.getCellPopulation()}`, px, this.panel.getY("cells"));
+    text(
+      `Cell Population: ${this.sim.getCellPopulation()}`,
+      px,
+      this.panel.getY("cells"),
+    );
   }
 
   renderSimulationControls(px) {
@@ -92,7 +107,11 @@ class LeftPanel {
     fill(this.theme.textMuted);
     textSize(this.theme.textSizeCaption);
     textAlign(LEFT, TOP);
-    text("Particles (restart to apply)", px, this.panel.getY("particleCaption"));
+    text(
+      "Particles (restart to apply)",
+      px,
+      this.panel.getY("particleCaption"),
+    );
 
     this.renderParticleInput(px);
     this.restartButton.display();
@@ -112,7 +131,9 @@ class LeftPanel {
     fill(this.theme.textPrimary);
     textSize(this.theme.textSizeSecondary);
     textAlign(LEFT, TOP);
-    const display = isTyping ? `${this.input.getTypingBuffer()}_` : str(this.sim.getParticleCount());
+    const display = isTyping
+      ? `${this.input.getTypingBuffer()}_`
+      : str(this.sim.getParticleCount());
     text(display, px + 8, iy + 5);
   }
 
@@ -120,7 +141,10 @@ class LeftPanel {
     const gh = 120;
     const gw = Config.LEFT_PANEL_WIDTH;
     const x0 = this.panel.x;
-    const y0 = min(this.panel.y + this.panel.getTotalHeight() + 15, height - gh - 20);
+    const y0 = min(
+      this.panel.y + this.panel.getTotalHeight() + 15,
+      height - gh - 20,
+    );
 
     noStroke();
     fill(this.theme.bgPanel);
@@ -168,11 +192,17 @@ class LeftPanel {
   }
 
   handleRestartClick(mx, my) {
-    return !this.panel.getGroup("Simulation").collapsed && this.restartButton.isPressed(mx, my);
+    return (
+      !this.panel.getGroup("Simulation").collapsed &&
+      this.restartButton.isPressed(mx, my)
+    );
   }
 
   handlePauseClick(mx, my) {
-    return !this.panel.getGroup("Simulation").collapsed && this.pauseButton.isPressed(mx, my);
+    return (
+      !this.panel.getGroup("Simulation").collapsed &&
+      this.pauseButton.isPressed(mx, my)
+    );
   }
 
   handleParticleInputClick(mx, my) {
@@ -260,7 +290,11 @@ class LeftPanel {
     fill(255, 170);
     textSize(12);
     textAlign(LEFT, BOTTOM);
-    text(`${metadata.name} ${metadata.version} by ${metadata.author}`, 12, height - 12);
+    text(
+      `${metadata.name} ${metadata.version} by ${metadata.author}`,
+      12,
+      height - 12,
+    );
     pop();
   }
 }

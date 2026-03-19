@@ -12,7 +12,11 @@ class Renderer {
 
   getAxisSamples(resolution, viewRadius) {
     const cache = this.axisSampleCache;
-    if (cache.resolution === resolution && cache.viewRadius === viewRadius && this.axisSamples.length === resolution) {
+    if (
+      cache.resolution === resolution &&
+      cache.viewRadius === viewRadius &&
+      this.axisSamples.length === resolution
+    ) {
       return this.axisSamples;
     }
 
@@ -67,8 +71,19 @@ class Renderer {
   }
 
   update() {
-    const { n, l, m, resolution: res, viewRadius, slicePlane, sliceOffset, colourMap, exposure, viewCenter } = this.appcore.params;
-    const { solver } = this.appcore;
+    const {
+      n,
+      l,
+      m,
+      resolution: res,
+      viewRadius,
+      slicePlane,
+      sliceOffset,
+      colourMap,
+      exposure,
+      viewCenter,
+    } = this.appcore.params;
+    const { fallbacksolver } = this.appcore;
     let { buffer } = this;
 
     if (!buffer || buffer.width !== res || buffer.height !== res) {
@@ -114,7 +129,7 @@ class Renderer {
         else if (cFixed === 1) y = sliceOffset;
         else z = sliceOffset;
 
-        const density = solver.getProbabilityDensity(x, y, z, n, l, m);
+        const density = fallbacksolver.getProbabilityDensity(x, y, z, n, l, m);
         grid[rowOffset + u] = density;
         if (density > peak) peak = density;
       }
@@ -124,14 +139,18 @@ class Renderer {
     this.renderToBuffer(grid, peak, res, colourMap, exposure);
   }
 
-   renderFromGrid(gridBuffer, peak) {
-     const { resolution: res, colourMap, exposure } = this.appcore.params;
-     this.grid = new Float32Array(gridBuffer);
-     if (!this.buffer || this.buffer.width !== res || this.buffer.height !== res) {
-       this.buffer = createImage(res, res);
-     }
-     this.renderToBuffer(this.grid, peak, res, colourMap, exposure);
-   }
+  renderFromGrid(gridBuffer, peak) {
+    const { resolution: res, colourMap, exposure } = this.appcore.params;
+    this.grid = new Float32Array(gridBuffer);
+    if (
+      !this.buffer ||
+      this.buffer.width !== res ||
+      this.buffer.height !== res
+    ) {
+      this.buffer = createImage(res, res);
+    }
+    this.renderToBuffer(this.grid, peak, res, colourMap, exposure);
+  }
 
   renderToBuffer(grid, peak, res, colourMap, exposure) {
     const { buffer } = this;
@@ -156,12 +175,17 @@ class Renderer {
   }
 
   render() {
-    const { pixelSmoothing, renderOverlay, renderLegend, renderKeymapRef } = this.appcore.params;
+    const { pixelSmoothing, renderOverlay, renderLegend, renderKeymapRef } =
+      this.appcore.params;
     const { buffer } = this;
 
     background(0);
 
-    if (pixelSmoothing) { smooth(); } else { noSmooth(); }
+    if (pixelSmoothing) {
+      smooth();
+    } else {
+      noSmooth();
+    }
 
     if (buffer) {
       image(buffer, 0, 0, width, height);
@@ -170,7 +194,7 @@ class Renderer {
     if (renderOverlay) {
       this.renderOverlay();
     }
-    
+
     if (renderLegend) {
       this.renderLegend();
     }
@@ -181,8 +205,10 @@ class Renderer {
   }
 
   renderOverlay() {
-    const { n, l, m, viewRadius, sliceOffset, orbitalNotation, viewCenter } = this.appcore.params;
-    const { axis1, axis2, fixedLabel, axis1Label, axis2Label } = this.appcore.getPlaneAxes();
+    const { n, l, m, viewRadius, sliceOffset, orbitalNotation, viewCenter } =
+      this.appcore.params;
+    const { axis1, axis2, fixedLabel, axis1Label, axis2Label } =
+      this.appcore.getPlaneAxes();
     const fps = this.appcore.statistics.fps;
     const overlay = `Orbital: ${orbitalNotation}\nn=${n}, l=${l}, m=${m}\nView Radius: ${viewRadius.toFixed(2)} a₀\nPan ${axis1Label}: ${viewCenter[axis1].toFixed(2)} a₀   ${axis2Label}: ${viewCenter[axis2].toFixed(2)} a₀\nSlice ${fixedLabel}: ${sliceOffset.toFixed(2)} a₀\nFPS: ${fps.toFixed(1)}`;
 
@@ -209,7 +235,10 @@ class Renderer {
     for (let i = 0; i <= 10; i++) {
       const t = i / 10;
       const idx = (((1 - t) * 255) | 0) * 3;
-      grad.addColorStop(t, `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`);
+      grad.addColorStop(
+        t,
+        `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
+      );
     }
 
     drawingContext.strokeStyle = "rgba(255, 255, 255, 0.78)";
@@ -223,7 +252,7 @@ class Renderer {
     const labels = [
       { v: 1, y: y1 },
       { v: 1 / 2, y: y1 + h / 2 },
-      { v: 0, y: y2 }
+      { v: 0, y: y2 },
     ];
 
     fill(255);
@@ -299,9 +328,7 @@ class Renderer {
       },
       {
         title: "Reference",
-        entries: [
-          ["#", "Toggle keymap reference"],
-        ],
+        entries: [["#", "Toggle keymap reference"]],
       },
     ];
 
@@ -342,7 +369,7 @@ class Renderer {
     textSize(11);
     textAlign(CENTER, BOTTOM);
     text("Press # to close", width / 2, height - 16);
-    
+
     pop();
   }
 }

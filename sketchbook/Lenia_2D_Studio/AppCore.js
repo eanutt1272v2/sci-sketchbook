@@ -11,8 +11,8 @@ class AppCore {
         greyscale: {
           r: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
           g: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-          b: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        }
+          b: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        },
       };
       this.colourMapKeys = ["greyscale"];
     }
@@ -21,16 +21,23 @@ class AppCore {
       running: true,
       gridSize: 128,
 
-      R: 13, T: 10, m: 0.15, s: 0.015,
-      b: [1], kn: 1, gn: 1,
-      
+      R: 13,
+      T: 10,
+      m: 0.15,
+      s: 0.015,
+      b: [1],
+      kn: 1,
+      gn: 1,
+
       softClip: false,
       multiStep: false,
       addNoise: 0,
       maskRate: 0,
       paramP: 0,
-      
-      colourMap: this.colourMapKeys.includes("turbo") ? "turbo" : this.colourMapKeys[0],
+
+      colourMap: this.colourMapKeys.includes("turbo")
+        ? "turbo"
+        : this.colourMapKeys[0],
       displayMode: "world",
 
       renderGrid: true,
@@ -45,7 +52,7 @@ class AppCore {
       placeScale: 1,
       autoScaleSimParams: true,
 
-      imageFormat: "png"
+      imageFormat: "png",
     };
 
     this.statistics = {
@@ -62,12 +69,12 @@ class AppCore {
       angle: 0,
       symmSides: 0,
       symmStrength: 0,
-      fps: 0
+      fps: 0,
     };
 
     this.displayData = {
       frameCount: 0,
-      lastTime: 0
+      lastTime: 0,
     };
 
     this.font = font;
@@ -77,9 +84,20 @@ class AppCore {
     this.board = new Board(this.params.gridSize);
     this.automaton = new Automaton(this.params);
     this.analyser = new Analyser(this.statistics, this.displayData);
-    this.renderer = new Renderer(this.params.gridSize, this.colourMaps, this.params.colourMap);
+    this.renderer = new Renderer(
+      this.params.gridSize,
+      this.colourMaps,
+      this.params.colourMap,
+    );
     this.media = new Media(this);
-    this.gui = new GUI(this.params, this.statistics, this.displayData, this.metadata, this.animalLibrary, this);
+    this.gui = new GUI(
+      this.params,
+      this.statistics,
+      this.displayData,
+      this.metadata,
+      this.animalLibrary,
+      this,
+    );
     this.input = new InputHandler(this);
 
     this._worker = null;
@@ -99,13 +117,16 @@ class AppCore {
     try {
       this._worker = new Worker("FFTWorker.js");
     } catch (e) {
-      console.warn("[Lenia] Web Worker unavailable — falling back to main-thread simulation.", e);
+      console.warn(
+        "[Lenia] Web Worker unavailable — falling back to main-thread simulation.",
+        e,
+      );
       this._worker = null;
       return;
     }
 
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
-    this._worker.onerror   = (e) => {
+    this._worker.onerror = (e) => {
       console.error("[Lenia] Worker error:", e);
       this._workerBusy = false;
       this._stepPending = false;
@@ -125,7 +146,7 @@ class AppCore {
     this._kernelPending = false;
     this._worker.postMessage({
       type: "kernel",
-      params: { ...this.params, size: this.params.gridSize }
+      params: { ...this.params, size: this.params.gridSize },
     });
   }
 
@@ -140,26 +161,25 @@ class AppCore {
         this._workerSendKernel();
         return;
       }
-       if (this._stepPending) {
-         this._stepPending = false;
-         this._dispatchWorkerStep();
-       }
+      if (this._stepPending) {
+        this._stepPending = false;
+        this._dispatchWorkerStep();
+      }
       return;
     }
 
     if (data.type === "result") {
       const b = this.board;
 
-      b.cells     = new Float32Array(data.cells);
+      b.cells = new Float32Array(data.cells);
       b.potential = new Float32Array(data.potential);
-      b.field     = new Float32Array(data.field);
-      b.fieldOld  = data.fieldOld ? new Float32Array(data.fieldOld) : null;
+      b.field = new Float32Array(data.field);
+      b.fieldOld = data.fieldOld ? new Float32Array(data.fieldOld) : null;
 
       this.automaton.change = new Float32Array(data.change);
       this.automaton.gen++;
-      this.automaton.time = Math.round(
-        (this.automaton.time + 1 / this.params.T) * 10000
-      ) / 10000;
+      this.automaton.time =
+        Math.round((this.automaton.time + 1 / this.params.T) * 10000) / 10000;
 
       this._workerBusy = false;
 
@@ -198,7 +218,10 @@ class AppCore {
   _flushPendingMutations() {
     if (!this._pendingMutations.length) return;
 
-    const mutations = this._pendingMutations.splice(0, this._pendingMutations.length);
+    const mutations = this._pendingMutations.splice(
+      0,
+      this._pendingMutations.length,
+    );
     for (const mutation of mutations) {
       mutation();
     }
@@ -218,12 +241,12 @@ class AppCore {
         ...this.params,
         size: this.params.gridSize,
         gn: this.params.gn,
-        kn: this.params.kn
+        kn: this.params.kn,
       },
-      cells:     b.cells.buffer,
+      cells: b.cells.buffer,
       potential: b.potential.buffer,
-      field:     b.field.buffer,
-      fieldOld:  null
+      field: b.field.buffer,
+      fieldOld: null,
     };
 
     if (this.params.multiStep && b.fieldOld) {
@@ -231,10 +254,10 @@ class AppCore {
       transfers.push(b.fieldOld.buffer);
     }
 
-    b.cells     = null;
+    b.cells = null;
     b.potential = null;
-    b.field     = null;
-    b.fieldOld  = null;
+    b.field = null;
+    b.fieldOld = null;
 
     this._workerBusy = true;
     this._worker.postMessage(msg, transfers);
@@ -244,9 +267,12 @@ class AppCore {
   _ensureBuffers() {
     const size = this.params.gridSize;
     const count = size * size;
-    if (!this.board.cells     || this.board.cells.length     !== count) this.board.cells     = new Float32Array(count);
-    if (!this.board.potential || this.board.potential.length !== count) this.board.potential = new Float32Array(count);
-    if (!this.board.field     || this.board.field.length     !== count) this.board.field     = new Float32Array(count);
+    if (!this.board.cells || this.board.cells.length !== count)
+      this.board.cells = new Float32Array(count);
+    if (!this.board.potential || this.board.potential.length !== count)
+      this.board.potential = new Float32Array(count);
+    if (!this.board.field || this.board.field.length !== count)
+      this.board.field = new Float32Array(count);
   }
 
   _postStepUpdate() {
@@ -261,7 +287,11 @@ class AppCore {
       this.gui.setupTabs();
     }
 
-    if (this.gui && this.animalLibrary.loaded && this.animalLibrary.animals.length > 0) {
+    if (
+      this.gui &&
+      this.animalLibrary.loaded &&
+      this.animalLibrary.animals.length > 0
+    ) {
       this.loadInitialAnimal();
     }
   }
@@ -270,7 +300,12 @@ class AppCore {
     this.input.handleContinuousInput();
 
     if (this.board.cells) {
-      this.renderer.render(this.board, this.automaton, this.params.displayMode, this.params.colourMap);
+      this.renderer.render(
+        this.board,
+        this.automaton,
+        this.params.displayMode,
+        this.params.colourMap,
+      );
 
       if (this.params.renderGrid && this.params.displayMode !== "kernel") {
         this.renderer.renderGrid(this.params.R);
@@ -288,7 +323,10 @@ class AppCore {
         this.renderer.renderStats(this.statistics, this.params);
       }
 
-      if (this.params.renderMotionOverlay && this.params.displayMode !== "kernel") {
+      if (
+        this.params.renderMotionOverlay &&
+        this.params.displayMode !== "kernel"
+      ) {
         this.renderer.renderMotionOverlay(this.statistics, this.params);
       }
     }
@@ -314,79 +352,86 @@ class AppCore {
     }
 
     this.analyser.updateFps();
-
   }
 
   stepOnce() {
-     if (this._workerBusy) return;
-     this._ensureBuffers();
-     if (this._worker) {
-       this._dispatchWorkerStep();
-     } else {
-       this.automaton.step(this.board);
-       this._postStepUpdate();
-     }
+    if (this._workerBusy) return;
+    this._ensureBuffers();
+    if (this._worker) {
+      this._dispatchWorkerStep();
+    } else {
+      this.automaton.step(this.board);
+      this._postStepUpdate();
+    }
   }
 
   clearWorld() {
-    this._queueAction("clearWorld", () => this._queueOrRunMutation(() => {
-      this._ensureBuffers();
-      this.board.clear();
-      this.analyser.resetStatistics();
-      this.analyser.reset();
-    }));
+    this._queueAction("clearWorld", () =>
+      this._queueOrRunMutation(() => {
+        this._ensureBuffers();
+        this.board.clear();
+        this.analyser.resetStatistics();
+        this.analyser.reset();
+      }),
+    );
   }
 
   randomiseWorld() {
-    this._queueAction("randomiseWorld", () => this._queueOrRunMutation(() => {
-      this._ensureBuffers();
-      this.board.randomise(this.automaton.R);
-      this.analyser.resetStatistics();
-    }));
+    this._queueAction("randomiseWorld", () =>
+      this._queueOrRunMutation(() => {
+        this._ensureBuffers();
+        this.board.randomise(this.automaton.R);
+        this.analyser.resetStatistics();
+      }),
+    );
   }
 
   changeResolution() {
-    this._queueAction("changeResolution", () => this._queueOrRunMutation(() => {
-      this._restartWorker();
+    this._queueAction("changeResolution", () =>
+      this._queueOrRunMutation(() => {
+        this._restartWorker();
 
-      const canvasSize = min(windowWidth, windowHeight);
-      resizeCanvas(canvasSize, canvasSize);
-      this.board.resize(this.params.gridSize);
-      this.renderer.resize(this.params.gridSize);
+        const canvasSize = min(windowWidth, windowHeight);
+        resizeCanvas(canvasSize, canvasSize);
+        this.board.resize(this.params.gridSize);
+        this.renderer.resize(this.params.gridSize);
 
-      this._pendingPlacement = null;
-      this.analyser.reset();
-      this.analyser.resetStatistics();
+        this._pendingPlacement = null;
+        this.analyser.reset();
+        this.analyser.resetStatistics();
 
-      this._workerSendKernel();
-    }));
+        this._workerSendKernel();
+      }),
+    );
   }
 
   loadAnimal(animal) {
     if (!animal) return;
 
-    this._queueAction("loadAnimal", () => this._queueOrRunMutation(() => {
-      this._ensureBuffers();
-      this.analyser.resetStatistics();
+    this._queueAction("loadAnimal", () =>
+      this._queueOrRunMutation(() => {
+        this._ensureBuffers();
+        this.analyser.resetStatistics();
 
-      const scale = this.params.placeScale || 1;
-      if (Math.abs(scale - 1) < 1e-6) {
-        this.board.loadPattern(animal);
-      } else {
-        this.board.loadPatternScaled(animal, scale);
-      }
+        const scale = this.params.placeScale || 1;
+        if (Math.abs(scale - 1) < 1e-6) {
+          this.board.loadPattern(animal);
+        } else {
+          this.board.loadPatternScaled(animal, scale);
+        }
 
-      this.animalLibrary.applyAnimalParameters(animal);
+        this.animalLibrary.applyAnimalParameters(animal);
 
-      if (this.params.autoScaleSimParams) {
-        this.applyScaledAnimalParams(animal, this.params.placeScale || 1);
-      }
+        if (this.params.autoScaleSimParams) {
+          this.applyScaledAnimalParams(animal, this.params.placeScale || 1);
+        }
 
-      this.automaton.updateParameters(this.params);
-      this._workerSendKernel();
+        this.automaton.updateParameters(this.params);
+        this._workerSendKernel();
 
-      this.refreshGUI();
-    }));
+        this.refreshGUI();
+      }),
+    );
   }
 
   loadSelectedAnimal() {
@@ -399,22 +444,24 @@ class AppCore {
   loadAnimalParams(animal) {
     if (!animal) return;
 
-    this._queueAction("loadAnimalParams", () => this._queueOrRunMutation(() => {
-      this._ensureBuffers();
-      this.analyser.resetStatistics();
-      this.board.clear();
+    this._queueAction("loadAnimalParams", () =>
+      this._queueOrRunMutation(() => {
+        this._ensureBuffers();
+        this.analyser.resetStatistics();
+        this.board.clear();
 
-      this.animalLibrary.applyAnimalParameters(animal);
+        this.animalLibrary.applyAnimalParameters(animal);
 
-      if (this.params.autoScaleSimParams) {
-        this.applyScaledAnimalParams(animal, this.params.placeScale || 1);
-      }
+        if (this.params.autoScaleSimParams) {
+          this.applyScaledAnimalParams(animal, this.params.placeScale || 1);
+        }
 
-      this.automaton.updateParameters(this.params);
-      this._workerSendKernel();
+        this.automaton.updateParameters(this.params);
+        this._workerSendKernel();
 
-      this.refreshGUI();
-    }));
+        this.refreshGUI();
+      }),
+    );
   }
 
   applyScaledAnimalParams(animal, scale = 1) {
@@ -445,7 +492,6 @@ class AppCore {
     this.updateAutomatonParams();
     this.refreshGUI();
   }
-
 
   loadSelectedAnimalParams() {
     const currentSelection = this.params.selectedAnimal || "";
@@ -505,7 +551,9 @@ class AppCore {
   }
 
   _queueAction(name, handler) {
-    this._pendingActions = this._pendingActions.filter((action) => action.name !== name);
+    this._pendingActions = this._pendingActions.filter(
+      (action) => action.name !== name,
+    );
     this._pendingActions.push({ name, handler });
   }
 
@@ -516,7 +564,8 @@ class AppCore {
   }
 
   loadInitialAnimal() {
-    if (!this.animalLibrary.loaded || this.animalLibrary.animals.length === 0) return;
+    if (!this.animalLibrary.loaded || this.animalLibrary.animals.length === 0)
+      return;
 
     const firstAnimal = this.animalLibrary.getAnimal(0);
     if (firstAnimal) {

@@ -2,6 +2,7 @@ p5.disableFriendlyErrors = true;
 
 let appcore;
 let font;
+let mainCanvas;
 
 const metadata = {
   name: "Mandelbrot Set",
@@ -15,11 +16,24 @@ function preload() {
 
 function setup() {
   const canvasSize = min(windowWidth, windowHeight);
-  createCanvas(canvasSize, canvasSize);
-  textFont(font);
-  pixelDensity(1);
+  mainCanvas = createCanvas(canvasSize, canvasSize);
+  setupCanvasProperties(mainCanvas);
   appcore = new AppCore();
   appcore.setup();
+}
+
+function setupCanvasProperties(canvas) {
+  const canvasEl = canvas.elt;
+
+  canvasEl.setAttribute("tabindex", "0");
+  setTimeout(() => {
+    canvasEl.focus();
+  }, 100);
+
+  noSmooth();
+  textFont(font);
+  pixelDensity(1);
+  frameRate(60);
 }
 
 function windowResized() {
@@ -34,7 +48,7 @@ function windowResized() {
   }
 }
 
-function draw() { appcore.draw();}
+function draw() { appcore.draw(); }
 function mousePressed() { appcore.input.onMousePressed(); return false; }
 function mouseReleased() { appcore.input.onMouseReleased(); return false; }
 function mouseDragged() { appcore.input.onMouseDragged(); return false; }

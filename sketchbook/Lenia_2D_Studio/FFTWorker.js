@@ -5,23 +5,32 @@ function _fftRadix2(buf, inverse) {
   let j = 0;
   for (let i = 1; i < N; i++) {
     let bit = N >>> 1;
-    while (j & bit) { j ^= bit; bit >>>= 1; }
+    while (j & bit) {
+      j ^= bit;
+      bit >>>= 1;
+    }
     j ^= bit;
     if (i < j) {
-      let ti = i * 2, tj = j * 2;
-      let t = buf[ti]; buf[ti] = buf[tj]; buf[tj] = t;
-      t = buf[ti + 1]; buf[ti + 1] = buf[tj + 1]; buf[tj + 1] = t;
+      let ti = i * 2,
+        tj = j * 2;
+      let t = buf[ti];
+      buf[ti] = buf[tj];
+      buf[tj] = t;
+      t = buf[ti + 1];
+      buf[ti + 1] = buf[tj + 1];
+      buf[tj + 1] = t;
     }
   }
 
   const sign = inverse ? 1 : -1;
   for (let len = 2; len <= N; len <<= 1) {
     const half = len >>> 1;
-    const ang = sign * 2 * Math.PI / len;
+    const ang = (sign * 2 * Math.PI) / len;
     const wRe = Math.cos(ang);
     const wIm = Math.sin(ang);
     for (let i = 0; i < N; i += len) {
-      let uRe = 1, uIm = 0;
+      let uRe = 1,
+        uIm = 0;
       for (let k = 0; k < half; k++) {
         const a = (i + k) * 2;
         const b = (i + k + half) * 2;
@@ -73,13 +82,13 @@ function _nextPow2(n) {
 
 const KERNEL_CORE = [
   (r) => Math.pow(4 * r * (1 - r), 4),
-  (r) => (r > 0 && r < 1) ? Math.exp(4 - 1 / (r * (1 - r))) : 0,
-  (r, q = 0.25) => (r >= q && r <= 1 - q) ? 1 : 0,
+  (r) => (r > 0 && r < 1 ? Math.exp(4 - 1 / (r * (1 - r))) : 0),
+  (r, q = 0.25) => (r >= q && r <= 1 - q ? 1 : 0),
   (r, q = 0.25) => {
     if (r >= q && r <= 1 - q) return 1;
     if (r < q) return 0.5;
     return 0;
-  }
+  },
 ];
 
 function _kernelCore(r, kn) {
@@ -119,10 +128,18 @@ function _buildKernel(params) {
 
   let sum = 0;
   let maxVal = 0;
-  for (let i = 0; i < kernel.length; i++) { sum += kernel[i]; if (kernel[i] > maxVal) maxVal = kernel[i]; }
-  if (sum > 0) { for (let i = 0; i < kernel.length; i++) kernel[i] /= sum; maxVal /= sum; }
+  for (let i = 0; i < kernel.length; i++) {
+    sum += kernel[i];
+    if (kernel[i] > maxVal) maxVal = kernel[i];
+  }
+  if (sum > 0) {
+    for (let i = 0; i < kernel.length; i++) kernel[i] /= sum;
+    maxVal /= sum;
+  }
 
-  const dxArr = [], dyArr = [], kvArr = [];
+  const dxArr = [],
+    dyArr = [],
+    kvArr = [];
   for (let y = 0; y < kernelSize; y++) {
     for (let x = 0; x < kernelSize; x++) {
       const val = kernel[y * kernelSize + x];
@@ -141,7 +158,7 @@ function _buildKernel(params) {
     kernelMax: maxVal,
     kernelDX: Int16Array.from(dxArr),
     kernelDY: Int16Array.from(dyArr),
-    kernelValues: Float32Array.from(kvArr)
+    kernelValues: Float32Array.from(kvArr),
   };
 }
 
@@ -153,8 +170,8 @@ function _buildKernelFFT(kernel, kernelSize, N) {
     for (let kx = 0; kx < kernelSize; kx++) {
       const val = kernel[ky * kernelSize + kx];
       if (val === 0) continue;
-      const destY = ((ky - kr) + N) % N;
-      const destX = ((kx - kr) + N) % N;
+      const destY = (ky - kr + N) % N;
+      const destX = (kx - kr + N) % N;
       buf[(destY * N + destX) * 2] = val;
     }
   }
@@ -167,9 +184,9 @@ let _kernelFFT = null;
 let _kernelInfo = null;
 
 function _growthFunc(n, m, s, gn) {
-  if (gn === 2) return Math.exp(-((n - m) ** 2) / (2 * (s ** 2))) * 2 - 1;
-  if (gn === 3) return (Math.abs(n - m) <= s) ? 1 : -1;
-  const val = Math.max(0, 1 - ((n - m) ** 2) / (9 * (s ** 2)));
+  if (gn === 2) return Math.exp(-((n - m) ** 2) / (2 * s ** 2)) * 2 - 1;
+  if (gn === 3) return Math.abs(n - m) <= s ? 1 : -1;
+  const val = Math.max(0, 1 - (n - m) ** 2 / (9 * s ** 2));
   return Math.pow(val, 4) * 2 - 1;
 }
 
@@ -186,9 +203,11 @@ function _stepFFT(cells, potential, field, fieldOld, params, N) {
 
   const result = new Float64Array(N * N * 2);
   for (let i = 0; i < N * N; i++) {
-    const ar = cellBuf[i * 2], ai = cellBuf[i * 2 + 1];
-    const br = _kernelFFT[i * 2], bi = _kernelFFT[i * 2 + 1];
-    result[i * 2]     = ar * br - ai * bi;
+    const ar = cellBuf[i * 2],
+      ai = cellBuf[i * 2 + 1];
+    const br = _kernelFFT[i * 2],
+      bi = _kernelFFT[i * 2 + 1];
+    result[i * 2] = ar * br - ai * bi;
     result[i * 2 + 1] = ar * bi + ai * br;
   }
   _fft2D(result, N, true);
@@ -199,7 +218,8 @@ function _stepFFT(cells, potential, field, fieldOld, params, N) {
     }
   }
 
-  const { T, m, s, gn, softClip, multiStep, addNoise, maskRate, paramP } = params;
+  const { T, m, s, gn, softClip, multiStep, addNoise, maskRate, paramP } =
+    params;
   const dt = 1 / T;
   const count = size * size;
   const noiseAmp = addNoise / 10;
@@ -251,29 +271,32 @@ self.onmessage = function (e) {
 
     _kernelFFT = _buildKernelFFT(info.kernel, info.kernelSize, _N);
 
-    self.postMessage({
-      type: "kernelReady",
-      kernelSize: info.kernelSize,
-      kernelMax: info.kernelMax,
-      kernel: info.kernel,
-      kernelDX: info.kernelDX,
-      kernelDY: info.kernelDY,
-      kernelValues: info.kernelValues
-    }, [
-      info.kernel.buffer,
-      info.kernelDX.buffer,
-      info.kernelDY.buffer,
-      info.kernelValues.buffer
-    ]);
+    self.postMessage(
+      {
+        type: "kernelReady",
+        kernelSize: info.kernelSize,
+        kernelMax: info.kernelMax,
+        kernel: info.kernel,
+        kernelDX: info.kernelDX,
+        kernelDY: info.kernelDY,
+        kernelValues: info.kernelValues,
+      },
+      [
+        info.kernel.buffer,
+        info.kernelDX.buffer,
+        info.kernelDY.buffer,
+        info.kernelValues.buffer,
+      ],
+    );
     return;
   }
 
   if (msg.type === "step") {
-    const cells     = new Float32Array(msg.cells);
+    const cells = new Float32Array(msg.cells);
     const potential = new Float32Array(msg.potential);
-    const field     = new Float32Array(msg.field);
-    const fieldOld  = msg.fieldOld ? new Float32Array(msg.fieldOld) : null;
-    const params    = msg.params;
+    const field = new Float32Array(msg.field);
+    const fieldOld = msg.fieldOld ? new Float32Array(msg.fieldOld) : null;
+    const params = msg.params;
 
     if (!_kernelFFT || _N < _nextPow2(params.size)) {
       const info = _buildKernel(params);
@@ -289,17 +312,25 @@ self.onmessage = function (e) {
       newFieldOld = new Float32Array(field);
     }
 
-    const transfers = [cells.buffer, potential.buffer, field.buffer, change.buffer];
+    const transfers = [
+      cells.buffer,
+      potential.buffer,
+      field.buffer,
+      change.buffer,
+    ];
     if (newFieldOld) transfers.push(newFieldOld.buffer);
 
-    self.postMessage({
-      type: "result",
-      cells: cells.buffer,
-      potential: potential.buffer,
-      field: field.buffer,
-      fieldOld: newFieldOld ? newFieldOld.buffer : null,
-      change: change.buffer
-    }, transfers);
+    self.postMessage(
+      {
+        type: "result",
+        cells: cells.buffer,
+        potential: potential.buffer,
+        field: field.buffer,
+        fieldOld: newFieldOld ? newFieldOld.buffer : null,
+        change: change.buffer,
+      },
+      transfers,
+    );
     return;
   }
 };

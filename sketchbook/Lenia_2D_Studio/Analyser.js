@@ -1,10 +1,21 @@
 class Analyser {
   static STAT_NAMES = {
-    'p_m': 'Param m', 'p_s': 'Param s', 'n': 'Gen (#)', 't': 'Time (s)',
-    'm': 'Mass (mg)', 'g': 'Growth (mg/s)', 'r': 'Gyradius (mm)',
-    'd': 'Mass-growth distance (mm)', 's': 'Speed (mm/s)', 'w': 'Angular speed (deg/s)',
-    'm_a': 'Mass asymmetry (mg)', 'x': 'X position (mm)', 'y': 'Y position (mm)',
-    'l': 'Lyapunov exponent', 'k': 'Rotational symmetry', 'w_k': 'Rotational speed'
+    p_m: "Param m",
+    p_s: "Param s",
+    n: "Gen (#)",
+    t: "Time (s)",
+    m: "Mass (mg)",
+    g: "Growth (mg/s)",
+    r: "Gyradius (mm)",
+    d: "Mass-growth distance (mm)",
+    s: "Speed (mm/s)",
+    w: "Angular speed (deg/s)",
+    m_a: "Mass asymmetry (mg)",
+    x: "X position (mm)",
+    y: "Y position (mm)",
+    l: "Lyapunov exponent",
+    k: "Rotational symmetry",
+    w_k: "Rotational speed",
   };
 
   static STAT_HEADERS = Object.keys(Analyser.STAT_NAMES);
@@ -28,11 +39,11 @@ class Analyser {
       angle: 0,
       symmSides: 0,
       symmStrength: 0,
-      fps: 0
+      fps: 0,
     };
     this.displayData = displayData || {
       frameCount: 0,
-      lastTime: 0
+      lastTime: 0,
     };
 
     this.reset();
@@ -113,7 +124,8 @@ class Analyser {
       }
     }
 
-    stats.gyradius = stats.mass > this.epsilon ? Math.sqrt(inertia / stats.mass) : 0;
+    stats.gyradius =
+      stats.mass > this.epsilon ? Math.sqrt(inertia / stats.mass) : 0;
     if (this.lastCenterX !== null && stats.mass > this.epsilon) {
       const dx = this._torusDelta(stats.centerX, this.lastCenterX, size);
       const dy = this._torusDelta(stats.centerY, this.lastCenterY, size);
@@ -143,10 +155,13 @@ class Analyser {
       }
     }
     if (automaton && automaton.change && stats.maxValue > this.epsilon) {
-      const sum = Array.from(automaton.change).reduce((a, b) => a + Math.abs(b), 0);
+      const sum = Array.from(automaton.change).reduce(
+        (a, b) => a + Math.abs(b),
+        0,
+      );
       if (sum > this.epsilon) {
         const l = Math.log(sum) - this.lyapunov;
-        this.lyapunov += l / Math.max(1, (automaton.gen || 1));
+        this.lyapunov += l / Math.max(1, automaton.gen || 1);
       }
     }
     this._detectSymmetry(cells, size, stats);
@@ -154,7 +169,7 @@ class Analyser {
       const dx = this._torusDelta(stats.centerX, this.lastCenterX, size);
       const dy = this._torusDelta(stats.centerY, this.lastCenterY, size);
       stats.speed = Math.sqrt(dx * dx + dy * dy);
-      stats.angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      stats.angle = (Math.atan2(dy, dx) * 180) / Math.PI;
     } else {
       stats.speed = 0;
       stats.angle = 0;
@@ -177,7 +192,7 @@ class Analyser {
   _detectSymmetry(cells, size, stats) {
     const center = size / 2;
     const radius = Math.min(center * 0.8, 64);
-    const angularBins = 64;  
+    const angularBins = 64;
     const angles = new Float32Array(angularBins);
     for (let theta = 0; theta < angularBins; theta++) {
       const angle = (theta / angularBins) * 2 * Math.PI;
@@ -186,20 +201,20 @@ class Analyser {
       for (let r = 1; r < radius; r += 1) {
         const x = Math.round(center + r * Math.cos(angle));
         const y = Math.round(center + r * Math.sin(angle));
-        
+
         if (x >= 0 && x < size && y >= 0 && y < size) {
           sum += cells[y * size + x];
           count++;
         }
       }
-      
+
       angles[theta] = count > 0 ? sum / count : 0;
     }
     const harmonics = new Float32Array(angularBins / 2);
     for (let k = 0; k < angularBins / 2; k++) {
       let cosSum = 0;
       let sinSum = 0;
-      
+
       for (let n = 0; n < angularBins; n++) {
         const phase = (2 * Math.PI * k * n) / angularBins;
         cosSum += angles[n] * Math.cos(phase);
@@ -219,13 +234,10 @@ class Analyser {
     const symmStrength = maxAll > this.epsilon ? maxHarmonic / maxAll : 0;
     let rotSpeed = 0;
     if (this.lastCenterX !== null) {
-      const angleOffset = Math.atan2(
-        angles[angularBins / 4],
-        angles[0]
-      );
-      rotSpeed = angleOffset * 180 / Math.PI;
+      const angleOffset = Math.atan2(angles[angularBins / 4], angles[0]);
+      rotSpeed = (angleOffset * 180) / Math.PI;
     }
-    
+
     stats.symmSides = maxIndex > 0 ? maxIndex : 0;
     stats.symmStrength = symmStrength;
     stats.rotationSpeed = rotSpeed;
@@ -277,7 +289,7 @@ class Analyser {
 
     if (now - displayData.lastTime > 1000) {
       statistics.fps = Math.round(
-        displayData.frameCount * 1000 / (now - displayData.lastTime)
+        (displayData.frameCount * 1000) / (now - displayData.lastTime),
       );
       displayData.frameCount = 0;
       displayData.lastTime = now;
@@ -298,25 +310,26 @@ class Analyser {
       statistics.speed || 0,
       statistics.angle || 0,
       statistics.symmSides || 0,
-      statistics.symmStrength || 0
+      statistics.symmStrength || 0,
     ];
   }
   exportCSV() {
-    const headers = 'FPS,Gen,Time,Mass,Growth,Gyradius,CenterX,CenterY,MassAsym,Speed,Angle,SymmSides,SymmStrength\n';
+    const headers =
+      "FPS,Gen,Time,Mass,Growth,Gyradius,CenterX,CenterY,MassAsym,Speed,Angle,SymmSides,SymmStrength\n";
     let csv = headers;
 
     for (const row of this.series) {
-      csv += row.join(',') + '\n';
+      csv += row.join(",") + "\n";
     }
 
     return csv;
   }
   importCSV(csvText) {
-    const lines = csvText.trim().split('\n');
+    const lines = csvText.trim().split("\n");
     this.series = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => parseFloat(v) || 0);
+      const values = lines[i].split(",").map((v) => parseFloat(v) || 0);
       this.series.push(values);
     }
   }

@@ -117,7 +117,10 @@ class InputHandler {
     } else if (key === "." && !this.typingBuffer.includes(".")) {
       this.typingBuffer += ".";
     } else if (this.isBackspace() && this.typingBuffer.length > 0) {
-      this.typingBuffer = this.typingBuffer.substring(0, this.typingBuffer.length - 1);
+      this.typingBuffer = this.typingBuffer.substring(
+        0,
+        this.typingBuffer.length - 1,
+      );
     } else if (keyCode === ENTER || keyCode === RETURN) {
       this.commitTyping();
     } else if (keyCode === 27 || keyCode === ESC) {
@@ -188,13 +191,13 @@ class InputHandler {
       case "[":
       case "{":
         this.sim.setParticleCount(
-          int(this.sim.getParticleCount() - 100 * stepBoost)
+          int(this.sim.getParticleCount() - 100 * stepBoost),
         );
         break;
       case "]":
       case "}":
         this.sim.setParticleCount(
-          int(this.sim.getParticleCount() + 100 * stepBoost)
+          int(this.sim.getParticleCount() + 100 * stepBoost),
         );
         break;
       default:
@@ -273,7 +276,13 @@ class InputHandler {
 
   updateParamFromSlider(index, mx) {
     const slider = this.rightPanel.getSlider(index);
-    const value = map(mx, slider.getX(), slider.getX() + slider.getWidth(), slider.getMin(), slider.getMax());
+    const value = map(
+      mx,
+      slider.getX(),
+      slider.getX() + slider.getWidth(),
+      slider.getMin(),
+      slider.getMax(),
+    );
     this.setParamValue(index, value);
   }
 

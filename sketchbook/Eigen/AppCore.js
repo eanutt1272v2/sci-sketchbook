@@ -43,7 +43,7 @@ class AppCore {
 
     this._pendingActions = [];
 
-    this.solver = new Solver(this);
+    this.fallbacksolver = new FallbackSolver(this);
     this.analyser = new Analyser(this.statistics);
     this.renderer = new Renderer(this);
     this.media = new Media(this);
@@ -249,7 +249,9 @@ class AppCore {
     if (!Array.isArray(this._pendingActions)) {
       this._pendingActions = [];
     }
-    this._pendingActions = this._pendingActions.filter((action) => action.name !== name);
+    this._pendingActions = this._pendingActions.filter(
+      (action) => action.name !== name,
+    );
     this._pendingActions.push({ name, handler });
   }
 
