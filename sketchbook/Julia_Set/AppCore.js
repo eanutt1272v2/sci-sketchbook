@@ -1,5 +1,8 @@
 class AppCore {
-  constructor() {
+  constructor(assets = {}) {
+    const { metadata = null } = assets;
+
+    this.metadata = metadata;
     this.maxIterations = 128;
     this.zoom = 1.0;
     this.offsetX = 0.0;
@@ -20,6 +23,22 @@ class AppCore {
     this.panel = null;
     this.renderer = null;
     this.input = null;
+  }
+
+  windowResized() {
+    const canvasSize = min(windowWidth, windowHeight);
+    resizeCanvas(canvasSize, canvasSize);
+
+    if (this.renderer !== null) {
+      this.renderer.buffer = createGraphics(width, height);
+      this.renderer.buffer.pixelDensity(1);
+    }
+
+    if (this.panel !== null) {
+      this.panel = new UIPanel(this);
+    }
+
+    this.needsRedraw = true;
   }
 
   setup() {
@@ -84,7 +103,7 @@ class AppCore {
 
   exportImagePNG() {
     const timestamp = `${year()}${nf(month(), 2)}${nf(day(), 2)}_${nf(hour(), 2)}${nf(minute(), 2)}${nf(second(), 2)}`;
-    const slug = (metadata.name || "fractal")
+    const slug = ((this.metadata && this.metadata.name) || "fractal")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "_")
       .replace(/^_+|_+$/g, "");

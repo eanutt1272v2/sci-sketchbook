@@ -18,7 +18,7 @@ function setup() {
   const canvasSize = min(windowWidth, windowHeight);
   mainCanvas = createCanvas(canvasSize, canvasSize);
   setupCanvasProperties(mainCanvas);
-  appcore = new AppCore();
+  appcore = new AppCore({ metadata });
   appcore.setup();
 }
 
@@ -37,15 +37,7 @@ function setupCanvasProperties(canvas) {
 }
 
 function windowResized() {
-  const canvasSize = min(windowWidth, windowHeight);
-  resizeCanvas(canvasSize, canvasSize);
-
-  if (appcore !== null) {
-    appcore.renderer.buffer = createGraphics(width, height);
-    appcore.renderer.buffer.pixelDensity(1);
-    appcore.panel = new UIPanel(appcore);
-    appcore.needsRedraw = true;
-  }
+  if (appcore !== null) appcore.windowResized();
 }
 
 function draw() {
