@@ -28,8 +28,8 @@ class GUI {
       pages: [
         { title: "Sim" },
         { title: "Params" },
-        { title: "Animals" },
         { title: "Render" },
+        { title: "Animals" },
         { title: "Stats" },
         { title: "Media" },
       ],
@@ -37,8 +37,8 @@ class GUI {
 
     this.createSimulationTab(tabs.pages[0]);
     this.createParametersTab(tabs.pages[1]);
-    this.createAnimalsTab(tabs.pages[2]);
-    this.createRenderTab(tabs.pages[3]);
+    this.createAnimalsTab(tabs.pages[3]);
+    this.createRenderTab(tabs.pages[2]);
     this.createStatisticsTab(tabs.pages[4]);
     this.createMediaTab(tabs.pages[5]);
   }
@@ -179,6 +179,45 @@ class GUI {
     });
   }
 
+  createRenderTab(page) {
+    const { params } = this;
+
+    page
+      .addBinding(params, "colourMap", {
+        label: "Colour Map",
+        options: this.appcore
+          ? this.appcore.getColourMapOptions()
+          : { greyscale: "greyscale" },
+      })
+      .on("change", () =>
+        this.appcore?.renderer?.setColourMap(params.colourMap),
+      );
+
+    page.addBlade({ view: "separator" });
+
+    page.addBinding(params, "renderMode", {
+      label: "Render Mode",
+      options: {
+        World: "world",
+        "Potential Field": "potential",
+        "Growth Field": "field",
+        Kernel: "kernel",
+      },
+    });
+
+    page.addBlade({ view: "separator" });
+
+    const overlay = page.addFolder({ title: "Overlay Options" });
+
+    overlay.addBinding(params, "renderGrid", { label: "Grid" });
+    overlay.addBinding(params, "renderScale", { label: "Scale Bar" });
+    overlay.addBinding(params, "renderLegend", { label: "Legend" });
+    overlay.addBinding(params, "renderStats", { label: "Statistics" });
+    overlay.addBinding(params, "renderMotionOverlay", {
+      label: "Motion Overlay",
+    });
+  }
+
   createAnimalsTab(page) {
     const { params } = this;
 
@@ -252,45 +291,6 @@ class GUI {
           this.appcore.refreshGUI();
         }
       });
-  }
-
-  createRenderTab(page) {
-    const { params } = this;
-
-    page
-      .addBinding(params, "colourMap", {
-        label: "Colour Map",
-        options: this.appcore
-          ? this.appcore.getColourMapOptions()
-          : { greyscale: "greyscale" },
-      })
-      .on("change", () =>
-        this.appcore?.renderer?.setColourMap(params.colourMap),
-      );
-
-    page.addBlade({ view: "separator" });
-
-    page.addBinding(params, "renderMode", {
-      label: "Render Mode",
-      options: {
-        World: "world",
-        "Potential Field": "potential",
-        "Growth Field": "field",
-        Kernel: "kernel",
-      },
-    });
-
-    page.addBlade({ view: "separator" });
-
-    const overlay = page.addFolder({ title: "Overlay Options" });
-
-    overlay.addBinding(params, "renderGrid", { label: "Grid" });
-    overlay.addBinding(params, "renderScale", { label: "Scale Bar" });
-    overlay.addBinding(params, "renderLegend", { label: "Legend" });
-    overlay.addBinding(params, "renderStats", { label: "Statistics" });
-    overlay.addBinding(params, "renderMotionOverlay", {
-      label: "Motion Overlay",
-    });
   }
 
   createStatisticsTab(page) {
