@@ -10,7 +10,7 @@ class Dropdown {
     this.isOpen = false;
   }
 
-  display(currentIndex) {
+  render(currentIndex) {
     colorMode(RGB, 255);
     stroke(this.theme.strokeWidget);
     strokeWeight(this.theme.swWidget);

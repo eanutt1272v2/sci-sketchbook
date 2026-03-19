@@ -8,7 +8,7 @@ class Button {
     this.theme = theme;
   }
 
-  display() {
+  render() {
     colorMode(RGB, 255);
     const hovered = this.isMouseOver();
     fill(hovered ? this.theme.bgHover : this.theme.bgWidget);

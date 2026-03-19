@@ -6,6 +6,8 @@ class FractalRenderer {
 
     this.LUT_SIZE = 2048;
     this.colorLUT = new Array(this.LUT_SIZE);
+    this.lutBuffer = new Uint8Array(this.LUT_SIZE * 3);
+    this.lutVersion = 0;
 
     this.mapNames = [
       "cividis",
@@ -77,6 +79,17 @@ class FractalRenderer {
     this.buffer.updatePixels();
   }
 
+  renderFromPixels(pixelsBuffer) {
+    const src = new Uint8ClampedArray(pixelsBuffer);
+    this.buffer.loadPixels();
+    this.buffer.pixels.set(src);
+    this.buffer.updatePixels();
+  }
+
+  buildLUTBuffer() {
+    return this.lutBuffer;
+  }
+
   setMap(index) {
     this.currentMapIndex = index;
     this.generateLUT();
@@ -90,7 +103,11 @@ class FractalRenderer {
       const g = Math.round(constrain(this.applyPoly(t, c[1]), 0, 1) * 255);
       const b = Math.round(constrain(this.applyPoly(t, c[2]), 0, 1) * 255);
       this.colorLUT[i] = [r, g, b];
+      this.lutBuffer[i * 3] = r;
+      this.lutBuffer[i * 3 + 1] = g;
+      this.lutBuffer[i * 3 + 2] = b;
     }
+    this.lutVersion++;
   }
 
   applyPoly(t, c) {

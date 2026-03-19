@@ -37,10 +37,8 @@ class RightPanel {
 
   render() {
     for (const col of this.columns) {
-      col.recompute();
-      col.drawBackground();
+      col.renderBackground();
     }
-    this.params.rebuildWidgets(this.columns);
     this.params.render(this.columns, this.input);
   }
 
@@ -48,6 +46,7 @@ class RightPanel {
     for (const col of this.columns) {
       if (col.handleHeaderClick(mx, my)) {
         col.recompute();
+        this.params.rebuildWidgets(this.columns);
         return true;
       }
     }

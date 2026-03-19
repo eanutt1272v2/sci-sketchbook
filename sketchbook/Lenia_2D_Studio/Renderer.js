@@ -14,7 +14,7 @@ class Renderer {
     this.img = createImage(this.size, this.size);
   }
 
-  render(board, automaton, displayMode, colourMapName) {
+  render(board, automaton, renderMode, colourMapName) {
     this.setColourMap(colourMapName);
 
     let data = board.cells;
@@ -22,20 +22,20 @@ class Renderer {
     let vmax = 1;
     let currentSize = this.size;
 
-    if (displayMode === "potential") {
+    if (renderMode === "potential") {
       data = board.potential;
       vmax = 2 * automaton.m;
       if (this.img.width !== this.size) {
         this.img = createImage(this.size, this.size);
       }
-    } else if (displayMode === "field") {
+    } else if (renderMode === "field") {
       data = board.field;
       vmin = -1;
       vmax = 1;
       if (this.img.width !== this.size) {
         this.img = createImage(this.size, this.size);
       }
-    } else if (displayMode === "kernel") {
+    } else if (renderMode === "kernel") {
       data = automaton.kernel;
       currentSize = automaton.kernelSize;
       if (this.img.width !== currentSize) {
@@ -55,11 +55,13 @@ class Renderer {
       for (let x = 0; x < currentSize; x++) {
         const val = data[row + x];
         const normVal = (val - vmin) / denom;
-        const rgb = this._valueToColour(Math.max(0, Math.min(1, normVal)));
+        const clamped = Math.max(0, Math.min(1, normVal));
+        const lutIndex = Math.min(255, Math.max(0, Math.round(clamped * 255))) *
+          3;
         const idx = (row + x) * 4;
-        this.img.pixels[idx] = rgb[0];
-        this.img.pixels[idx + 1] = rgb[1];
-        this.img.pixels[idx + 2] = rgb[2];
+        this.img.pixels[idx] = this.lut[lutIndex];
+        this.img.pixels[idx + 1] = this.lut[lutIndex + 1];
+        this.img.pixels[idx + 2] = this.lut[lutIndex + 2];
         this.img.pixels[idx + 3] = 255;
       }
     }
@@ -253,9 +255,9 @@ class Renderer {
         ],
       },
       {
-        title: "Display",
+        title: "Rendering",
         entries: [
-          ["Tab", "Cycle display mode"],
+          ["Tab", "Cycle render mode"],
           ["T", "Cycle colour map"],
           ["G", "Toggle grid"],
           ["L", "Toggle colour legend"],

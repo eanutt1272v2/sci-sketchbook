@@ -25,7 +25,7 @@ Continuous cellular automata studio inspired by Lenia, designed for experimentin
 | `Z` | Randomise world |
 | `X` | Clear world |
 | `R` | Reset simulation state |
-| `Tab` | Cycle display mode (`world → potential → field → kernel`) |
+| `Tab` | Cycle render mode (`world → potential → field → kernel`) |
 | `T` | Cycle colour map |
 | `G` | Toggle grid |
 | `L` | Toggle colour legend |

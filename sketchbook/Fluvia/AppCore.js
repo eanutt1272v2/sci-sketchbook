@@ -50,7 +50,7 @@ class AppCore {
       renderLegend: true,
       renderKeymapRef: false,
 
-      displayMethod: "3D",
+      renderMethod: "3D",
       heightScale: 100,
       surfaceMap: "composite",
       colourMap: this.colourMapKeys.includes("viridis")

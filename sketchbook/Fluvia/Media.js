@@ -210,7 +210,7 @@ class Media {
           "renderStats",
           "renderLegend",
           "renderKeymapRef",
-          "displayMethod",
+          "renderMethod",
           "heightScale",
           "surfaceMap",
           "colourMap",
@@ -483,10 +483,10 @@ class Media {
   }
 
   _getFilename(extension) {
-    const { terrainSize, surfaceMap, displayMethod } = this.appcore.params;
+    const { terrainSize, surfaceMap, renderMethod } = this.appcore.params;
     const { name, version } = this.appcore.metadata;
     const ts = Date.now();
 
-    return `${name}_${version}_${displayMethod}_${surfaceMap}_${terrainSize}_${ts}.${extension}`;
+    return `${name}_${version}_${renderMethod}_${surfaceMap}_${terrainSize}_${ts}.${extension}`;
   }
 }

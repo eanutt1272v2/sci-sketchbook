@@ -9,7 +9,6 @@ class InputHandler {
       return;
     }
 
-    // Rebuild-heavy kernel changes are applied at half frame rate for stability.
     if (frameCount % 2 !== 0) {
       return;
     }
@@ -162,7 +161,7 @@ class InputHandler {
     }
 
     if (kCode === 9) {
-      this._cycleDisplayMode();
+      this._cycleRenderMode();
       this.appcore.refreshGUI();
       return false;
     }
@@ -174,7 +173,7 @@ class InputHandler {
     }
 
     if (keyLower === "g") {
-      const enabled = this.appcore.params.displayMode !== "kernel";
+      const enabled = this.appcore.params.renderMode !== "kernel";
       if (enabled) {
         this.appcore.params.renderGrid = !this.appcore.params.renderGrid;
         this.appcore.refreshGUI();
@@ -336,11 +335,11 @@ class InputHandler {
     return false;
   }
 
-  _cycleDisplayMode() {
+  _cycleRenderMode() {
     const modes = ["world", "potential", "field", "kernel"];
-    const idx = modes.indexOf(this.appcore.params.displayMode);
-    this.appcore.params.displayMode = modes[(idx + 1) % modes.length];
-    console.log(`[Lenia] Display: ${this.appcore.params.displayMode}`);
+    const idx = modes.indexOf(this.appcore.params.renderMode);
+    this.appcore.params.renderMode = modes[(idx + 1) % modes.length];
+    console.log(`[Lenia] Render: ${this.appcore.params.renderMode}`);
   }
 
   _cycleGridSize() {

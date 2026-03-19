@@ -11,7 +11,7 @@ class SliderComponent {
     this.theme = theme;
   }
 
-  display() {
+  render() {
     colorMode(RGB, 255);
     const trackY = this.y + this.h / 2;
     stroke(this.theme.strokeTrack);
@@ -27,7 +27,7 @@ class SliderComponent {
           ? this.theme.textPrimary
           : this.theme.textSecondary,
     );
-    ellipse(handleX, trackY, this.h * 0.5, this.h * 0.5);
+    ellipse(handleX, trackY, this.h * 0.75, this.h * 0.75);
   }
 
   isPressed(mx, my) {

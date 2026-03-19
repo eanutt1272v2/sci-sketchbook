@@ -617,8 +617,8 @@ class UIPanel {
     }
 
     if (collapsed) {
-      zoomInBtn.display(g, t);
-      zoomOutBtn.display(g, t);
+      zoomInBtn.render(g, t);
+      zoomOutBtn.render(g, t);
       return;
     }
 
@@ -635,18 +635,18 @@ class UIPanel {
     g.textAlign(LEFT, TOP);
     g.text(isTypingIter ? "Iterations: " + iterTypingBuffer + "_" : "Iterations: " + r.maximumIterations, cx, layout.getY("iterLabel"));
 
-    iterSlider.display(g, t);
-    for (Button b : iterStepButtons) b.display(g, t);
+    iterSlider.render(g, t);
+    for (Button b : iterStepButtons) b.render(g, t);
 
     g.fill(t.textPrimary);
     g.textSize(t.textSizeSecondary);
     g.textAlign(LEFT, TOP);
     g.text(isTypingRes ? "Resolution: " + resTypingBuffer + "_" : "Resolution: " + r.resolutionScale, cx, layout.getY("resLabel"));
 
-    resSlider.display(g, t);
-    for (Button b : resStepButtons) b.display(g, t);
+    resSlider.render(g, t);
+    for (Button b : resStepButtons) b.render(g, t);
 
-    recomputeBtn.display(g, t);
+    recomputeBtn.render(g, t);
 
     float px = layout.contentX();
     float pw = layout.contentW();
@@ -700,8 +700,8 @@ class UIPanel {
     g.textSize(t.textSizeCaption);
     g.text("[WASD]: Rotate  [Q/E]: Zoom  [R]: Recompute  [H]: Hide", cx, layout.getY("hints"));
 
-    zoomInBtn.display(g, t);
-    zoomOutBtn.display(g, t);
+    zoomInBtn.render(g, t);
+    zoomOutBtn.render(g, t);
 
     int powerIdx = 0;
     for (int i = 0; i < r.powerValues.length; i++) {
@@ -711,10 +711,10 @@ class UIPanel {
     for (int i = 0; i < r.resolutionValues.length; i++) {
       if (r.resolutionValues[i] == r.resolutionScale) { resIdx = i; break; }
     }
-    dropdown.displayTrigger(g, t, powerIdx);
-    resDropdown.displayTrigger(g, t, resIdx);
-    dropdown.displayList(g, t);
-    resDropdown.displayList(g, t);
+    dropdown.renderTrigger(g, t, powerIdx);
+    resDropdown.renderTrigger(g, t, resIdx);
+    dropdown.renderList(g, t);
+    resDropdown.renderList(g, t);
   }
 
   void drawChevron(PGraphics g, UITheme t, float cx, float cy, boolean isCollapsed) {
@@ -824,7 +824,7 @@ class Slider {
     this.min = min; this.max = max; this.val = start;
   }
 
-  void display(PGraphics g, UITheme t) {
+  void render(PGraphics g, UITheme t) {
     float trackY = y + h / 2;
     float handleX = map(val, min, max, x, x + w);
 
@@ -856,7 +856,7 @@ class Dropdown {
     this.x = x; this.y = y; this.w = w; this.h = h; this.items = items;
   }
 
-  void displayTrigger(PGraphics g, UITheme t, int currentIndex) {
+  void renderTrigger(PGraphics g, UITheme t, int currentIndex) {
     g.stroke(t.strokeWidget);
     g.strokeWeight(t.swWidget);
     g.fill(isHeaderOver() ? t.bgHover : t.bgWidget);
@@ -868,7 +868,7 @@ class Dropdown {
     drawChevron(g, t, x + w - 12, y + h / 2, !isOpen);
   }
 
-  void displayList(PGraphics g, UITheme t) {
+  void renderList(PGraphics g, UITheme t) {
     if (!isOpen) return;
     for (int i = 0; i < items.length; i++) {
       boolean over = mouseX > x && mouseX < x + w && mouseY > y + h + i * h && mouseY < y + 2 * h + i * h;
@@ -919,7 +919,7 @@ class Button {
     this.x = x; this.y = y; this.w = w; this.h = h; this.label = label;
   }
 
-  void display(PGraphics g, UITheme t) {
+  void render(PGraphics g, UITheme t) {
     g.fill(isMouseOver() ? t.bgHover : t.bgWidget);
     g.stroke(t.strokeWidget);
     g.strokeWeight(t.swWidget);

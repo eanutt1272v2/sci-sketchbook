@@ -12,6 +12,41 @@ class InputHandler {
     this.isTypingIter = false;
     this.typingBuffer = "";
     this.pinchDistance = null;
+    this.isPanning = false;
+    this.panAnchorWorldX = 0;
+    this.panAnchorWorldY = 0;
+  }
+
+  getWorldAtScreen(px, py) {
+    const ar = width / height;
+    const invZoom = 1.0 / this.appcore.zoom;
+    return {
+      x: (-2.1 * ar + (px / width) * 3.2 * ar) * invZoom + this.appcore.offsetX,
+      y: (-2.1 + (py / height) * 3.2) * invZoom + this.appcore.offsetY,
+    };
+  }
+
+  startPanAt(px, py) {
+    const w = this.getWorldAtScreen(px, py);
+    this.panAnchorWorldX = w.x;
+    this.panAnchorWorldY = w.y;
+    this.isPanning = true;
+  }
+
+  updatePanAt(px, py) {
+    if (!this.isPanning) return;
+    const ar = width / height;
+    const invZoom = 1.0 / this.appcore.zoom;
+    const worldDeltaX = (-2.1 * ar + (px / width) * 3.2 * ar) * invZoom;
+    const worldDeltaY = (-2.1 + (py / height) * 3.2) * invZoom;
+
+    this.appcore.offsetX = this.panAnchorWorldX - worldDeltaX;
+    this.appcore.offsetY = this.panAnchorWorldY - worldDeltaY;
+    this.appcore.needsRedraw = true;
+  }
+
+  stopPan() {
+    this.isPanning = false;
   }
 
   handleContinuousInput() {
@@ -75,6 +110,7 @@ class InputHandler {
 
   onMousePressed() {
     if (!this.appcore.showUI) {
+      this.startPanAt(mouseX, mouseY);
       return;
     }
 
@@ -157,6 +193,11 @@ class InputHandler {
     if (p.exportBtn.isMouseOver() && !this.appcore.justPressed) {
       this.appcore.exportImagePNG();
       this.appcore.justPressed = true;
+      return;
+    }
+
+    if (!this.appcore.justPressed) {
+      this.startPanAt(mouseX, mouseY);
     }
   }
 
@@ -164,6 +205,7 @@ class InputHandler {
     this.appcore.panel.slider.locked = false;
     this.appcore.justPressed = false;
     this.pinchDistance = null;
+    this.stopPan();
   }
 
   onTouchStarted() {
@@ -171,11 +213,15 @@ class InputHandler {
       const t1 = touches[0];
       const t2 = touches[1];
       this.pinchDistance = dist(t1.x, t1.y, t2.x, t2.y);
+      this.stopPan();
       return;
     }
 
     this.pinchDistance = null;
     this.onMousePressed();
+    if (touches.length === 1) {
+      this.startPanAt(touches[0].x, touches[0].y);
+    }
   }
 
   onTouchMoved() {
@@ -203,6 +249,10 @@ class InputHandler {
     }
 
     this.pinchDistance = null;
+    if (touches.length === 1) {
+      this.updatePanAt(touches[0].x, touches[0].y);
+      return;
+    }
     this.onMouseDragged();
   }
 
@@ -240,12 +290,7 @@ class InputHandler {
       return;
     }
 
-    const ar = width / height;
-    this.appcore.offsetX -=
-      ((mouseX - pmouseX) * (3.2 * ar)) / width / this.appcore.zoom;
-    this.appcore.offsetY -=
-      ((mouseY - pmouseY) * 3.2) / height / this.appcore.zoom;
-    this.appcore.needsRedraw = true;
+    this.updatePanAt(mouseX, mouseY);
   }
 
   onMouseWheel(event) {

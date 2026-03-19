@@ -8,6 +8,9 @@ class Renderer {
 
     this.lut = new Uint8ClampedArray(256 * 3);
     this.currentColourMap = "";
+    this.legendGradient = null;
+    this.legendGradientKey = "";
+    this._lastPixelSmoothing = null;
   }
 
   getAxisSamples(resolution, viewRadius) {
@@ -181,10 +184,13 @@ class Renderer {
 
     background(0);
 
-    if (pixelSmoothing) {
-      smooth();
-    } else {
-      noSmooth();
+    if (this._lastPixelSmoothing !== pixelSmoothing) {
+      if (pixelSmoothing) {
+        smooth();
+      } else {
+        noSmooth();
+      }
+      this._lastPixelSmoothing = pixelSmoothing;
     }
 
     if (buffer) {
@@ -231,20 +237,25 @@ class Renderer {
     const w = 20;
     const h = y2 - y1;
 
-    const grad = drawingContext.createLinearGradient(0, y1, 0, y2);
-    for (let i = 0; i <= 10; i++) {
-      const t = i / 10;
-      const idx = (((1 - t) * 255) | 0) * 3;
-      grad.addColorStop(
-        t,
-        `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
-      );
+    const legendKey = `${width}x${height}:${this.currentColourMap}`;
+    if (this.legendGradientKey !== legendKey || !this.legendGradient) {
+      const grad = drawingContext.createLinearGradient(0, y1, 0, y2);
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        const idx = (((1 - t) * 255) | 0) * 3;
+        grad.addColorStop(
+          t,
+          `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
+        );
+      }
+      this.legendGradient = grad;
+      this.legendGradientKey = legendKey;
     }
 
     drawingContext.strokeStyle = "rgba(255, 255, 255, 0.78)";
     drawingContext.lineWidth = 1;
 
-    drawingContext.fillStyle = grad;
+    drawingContext.fillStyle = this.legendGradient;
     drawingContext.fillRect(x - w, y1, w, h);
 
     drawingContext.strokeRect(x - w, y1, w, h);
@@ -309,7 +320,7 @@ class Renderer {
         ],
       },
       {
-        title: "Display",
+        title: "Rendering",
         entries: [
           ["C", "Cycle colour map"],
           ["M", "Toggle pixel smoothing"],

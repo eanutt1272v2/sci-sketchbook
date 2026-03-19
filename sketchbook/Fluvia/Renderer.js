@@ -15,7 +15,7 @@ class Renderer {
     this.lut = new Uint8ClampedArray(256 * 3);
     this.currentColourMap = "";
     this.lutChannels = ["r", "g", "b"];
-    this.textureUpdateIntervalMs = 33;
+    this.textureUpdateIntervalMs = 50;
     this.lastTextureUpdateMs = 0;
     this.textureDirty = true;
     this.compositeLegendItems = [
@@ -34,9 +34,9 @@ class Renderer {
         ],
       },
       {
-        title: "Display",
+        title: "Rendering",
         entries: [
-          ["1 / 2", "Switch display: 2D / 3D"],
+          ["1 / 2", "Switch render method: 2D / 3D"],
           ["O / L", "Toggle stats / legend overlays"],
           ["C", "Cycle colour map (Shift reverse)"],
           ["M", "Cycle surface map (Shift reverse)"],
@@ -79,27 +79,27 @@ class Renderer {
   }
 
   _adaptTextureInterval(renderCostMs) {
-    if (renderCostMs > 40) {
+    if (renderCostMs > 32) {
+      this.textureUpdateIntervalMs = 100;
+      return;
+    }
+
+    if (renderCostMs > 24) {
+      this.textureUpdateIntervalMs = 80;
+      return;
+    }
+
+    if (renderCostMs > 16) {
       this.textureUpdateIntervalMs = 66;
       return;
     }
 
-    if (renderCostMs > 28) {
-      this.textureUpdateIntervalMs = 50;
-      return;
-    }
-
-    if (renderCostMs > 18) {
+    if (renderCostMs < 10) {
       this.textureUpdateIntervalMs = 40;
       return;
     }
 
-    if (renderCostMs < 12) {
-      this.textureUpdateIntervalMs = 25;
-      return;
-    }
-
-    this.textureUpdateIntervalMs = 33;
+    this.textureUpdateIntervalMs = 50;
   }
 
   updateLUT(colourMap) {
@@ -289,7 +289,7 @@ class Renderer {
       !terrain.sedimentMap ||
       !terrain.dischargeMap
     ) {
-      if (this.appcore.params.displayMethod === "3D") {
+      if (this.appcore.params.renderMethod === "3D") {
         image(this.canvas3D, 0, 0, width, height);
       } else {
         image(this.canvas2D, 0, 0, width, height);
@@ -298,11 +298,12 @@ class Renderer {
       return;
     }
 
-    const is3D = this.appcore.params.displayMethod === "3D";
+    const is3D = this.appcore.params.renderMethod === "3D";
     const nowMs = performance.now();
     const shouldUpdateTexture =
       this.textureDirty ||
-      nowMs - this.lastTextureUpdateMs >= this.textureUpdateIntervalMs;
+      (this.appcore.params.running &&
+        nowMs - this.lastTextureUpdateMs >= this.textureUpdateIntervalMs);
 
     if (shouldUpdateTexture) {
       const startMs = performance.now();
@@ -373,7 +374,7 @@ class Renderer {
     const lines = [
       `FPS: ${statistics.fps.toFixed(2)}`,
       `Time: ${statistics.simulationTime.toFixed(2)}s`,
-      `Display Method: ${params.displayMethod}`,
+      `Render Method: ${params.renderMethod}`,
       `Surface Map: ${params.surfaceMap}`,
       `Colour Map: ${params.colourMap}`,
       `Elevation Range: ${statistics.heightBounds.min.toFixed(3)} - ${statistics.heightBounds.max.toFixed(3)}`,

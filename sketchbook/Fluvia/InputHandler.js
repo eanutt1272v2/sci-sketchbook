@@ -73,13 +73,13 @@ class InputHandler {
     }
 
     if (keyLower === "1") {
-      this.appcore.params.displayMethod = "2D";
+      this.appcore.params.renderMethod = "2D";
       this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "2") {
-      this.appcore.params.displayMethod = "3D";
+      this.appcore.params.renderMethod = "3D";
       this.appcore.refreshGUI();
       return false;
     }
@@ -232,7 +232,7 @@ class InputHandler {
     if (
       this.shouldIgnoreKeyboard() ||
       this.appcore.params.renderKeymapRef ||
-      this.appcore.params.displayMethod !== "3D"
+      this.appcore.params.renderMethod !== "3D"
     ) {
       return;
     }
@@ -271,10 +271,10 @@ class InputHandler {
     if (!event?.target || typeof event.target.closest !== "function")
       return false;
 
-    const { displayMethod } = this.appcore.params;
+    const { renderMethod } = this.appcore.params;
     const { target } = event;
 
-    const is3D = displayMethod === "3D";
+    const is3D = renderMethod === "3D";
     const isUI = target.closest(".tp-dfwv");
     const isCanvas = target.tagName === "CANVAS";
 

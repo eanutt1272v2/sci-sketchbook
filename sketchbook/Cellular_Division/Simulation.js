@@ -19,7 +19,80 @@ class Simulation {
     this.spatialGrid = null;
     this.cellTracker = null;
 
+    this._worker = null;
+    this._workerBusy = false;
+    this._workerReady = false;
+    this._lastResult = null;
+    this._history = [];
+    this._historySampleCounter = 0;
+    this._workerStepIntervalMs = 22;
+    this._lastWorkerStepMs = 0;
+
+    this._initWorker();
     this.restart();
+  }
+
+  _initWorker() {
+    try {
+      this._worker = new Worker("SimulationWorker.js");
+    } catch (e) {
+      console.warn(
+        "[Cellular Division] Worker unavailable, falling back to sync sim.",
+        e,
+      );
+      this._worker = null;
+      return;
+    }
+    this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
+    this._worker.onerror = (e) => {
+      console.error("[Cellular Division] Worker error:", e);
+      this._workerBusy = false;
+    };
+  }
+
+  _sendWorkerInit() {
+    if (!this._worker) return;
+    this._workerReady = false;
+    this._workerBusy = false;
+    this._worker.postMessage({
+      type: "restart",
+      count: this.particleCount,
+      canvasW: width,
+      canvasH: height,
+      alpha: this.alpha,
+      beta: this.beta,
+      gamma: this.gamma,
+      radius: this.radius,
+      densityThreshold: this.densityThreshold,
+    });
+  }
+
+  _onWorkerMessage(data) {
+    if (data.type === "ready") {
+      this._workerReady = true;
+      this._workerBusy = false;
+      this.isRestarting = false;
+      this._history.length = 0;
+      this._historySampleCounter = 0;
+      return;
+    }
+    if (data.type !== "result") return;
+
+    this._workerBusy = false;
+    this._lastResult = {
+      particleData: new Float32Array(data.particleData),
+      particleCount: data.particleCount,
+      population: data.population,
+      elapsed: data.elapsed,
+      paused: data.paused,
+    };
+    this._historySampleCounter++;
+    if ((this._historySampleCounter & 1) === 0) {
+      this._history.push(data.population);
+      if (this._history.length > width) {
+        this._history.shift();
+      }
+    }
   }
 
   defaultParticleCount() {
@@ -28,6 +101,14 @@ class Simulation {
   }
 
   restart() {
+    if (this._worker) {
+      this._sendWorkerInit();
+      this.needsRestart = false;
+      this.isRestarting = true;
+      this.startTime = millis();
+      return;
+    }
+
     this.species = new Species(this.alpha, this.beta, this.gamma, this.radius);
     this.particles = [];
     this.spatialGrid = new Grid(Config.GRID_SIZE);
@@ -64,6 +145,25 @@ class Simulation {
       this.restart();
     }
 
+    if (this._worker) {
+      const activeCount = this._lastResult
+        ? this._lastResult.particleCount
+        : this.particleCount;
+      this._workerStepIntervalMs = activeCount > 7000 ? 30 : 22;
+
+      if (
+        this._workerReady &&
+        !this._workerBusy &&
+        !this.paused &&
+        millis() - this._lastWorkerStepMs >= this._workerStepIntervalMs
+      ) {
+        this._workerBusy = true;
+        this._lastWorkerStepMs = millis();
+        this._worker.postMessage({ type: "tick" });
+      }
+      return;
+    }
+
     if (this.isRestarting) {
       this._buildParticlesChunk();
       return;
@@ -90,10 +190,57 @@ class Simulation {
 
   render() {
     this.drawTrail();
-
     strokeWeight(1);
+    colorMode(RGB, 255);
+
+    if (this._worker) {
+      if (!this._lastResult) return;
+      const { particleData, particleCount } = this._lastResult;
+      const ctx = drawingContext;
+
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+
+      const drawCategory = (strokeStyle, predicate) => {
+        ctx.strokeStyle = strokeStyle;
+        ctx.beginPath();
+        for (let i = 0; i < particleCount; i++) {
+          const base = i * 4;
+          const closeCount = particleData[base + 2];
+          const neighbourCount = particleData[base + 3];
+          if (!predicate(closeCount, neighbourCount)) continue;
+          const x = particleData[base];
+          const y = particleData[base + 1];
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + 0.01, y);
+        }
+        ctx.stroke();
+      };
+
+      drawCategory("rgb(255,80,255)", (closeCount) => closeCount > 15);
+      drawCategory(
+        "rgb(255,255,100)",
+        (closeCount, neighbourCount) => closeCount <= 15 && neighbourCount > 35,
+      );
+      drawCategory(
+        "rgb(0,0,255)",
+        (closeCount, neighbourCount) =>
+          closeCount <= 15 && neighbourCount > 15 && neighbourCount <= 35,
+      );
+      drawCategory(
+        "rgb(180,100,50)",
+        (closeCount, neighbourCount) =>
+          closeCount <= 15 && neighbourCount >= 13 && neighbourCount <= 15,
+      );
+      drawCategory(
+        "rgb(80,255,80)",
+        (closeCount, neighbourCount) => closeCount <= 15 && neighbourCount < 13,
+      );
+      return;
+    }
+
     for (const p of this.particles) {
-      p.display();
+      p.render();
     }
   }
 
@@ -128,39 +275,55 @@ class Simulation {
   }
 
   getParticleCount() {
+    if (this._worker) {
+      return this._lastResult ? this._lastResult.particleCount : 0;
+    }
     return this.isRestarting ? this.particles.length : this.particleCount;
   }
 
   getCellPopulation() {
+    if (this._worker) {
+      return this._lastResult ? this._lastResult.population : 0;
+    }
     return this.cellTracker.getPopulation();
   }
 
   getElapsedSeconds() {
+    if (this._worker) {
+      return this._lastResult ? int(this._lastResult.elapsed / 1000) : 0;
+    }
     return int((millis() - this.startTime) / 1000);
   }
 
   getCellHistory() {
+    if (this._worker) {
+      return this._history;
+    }
     return this.cellTracker.getHistory();
   }
 
   setAlpha(value) {
     this.alpha = constrain(value, 0, 360);
     this.updateSpecies();
+    if (this._worker) this._worker.postMessage({ type: "setParam", key: "alpha", value: this.alpha });
   }
 
   setBeta(value) {
     this.beta = constrain(value, 0, 90);
     this.updateSpecies();
+    if (this._worker) this._worker.postMessage({ type: "setParam", key: "beta", value: this.beta });
   }
 
   setGamma(value) {
     this.gamma = constrain(value, 0, 50);
     this.updateSpecies();
+    if (this._worker) this._worker.postMessage({ type: "setParam", key: "gamma", value: this.gamma });
   }
 
   setRadius(value) {
     this.radius = constrain(value, 5, 50);
     this.updateSpecies();
+    if (this._worker) this._worker.postMessage({ type: "setParam", key: "radius", value: this.radius });
   }
 
   setTrailAlpha(value) {
@@ -169,6 +332,7 @@ class Simulation {
 
   setDensityThreshold(value) {
     this.densityThreshold = constrain(value, 1, 60);
+    if (this._worker) this._worker.postMessage({ type: "setParam", key: "densityThreshold", value: this.densityThreshold });
   }
 
   setParticleCount(value) {
@@ -185,6 +349,8 @@ class Simulation {
 
   togglePause() {
     this.paused = !this.paused;
+    if (this._worker)
+      this._worker.postMessage({ type: "setPaused", value: this.paused });
   }
 
   isPaused() {

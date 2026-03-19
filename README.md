@@ -2,8 +2,9 @@
 
 > [!IMPORTANT]
 > **Major Migration and Refactor Notice**
-> 
+>
 > I am currently transitioning the vast majority of the library's sketches from **Processing (Java)** to **p5.js** to improve web accessibility, cross-device support, and eliminate version/feature drift caused by legacy versions. During this period:
+>
 > - Many sketches are undergoing massive structural refactors which I am attempting to complete and roll out quickly.
 > - Legacy `.pde` files and sketch versions are being phased out. Some older experiments may be discontinued or deleted if they no longer fit my goals.
 > - You may encounter some bugs, but these will likely be patched very quickly. If they are not patched, give me a nudge in issues or email me at [**eanutt1272.v2@gmail.com**](mailto:eanutt1272.v2@gmail.com).
@@ -11,6 +12,7 @@
 A collection of scientific and mathematical creative-coding sketches, simulations, and visualisations.
 
 The repository includes projects built with:
+
 - `p5.js`
 - `Processing (Java)` (soon to be discontinued)
 - `GLSL` shaders (via p5.js/WebGL)
@@ -42,15 +44,16 @@ git clone https://github.com/eanutt1272v2/sci-sketchbook.git
 cd sci-sketchbook
 ```
 
-2. Start the local server.
+1. Start the local server.
 
 ```bash
 docker compose up -d
 ```
 
-3. Open `http://localhost`.
+1. Open `http://localhost`.
 
 Notes:
+
 - Default ports are `80` and `443`.
 - View logs with `docker compose logs -f`.
 
@@ -59,10 +62,12 @@ Notes:
 Most browser sketches can also be run from each sketch directory via a simple static web server.
 
 Example:
+
 ```bash
 cd sketchbook/Mandelbrot_Set/p5_JS
 python3 -m http.server 8080
 ```
+
 Then open `http://localhost:8080`.
 
 Processing sketches can be opened in Processing 4.x via the corresponding `.pde` entry file.

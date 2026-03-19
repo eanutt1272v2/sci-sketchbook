@@ -20,7 +20,7 @@ class Analyser {
 
   static STAT_HEADERS = Object.keys(Analyser.STAT_NAMES);
 
-  constructor(statistics = null, displayData = null) {
+  constructor(statistics = null, renderData = null) {
     this.epsilon = 1e-10;
     this.series = [];
     this.segmentInit = 128;
@@ -41,7 +41,7 @@ class Analyser {
       symmStrength: 0,
       fps: 0,
     };
-    this.displayData = displayData || {
+    this.renderData = renderData || {
       frameCount: 0,
       lastTime: 0,
     };
@@ -282,17 +282,17 @@ class Analyser {
   }
 
   updateFps() {
-    const displayData = this.displayData;
+    const renderData = this.renderData;
     const statistics = this.statistics;
-    displayData.frameCount++;
+    renderData.frameCount++;
     const now = millis();
 
-    if (now - displayData.lastTime > 1000) {
+    if (now - renderData.lastTime > 1000) {
       statistics.fps = Math.round(
-        (displayData.frameCount * 1000) / (now - displayData.lastTime),
+        (renderData.frameCount * 1000) / (now - renderData.lastTime),
       );
-      displayData.frameCount = 0;
-      displayData.lastTime = now;
+      renderData.frameCount = 0;
+      renderData.lastTime = now;
     }
   }
   getStatRow() {

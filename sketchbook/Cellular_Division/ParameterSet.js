@@ -4,12 +4,12 @@ class ParameterSet {
     this.theme = theme;
 
     this.labels = [
-      "Alpha",
-      "Beta",
-      "Gamma",
-      "Radius",
-      "Trail Alpha",
-      "Density Threshold",
+      "Alpha (α)",
+      "Beta (β)",
+      "Gamma (γ)",
+      "Radius (r)",
+      "Trail Alpha (τ)",
+      "Density Threshold (ρ)",
     ];
     this.mins = [0, 0, 0, 5, 0, 1];
     this.maxes = [360, 90, 50, 50, 255, 60];
@@ -133,16 +133,16 @@ class ParameterSet {
       fill(isTyping ? this.theme.textPrimary : this.theme.textSecondary);
       textSize(this.theme.textSizeCaption);
       textAlign(RIGHT, TOP);
-      const display =
+      const render =
         input !== null && isTyping
           ? `${input.getTypingBuffer()}_`
           : nf(values[p], 1, 1);
-      text(display, this.valueX[p] + Config.VALUE_BOX_WIDTH - 5, vy + 2);
+      text(render, this.valueX[p] + Config.VALUE_BOX_WIDTH - 5, vy + 2);
 
       this.sliders[p].val = constrain(values[p], this.mins[p], this.maxes[p]);
-      this.sliders[p].display();
-      this.minusButtons[p].display();
-      this.plusButtons[p].display();
+      this.sliders[p].render();
+      this.minusButtons[p].render();
+      this.plusButtons[p].render();
     }
   }
 

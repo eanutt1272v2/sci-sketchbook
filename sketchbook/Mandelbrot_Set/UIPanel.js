@@ -11,7 +11,7 @@ class UIPanel {
     this.layout.add("zoomInfo", 19, "panel");
     this.layout.add("posInfo", 19, "panel");
     this.layout.add("hints", 15, "panel");
-    this.layout.add("colorMap", 28, "panel");
+    this.layout.add("colourMap", 28, "panel");
     this.layout.finish();
 
     this.slider = new Slider(
@@ -41,7 +41,7 @@ class UIPanel {
 
     this.dropdown = new Dropdown(
       this.layout.contentX(),
-      this.layout.getY("colorMap"),
+      this.layout.getY("colourMap"),
       180,
       26,
       this.appcore.renderer.mapNames,
@@ -117,10 +117,10 @@ class UIPanel {
       text("(click to type)", px + 155, this.layout.getY("iterLabel") + 3);
     }
 
-    this.slider.display();
+    this.slider.render();
 
     for (const b of this.stepButtons) {
-      b.display();
+      b.render();
     }
 
     noStroke();
@@ -143,11 +143,11 @@ class UIPanel {
       this.layout.getY("hints"),
     );
 
-    this.dropdown.display(this.appcore.renderer.currentMapIndex);
+    this.dropdown.render(this.appcore.renderer.currentMapIndex);
 
-    this.exportBtn.display();
-    this.zoomInBtn.display();
-    this.zoomOutBtn.display();
+    this.exportBtn.render();
+    this.zoomInBtn.render();
+    this.zoomOutBtn.render();
     this.renderCredits();
   }
 

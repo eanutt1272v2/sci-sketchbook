@@ -2,14 +2,14 @@ class GUI {
   constructor(
     params,
     statistics,
-    displayData,
+    renderData,
     metadata,
     animalLibrary = null,
     appcore = null,
   ) {
     this.params = params;
     this.statistics = statistics;
-    this.displayData = displayData;
+    this.renderData = renderData;
     this.metadata = metadata;
     this.animalLibrary = animalLibrary;
     this.appcore = appcore;
@@ -29,7 +29,7 @@ class GUI {
         { title: "Sim" },
         { title: "Params" },
         { title: "Animals" },
-        { title: "Display" },
+        { title: "Render" },
         { title: "Stats" },
         { title: "Media" },
       ],
@@ -38,7 +38,7 @@ class GUI {
     this.createSimulationTab(tabs.pages[0]);
     this.createParametersTab(tabs.pages[1]);
     this.createAnimalsTab(tabs.pages[2]);
-    this.createDisplayTab(tabs.pages[3]);
+    this.createRenderTab(tabs.pages[3]);
     this.createStatisticsTab(tabs.pages[4]);
     this.createMediaTab(tabs.pages[5]);
   }
@@ -257,7 +257,7 @@ class GUI {
       .on("click", () => this.appcore?.loadSelectedAnimal());
   }
 
-  createDisplayTab(page) {
+  createRenderTab(page) {
     const { params } = this;
 
     page
@@ -273,8 +273,8 @@ class GUI {
 
     page.addBlade({ view: "separator" });
 
-    page.addBinding(params, "displayMode", {
-      label: "Display Mode",
+    page.addBinding(params, "renderMode", {
+      label: "Render Mode",
       options: {
         World: "world",
         "Potential Field": "potential",

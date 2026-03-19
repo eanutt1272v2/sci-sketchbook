@@ -85,14 +85,14 @@ class Particle {
     );
   }
 
-  display() {
+  render() {
     colorMode(RGB, 255);
-    fill(this.getDisplayColour());
-    const pRadius = 2;
-    rect(this.x - pRadius / 2, this.y - pRadius / 2, pRadius, pRadius);
+    stroke(this.getRenderColour());
+    strokeWeight(2);
+    point(this.x, this.y);
   }
 
-  getDisplayColour() {
+  getRenderColour() {
     if (this.closeNeighbourCount > 15) {
       return color(255, 80, 255);
     }

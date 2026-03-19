@@ -20,6 +20,11 @@ class AppCore {
     this.panel = null;
     this.renderer = null;
     this.input = null;
+
+    this._worker = null;
+    this._workerBusy = false;
+    this._renderPending = false;
+    this._workerLutVersion = -1;
   }
 
   windowResized() {
@@ -46,6 +51,64 @@ class AppCore {
 
     this.renderer.generateLUT();
     colorMode(RGB, 255);
+    this._initWorker();
+  }
+
+  _initWorker() {
+    try {
+      this._worker = new Worker("FractalWorker.js");
+    } catch (e) {
+      console.warn(
+        "[Burning Ship Fractal] Worker unavailable, falling back to sync render.",
+        e,
+      );
+      this._worker = null;
+      return;
+    }
+    this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
+    this._workerLutVersion = -1;
+    this._worker.onerror = (e) => {
+      console.error("[Burning Ship Fractal] Worker error:", e);
+      this._workerBusy = false;
+      this.renderer.render();
+    };
+  }
+
+  _dispatchRender() {
+    this._workerBusy = true;
+    this._renderPending = false;
+    if (this._workerLutVersion !== this.renderer.lutVersion) {
+      const lut = this.renderer.buildLUTBuffer();
+      this._worker.postMessage({
+        type: "setLUT",
+        lut,
+        LUT_SIZE: this.renderer.LUT_SIZE,
+      });
+      this._workerLutVersion = this.renderer.lutVersion;
+    }
+    this._worker.postMessage({
+      type: "render",
+      w: width,
+      h: height,
+      zoom: this.zoom,
+      offsetX: this.offsetX,
+      offsetY: this.offsetY,
+      maxIterations: this.maxIterations,
+    });
+  }
+
+  _onWorkerMessage(data) {
+    if (data.type !== "result") return;
+    this._workerBusy = false;
+    if (data.w === width && data.h === height) {
+      this.renderer.renderFromPixels(data.pixels);
+    } else {
+      this.needsRedraw = true;
+    }
+    if (this._renderPending) {
+      this._renderPending = false;
+      this._dispatchRender();
+    }
   }
 
   draw() {
@@ -53,7 +116,15 @@ class AppCore {
     this.input.handleContinuousInput();
 
     if (this.needsRedraw) {
-      this.renderer.render();
+      if (this._worker) {
+        if (!this._workerBusy) {
+          this._dispatchRender();
+        } else {
+          this._renderPending = true;
+        }
+      } else {
+        this.renderer.render();
+      }
       this.needsRedraw = false;
     }
 

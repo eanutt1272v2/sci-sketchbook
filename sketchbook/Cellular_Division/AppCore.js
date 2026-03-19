@@ -26,8 +26,11 @@ class AppCore {
   }
 
   windowResized() {
-    // Keep the fixed-layout UI canvas dimensions on resize.
-    resizeCanvas(1100, 800);
+    const canvasSize = min(windowWidth, windowHeight);
+    resizeCanvas(canvasSize, canvasSize);
+    this.ui = new UIManager(this);
+    this.sim.particleCount = this.sim.defaultParticleCount();
+    this.restartSimulation();
   }
 
   restartSimulation() {

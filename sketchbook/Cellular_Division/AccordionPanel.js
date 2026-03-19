@@ -89,7 +89,7 @@ class AccordionPanel {
     return false;
   }
 
-  drawBackground() {
+  renderBackground() {
     colorMode(RGB, 255);
     fill(this.theme.bgPanel);
     stroke(this.theme.strokePanel);
@@ -128,7 +128,7 @@ class AccordionPanel {
         hy + AccordionPanel.HEADER_HEIGHT / 2,
       );
 
-      this.drawCollapseIndicator(
+      this.renderCollapseIndicator(
         this.x + this.w - this.padding * 2,
         hy + AccordionPanel.HEADER_HEIGHT / 2,
         g.collapsed,
@@ -136,7 +136,7 @@ class AccordionPanel {
     }
   }
 
-  drawCollapseIndicator(cx, cy, collapsed) {
+  renderCollapseIndicator(cx, cy, collapsed) {
     stroke(this.theme.textMuted);
     strokeWeight(1.5);
     noFill();

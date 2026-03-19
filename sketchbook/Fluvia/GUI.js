@@ -153,8 +153,8 @@ class GUI {
   createVisualTab(page) {
     const { params, colourMaps } = this.appcore;
 
-    page.addBinding(params, "displayMethod", {
-      label: "Display Method",
+    page.addBinding(params, "renderMethod", {
+      label: "Render Method",
       options: { "3D": "3D", "2D": "2D" },
     });
 

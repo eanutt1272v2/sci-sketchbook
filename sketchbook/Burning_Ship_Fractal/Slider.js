@@ -12,7 +12,7 @@ class Slider {
     this.locked = false;
   }
 
-  display() {
+  render() {
     colorMode(RGB, 255);
     const trackY = this.y + this.h / 2;
     stroke(this.theme.strokeTrack);

@@ -8,7 +8,7 @@ class Button {
     this.theme = theme;
   }
 
-  display() {
+  render() {
     colorMode(RGB, 255);
     fill(this.isMouseOver() ? this.theme.bgHover : this.theme.bgWidget);
     stroke(this.theme.strokeWidget);

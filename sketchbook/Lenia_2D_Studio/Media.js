@@ -257,7 +257,7 @@ class Media {
           "maskRate",
           "paramP",
           "colourMap",
-          "displayMode",
+          "renderMode",
           "renderGrid",
           "renderScale",
           "renderLegend",
@@ -327,8 +327,8 @@ class Media {
 
   _getFilename(extension) {
     const { name, version } = this.appcore.metadata;
-    const { displayMode, gridSize } = this.appcore.params;
+    const { renderMode, gridSize } = this.appcore.params;
     const ts = Date.now();
-    return `${name}_${version}_${displayMode}_${gridSize}_${ts}.${extension}`;
+    return `${name}_${version}_${renderMode}_${gridSize}_${ts}.${extension}`;
   }
 }

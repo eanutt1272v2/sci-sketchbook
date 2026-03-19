@@ -14,7 +14,7 @@ const Config = {
 
 const metadata = {
   name: "Cellular Division",
-  version: "v2.5.8-dev",
+  version: "v2.6.3-dev",
   author: "@eanutt1272.v2",
 };
 
@@ -27,7 +27,8 @@ function preload() {
 }
 
 function setup() {
-  mainCanvas = createCanvas(1100, 800);
+  const canvasSize = min(windowWidth, windowHeight);
+  mainCanvas = createCanvas(canvasSize, canvasSize);
   setupCanvasProperties(mainCanvas);
   appcore = new AppCore({ metadata });
 }

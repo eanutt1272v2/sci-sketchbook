@@ -55,15 +55,11 @@ class LeftPanel {
   }
 
   render() {
-    this.panel.recompute();
-    this.cacheHitBoxes();
-    this.restartButton.y = this.panel.getY("restart");
-    this.pauseButton.y = this.panel.getY("pause");
     this.pauseButton.label = this.sim.isPaused()
       ? "Play Simulation"
       : "Pause Simulation";
 
-    this.panel.drawBackground();
+    this.panel.renderBackground();
     const px = this.panel.contentX();
 
     this.renderStatistics(px);
@@ -114,8 +110,8 @@ class LeftPanel {
     );
 
     this.renderParticleInput(px);
-    this.restartButton.display();
-    this.pauseButton.display();
+    this.restartButton.render();
+    this.pauseButton.render();
   }
 
   renderParticleInput(px) {
@@ -131,10 +127,10 @@ class LeftPanel {
     fill(this.theme.textPrimary);
     textSize(this.theme.textSizeSecondary);
     textAlign(LEFT, TOP);
-    const display = isTyping
+    const render = isTyping
       ? `${this.input.getTypingBuffer()}_`
       : str(this.sim.getParticleCount());
-    text(display, px + 8, iy + 5);
+    text(render, px + 8, iy + 5);
   }
 
   renderGraph() {
@@ -186,6 +182,9 @@ class LeftPanel {
   handleHeaderClick(mx, my) {
     if (this.panel.handleHeaderClick(mx, my)) {
       this.panel.recompute();
+      this.cacheHitBoxes();
+      this.restartButton.y = this.panel.getY("restart");
+      this.pauseButton.y = this.panel.getY("pause");
       return true;
     }
     return false;

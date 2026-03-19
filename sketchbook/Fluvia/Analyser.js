@@ -1,7 +1,7 @@
 class Analyser {
   constructor(appcore) {
     this.appcore = appcore;
-    this.analysisIntervalMs = 120;
+    this.analysisIntervalMs = 250;
     this.simulationStartTime = performance.now();
     this.reinitialise();
   }

@@ -38,7 +38,7 @@ class AppCore {
       colourMap: this.colourMapKeys.includes("turbo")
         ? "turbo"
         : this.colourMapKeys[0],
-      displayMode: "world",
+      renderMode: "world",
 
       renderGrid: true,
       renderScale: true,
@@ -72,7 +72,7 @@ class AppCore {
       fps: 0,
     };
 
-    this.displayData = {
+    this.renderData = {
       frameCount: 0,
       lastTime: 0,
     };
@@ -83,7 +83,7 @@ class AppCore {
     this.animalLibrary.loadFromData(animalsData);
     this.board = new Board(this.params.gridSize);
     this.automaton = new Automaton(this.params);
-    this.analyser = new Analyser(this.statistics, this.displayData);
+    this.analyser = new Analyser(this.statistics, this.renderData);
     this.renderer = new Renderer(
       this.params.gridSize,
       this.colourMaps,
@@ -93,7 +93,7 @@ class AppCore {
     this.gui = new GUI(
       this.params,
       this.statistics,
-      this.displayData,
+      this.renderData,
       this.metadata,
       this.animalLibrary,
       this,
@@ -303,11 +303,11 @@ class AppCore {
       this.renderer.render(
         this.board,
         this.automaton,
-        this.params.displayMode,
+        this.params.renderMode,
         this.params.colourMap,
       );
 
-      if (this.params.renderGrid && this.params.displayMode !== "kernel") {
+      if (this.params.renderGrid && this.params.renderMode !== "kernel") {
         this.renderer.renderGrid(this.params.R);
       }
 
@@ -325,7 +325,7 @@ class AppCore {
 
       if (
         this.params.renderMotionOverlay &&
-        this.params.displayMode !== "kernel"
+        this.params.renderMode !== "kernel"
       ) {
         this.renderer.renderMotionOverlay(this.statistics, this.params);
       }
