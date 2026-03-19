@@ -257,7 +257,7 @@ class GUI {
 
     scaleFolder
       .addBinding(params, "autoScaleSimParams", {
-        label: "Auto-scale Sim Params to Scale",
+        label: "Auto-scale sim params to scale",
       })
       .on("change", () => {
         if (!this.appcore || !params.autoScaleSimParams) return;
@@ -269,7 +269,7 @@ class GUI {
       });
 
     scaleFolder
-      .addButton({ title: "Manually Scale Sim Params to Scale" })
+      .addButton({ title: "Manually scale sim params to scale" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
@@ -281,7 +281,7 @@ class GUI {
       });
 
     scaleFolder
-      .addButton({ title: "Reset to Sim Params from Animal" })
+      .addButton({ title: "Reset to sim params from animal" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
