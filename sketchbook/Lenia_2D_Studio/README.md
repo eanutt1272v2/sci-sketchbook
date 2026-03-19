@@ -2,59 +2,64 @@
 
 ## Overview
 
-Continuous cellular automata studio inspired by Lenia, designed for experimenting with smooth life-like dynamics, kernels, and species presets.
+A continuous cellular automata implementation of Lenia, designed for experimenting with smooth life-like dynamics, kernels, and the organism catalogue.
 
-## Implementation
+The model uses continuous state values and convolution-based local interaction, which makes many patterns more resilient and organism-like than binary cellular automata (e.g. GoL, which is actually in the bottom of the catalogue, along, with smooth life).
 
-- Modular p5.js application (`Automaton`, `Board`, `Renderer`, `Analyser`, `GUI`)
-- Preset library via `animals.json`
-- Includes `LENIAND_PORT.md` notes for related porting context
+## Method
+
+Let `A_t(x) in [0,1]` denote field intensity at position `x` and time `t`.
+
+The update loop follows the pipeline:
+
+1. Compute potential through convolution: `U_t(x) = (K * A_t)(x)`
+2. Apply growth mapping: `G_t(x) = G(U_t(x); m, s)`
+3. Integrate in time: `A_{t+dt}(x) = clip(A_t(x) + dt * G_t(x), 0, 1)`
+
+`dt` is controlled by the time-scale parameter `T`.
+
+Control parameters include `R`, `T`, `m`, `s`, kernel/growth families (`kn`, `gn`), clipping mode, and optional multi-step integration:
+
+- `R`: interaction radius (kernel support)
+- `T`: temporal scale / update speed
+- `m`: growth-centre (preferred potential)
+- `s`: growth-width (tolerance around `m`)
+
+For larger grids, convolution is accelerated in `FFTWorker.js`.
+
+## Architecture
+
+- `AppCore.js`: management of worker and other components
+- `FFTWorker.js`: kernel generation and world-step execution
+- `Automaton.js`, `Board.js`: world state and updating
+- `Renderer.js`: world/potential/field/kernel render modes
+- `Analyser.js`: motion and morphology statistics
+- `AnimalLibrary.js`, `animals.json`: preset management
+- `GUI.js`, `InputHandler.js`, `Media.js`: controls and export systems
 
 ## Controls
 
-- Load and test predefined organisms
-- Adjust kernel and growth parameters
-- Tune simulation speed and visualisation settings
+- `Space`: run/pause
+- `N`: single step
+- `A / D`: previous/next animal
+- `F`: load selected animal
+- `Tab`: cycle render mode
+- `G/L/O/M/B`: overlay toggles
+- `[ ]`, `; '`, `, .`, `- +`: key parameter nudges
+- see keymap for extended reference
 
-### Keyboard Shortcuts
+## Notes
 
-| Key | Action |
-| --- | --- |
-| `#` | Toggle keyboard reference overlay |
-| `Space` | Pause or resume simulation |
-| `N` | Step one generation |
-| `A / D` | Load previous or next animal |
-| `F` | Load currently selected animal |
-| `P` | Toggle place mode for click placement |
-| `Z` | Randomise world |
-| `X` | Clear world |
-| `R` | Reset simulation state |
-| `Tab` | Cycle render mode (`world → potential → field → kernel`) |
-| `T` | Cycle colour map |
-| `G` | Toggle grid |
-| `L` | Toggle colour legend |
-| `O` | Toggle statistics overlay |
-| `M` | Toggle motion overlay (centre dot + direction arrow) |
-| `B` | Toggle scale bar |
-| `H` | Hide or show GUI panel |
-| `V` | Cycle grid size (`64 / 128 / 256`) |
-| `[ / ]` | Decrease or increase kernel radius `R` |
-| `; / '` | Decrease or increase time integration `T` |
-| `, / .` | Decrease or increase growth centre `m` |
-| `- / +` | Decrease or increase growth width `s` |
-| `← / →` | Decrease or increase noise |
-| `↓ / ↑` | Decrease or increase mask rate |
-| `K` | Cycle kernel function |
-| `Y` | Cycle growth function |
-| `U` | Toggle soft clipping |
-| `I` | Toggle multi-step integration |
-| `S` | Save canvas as PNG |
-| `E` | Export world state (JSON) |
-| `C` | Export statistics (CSV) |
+- The keymap overlay (`#`) shows full keyboard control details.
+- Small changes in `m`, `s`, and `R` can alter behaviour (extinction, stable motion, oscillation, and explosion).
 
-## How to Run
+## References
 
-### Browser (p5.js/WebGL)
+- Bert Wang-Chak Chan, "Lenia: Biology of Artificial Life" (2019): <https://arxiv.org/abs/1812.05433>
+- Lenia project and demos: <https://chakazul.github.io/lenia.html>
+- Lenia rule summary (quick reference): <https://en.wikipedia.org/wiki/Lenia>
+
+## Run
 
 ```bash
 cd sketchbook/Lenia_2D_Studio

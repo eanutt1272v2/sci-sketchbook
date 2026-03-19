@@ -5,7 +5,6 @@ class Board {
     this.potential = this._createGrid();
     this.field = this._createGrid();
     this.fieldOld = null;
-    this.names = ["", "", ""];
     this.params = {
       R: 13,
       T: 10,
@@ -28,7 +27,7 @@ class Board {
   _getPatternGrid(pattern) {
     if (!pattern || !pattern.cells) return null;
     if (!pattern._parsedGrid) {
-      pattern._parsedGrid = RLEParser.parse(pattern.cells);
+      pattern._parsedGrid = RLECodec.parse(pattern.cells);
     }
     return pattern._parsedGrid;
   }
@@ -348,16 +347,12 @@ class Board {
       params: this.params,
       cells: this._cellsToRLE(),
       stats: stats,
-      names: this.names,
     };
   }
   static fromJSON(data) {
     const board = new Board(data.size || 128);
     if (data.params) {
       board.params = { ...board.params, ...data.params };
-    }
-    if (data.names) {
-      board.names = data.names;
     }
     if (data.cells) {
       board._cellsFromRLE(data.cells);
@@ -366,80 +361,15 @@ class Board {
   }
 
   _cellsToRLE() {
-    let rle = "";
-    let lastVal = -1;
-    let count = 0;
-
-    for (let i = 0; i < this.cells.length; i++) {
-      const val = Math.round(this.cells[i] * 255);
-
-      if (val === lastVal) {
-        count++;
-      } else {
-        if (count > 0) {
-          rle += (count > 1 ? count : "") + Board.val2ch(lastVal) + " ";
-        }
-        lastVal = val;
-        count = 1;
-      }
-    }
-
-    if (count > 0) {
-      rle += (count > 1 ? count : "") + Board.val2ch(lastVal) + "!";
-    }
-
-    return rle;
+    return RLECodec.encode(this.cells, this.size, this.size);
   }
 
   _cellsFromRLE(rle) {
-    let idx = 0;
-    let count = "";
-
-    for (let i = 0; i < rle.length; i++) {
-      const ch = rle[i];
-
-      if (ch >= "0" && ch <= "9") {
-        count += ch;
-      } else if (ch === "!" || ch === " ") {
-        continue;
-      } else {
-        const n = count ? parseInt(count) : 1;
-        const val = Board.ch2val(ch) / 255;
-
-        for (let j = 0; j < n; j++) {
-          if (idx < this.cells.length) {
-            this.cells[idx++] = val;
-          }
-        }
-        count = "";
-      }
-    }
-  }
-
-  static ch2val(c) {
-    if (c === "." || c === "b") return 0;
-    if (c === "o") return 255;
-    if (c.length === 1) return Math.min(255, ord(c) - ord("A") + 1);
-    return Math.min(
-      255,
-      (ord(c[0]) - ord("p")) * 24 + (ord(c[1]) - ord("A") + 25),
-    );
-  }
-
-  static val2ch(v) {
-    if (v === 0) return ".";
-    if (v < 25) return String.fromCharCode(65 + v - 1);
-    return (
-      String.fromCharCode(112 + Math.floor((v - 25) / 24)) +
-      String.fromCharCode(65 + ((v - 25) % 24))
-    );
+    const decoded = RLECodec.decode(rle, this.size, this.size);
+    this.cells.set(decoded);
   }
 
   static get EPSILON() {
     return 1e-10;
   }
-}
-
-function ord(c) {
-  return c.charCodeAt(0);
 }

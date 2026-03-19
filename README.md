@@ -1,77 +1,66 @@
 # sci-sketchbook <img src="logo.png" alt="sci-sketchbook logo" align="right" width="175">
 
-> [!IMPORTANT]
-> **Major Migration and Refactor Notice**
->
-> I am currently transitioning the vast majority of the library's sketches from **Processing (Java)** to **p5.js** to improve web accessibility, cross-device support, and eliminate version/feature drift caused by legacy versions. During this period:
->
-> - Many sketches are undergoing massive structural refactors which I am attempting to complete and roll out quickly.
-> - Legacy `.pde` files and sketch versions are being phased out. Some older experiments may be discontinued or deleted if they no longer fit my goals.
-> - You may encounter some bugs, but these will likely be patched very quickly. If they are not patched, give me a nudge in issues or email me at [**eanutt1272.v2@gmail.com**](mailto:eanutt1272.v2@gmail.com).
+## Overview
 
-A collection of scientific and mathematical creative-coding sketches, simulations, and visualisations.
+A curated collection of interactive maths and science sketches used to explore dynamical systems, emergent behaviour, numerical simulation, and visual computation.
 
-The repository includes projects built with:
+Most active projects are implemented in `p5.js` with worker acceleration, while a smaller set of legacy studies remains in Processing.
 
-- `p5.js`
-- `Processing (Java)` (soon to be discontinued)
-- `GLSL` shaders (via p5.js/WebGL)
+Live deployment: <https://sci-sketchbook.onrender.com/>
 
-A public deployment is available at <https://sci-sketchbook.onrender.com/>.
+## Themes
+
+- Fractals and complex dynamics
+- Continuous cellular automata and artificial life
+- Hydraulic erosion and terrain evolution
+- Wavefunction and field visualisation
+- Educational neural-network demonstrations
 
 ## Sketch Index
 
-| Sketch | Summary | Implementations |
+| Sketch | Focus | Runtime |
 | :-- | :-- | :-- |
-| [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | Burning Ship fractal explorer on the complex plane. | p5.js |
-| [Cellular Division](./sketchbook/Cellular_Division) | Particle-based emergent growth and division simulation based on PPS model. | p5.js |
-| [Eigen](./sketchbook/Eigen) | Hydrogen orbital visualiser mapping electron probability density using radial and angular wavefunctions. | p5.js |
-| [Fluvia](./sketchbook/Fluvia) | Fast Lagrangian hydraulic terrain erosion simulation with meandering river systems. | p5.js |
-| [Julia Set](./sketchbook/Julia_Set) | Interactive Julia set fractal explorer. | p5.js |
-| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Lenia continuous cellular automata implementation with catalogue and statistics. | p5.js |
-| [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | Interactive Mandelbrot set fractal explorer. | p5.js |
-| [MandelBulber](./sketchbook/MandelBulber) | 3D Mandelbulb point-cloud exploration in Processing. | Processing (Java) |
-| [Neural Network](./sketchbook/Neural_Network) | Visual and functional feedforward digit-recognition neural network demonstration. | Processing (Java) |
+| [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | Non-holomorphic escape-time fractal dynamics | p5.js + worker |
+| [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | Quadratic complex-set exploration | p5.js + worker |
+| [Julia Set](./sketchbook/Julia_Set) | Parameter-fixed quadratic Julia dynamics | p5.js + worker |
+| [Cellular Division](./sketchbook/Cellular_Division) | Primordial Particle System emergence | p5.js + worker |
+| [Eigen](./sketchbook/Eigen) | Hydrogen orbital probability-density slicing | p5.js + worker |
+| [Fluvia](./sketchbook/Fluvia) | Lagrangian hydraulic erosion simulation | p5.js + worker + GLSL |
+| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia-style automata laboratory | p5.js + FFT worker |
+| [MandelBulber](./sketchbook/MandelBulber) | Legacy Mandelbulb point-cloud rendering | Processing |
+| [Neural Network](./sketchbook/Neural_Network) | Legacy handwritten-digit classifier demo | Processing |
 
 ## Running Locally
 
 ### Option 1: Docker + Caddy (recommended)
 
-1. Clone the repository.
-
 ```bash
 git clone https://github.com/eanutt1272v2/sci-sketchbook.git
 cd sci-sketchbook
-```
-
-1. Start the local server.
-
-```bash
 docker compose up -d
 ```
 
-1. Open `http://localhost`.
+Then open `http://localhost` and browse to `sketchbook/<Sketch_Name>/`.
 
-Notes:
-
-- Default ports are `80` and `443`.
-- View logs with `docker compose logs -f`.
-
-### Option 2: Open sketch folders directly
-
-Most browser sketches can also be run from each sketch directory via a simple static web server.
-
-Example:
+### Option 2: Run a single sketch via static server
 
 ```bash
-cd sketchbook/Mandelbrot_Set/p5_JS
+cd sketchbook/Mandelbrot_Set
 python3 -m http.server 8080
 ```
 
-Then open `http://localhost:8080`.
+Open `http://localhost:8080`.
 
-Processing sketches can be opened in Processing 4.x via the corresponding `.pde` entry file.
+### Option 3: Processing sketches
+
+Open the corresponding `.pde` file in Processing 4.x and run.
+
+## Notes
+
+- Heavy numerical kernels are offloaded to Web Workers where available.
+- Most simulation pipelines use typed arrays to reduce allocation overhead.
+- READMEs are written in British English and prioritise mathematical clarity.
 
 ## Licence
 
-This project is made available under the terms in [`LICENSE`](./LICENSE).
+See [`LICENSE`](./LICENSE).

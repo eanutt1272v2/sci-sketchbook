@@ -1,31 +1,43 @@
 # Julia Set
 
 ## Overview
-Interactive Julia set explorer for the recurrence:
+
+Interactive Julia-set explorer for
 
 `z_{n+1} = z_n^2 + c`
 
-with fixed complex parameter `c` and per-pixel iteration over the complex plane.
+with fixed complex parameter `c`, where each pixel supplies a distinct initial condition `z_0`.
 
-## Implementations
-- `Processing_Java/` (modular Processing version)
-- `p5_JS/` (modular browser version)
+## Method
+
+Per pixel:
+
+- Interpret the pixel coordinate as initial state `z_0`
+- Iterate until escape or iteration cap
+- Compute smooth escape-time colouring using the same interpolation strategy as Mandelbrot rendering
+
+This approach does not encounter hard banding and produces a smooth and continuous gradient.
+
+## Architecture
+
+- `JuliaSet.js`: p5 sketch entrypoint
+- `AppCore.js`: state and worker management
+- `FractalWorker.js`: orbit-integration solver
+- `FractalRenderer.js`: LUT and frame update pipeline
+- `InputHandler.js`: pointer/touch/keyboard interaction
 
 ## Controls
-- Pan: arrow keys or drag
-- Zoom: keyboard and mouse wheel
-- Iteration depth: UI slider/controls
-- Palette: selectable colour maps
-- UI visibility/reset shortcuts available in-app
 
-## How to Run
+- Drag/touch to pan
+- Wheel/pinch to zoom
+- Adjust iteration depth
+- Switch palette and export
 
-### Browser (p5.js)
+## Run
+
 ```bash
-cd sketchbook/Julia_Set/p5_JS
+cd sketchbook/Julia_Set
 python3 -m http.server 8080
 ```
-Open `http://localhost:8080`.
 
-### Processing (Java)
-Open `sketchbook/Julia_Set/Processing_Java/Julia_Set.pde` in Processing 4.x and click Run.
+Open `http://localhost:8080`.

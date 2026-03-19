@@ -325,12 +325,19 @@ class Analyser {
     return csv;
   }
   importCSV(csvText) {
-    const lines = csvText.trim().split("\n");
+    const lines = String(csvText || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#"));
     this.series = [];
 
+    if (lines.length < 2) return;
+
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(",").map((v) => parseFloat(v) || 0);
-      this.series.push(values);
+      const values = lines[i].split(",").map((v) => parseFloat(v));
+      if (values.some((v) => Number.isFinite(v))) {
+        this.series.push(values.map((v) => (Number.isFinite(v) ? v : 0)));
+      }
     }
   }
 }

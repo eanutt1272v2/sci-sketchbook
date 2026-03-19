@@ -361,9 +361,6 @@ class GUI {
 
     const imp = page.addFolder({ title: "Import" });
     imp
-      .addButton({ title: "Import Image to World" })
-      .on("click", () => media?.openImportDialog());
-    imp
       .addButton({ title: "Import Params (JSON)" })
       .on("click", () => media?.importParamsJSON());
     imp

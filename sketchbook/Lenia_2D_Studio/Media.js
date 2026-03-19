@@ -5,9 +5,6 @@ class Media {
     this.recordedChunks = [];
     this.isRecording = false;
 
-    this.importInput = this._createHiddenInput("image/*", (file) =>
-      this.handleImageImport(file),
-    );
     this.dataImportInput = this._createHiddenInput(
       ".json,application/json,text/plain",
       (file) => {
@@ -34,68 +31,10 @@ class Media {
     return input;
   }
 
-  openImportDialog() {
-    this.importInput.value = "";
-    this.importInput.click();
-  }
-
   openDataImportDialog(handler) {
     this.pendingDataImportHandler = handler;
     this.dataImportInput.value = "";
     this.dataImportInput.click();
-  }
-
-  handleImageImport(file) {
-    if (!file?.type.startsWith("image")) {
-      console.error("Import failed: provided file is not an image");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const imgSrc = event.target.result;
-      loadImage(
-        imgSrc,
-        (img) => {
-          const { board, analyser, automaton } = this.appcore;
-          const size = board.size;
-          const area = size * size;
-
-          img.resize(size, size);
-          img.loadPixels();
-
-          const pixels = img.pixels;
-          if (!pixels || pixels.length < area * 4) {
-            console.error("Import failed: pixel buffer incomplete");
-            return;
-          }
-
-          for (let i = 0; i < area; i++) {
-            const idx = i << 2;
-            const brightness =
-              (0.2126 * pixels[idx] +
-                0.7152 * pixels[idx + 1] +
-                0.0722 * pixels[idx + 2]) /
-              255;
-            board.cells[i] = brightness;
-          }
-
-          board.potential.fill(0);
-          board.field.fill(0);
-          if (board.fieldOld) board.fieldOld.fill(0);
-
-          automaton.reset();
-          analyser.resetStatistics();
-          analyser.reset();
-
-          this.appcore.refreshGUI();
-          console.log(`Imported image into Lenia board: ${size}x${size}`);
-        },
-        (err) => console.error("Import failed: load error", err),
-      );
-    };
-
-    reader.readAsDataURL(file);
   }
 
   startRecording() {
@@ -161,6 +100,13 @@ class Media {
   exportWorldJSON() {
     const data = this.appcore.board.toJSON();
     if (!data) return;
+
+    data.metadata = this._getMetadataSnapshot();
+    data.params = this._getFullParamsSnapshot();
+    data.stats = this._getFullStatsSnapshot();
+    data.format = "lenia-world-v2";
+    data.exportedAt = new Date().toISOString();
+
     this._downloadJSON(data, this._getFilename("world.json"));
     console.log(`[Lenia] Exported world JSON: size=${this.appcore.board.size}`);
   }
@@ -172,34 +118,48 @@ class Media {
           throw new Error("Invalid world JSON payload");
         }
 
-        const importedBoard = Board.fromJSON(data);
-        const newSize = importedBoard.size || this.appcore.params.gridSize;
-
-        if (newSize !== this.appcore.params.gridSize) {
-          this.appcore.params.gridSize = newSize;
-          this.appcore.changeResolution();
-        }
-
-        this.appcore._ensureBuffers();
-        this.appcore.board.cells.set(
-          importedBoard.cells.subarray(0, this.appcore.board.cells.length),
-        );
-        this.appcore.board.potential.fill(0);
-        this.appcore.board.field.fill(0);
-        if (this.appcore.board.fieldOld) this.appcore.board.fieldOld.fill(0);
-
-        this.appcore.analyser.resetStatistics();
-        this.appcore.analyser.reset();
-        this.appcore.automaton.reset();
-        this.appcore.refreshGUI();
-        this.appcore._workerSendKernel();
-        console.log(`[Lenia] Imported world JSON: size=${newSize}`);
+        const payload = this._normaliseWorldPayload(data);
+        this.appcore.importWorldPayload(payload);
       });
     });
   }
 
+  _normaliseWorldPayload(data) {
+    const rawSize = Number(data.size) || Number(data?.params?.gridSize);
+    const size = this.appcore._normaliseGridSize(rawSize || this.appcore.params.gridSize);
+
+    let cells = null;
+    if (typeof data.cells === "string") {
+      cells = RLECodec.decode(data.cells, size, size);
+    } else if (Array.isArray(data.cells)) {
+      const out = new Float32Array(size * size);
+      const n = Math.min(data.cells.length, out.length);
+      for (let i = 0; i < n; i++) {
+        const v = Number(data.cells[i]);
+        out[i] = Number.isFinite(v) ? constrain(v, 0, 1) : 0;
+      }
+      cells = out;
+    }
+
+    if (!cells) {
+      throw new Error("Invalid world JSON: unsupported cells encoding");
+    }
+
+    return {
+      size,
+      cells,
+      params: data.params,
+    };
+  }
+
   exportStatisticsCSV() {
-    const csv = this.appcore.analyser.exportCSV();
+    const metadataJson = JSON.stringify(this._getMetadataSnapshot());
+    const exportedAt = new Date().toISOString();
+    const csvBody = this.appcore.analyser.exportCSV();
+    const csv =
+      `# exportedAt: ${exportedAt}\n` +
+      `# metadata: ${metadataJson}\n` +
+      csvBody;
     if (!csv) return;
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
     console.log(`[Lenia] Exported statistics CSV`);
@@ -207,12 +167,9 @@ class Media {
 
   exportStatisticsJSON() {
     const payload = {
-      metadata: this.appcore.metadata,
-      statistics: { ...this.appcore.statistics },
-      series: Array.isArray(this.appcore.analyser.series)
-        ? this.appcore.analyser.series
-        : [],
+      metadata: this._getMetadataSnapshot(),
       exportedAt: new Date().toISOString(),
+      ...this._getFullStatsSnapshot(),
     };
     this._downloadJSON(payload, this._getFilename("stats.json"));
     console.log(
@@ -222,9 +179,9 @@ class Media {
 
   exportParamsJSON() {
     const payload = {
-      metadata: this.appcore.metadata,
-      params: JSON.parse(JSON.stringify(this.appcore.params)),
+      metadata: this._getMetadataSnapshot(),
       exportedAt: new Date().toISOString(),
+      params: this._getFullParamsSnapshot(),
     };
     this._downloadJSON(payload, this._getFilename("params.json"));
     console.log(`[Lenia] Exported params JSON`);
@@ -233,8 +190,12 @@ class Media {
   importParamsJSON() {
     this.openDataImportDialog((file) => {
       this._readJSONFile(file, (data) => {
-        if (!data || typeof data !== "object" || !data.params) {
+        if (!data || typeof data !== "object") {
           throw new Error("Invalid params JSON payload");
+        }
+
+        if (!data.params || typeof data.params !== "object") {
+          throw new Error("Invalid params JSON format");
         }
 
         const incoming = data.params;
@@ -296,6 +257,27 @@ class Media {
     };
     reader.onerror = () => console.error("File read failed");
     reader.readAsText(file);
+  }
+
+  _getFullParamsSnapshot() {
+    return JSON.parse(JSON.stringify(this.appcore.params || {}));
+  }
+
+  _getMetadataSnapshot() {
+    return JSON.parse(JSON.stringify(this.appcore.metadata || {}));
+  }
+
+  _getFullStatsSnapshot() {
+    return {
+      statistics: JSON.parse(JSON.stringify(this.appcore.statistics || {})),
+      series: JSON.parse(
+        JSON.stringify(
+          Array.isArray(this.appcore.analyser?.series)
+            ? this.appcore.analyser.series
+            : [],
+        ),
+      ),
+    };
   }
 
   _downloadJSON(payload, filename) {

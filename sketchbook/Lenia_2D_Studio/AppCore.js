@@ -405,6 +405,119 @@ class AppCore {
     );
   }
 
+  _normaliseGridSize(size) {
+    const allowed = [64, 128, 256, 512];
+    const raw = Number(size);
+    if (!Number.isFinite(raw) || raw <= 0) return this.params.gridSize;
+
+    let closest = allowed[0];
+    let bestDist = Math.abs(raw - closest);
+    for (let i = 1; i < allowed.length; i++) {
+      const d = Math.abs(raw - allowed[i]);
+      if (d < bestDist) {
+        closest = allowed[i];
+        bestDist = d;
+      }
+    }
+
+    return closest;
+  }
+
+  _applyImportedWorldParams(rawParams) {
+    if (!rawParams || typeof rawParams !== "object") return;
+
+    const p = this.params;
+    const toNumber = (value, fallback) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    if ("R" in rawParams) p.R = Math.round(constrain(toNumber(rawParams.R, p.R), 2, 50));
+    if ("T" in rawParams) p.T = Math.round(constrain(toNumber(rawParams.T, p.T), 1, 50));
+    if ("m" in rawParams) p.m = constrain(toNumber(rawParams.m, p.m), 0, 0.5);
+    if ("s" in rawParams) p.s = constrain(toNumber(rawParams.s, p.s), 0.001, 0.1);
+    if ("kn" in rawParams) p.kn = Math.round(constrain(toNumber(rawParams.kn, p.kn), 1, 4));
+    if ("gn" in rawParams) p.gn = Math.round(constrain(toNumber(rawParams.gn, p.gn), 1, 3));
+    if ("addNoise" in rawParams) {
+      p.addNoise = constrain(toNumber(rawParams.addNoise, p.addNoise), 0, 10);
+    }
+    if ("maskRate" in rawParams) {
+      p.maskRate = constrain(toNumber(rawParams.maskRate, p.maskRate), 0, 10);
+    }
+    if ("paramP" in rawParams) {
+      p.paramP = Math.round(constrain(toNumber(rawParams.paramP, p.paramP), 0, 64));
+    }
+    if ("softClip" in rawParams) p.softClip = Boolean(rawParams.softClip);
+    if ("multiStep" in rawParams) p.multiStep = Boolean(rawParams.multiStep);
+
+    if ("b" in rawParams) {
+      const b = rawParams.b;
+      if (typeof b === "string") {
+        p.b = b
+          .split(",")
+          .map((v) => RLECodec.parseFraction(v))
+          .filter((v) => Number.isFinite(v));
+      } else if (Array.isArray(b)) {
+        p.b = b.map((v) => Number(v)).filter((v) => Number.isFinite(v));
+      }
+      if (!Array.isArray(p.b) || p.b.length === 0) p.b = [1];
+    }
+  }
+
+  importWorldPayload(payload) {
+    if (!payload || !payload.cells) return;
+
+    this._queueAction("importWorld", () =>
+      this._queueOrRunMutation(() => {
+        const nextSize = this._normaliseGridSize(payload.size || this.params.gridSize);
+        const sizeChanged = nextSize !== this.params.gridSize;
+
+        if (sizeChanged) {
+          this.params.gridSize = nextSize;
+          this._restartWorker();
+
+          const canvasSize = min(windowWidth, windowHeight);
+          resizeCanvas(canvasSize, canvasSize);
+          this.board.resize(nextSize);
+          this.renderer.resize(nextSize);
+          this._pendingPlacement = null;
+        }
+
+        this._ensureBuffers();
+
+        const src = payload.cells;
+        this.board.cells.fill(0);
+        if (src instanceof Float32Array) {
+          this.board.cells.set(src.subarray(0, this.board.cells.length));
+        } else if (Array.isArray(src)) {
+          const n = Math.min(src.length, this.board.cells.length);
+          for (let i = 0; i < n; i++) {
+            const v = Number(src[i]);
+            this.board.cells[i] = Number.isFinite(v) ? constrain(v, 0, 1) : 0;
+          }
+        }
+
+        this.board.potential.fill(0);
+        this.board.field.fill(0);
+        if (this.board.fieldOld) this.board.fieldOld.fill(0);
+
+        this._applyImportedWorldParams(payload.params);
+        this.automaton.reset();
+        this.automaton.updateParameters(this.params);
+
+        this.analyser.resetStatistics();
+        this.analyser.reset();
+
+        this._workerSendKernel();
+        this.refreshGUI();
+
+        console.log(
+          `[Lenia] Imported world: size=${this.params.gridSize}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}`,
+        );
+      }),
+    );
+  }
+
   loadAnimal(animal) {
     if (!animal) return;
 

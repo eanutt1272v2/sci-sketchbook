@@ -36,7 +36,7 @@ class AnimalLibrary {
     if (b !== undefined) {
       params.b =
         typeof b === "string"
-          ? b.split(",").map((val) => RLEParser.parseFraction(val))
+          ? b.split(",").map((val) => RLECodec.parseFraction(val))
           : b;
     }
   }

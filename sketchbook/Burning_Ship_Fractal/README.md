@@ -1,33 +1,45 @@
 # Burning Ship Fractal
 
 ## Overview
-Interactive explorer for the Burning Ship fractal:
+
+Interactive explorer of the Burning Ship fractal, a non-holomorphic quadratic map defined by absolute-value folding:
 
 `z_{n+1} = (|Re(z_n)| + i|Im(z_n)|)^2 + c`
 
-This variant is known for its flame-like geometry and sharp 'filament-like' details.
+This folding breaks rotational symmetry and yields highly anisotropic geometry, including flame-like filaments and cusp chains.
 
-## Implementations
-- `p5_JS/`
+## Method
 
-Both implementations use the same modular UI architecture (`AppCore`, `FractalRenderer`, input handling, and reusable UI widgets).
+For each pixel, the renderer maps canvas coordinates to a complex point `c`, iterates the recurrence, and applies an escape test (`|z|^2 > 16`) up to a maximum iteration cap.
+
+Smooth colouring uses continuous escape-time interpolation:
+
+- `logZn = 0.5 * log(zx^2 + zy^2)`
+- `nu = log(logZn / log(2)) / log(2)`
+- `t = (n + 1 - nu) / maxIterations`
+
+The normalised parameter `t` is then mapped through a LUT to RGB.
+
+## Architecture
+
+- `BurningShipFractal.js`: p5 sketch entrypoint
+- `AppCore.js`: state management, worker dispatch, UI manipulation
+- `FractalWorker.js`: worker-based escape-time kernel
+- `FractalRenderer.js`: LUT generation and framebuffer compositing
+- `InputHandler.js`: robust pan/zoom controls
 
 ## Controls
-- Pan and zoom on the complex plane
-- Adjust iteration depth
-- Switch colour mapping/palette
 
-## Preview
-![Burning Ship Fractal](Burning_Ship_Fractal.png)
+- Drag to pan
+- Wheel/pinch to zoom
+- Adjust iteration depth via slider and step controls
+- Switch colour maps via UI/shortcuts
 
-## How to Run
+## Run
 
-### Browser (p5.js)
 ```bash
-cd sketchbook/Burning_Ship_Fractal/p5_JS
+cd sketchbook/Burning_Ship_Fractal
 python3 -m http.server 8080
 ```
-Open `http://localhost:8080`.
 
-### Processing (Java)
-Open `sketchbook/Burning_Ship_Fractal/Processing_Java/Burning_Ship_Fractal.pde` in Processing 4.x and click Run.
+Open `http://localhost:8080`.

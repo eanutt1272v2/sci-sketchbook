@@ -313,11 +313,6 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "j") {
-      this.appcore.media.openImportDialog();
-      return false;
-    }
-
     if (keyLower === "q") {
       this._cyclePlaceScale(k === "Q" ? -1 : 1);
       return false;
