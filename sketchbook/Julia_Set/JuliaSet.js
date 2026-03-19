@@ -6,7 +6,7 @@ let mainCanvas;
 
 const metadata = {
   name: "Julia Set",
-  version: "v3.0.0-dev",
+  version: "v3.2.0-dev",
   author: "@eanutt1272.v2",
 };
 
