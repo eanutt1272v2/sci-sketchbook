@@ -276,9 +276,6 @@ class GUI {
 
     const data = page.addFolder({ title: "Analysis Data", expanded: true });
     data
-      .addButton({ title: "Export Analysis (JSON)" })
-      .on("click", () => media?.exportAnalysisJSON());
-    data
       .addButton({ title: "Export Stats (CSV)" })
       .on("click", () => media?.exportStatisticsCSV());
   }

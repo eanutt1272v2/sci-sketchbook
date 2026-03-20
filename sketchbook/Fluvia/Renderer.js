@@ -18,10 +18,10 @@ class Renderer {
     this.lastTextureUpdateMs = 0;
     this.textureDirty = true;
     this.compositeLegendItems = [
+      { l: "Water", cKey: "waterColour" },
+      { l: "Sediment", cKey: "sedimentColour" },
       { l: "Flat", cKey: "flatColour" },
       { l: "Steep", cKey: "steepColour" },
-      { l: "Sediment", cKey: "sedimentColour" },
-      { l: "Water", cKey: "waterColour" },
     ];
     this.keymapSections = [
       {
@@ -381,7 +381,11 @@ class Renderer {
       `Rugosity: ${statistics.rugosity.toFixed(3)}`,
       `Slope Complexity: ${statistics.slopeComplexity.toFixed(3)}`,
       `Water Total: ${statistics.totalWater.toFixed(2)}`,
-      `Active Water Cover: ${statistics.activeWaterCover.toFixed(2)} %`,
+      `Active Water Cells: ${statistics.activeWaterCover.toFixed(2)}`,
+      `Comp Water: ${statistics.compositeWaterCoveragePct.toFixed(1)} %`,
+      `Comp Sediment: ${statistics.compositeSedimentCoveragePct.toFixed(1)} %`,
+      `Comp Flat: ${statistics.compositeFlatCoveragePct.toFixed(1)} %`,
+      `Comp Steep: ${statistics.compositeSteepCoveragePct.toFixed(1)} %`,
       `Hydraulic Residence: ${statistics.hydraulicResidence.toFixed(2)}`,
       `Drainage Density: ${statistics.drainageDensity.toFixed(2)} %`,
       `Discharge peak: ${statistics.peakDischarge.toFixed(3)}`,
@@ -405,39 +409,77 @@ class Renderer {
   }
 
   renderLegend() {
-    if (this.appcore.params.surfaceMap === "composite") {
-      this.renderCompositeLegend();
-    } else {
-      this.renderDataLegend();
-    }
-  }
-
-  renderCompositeLegend() {
     push();
-    const params = this.appcore.params;
+    const { surfaceMap, colourMap } = this.appcore.params;
 
-    textSize(14);
-    textAlign(LEFT, CENTER);
+    if (surfaceMap === "composite") {
+      const params = this.appcore.params;
+      const s = this.appcore.statistics;
+      const metrics = {
+        contributionPct: {
+          waterColour: Number(s.compositeWaterCoveragePct) || 0,
+          sedimentColour: Number(s.compositeSedimentCoveragePct) || 0,
+          flatColour: Number(s.compositeFlatCoveragePct) || 0,
+          steepColour: Number(s.compositeSteepCoveragePct) || 0,
+        },
+        meanControls: {
+          slope: Number(s.compositeMeanSlopeWeight) || 0,
+          sediment: Number(s.compositeMeanSedimentAlpha) || 0,
+          discharge: Number(s.compositeMeanWaterAlpha) || 0,
+        },
+      };
+      const anchors = [
+        { l: "Water", cKey: "waterColour", t: 0.10 },
+        { l: "Sediment", cKey: "sedimentColour", t: 0.34 },
+        { l: "Flat", cKey: "flatColour", t: 0.66 },
+        { l: "Steep", cKey: "steepColour", t: 0.90 },
+      ];
 
-    this.compositeLegendItems.forEach((item, i) => {
-      const c = params[item.cKey];
-      const y = 15 + i * 28;
-      fill(c.r, c.g, c.b);
-      stroke(255, 200);
-      strokeWeight(1);
-      rect(width - 110, y, 20, 20);
+      const x = width - 20;
+      const y1 = 20;
+      const y2 = height - 20;
+      const w = 15;
+      const h = y2 - y1;
+
+      const grad = drawingContext.createLinearGradient(0, y1, 0, y2);
+      const stops = anchors
+        .map((anchor) => ({ stop: 1 - anchor.t, cKey: anchor.cKey }))
+        .sort((a, b) => a.stop - b.stop);
+
+      const firstColour = params[stops[0].cKey];
+      const lastColour = params[stops[stops.length - 1].cKey];
+      grad.addColorStop(0, `rgb(${firstColour.r}, ${firstColour.g}, ${firstColour.b})`);
+      stops.forEach((stop) => {
+        const c = params[stop.cKey];
+        grad.addColorStop(stop.stop, `rgb(${c.r}, ${c.g}, ${c.b})`);
+      });
+      grad.addColorStop(1, `rgb(${lastColour.r}, ${lastColour.g}, ${lastColour.b})`);
+
+      noStroke();
+      drawingContext.fillStyle = grad;
+      drawingContext.fillRect(x - w, y1, w, h);
+
+      noFill();
+      stroke(255, 255, 255, 200);
+      strokeWeight(1.5);
+      rect(x - w, y1, w, h);
 
       fill(255);
       noStroke();
-      text(item.l, width - 82, y + 10);
-    });
-    pop();
-  }
+      textSize(11);
+      textAlign(RIGHT, CENTER);
+      anchors.forEach((anchor) => {
+        const y = y2 - anchor.t * h;
+        const pct = metrics.contributionPct[anchor.cKey] || 0;
+        text(`${anchor.l} ${pct.toFixed(1)}%`, x - w - 6, y);
+        stroke(255, 255, 255, 150);
+        strokeWeight(1);
+        line(x - w - 3, y, x - w, y);
+      });
 
-  renderDataLegend() {
-    push();
-    const { surfaceMap, colourMap } = this.appcore.params;
-    this.updateLUT(colourMap || "viridis");
+      pop();
+      return;
+    }
 
     const x = width - 20;
     const y1 = 20;
@@ -446,14 +488,34 @@ class Renderer {
     const h = y2 - y1;
 
     const grad = drawingContext.createLinearGradient(0, y1, 0, y2);
-    const stops = 32;
-    for (let i = 0; i <= stops; i++) {
-      const t = i / stops;
-      const idx = (((1 - t) * 255) | 0) * 3;
+    if (surfaceMap === "composite") {
+      const params = this.appcore.params;
+      const stops = compositeAnchors
+        .map((anchor) => ({ stop: 1 - anchor.t, cKey: anchor.cKey }))
+        .sort((a, b) => a.stop - b.stop);
+
+      const firstColour = params[stops[0].cKey];
+      const lastColour = params[stops[stops.length - 1].cKey];
       grad.addColorStop(
-        t,
-        `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
+        0,
+        `rgb(${firstColour.r}, ${firstColour.g}, ${firstColour.b})`,
       );
+      stops.forEach((stop) => {
+        const c = params[stop.cKey];
+        grad.addColorStop(stop.stop, `rgb(${c.r}, ${c.g}, ${c.b})`);
+      });
+      grad.addColorStop(1, `rgb(${lastColour.r}, ${lastColour.g}, ${lastColour.b})`);
+    } else {
+      this.updateLUT(colourMap || "viridis");
+      const stops = 32;
+      for (let i = 0; i <= stops; i++) {
+        const t = i / stops;
+        const idx = (((1 - t) * 255) | 0) * 3;
+        grad.addColorStop(
+          t,
+          `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
+        );
+      }
     }
 
     noStroke();
@@ -465,6 +527,11 @@ class Renderer {
     strokeWeight(1.5);
     rect(x - w, y1, w, h);
 
+    fill(255);
+    noStroke();
+    textSize(11);
+    textAlign(RIGHT, CENTER);
+
     const b = this.calculateBounds(surfaceMap);
     const labels = [
       { v: b.min + b.range * 1.0, y: y1 },
@@ -474,17 +541,13 @@ class Renderer {
       { v: b.min, y: y2 },
     ];
 
-    fill(255);
-    noStroke();
-    textSize(11);
-    textAlign(RIGHT, CENTER);
-
     labels.forEach((l) => {
       text(l.v.toFixed(3), x - w - 6, l.y);
       stroke(255, 255, 255, 150);
       strokeWeight(1);
       line(x - w - 3, l.y, x - w, l.y);
     });
+
     pop();
   }
 

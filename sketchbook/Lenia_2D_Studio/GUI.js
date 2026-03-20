@@ -50,7 +50,7 @@ class GUI {
   createSimulationTab(page) {
     const { params, statistics } = this;
 
-    const run = page.addFolder({ title: "Run Controls", expanded: true });
+    const run = page.addFolder({ title: "Simulation Controls", expanded: true });
     run.addBinding(params, "running", { label: "Running" });
     run
       .addButton({ title: "Step Once" })

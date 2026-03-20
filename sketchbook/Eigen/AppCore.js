@@ -18,7 +18,7 @@ class AppCore {
       pixelSmoothing: true,
       renderOverlay: true,
       renderLegend: true,
-      renderKeymapRef: true,
+      renderKeymapRef: false,
 
       viewRadius: 32,
       slicePlane: "xz",

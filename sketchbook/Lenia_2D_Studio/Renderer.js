@@ -252,8 +252,9 @@ class Renderer {
     const { name, version } = metadata;
 
     push();
-    background(0);
+    fill(0, 220);
     noStroke();
+    rect(0, 0, width, height);
 
     fill(255);
     textAlign(LEFT, TOP);
@@ -287,7 +288,7 @@ class Renderer {
         title: "Rendering",
         entries: [
           ["Tab", "Cycle render mode"],
-          ["4", "Toggle calc diagnostics panels"],
+          ["4", "Toggle calculation diagnostics panels"],
           ["T", "Cycle colour map"],
           ["G", "Toggle grid"],
           ["L", "Toggle colour legend"],

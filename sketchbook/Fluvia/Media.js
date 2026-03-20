@@ -174,7 +174,7 @@ class Media {
 
   exportParamsJSON() {
     const payload = {
-      format: "data-tools.params.v1",
+      format: "simpipe.params",
       metadata: this.appcore.metadata,
       params: this._serialiseParams(this.appcore.params),
       exportedAt: new Date().toISOString(),
@@ -189,57 +189,14 @@ class Media {
         if (!data || typeof data !== "object" || !data.params) {
           throw new Error("[Fluvia] Invalid params JSON payload");
         }
-        if (data.format !== "data-tools.params.v1") {
+        if (data.format !== "simpipe.params") {
           throw new Error("[Fluvia] Invalid params JSON format version");
         }
 
         const oldSize = this.appcore.params.terrainSize;
         const incoming = data.params;
         const target = this.appcore.params;
-
-        const scalarKeys = [
-          "running",
-          "dropletsPerFrame",
-          "maxAge",
-          "minVolume",
-          "terrainSize",
-          "noiseScale",
-          "noiseOctaves",
-          "amplitudeFalloff",
-          "sedimentErosionRate",
-          "bedrockErosionRate",
-          "depositionRate",
-          "evaporationRate",
-          "precipitationRate",
-          "entrainment",
-          "gravity",
-          "momentumTransfer",
-          "learningRate",
-          "maxHeightDiff",
-          "settlingRate",
-          "renderStats",
-          "renderLegend",
-          "renderKeymapRef",
-          "renderMethod",
-          "heightScale",
-          "surfaceMap",
-          "colourMap",
-          "specularIntensity",
-          "imageFormat",
-          "recordingFPS",
-          "videoBitrateMbps",
-        ];
-
-        for (const key of scalarKeys) {
-          if (key in incoming) target[key] = incoming[key];
-        }
-
-        this._assignColour(incoming, target, "skyColour");
-        this._assignColour(incoming, target, "steepColour");
-        this._assignColour(incoming, target, "flatColour");
-        this._assignColour(incoming, target, "sedimentColour");
-        this._assignColour(incoming, target, "waterColour");
-        this._assignVec3(incoming, target, "lightDir");
+        this._applyParamsSnapshot(incoming);
 
         if (target.terrainSize !== oldSize) {
           this.appcore.reinitialise();
@@ -253,9 +210,10 @@ class Media {
 
   exportStatisticsJSON() {
     const payload = {
-      format: "data-tools.stats.v1",
+      format: "simpipe.stats",
       metadata: this.appcore.metadata,
       statistics: this._serialiseStatistics(),
+      series: [],
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("stats.json"));
@@ -284,6 +242,13 @@ class Media {
       "slopeComplexity",
       "sedimentFlux",
       "erosionRate",
+      "compositeWaterCoveragePct",
+      "compositeSedimentCoveragePct",
+      "compositeFlatCoveragePct",
+      "compositeSteepCoveragePct",
+      "compositeMeanSlopeWeight",
+      "compositeMeanSedimentAlpha",
+      "compositeMeanWaterAlpha",
     ];
 
     for (const k of scalarKeys) rows.push([k, Number(stats[k]) || 0]);
@@ -311,20 +276,25 @@ class Media {
       return;
     }
     const payload = {
-      format: "data-tools.world.v2",
+      format: "simpipe.world",
       metadata: this.appcore.metadata,
-      terrainSize: terrain.size,
-      maps: {
-        heightMap: this._encodeWorldMap(terrain.heightMap),
-        originalHeightMap: this._encodeWorldMap(terrain.originalHeightMap),
-        bedrockMap: this._encodeWorldMap(terrain.bedrockMap),
-        sedimentMap: this._encodeWorldMap(terrain.sedimentMap),
-        dischargeMap: this._encodeWorldMap(terrain.dischargeMap),
-        dischargeTrack: this._encodeWorldMap(terrain.dischargeTrack),
-        momentumX: this._encodeWorldMap(terrain.momentumX),
-        momentumY: this._encodeWorldMap(terrain.momentumY),
-        momentumXTrack: this._encodeWorldMap(terrain.momentumXTrack),
-        momentumYTrack: this._encodeWorldMap(terrain.momentumYTrack),
+      params: this._serialiseParams(this.appcore.params),
+      statistics: this._serialiseStatistics(),
+      series: [],
+      world: {
+        terrainSize: terrain.size,
+        maps: {
+          heightMap: this._encodeWorldMap(terrain.heightMap),
+          originalHeightMap: this._encodeWorldMap(terrain.originalHeightMap),
+          bedrockMap: this._encodeWorldMap(terrain.bedrockMap),
+          sedimentMap: this._encodeWorldMap(terrain.sedimentMap),
+          dischargeMap: this._encodeWorldMap(terrain.dischargeMap),
+          dischargeTrack: this._encodeWorldMap(terrain.dischargeTrack),
+          momentumX: this._encodeWorldMap(terrain.momentumX),
+          momentumY: this._encodeWorldMap(terrain.momentumY),
+          momentumXTrack: this._encodeWorldMap(terrain.momentumXTrack),
+          momentumYTrack: this._encodeWorldMap(terrain.momentumYTrack),
+        },
       },
       exportedAt: new Date().toISOString(),
     };
@@ -339,12 +309,19 @@ class Media {
         if (
           !data ||
           typeof data !== "object" ||
-          data.format !== "data-tools.world.v2" ||
-          !data.maps ||
-          !data.terrainSize
+          data.format !== "simpipe.world" ||
+          !data.params ||
+          !data.statistics ||
+          !Array.isArray(data.series) ||
+          !data.world ||
+          !data.world.maps ||
+          !data.world.terrainSize
         ) {
           throw new Error("[Fluvia] Invalid world JSON payload");
         }
+
+        const world = data.world;
+        const maps = world.maps;
 
         const requiredMaps = [
           "heightMap",
@@ -359,12 +336,12 @@ class Media {
           "momentumYTrack",
         ];
         for (const key of requiredMaps) {
-          if (!this._isEncodedWorldMap(data.maps[key])) {
+          if (!this._isEncodedWorldMap(maps[key])) {
             throw new Error(`[Fluvia] Invalid world JSON: missing maps.${key}`);
           }
         }
 
-        const incomingSize = Number(data.terrainSize);
+        const incomingSize = Number(world.terrainSize);
         if (!Number.isFinite(incomingSize) || incomingSize <= 0) {
           throw new Error("[Fluvia] Invalid world JSON: invalid terrainSize");
         }
@@ -380,62 +357,64 @@ class Media {
         const { terrain } = this.appcore;
         this._copyArrayInto(
           terrain.heightMap,
-          this._decodeWorldMap(data.maps.heightMap, terrain.heightMap.length),
+          this._decodeWorldMap(maps.heightMap, terrain.heightMap.length),
         );
         this._copyArrayInto(
           terrain.originalHeightMap,
           this._decodeWorldMap(
-            data.maps.originalHeightMap,
+            maps.originalHeightMap,
             terrain.originalHeightMap.length,
           ),
         );
         this._copyArrayInto(
           terrain.bedrockMap,
-          this._decodeWorldMap(data.maps.bedrockMap, terrain.bedrockMap.length),
+          this._decodeWorldMap(maps.bedrockMap, terrain.bedrockMap.length),
         );
         this._copyArrayInto(
           terrain.sedimentMap,
-          this._decodeWorldMap(data.maps.sedimentMap, terrain.sedimentMap.length),
+          this._decodeWorldMap(maps.sedimentMap, terrain.sedimentMap.length),
         );
         this._copyArrayInto(
           terrain.dischargeMap,
           this._decodeWorldMap(
-            data.maps.dischargeMap,
+            maps.dischargeMap,
             terrain.dischargeMap.length,
           ),
         );
         this._copyArrayInto(
           terrain.dischargeTrack,
           this._decodeWorldMap(
-            data.maps.dischargeTrack,
+            maps.dischargeTrack,
             terrain.dischargeTrack.length,
           ),
         );
         this._copyArrayInto(
           terrain.momentumX,
-          this._decodeWorldMap(data.maps.momentumX, terrain.momentumX.length),
+          this._decodeWorldMap(maps.momentumX, terrain.momentumX.length),
         );
         this._copyArrayInto(
           terrain.momentumY,
-          this._decodeWorldMap(data.maps.momentumY, terrain.momentumY.length),
+          this._decodeWorldMap(maps.momentumY, terrain.momentumY.length),
         );
         this._copyArrayInto(
           terrain.momentumXTrack,
           this._decodeWorldMap(
-            data.maps.momentumXTrack,
+            maps.momentumXTrack,
             terrain.momentumXTrack.length,
           ),
         );
         this._copyArrayInto(
           terrain.momentumYTrack,
           this._decodeWorldMap(
-            data.maps.momentumYTrack,
+            maps.momentumYTrack,
             terrain.momentumYTrack.length,
           ),
         );
 
         terrain.updateBoundsCache();
         this.appcore.analyser.reinitialise();
+        this._applyParamsSnapshot(data.params, { forceTerrainSize: incomingSize });
+        this._applyStatisticsSnapshot(data.statistics);
         this.appcore._initWorker();
         this.appcore.refreshGUI();
         console.log(`[Fluvia] Imported world JSON: size=${terrain.size}`);
@@ -550,6 +529,125 @@ class Media {
     dstRoot[key].x = Number(s.x) || 0;
     dstRoot[key].y = Number(s.y) || 0;
     dstRoot[key].z = Number(s.z) || 0;
+  }
+
+  _applyParamsSnapshot(incoming, options = {}) {
+    if (!incoming || typeof incoming !== "object") return;
+
+    const target = this.appcore.params;
+    const scalarKeys = [
+      "running",
+      "dropletsPerFrame",
+      "maxAge",
+      "minVolume",
+      "terrainSize",
+      "noiseScale",
+      "noiseOctaves",
+      "amplitudeFalloff",
+      "sedimentErosionRate",
+      "bedrockErosionRate",
+      "depositionRate",
+      "evaporationRate",
+      "precipitationRate",
+      "entrainment",
+      "gravity",
+      "momentumTransfer",
+      "learningRate",
+      "maxHeightDiff",
+      "settlingRate",
+      "renderStats",
+      "renderLegend",
+      "renderKeymapRef",
+      "renderMethod",
+      "heightScale",
+      "surfaceMap",
+      "colourMap",
+      "specularIntensity",
+      "imageFormat",
+      "recordingFPS",
+      "videoBitrateMbps",
+    ];
+
+    for (const key of scalarKeys) {
+      if (key in incoming) target[key] = incoming[key];
+    }
+
+    this._assignColour(incoming, target, "skyColour");
+    this._assignColour(incoming, target, "steepColour");
+    this._assignColour(incoming, target, "flatColour");
+    this._assignColour(incoming, target, "sedimentColour");
+    this._assignColour(incoming, target, "waterColour");
+    this._assignVec3(incoming, target, "lightDir");
+
+    if (typeof options.forceTerrainSize === "number") {
+      target.terrainSize = options.forceTerrainSize;
+    }
+  }
+
+  _applyStatisticsSnapshot(incoming) {
+    if (!incoming || typeof incoming !== "object") return;
+
+    const stats = this.appcore.statistics;
+    const scalarKeys = [
+      "fps",
+      "frameCounter",
+      "simulationTime",
+      "avgElevation",
+      "elevationStdDev",
+      "totalWater",
+      "totalSediment",
+      "totalBedrock",
+      "peakDischarge",
+      "activeWaterCover",
+      "drainageDensity",
+      "hydraulicResidence",
+      "rugosity",
+      "slopeComplexity",
+      "sedimentFlux",
+      "erosionRate",
+      "compositeWaterCoveragePct",
+      "compositeSedimentCoveragePct",
+      "compositeFlatCoveragePct",
+      "compositeSteepCoveragePct",
+      "compositeMeanSlopeWeight",
+      "compositeMeanSedimentAlpha",
+      "compositeMeanWaterAlpha",
+    ];
+
+    for (const key of scalarKeys) {
+      if (key in incoming) {
+        const n = Number(incoming[key]);
+        stats[key] = Number.isFinite(n) ? n : 0;
+      }
+    }
+
+    if (incoming.heightBounds && typeof incoming.heightBounds === "object") {
+      stats.heightBounds.min = Number(incoming.heightBounds.min) || 0;
+      stats.heightBounds.max = Number(incoming.heightBounds.max) || 0;
+    }
+    if (incoming.sedimentBounds && typeof incoming.sedimentBounds === "object") {
+      stats.sedimentBounds.min = Number(incoming.sedimentBounds.min) || 0;
+      stats.sedimentBounds.max = Number(incoming.sedimentBounds.max) || 0;
+    }
+    if (incoming.dischargeBounds && typeof incoming.dischargeBounds === "object") {
+      stats.dischargeBounds.min = Number(incoming.dischargeBounds.min) || 0;
+      stats.dischargeBounds.max = Number(incoming.dischargeBounds.max) || 0;
+    }
+
+    const hist = incoming.heightHistogram;
+    const norm = incoming.normHistogram;
+    if (Array.isArray(hist)) {
+      const out = new Int32Array(256);
+      const limit = Math.min(256, hist.length);
+      for (let i = 0; i < limit; i++) out[i] = Number(hist[i]) || 0;
+      stats.heightHistogram = out;
+    }
+    if (Array.isArray(norm)) {
+      const out = new Float32Array(256);
+      const limit = Math.min(256, norm.length);
+      for (let i = 0; i < limit; i++) out[i] = Number(norm[i]) || 0;
+      stats.normHistogram = out;
+    }
   }
 
   _serialiseParams(params) {

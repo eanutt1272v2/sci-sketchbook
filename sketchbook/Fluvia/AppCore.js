@@ -98,6 +98,14 @@ class AppCore {
       slopeComplexity: 0,
       sedimentFlux: 0,
       erosionRate: 0,
+
+      compositeWaterCoveragePct: 0,
+      compositeSedimentCoveragePct: 0,
+      compositeFlatCoveragePct: 0,
+      compositeSteepCoveragePct: 0,
+      compositeMeanSlopeWeight: 0,
+      compositeMeanSedimentAlpha: 0,
+      compositeMeanWaterAlpha: 0,
     };
 
     this.font = font;

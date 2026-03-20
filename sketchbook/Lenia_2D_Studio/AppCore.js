@@ -309,7 +309,7 @@ class AppCore {
   draw() {
     this.input.handleContinuousInput();
 
-    if (this.board.cells && !this.params.renderKeymapRef) {
+    if (this.board.cells) {
       this.renderer.render(
         this.board,
         this.automaton,
@@ -343,9 +343,11 @@ class AppCore {
       if (this.params.renderCalcPanels) {
         this.renderer.renderCalcPanels(this.board, this.automaton, this.params);
       }
-    }
 
-    if (this.params.renderKeymapRef) {
+      if (this.params.renderKeymapRef) {
+        this.renderer.renderKeymapRef(this.metadata);
+      }
+    } else if (this.params.renderKeymapRef && !this._workerBusy) {
       this.renderer.renderKeymapRef(this.metadata);
     }
 
@@ -521,12 +523,18 @@ class AppCore {
 
         this.analyser.resetStatistics();
         this.analyser.reset();
+        if (payload.statistics && typeof payload.statistics === "object") {
+          Object.assign(this.statistics, payload.statistics);
+        }
+        if (Array.isArray(payload.series)) {
+          this.analyser.series = JSON.parse(JSON.stringify(payload.series));
+        }
 
         this._workerSendKernel();
         this.refreshGUI();
 
         console.log(
-          `[Lenia] Imported world: size=${this.params.gridSize}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}`,
+          `[Lenia] Imported world: size=${this.params.gridSize}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}`,
         );
       }),
     );

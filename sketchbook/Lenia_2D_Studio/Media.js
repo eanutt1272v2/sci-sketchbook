@@ -107,13 +107,21 @@ class Media {
     const data = this.appcore.board.toJSON();
     if (!data) return;
 
-    data.metadata = this._getMetadataSnapshot();
-    data.params = this._getFullParamsSnapshot();
-    data.stats = this._getFullStatsSnapshot();
-    data.format = "lenia-world-v2";
-    data.exportedAt = new Date().toISOString();
+    const stats = this._getFullStatsSnapshot();
+    const payload = {
+      format: "simpipe.world",
+      metadata: this._getMetadataSnapshot(),
+      params: this._getFullParamsSnapshot(),
+      statistics: stats.statistics,
+      series: stats.series,
+      world: {
+        size: data.size,
+        cells: data.cells,
+      },
+      exportedAt: new Date().toISOString(),
+    };
 
-    this._downloadJSON(data, this._getFilename("world.json"));
+    this._downloadJSON(payload, this._getFilename("world.json"));
     console.log(`[Lenia] Exported world JSON: size=${this.appcore.board.size}`);
   }
 
@@ -123,8 +131,12 @@ class Media {
         if (
           !data ||
           typeof data !== "object" ||
-          data.format !== "lenia-world-v2" ||
-          !data.cells
+          data.format !== "simpipe.world" ||
+          !data.world ||
+          !data.world.cells ||
+          !data.params ||
+          !data.statistics ||
+          !Array.isArray(data.series)
         ) {
           throw new Error("[Lenia] Invalid world JSON payload");
         }
@@ -136,21 +148,23 @@ class Media {
   }
 
   _normaliseWorldPayload(data) {
-    const rawSize = Number(data.size);
+    const rawSize = Number(data.world.size);
     if (!Number.isFinite(rawSize) || rawSize <= 0) {
       throw new Error("[Lenia] Invalid world JSON: missing or invalid size");
     }
     const size = this.appcore._normaliseGridSize(rawSize);
 
-    if (typeof data.cells !== "string") {
+    if (typeof data.world.cells !== "string") {
       throw new Error("[Lenia] Invalid world JSON: cells must be RLE string");
     }
-    const cells = RLECodec.decode(data.cells, size, size);
+    const cells = RLECodec.decode(data.world.cells, size, size);
 
     return {
       size,
       cells,
       params: data.params,
+      statistics: data.statistics,
+      series: data.series,
     };
   }
 
@@ -168,10 +182,13 @@ class Media {
   }
 
   exportStatisticsJSON() {
+    const stats = this._getFullStatsSnapshot();
     const payload = {
+      format: "simpipe.stats",
       metadata: this._getMetadataSnapshot(),
+      statistics: stats.statistics,
+      series: stats.series,
       exportedAt: new Date().toISOString(),
-      ...this._getFullStatsSnapshot(),
     };
     this._downloadJSON(payload, this._getFilename("stats.json"));
     console.log(
@@ -181,6 +198,7 @@ class Media {
 
   exportParamsJSON() {
     const payload = {
+      format: "simpipe.params",
       metadata: this._getMetadataSnapshot(),
       exportedAt: new Date().toISOString(),
       params: this._getFullParamsSnapshot(),
@@ -194,6 +212,10 @@ class Media {
       this._readJSONFile(file, (data) => {
         if (!data || typeof data !== "object") {
           throw new Error("[Lenia] Invalid params JSON payload");
+        }
+
+        if (data.format !== "simpipe.params") {
+          throw new Error("[Lenia] Invalid params JSON format version");
         }
 
         if (!data.params || typeof data.params !== "object") {

@@ -136,12 +136,6 @@ class InputHandler {
         this.appcore.exportImage();
         shouldRefreshGUI = false;
         break;
-      case "g":
-        this.appcore.media.exportAnalysisJSON();
-        shouldRefreshGUI = false;
-        logMsg = "Analysis exported";
-        break;
-
       case "x":
         this.appcore.resetViewCentre();
         logMsg = "View center reset";

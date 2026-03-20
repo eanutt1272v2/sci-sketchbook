@@ -39,6 +39,7 @@ class GUI {
     const { params, statistics } = this.appcore;
 
     const controls = page.addFolder({ title: "Simulation Controls", expanded: true });
+    controls.addBinding(params, "running", { label: "Running" });
     controls
       .addButton({ title: "Generate Terrain" })
       .on("click", () => this.appcore.generate());
@@ -65,7 +66,6 @@ class GUI {
     this.addSeparator(page);
 
     const droplets = page.addFolder({ title: "Droplets", expanded: true });
-    droplets.addBinding(params, "running", { label: "Running" });
     droplets.addBinding(params, "dropletsPerFrame", {
       label: "Droplets/Frame",
       min: 0,
@@ -223,7 +223,7 @@ class GUI {
 
     const colours = page.addFolder({ title: "Colour Palette", expanded: true });
 
-    ["sky", "flat", "steep", "sediment", "water"].forEach((type) => {
+    ["sky", "steep", "flat", "sediment", "water"].forEach((type) => {
       colours.addBinding(params, `${type}Colour`, {
         label: type.charAt(0).toUpperCase() + type.slice(1),
       });
@@ -383,6 +383,50 @@ class GUI {
       readonly: true,
       label: "Slope Complexity",
       format: (v) => v.toFixed(4),
+    });
+
+    const compositeFolder = page.addFolder({ title: "Composite Blend" });
+
+    compositeFolder.addBinding(statistics, "compositeWaterCoveragePct", {
+      readonly: true,
+      label: "Water Contribution (%)",
+      format: (v) => v.toFixed(1),
+    });
+
+    compositeFolder.addBinding(statistics, "compositeSedimentCoveragePct", {
+      readonly: true,
+      label: "Sediment Contribution (%)",
+      format: (v) => v.toFixed(1),
+    });
+
+    compositeFolder.addBinding(statistics, "compositeFlatCoveragePct", {
+      readonly: true,
+      label: "Flat Contribution (%)",
+      format: (v) => v.toFixed(1),
+    });
+
+    compositeFolder.addBinding(statistics, "compositeSteepCoveragePct", {
+      readonly: true,
+      label: "Steep Contribution (%)",
+      format: (v) => v.toFixed(1),
+    });
+
+    compositeFolder.addBinding(statistics, "compositeMeanSlopeWeight", {
+      readonly: true,
+      label: "Mean Slope Weight",
+      format: (v) => v.toFixed(3),
+    });
+
+    compositeFolder.addBinding(statistics, "compositeMeanSedimentAlpha", {
+      readonly: true,
+      label: "Mean Sediment Alpha",
+      format: (v) => v.toFixed(3),
+    });
+
+    compositeFolder.addBinding(statistics, "compositeMeanWaterAlpha", {
+      readonly: true,
+      label: "Mean Water Alpha",
+      format: (v) => v.toFixed(3),
     });
   }
 

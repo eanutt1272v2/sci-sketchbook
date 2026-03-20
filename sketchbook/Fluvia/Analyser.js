@@ -36,6 +36,14 @@ class Analyser {
     stats.activeWaterCover = 0;
     stats.slopeComplexity = 0;
 
+    stats.compositeWaterCoveragePct = 0;
+    stats.compositeSedimentCoveragePct = 0;
+    stats.compositeFlatCoveragePct = 0;
+    stats.compositeSteepCoveragePct = 0;
+    stats.compositeMeanSlopeWeight = 0;
+    stats.compositeMeanSedimentAlpha = 0;
+    stats.compositeMeanWaterAlpha = 0;
+
     stats.heightBounds.min = 0;
     stats.heightBounds.max = 0;
     stats.sedimentBounds.min = 0;
@@ -89,6 +97,13 @@ class Analyser {
     let sumE = 0,
       sumSqE = 0;
     let slopeSum = 0;
+    let compWater = 0,
+      compSediment = 0,
+      compFlat = 0,
+      compSteep = 0;
+    let compSlopeMean = 0,
+      compSedimentMean = 0,
+      compWaterMean = 0;
 
     statistics.heightHistogram.fill(0);
 
@@ -119,6 +134,23 @@ class Analyser {
         totalSA += sa;
         slopeSum += sa - 1.0;
       }
+
+      const normal = terrain.getSurfaceNormal(x, y);
+      const slopeW = constrain(1 - normal.y, 0, 1);
+      const sedW = constrain(s * 5, 0, 1);
+      const waterW = constrain(d, 0, 1);
+
+      const steepBase = slopeW;
+      const flatBase = 1 - slopeW;
+
+      compFlat += flatBase * (1 - sedW) * (1 - waterW);
+      compSteep += steepBase * (1 - sedW) * (1 - waterW);
+      compSediment += sedW * (1 - waterW);
+      compWater += waterW;
+
+      compSlopeMean += slopeW;
+      compSedimentMean += sedW;
+      compWaterMean += waterW;
     }
 
     terrain.updateBoundsCache();
@@ -150,6 +182,15 @@ class Analyser {
     statistics.sedimentFlux = (totalS - this.prevTotalSediment) / deltaTime;
     statistics.erosionRate = (this.prevTotalBedrock - totalB) / deltaTime;
     statistics.hydraulicResidence = totalW / (evaporationRate * area + 1e-6);
+
+    const invArea = 1 / area;
+    statistics.compositeWaterCoveragePct = compWater * invArea * 100;
+    statistics.compositeSedimentCoveragePct = compSediment * invArea * 100;
+    statistics.compositeFlatCoveragePct = compFlat * invArea * 100;
+    statistics.compositeSteepCoveragePct = compSteep * invArea * 100;
+    statistics.compositeMeanSlopeWeight = compSlopeMean * invArea;
+    statistics.compositeMeanSedimentAlpha = compSedimentMean * invArea;
+    statistics.compositeMeanWaterAlpha = compWaterMean * invArea;
 
     this._normaliseHistogram();
 

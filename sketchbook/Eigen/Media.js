@@ -100,7 +100,7 @@ class Media {
 
   exportParamsJSON() {
     const payload = {
-      format: "data-tools.params.v1",
+      format: "simpipe.params",
       metadata: this.appcore.metadata,
       params: this._serialiseParams(this.appcore.params),
       exportedAt: new Date().toISOString(),
@@ -121,7 +121,7 @@ class Media {
 
   exportStatisticsJSON() {
     const payload = {
-      format: "data-tools.stats.v1",
+      format: "simpipe.stats",
       metadata: this.appcore.metadata,
       statistics: { ...this.appcore.statistics },
       series: Array.isArray(this.appcore.analyser?.series)
@@ -174,20 +174,6 @@ class Media {
     console.log(`[Eigen] Exported stats CSV: ${series.length} rows`);
   }
 
-  exportAnalysisJSON() {
-    if (!this.appcore.analyser) return;
-    const payload = {
-      format: "data-tools.analysis.v1",
-      metadata: this.appcore.metadata,
-      ...this.appcore.analyser.exportJSON(),
-      exportedAt: new Date().toISOString(),
-    };
-    this._downloadJSON(payload, this._getFilename("analysis.json"));
-    console.log(
-      `[Eigen] Exported analysis JSON: ${(payload.series || []).length} rows`,
-    );
-  }
-
   exportWorldJSON() {
     const { renderer, params, statistics } = this.appcore;
     const grid = renderer?.grid;
@@ -197,17 +183,14 @@ class Media {
     }
 
     const payload = {
-      format: "data-tools.world.v1",
+      format: "simpipe.world",
       metadata: this.appcore.metadata,
       exportedAt: new Date().toISOString(),
       params: this._serialiseParams(params),
-      stats: {
-        format: "data-tools.stats.v1",
-        statistics: { ...statistics },
-        series: Array.isArray(this.appcore.analyser?.series)
-          ? this.appcore.analyser.series
-          : [],
-      },
+      statistics: { ...statistics },
+      series: Array.isArray(this.appcore.analyser?.series)
+        ? this.appcore.analyser.series
+        : [],
       world: {
         resolution: Number(params.resolution) || 0,
         peak: Number(this.appcore.getNormalisationPeak?.() || statistics.peakDensity || 1e-10),
@@ -222,25 +205,26 @@ class Media {
   importWorldJSON() {
     this.openDataImportDialog((file) => {
       this._readJSONFile(file, (data) => {
-        if (!data || typeof data !== "object" || data.format !== "data-tools.world.v1") {
+        if (!data || typeof data !== "object" || data.format !== "simpipe.world") {
           throw new Error("[Eigen] Invalid world JSON payload");
         }
         if (!data.params || typeof data.params !== "object") {
           throw new Error("[Eigen] Invalid world JSON: missing params");
         }
+        if (!data.statistics || typeof data.statistics !== "object") {
+          throw new Error("[Eigen] Invalid world JSON: missing statistics");
+        }
+        if (!Array.isArray(data.series)) {
+          throw new Error("[Eigen] Invalid world JSON: missing series");
+        }
 
-        const paramsPayload = { format: "data-tools.params.v1", params: data.params };
+        const paramsPayload = { format: "simpipe.params", params: data.params };
         this._applyParamsPayload(paramsPayload);
 
         const world = data.world;
-        if (
-          data.stats &&
-          (typeof data.stats !== "object" ||
-            data.stats.format !== "data-tools.stats.v1" ||
-            !data.stats.statistics ||
-            !Array.isArray(data.stats.series))
-        ) {
-          throw new Error("[Eigen] Invalid world JSON: malformed stats section");
+        Object.assign(this.appcore.statistics, data.statistics);
+        if (this.appcore.analyser) {
+          this.appcore.analyser.series = JSON.parse(JSON.stringify(data.series));
         }
         if (
           world &&
@@ -267,7 +251,7 @@ class Media {
     if (!data || typeof data !== "object" || !data.params) {
       throw new Error("[Eigen] Invalid params JSON payload");
     }
-    if (data.format !== "data-tools.params.v1") {
+    if (data.format !== "simpipe.params") {
       throw new Error("[Eigen] Invalid params JSON format version");
     }
 

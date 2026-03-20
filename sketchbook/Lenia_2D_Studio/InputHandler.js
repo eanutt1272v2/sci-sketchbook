@@ -210,7 +210,7 @@ class InputHandler {
       this.appcore.params.renderCalcPanels = !this.appcore.params.renderCalcPanels;
       this.appcore.refreshGUI();
       console.log(
-        `[Lenia] Calc panels: ${this.appcore.params.renderCalcPanels}`,
+        `[Lenia] Calculationpanels: ${this.appcore.params.renderCalcPanels}`,
       );
       return false;
     }

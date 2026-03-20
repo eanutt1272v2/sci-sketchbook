@@ -401,7 +401,6 @@ class Renderer {
         title: "Data",
         entries: [
           ["P", "Export image"],
-          ["G", "Export analysis data"],
           ["GUI: Media tab", "Export/import params + stats"],
         ],
       },
