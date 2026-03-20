@@ -2,9 +2,9 @@
 
 ## Overview
 
-A curated collection of interactive maths and science sketches used to explore dynamical systems, emergent behaviour, numerical simulation, and visual computation.
+An advanced collection of interactive mathematical and scientific sketches.
 
-Most active projects are implemented in `p5.js` with worker acceleration, while a smaller set of legacy studies remains in Processing.
+Most active projects are implemented in `p5.js` with worker computation, but a smaller amount of legacy sketches remain in Processing.
 
 Live deployment: <https://sci-sketchbook.onrender.com/>
 
@@ -22,13 +22,13 @@ Live deployment: <https://sci-sketchbook.onrender.com/>
 | :-- | :-- | :-- |
 | [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | Non-holomorphic escape-time fractal dynamics | p5.js + worker |
 | [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | Quadratic complex-set exploration | p5.js + worker |
-| [Julia Set](./sketchbook/Julia_Set) | Parameter-fixed quadratic Julia dynamics | p5.js + worker |
-| [Cellular Division](./sketchbook/Cellular_Division) | Primordial Particle System emergence | p5.js + worker |
+| [Julia Set](./sketchbook/Julia_Set) | Parameter-fixed quadratic Julia Set fractal | p5.js + worker |
+| [Cellular Division](./sketchbook/Cellular_Division) | Primordial Particle System implementation | p5.js + worker |
 | [Eigen](./sketchbook/Eigen) | Hydrogen orbital probability-density slicing | p5.js + worker |
 | [Fluvia](./sketchbook/Fluvia) | Lagrangian hydraulic erosion simulation | p5.js + worker + GLSL |
-| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia-style automata laboratory | p5.js + FFT worker |
+| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia cellular automata | p5.js + FFT worker |
 | [MandelBulber](./sketchbook/MandelBulber) | Legacy Mandelbulb point-cloud rendering | Processing |
-| [Neural Network](./sketchbook/Neural_Network) | Legacy handwritten-digit classifier demo | Processing |
+| [Neural Network](./sketchbook/Neural_Network) | Legacy handwritten-digit classifier | Processing |
 
 ## Running Locally
 
@@ -54,12 +54,6 @@ Open `http://localhost:8080`.
 ### Option 3: Processing sketches
 
 Open the corresponding `.pde` file in Processing 4.x and run.
-
-## Notes
-
-- Heavy numerical kernels are offloaded to Web Workers where available.
-- Most simulation pipelines use typed arrays to reduce allocation overhead.
-- READMEs are written in British English and prioritise mathematical clarity.
 
 ## Licence
 
