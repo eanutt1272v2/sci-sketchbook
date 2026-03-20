@@ -23,7 +23,7 @@ The normalised parameter `t` is then mapped through a LUT to an RGB value.
 ## Architecture
 
 - `BurningShipFractal.js`: p5 sketch entrypoint
-- `AppCore.js`: state management, worker dispatch, UI initialisation/build
+- `AppCore.js`: state management, worker management, UI initialisation/build
 - `FractalWorker.js`: worker-based escape-time kernel
 - `FractalRenderer.js`: LUT generation and framebuffer compositing
 - `InputHandler.js`: robust pan/zoom controls
