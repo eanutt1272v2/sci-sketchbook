@@ -19,7 +19,7 @@ class AppCore {
 
     this.params = {
       running: true,
-      gridSize: 128,
+      gridSize: 256,
 
       R: 13,
       T: 10,
@@ -45,7 +45,8 @@ class AppCore {
       renderLegend: true,
       renderStats: true,
       renderMotionOverlay: true,
-      renderKeymapRef: false,
+      renderCalcPanels: true,
+      renderKeymapRef: true,
 
       selectedAnimal: "",
       placeMode: true,
@@ -53,6 +54,8 @@ class AppCore {
       autoScaleSimParams: true,
 
       imageFormat: "png",
+      recordingFPS: 60,
+      videoBitrateMbps: 8,
     };
 
     this.statistics = {
@@ -64,11 +67,18 @@ class AppCore {
       gyradius: 0,
       centerX: 0,
       centerY: 0,
+      growthCenterX: 0,
+      growthCenterY: 0,
+      massGrowthDist: 0,
       massAsym: 0,
       speed: 0,
       angle: 0,
       symmSides: 0,
       symmStrength: 0,
+      rotationSpeed: 0,
+      lyapunov: 0,
+      period: 0,
+      periodConfidence: 0,
       fps: 0,
     };
 
@@ -118,7 +128,7 @@ class AppCore {
       this._worker = new Worker("FFTWorker.js");
     } catch (e) {
       console.warn(
-        "[Lenia] Web Worker unavailable — falling back to main-thread simulation.",
+        "[Lenia] Worker unavailable, falling back to main-thread simulation",
         e,
       );
       this._worker = null;
@@ -299,7 +309,7 @@ class AppCore {
   draw() {
     this.input.handleContinuousInput();
 
-    if (this.board.cells) {
+    if (this.board.cells && !this.params.renderKeymapRef) {
       this.renderer.render(
         this.board,
         this.automaton,
@@ -328,6 +338,10 @@ class AppCore {
 
       if (this.params.renderStats) {
         this.renderer.renderStats(this.statistics, this.params);
+      }
+
+      if (this.params.renderCalcPanels) {
+        this.renderer.renderCalcPanels(this.board, this.automaton, this.params);
       }
     }
 

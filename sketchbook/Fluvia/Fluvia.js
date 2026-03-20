@@ -6,7 +6,7 @@ let mainCanvas;
 
 const metadata = {
   name: "Fluvia",
-  version: "v5.1.1-dev",
+  version: "v5.1.2-dev",
   author: "@eanutt1272.v2",
 };
 

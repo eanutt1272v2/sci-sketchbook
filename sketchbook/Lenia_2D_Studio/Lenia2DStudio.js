@@ -6,7 +6,7 @@ let mainCanvas;
 
 const metadata = {
   name: "Lenia 2D Studio",
-  version: "v1.6.8-dev",
+  version: "v1.6.9-dev",
   author: "@eanutt1272.v2",
 };
 

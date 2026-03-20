@@ -46,11 +46,14 @@ class Media {
     }
 
     try {
-      const stream = sourceCanvas.captureStream(60);
-      this.mediaRecorder = new MediaRecorder(stream, {
-        mimeType: supportedType,
-        videoBitsPerSecond: 8000000,
-      });
+      const captureFps = this._getRecordingFPS();
+      const bitrateBps = this._getRecordingBitrateBps();
+      const stream = sourceCanvas.captureStream(captureFps);
+      const options = { mimeType: supportedType };
+      if (bitrateBps > 0) {
+        options.videoBitsPerSecond = bitrateBps;
+      }
+      this.mediaRecorder = new MediaRecorder(stream, options);
 
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) this.recordedChunks.push(event.data);
@@ -68,7 +71,10 @@ class Media {
       this.mediaRecorder.start();
       this.isRecording = true;
       this.appcore.refreshGUI();
-      console.log(`[Eigen] Recording: ${supportedType}`);
+      const bitrateMbps = bitrateBps > 0 ? bitrateBps / 1e6 : 0;
+      console.log(
+        `[Eigen] Recording: ${supportedType}, fps=${captureFps}, bitrate=${bitrateMbps.toFixed(2)}Mbps`,
+      );
     } catch (err) {
       console.error("[Eigen] Recording failed:", err);
       this.stopRecording();
@@ -94,6 +100,7 @@ class Media {
 
   exportParamsJSON() {
     const payload = {
+      format: "data-tools.params.v1",
       metadata: this.appcore.metadata,
       params: this._serialiseParams(this.appcore.params),
       exportedAt: new Date().toISOString(),
@@ -105,47 +112,7 @@ class Media {
   importParamsJSON() {
     this.openDataImportDialog((file) => {
       this._readJSONFile(file, (data) => {
-        if (!data || typeof data !== "object" || !data.params) {
-          throw new Error("[Eigen] Invalid params JSON payload");
-        }
-
-        const allowed = [
-          "n",
-          "l",
-          "m",
-          "colourMap",
-          "exposure",
-          "resolution",
-          "pixelSmoothing",
-          "renderOverlay",
-          "renderLegend",
-          "renderKeymapRef",
-          "viewRadius",
-          "slicePlane",
-          "sliceOffset",
-          "viewCentre",
-          "imageFormat",
-        ];
-
-        for (const key of allowed) {
-          if (!(key in data.params)) continue;
-
-          if (
-            key === "viewCentre" &&
-            data.params.viewCentre &&
-            typeof data.params.viewCentre === "object"
-          ) {
-            const vc = data.params.viewCentre;
-            this.appcore.params.viewCentre.x = Number(vc.x) || 0;
-            this.appcore.params.viewCentre.y = Number(vc.y) || 0;
-            this.appcore.params.viewCentre.z = Number(vc.z) || 0;
-          } else {
-            this.appcore.params[key] = data.params[key];
-          }
-        }
-
-        this.appcore.gui.enforceConstraints();
-        this.appcore.syncViewConstraints();
+        this._applyParamsPayload(data);
         this.appcore.refreshGUI();
         console.log("[Eigen] Imported params JSON");
       });
@@ -154,6 +121,7 @@ class Media {
 
   exportStatisticsJSON() {
     const payload = {
+      format: "data-tools.stats.v1",
       metadata: this.appcore.metadata,
       statistics: { ...this.appcore.statistics },
       series: Array.isArray(this.appcore.analyser?.series)
@@ -166,10 +134,13 @@ class Media {
   }
 
   exportStatisticsCSV() {
+    const metadataJson = JSON.stringify(this.appcore.metadata || {});
+    const exportedAt = new Date().toISOString();
     const series = Array.isArray(this.appcore.analyser?.series)
       ? this.appcore.analyser.series
       : [];
     const header = [
+      "fps",
       "density",
       "peakDensity",
       "mean",
@@ -185,7 +156,11 @@ class Media {
       "resolution",
       "viewRadius",
     ];
-    const rows = [header.join(",")];
+    const rows = [
+      `# exportedAt: ${exportedAt}`,
+      `# metadata: ${metadataJson}`,
+      header.join(","),
+    ];
     for (const row of series) {
       rows.push(
         (Array.isArray(row) ? row : []).map((v) => Number(v) || 0).join(","),
@@ -202,6 +177,7 @@ class Media {
   exportAnalysisJSON() {
     if (!this.appcore.analyser) return;
     const payload = {
+      format: "data-tools.analysis.v1",
       metadata: this.appcore.metadata,
       ...this.appcore.analyser.exportJSON(),
       exportedAt: new Date().toISOString(),
@@ -210,6 +186,130 @@ class Media {
     console.log(
       `[Eigen] Exported analysis JSON: ${(payload.series || []).length} rows`,
     );
+  }
+
+  exportWorldJSON() {
+    const { renderer, params, statistics } = this.appcore;
+    const grid = renderer?.grid;
+    if (!grid || !grid.length) {
+      console.warn("[Eigen] No rendered grid available for world export");
+      return;
+    }
+
+    const payload = {
+      format: "data-tools.world.v1",
+      metadata: this.appcore.metadata,
+      exportedAt: new Date().toISOString(),
+      params: this._serialiseParams(params),
+      stats: {
+        format: "data-tools.stats.v1",
+        statistics: { ...statistics },
+        series: Array.isArray(this.appcore.analyser?.series)
+          ? this.appcore.analyser.series
+          : [],
+      },
+      world: {
+        resolution: Number(params.resolution) || 0,
+        peak: Number(this.appcore.getNormalisationPeak?.() || statistics.peakDensity || 1e-10),
+        grid: Array.from(grid),
+      },
+    };
+
+    this._downloadJSON(payload, this._getFilename("world.json"));
+    console.log(`[Eigen] Exported world JSON: resolution=${payload.world.resolution}`);
+  }
+
+  importWorldJSON() {
+    this.openDataImportDialog((file) => {
+      this._readJSONFile(file, (data) => {
+        if (!data || typeof data !== "object" || data.format !== "data-tools.world.v1") {
+          throw new Error("[Eigen] Invalid world JSON payload");
+        }
+        if (!data.params || typeof data.params !== "object") {
+          throw new Error("[Eigen] Invalid world JSON: missing params");
+        }
+
+        const paramsPayload = { format: "data-tools.params.v1", params: data.params };
+        this._applyParamsPayload(paramsPayload);
+
+        const world = data.world;
+        if (
+          data.stats &&
+          (typeof data.stats !== "object" ||
+            data.stats.format !== "data-tools.stats.v1" ||
+            !data.stats.statistics ||
+            !Array.isArray(data.stats.series))
+        ) {
+          throw new Error("[Eigen] Invalid world JSON: malformed stats section");
+        }
+        if (
+          world &&
+          Number.isFinite(Number(world.resolution)) &&
+          Array.isArray(world.grid) &&
+          world.grid.length === Number(world.resolution) * Number(world.resolution)
+        ) {
+          this.appcore.params.resolution = Number(world.resolution);
+          this.appcore.renderer.renderFromGrid(
+            Float32Array.from(world.grid).buffer,
+            Math.max(1e-10, Number(world.peak) || 1e-10),
+          );
+        } else {
+          this.appcore.requestRender();
+        }
+
+        this.appcore.refreshGUI();
+        console.log(`[Eigen] Imported world JSON: resolution=${this.appcore.params.resolution}`);
+      });
+    });
+  }
+
+  _applyParamsPayload(data) {
+    if (!data || typeof data !== "object" || !data.params) {
+      throw new Error("[Eigen] Invalid params JSON payload");
+    }
+    if (data.format !== "data-tools.params.v1") {
+      throw new Error("[Eigen] Invalid params JSON format version");
+    }
+
+    const allowed = [
+      "n",
+      "l",
+      "m",
+      "colourMap",
+      "exposure",
+      "resolution",
+      "pixelSmoothing",
+      "renderOverlay",
+      "renderLegend",
+      "renderKeymapRef",
+      "viewRadius",
+      "slicePlane",
+      "sliceOffset",
+      "viewCentre",
+      "imageFormat",
+      "recordingFPS",
+      "videoBitrateMbps",
+    ];
+
+    for (const key of allowed) {
+      if (!(key in data.params)) continue;
+
+      if (
+        key === "viewCentre" &&
+        data.params.viewCentre &&
+        typeof data.params.viewCentre === "object"
+      ) {
+        const vc = data.params.viewCentre;
+        this.appcore.params.viewCentre.x = Number(vc.x) || 0;
+        this.appcore.params.viewCentre.y = Number(vc.y) || 0;
+        this.appcore.params.viewCentre.z = Number(vc.z) || 0;
+      } else {
+        this.appcore.params[key] = data.params[key];
+      }
+    }
+
+    this.appcore.gui.enforceConstraints();
+    this.appcore.syncViewConstraints();
   }
 
   _serialiseParams(params) {
@@ -221,6 +321,17 @@ class Media {
         z: Number(params.viewCentre.z) || 0,
       },
     };
+  }
+
+  _getRecordingFPS() {
+    const fps = Number(this.appcore.params?.recordingFPS);
+    return Math.max(12, Math.min(120, Math.round(fps || 60)));
+  }
+
+  _getRecordingBitrateBps() {
+    const mbps = Number(this.appcore.params?.videoBitrateMbps);
+    const clampedMbps = Math.max(1, Math.min(64, mbps || 8));
+    return Math.round(clampedMbps * 1e6);
   }
 
   _readJSONFile(file, onSuccess) {

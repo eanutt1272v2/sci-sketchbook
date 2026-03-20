@@ -67,6 +67,8 @@ class AppCore {
       waterColour: { r: 92, g: 133, b: 142 },
 
       imageFormat: "png",
+      recordingFPS: 60,
+      videoBitrateMbps: 8,
     };
 
     this.statistics = {
@@ -142,7 +144,7 @@ class AppCore {
       this._worker = new Worker("SolverWorker.js");
     } catch (e) {
       console.warn(
-        "[Fluvia] Worker unavailable, falling back to main-thread fallback solver.",
+        "[Fluvia] Worker unavailable, falling back to main-thread fallback solver",
         e,
       );
       this._worker = null;

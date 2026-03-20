@@ -56,11 +56,14 @@ class Media {
     }
 
     try {
-      const stream = sourceCanvas.captureStream(60);
-      this.mediaRecorder = new MediaRecorder(stream, {
-        mimeType: supportedType,
-        videoBitsPerSecond: 8000000,
-      });
+      const captureFps = this._getRecordingFPS();
+      const bitrateBps = this._getRecordingBitrateBps();
+      const stream = sourceCanvas.captureStream(captureFps);
+      const options = { mimeType: supportedType };
+      if (bitrateBps > 0) {
+        options.videoBitsPerSecond = bitrateBps;
+      }
+      this.mediaRecorder = new MediaRecorder(stream, options);
 
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) this.recordedChunks.push(event.data);
@@ -78,7 +81,10 @@ class Media {
       this.mediaRecorder.start();
       this.isRecording = true;
       this.appcore.refreshGUI();
-      console.log(`[Lenia] Recording: ${supportedType}`);
+      const bitrateMbps = bitrateBps > 0 ? bitrateBps / 1e6 : 0;
+      console.log(
+        `[Lenia] Recording: ${supportedType}, fps=${captureFps}, bitrate=${bitrateMbps.toFixed(2)}Mbps`,
+      );
     } catch (err) {
       console.error("[Lenia] Recording failed:", err);
       this.stopRecording();
@@ -114,7 +120,12 @@ class Media {
   importWorldJSON() {
     this.openDataImportDialog((file) => {
       this._readJSONFile(file, (data) => {
-        if (!data || typeof data !== "object" || !data.cells) {
+        if (
+          !data ||
+          typeof data !== "object" ||
+          data.format !== "lenia-world-v2" ||
+          !data.cells
+        ) {
           throw new Error("[Lenia] Invalid world JSON payload");
         }
 
@@ -215,10 +226,13 @@ class Media {
           "renderLegend",
           "renderStats",
           "renderMotionOverlay",
+          "renderCalcPanels",
           "renderKeymapRef",
           "selectedAnimal",
           "placeMode",
           "imageFormat",
+          "recordingFPS",
+          "videoBitrateMbps",
         ];
 
         for (const key of allowed) {
@@ -256,6 +270,17 @@ class Media {
 
   _getMetadataSnapshot() {
     return JSON.parse(JSON.stringify(this.appcore.metadata || {}));
+  }
+
+  _getRecordingFPS() {
+    const fps = Number(this.appcore.params?.recordingFPS);
+    return Math.max(12, Math.min(120, Math.round(fps || 60)));
+  }
+
+  _getRecordingBitrateBps() {
+    const mbps = Number(this.appcore.params?.videoBitrateMbps);
+    const clampedMbps = Math.max(1, Math.min(64, mbps || 8));
+    return Math.round(clampedMbps * 1e6);
   }
 
   _getFullStatsSnapshot() {

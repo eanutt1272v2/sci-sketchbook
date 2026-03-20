@@ -119,11 +119,14 @@ class Media {
     if (!supportedType) return console.error("[Fluvia] No supported video format found");
 
     try {
-      const stream = sourceCanvas.captureStream(60);
-      this.mediaRecorder = new MediaRecorder(stream, {
-        mimeType: supportedType,
-        videoBitsPerSecond: 8000000,
-      });
+      const captureFps = this._getRecordingFPS();
+      const bitrateBps = this._getRecordingBitrateBps();
+      const stream = sourceCanvas.captureStream(captureFps);
+      const options = { mimeType: supportedType };
+      if (bitrateBps > 0) {
+        options.videoBitsPerSecond = bitrateBps;
+      }
+      this.mediaRecorder = new MediaRecorder(stream, options);
 
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) this.recordedChunks.push(event.data);
@@ -141,7 +144,10 @@ class Media {
       this.mediaRecorder.start();
       this.isRecording = true;
       this.appcore.refreshGUI();
-      console.log(`[Fluvia] Recording: ${supportedType}`);
+      const bitrateMbps = bitrateBps > 0 ? bitrateBps / 1e6 : 0;
+      console.log(
+        `[Fluvia] Recording: ${supportedType}, fps=${captureFps}, bitrate=${bitrateMbps.toFixed(2)}Mbps`,
+      );
     } catch (err) {
       console.error("[Fluvia] Recording failed:", err);
       this.stopRecording();
@@ -168,6 +174,7 @@ class Media {
 
   exportParamsJSON() {
     const payload = {
+      format: "data-tools.params.v1",
       metadata: this.appcore.metadata,
       params: this._serialiseParams(this.appcore.params),
       exportedAt: new Date().toISOString(),
@@ -181,6 +188,9 @@ class Media {
       this._readJSONFile(file, (data) => {
         if (!data || typeof data !== "object" || !data.params) {
           throw new Error("[Fluvia] Invalid params JSON payload");
+        }
+        if (data.format !== "data-tools.params.v1") {
+          throw new Error("[Fluvia] Invalid params JSON format version");
         }
 
         const oldSize = this.appcore.params.terrainSize;
@@ -216,6 +226,8 @@ class Media {
           "colourMap",
           "specularIntensity",
           "imageFormat",
+          "recordingFPS",
+          "videoBitrateMbps",
         ];
 
         for (const key of scalarKeys) {
@@ -241,6 +253,7 @@ class Media {
 
   exportStatisticsJSON() {
     const payload = {
+      format: "data-tools.stats.v1",
       metadata: this.appcore.metadata,
       statistics: this._serialiseStatistics(),
       exportedAt: new Date().toISOString(),
@@ -250,6 +263,8 @@ class Media {
   }
 
   exportStatisticsCSV() {
+    const metadataJson = JSON.stringify(this.appcore.metadata || {});
+    const exportedAt = new Date().toISOString();
     const stats = this.appcore.statistics;
     const rows = [["key", "value"]];
     const scalarKeys = [
@@ -279,7 +294,10 @@ class Media {
     rows.push(["dischargeBounds.min", Number(stats.dischargeBounds?.min) || 0]);
     rows.push(["dischargeBounds.max", Number(stats.dischargeBounds?.max) || 0]);
 
-    const csv = rows.map((r) => `${r[0]},${r[1]}`).join("\n");
+    const csv =
+      `# exportedAt: ${exportedAt}\n` +
+      `# metadata: ${metadataJson}\n` +
+      rows.map((r) => `${r[0]},${r[1]}`).join("\n");
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
     console.log("[Fluvia] Exported stats CSV");
   }
@@ -293,19 +311,20 @@ class Media {
       return;
     }
     const payload = {
+      format: "data-tools.world.v2",
       metadata: this.appcore.metadata,
       terrainSize: terrain.size,
       maps: {
-        heightMap: Array.from(terrain.heightMap),
-        originalHeightMap: Array.from(terrain.originalHeightMap),
-        bedrockMap: Array.from(terrain.bedrockMap),
-        sedimentMap: Array.from(terrain.sedimentMap),
-        dischargeMap: Array.from(terrain.dischargeMap),
-        dischargeTrack: Array.from(terrain.dischargeTrack),
-        momentumX: Array.from(terrain.momentumX),
-        momentumY: Array.from(terrain.momentumY),
-        momentumXTrack: Array.from(terrain.momentumXTrack),
-        momentumYTrack: Array.from(terrain.momentumYTrack),
+        heightMap: this._encodeWorldMap(terrain.heightMap),
+        originalHeightMap: this._encodeWorldMap(terrain.originalHeightMap),
+        bedrockMap: this._encodeWorldMap(terrain.bedrockMap),
+        sedimentMap: this._encodeWorldMap(terrain.sedimentMap),
+        dischargeMap: this._encodeWorldMap(terrain.dischargeMap),
+        dischargeTrack: this._encodeWorldMap(terrain.dischargeTrack),
+        momentumX: this._encodeWorldMap(terrain.momentumX),
+        momentumY: this._encodeWorldMap(terrain.momentumY),
+        momentumXTrack: this._encodeWorldMap(terrain.momentumXTrack),
+        momentumYTrack: this._encodeWorldMap(terrain.momentumYTrack),
       },
       exportedAt: new Date().toISOString(),
     };
@@ -320,6 +339,7 @@ class Media {
         if (
           !data ||
           typeof data !== "object" ||
+          data.format !== "data-tools.world.v2" ||
           !data.maps ||
           !data.terrainSize
         ) {
@@ -339,7 +359,7 @@ class Media {
           "momentumYTrack",
         ];
         for (const key of requiredMaps) {
-          if (!Array.isArray(data.maps[key])) {
+          if (!this._isEncodedWorldMap(data.maps[key])) {
             throw new Error(`[Fluvia] Invalid world JSON: missing maps.${key}`);
           }
         }
@@ -358,19 +378,61 @@ class Media {
         }
 
         const { terrain } = this.appcore;
-        this._copyArrayInto(terrain.heightMap, data.maps.heightMap);
+        this._copyArrayInto(
+          terrain.heightMap,
+          this._decodeWorldMap(data.maps.heightMap, terrain.heightMap.length),
+        );
         this._copyArrayInto(
           terrain.originalHeightMap,
-          data.maps.originalHeightMap,
+          this._decodeWorldMap(
+            data.maps.originalHeightMap,
+            terrain.originalHeightMap.length,
+          ),
         );
-        this._copyArrayInto(terrain.bedrockMap, data.maps.bedrockMap);
-        this._copyArrayInto(terrain.sedimentMap, data.maps.sedimentMap);
-        this._copyArrayInto(terrain.dischargeMap, data.maps.dischargeMap);
-        this._copyArrayInto(terrain.dischargeTrack, data.maps.dischargeTrack);
-        this._copyArrayInto(terrain.momentumX, data.maps.momentumX);
-        this._copyArrayInto(terrain.momentumY, data.maps.momentumY);
-        this._copyArrayInto(terrain.momentumXTrack, data.maps.momentumXTrack);
-        this._copyArrayInto(terrain.momentumYTrack, data.maps.momentumYTrack);
+        this._copyArrayInto(
+          terrain.bedrockMap,
+          this._decodeWorldMap(data.maps.bedrockMap, terrain.bedrockMap.length),
+        );
+        this._copyArrayInto(
+          terrain.sedimentMap,
+          this._decodeWorldMap(data.maps.sedimentMap, terrain.sedimentMap.length),
+        );
+        this._copyArrayInto(
+          terrain.dischargeMap,
+          this._decodeWorldMap(
+            data.maps.dischargeMap,
+            terrain.dischargeMap.length,
+          ),
+        );
+        this._copyArrayInto(
+          terrain.dischargeTrack,
+          this._decodeWorldMap(
+            data.maps.dischargeTrack,
+            terrain.dischargeTrack.length,
+          ),
+        );
+        this._copyArrayInto(
+          terrain.momentumX,
+          this._decodeWorldMap(data.maps.momentumX, terrain.momentumX.length),
+        );
+        this._copyArrayInto(
+          terrain.momentumY,
+          this._decodeWorldMap(data.maps.momentumY, terrain.momentumY.length),
+        );
+        this._copyArrayInto(
+          terrain.momentumXTrack,
+          this._decodeWorldMap(
+            data.maps.momentumXTrack,
+            terrain.momentumXTrack.length,
+          ),
+        );
+        this._copyArrayInto(
+          terrain.momentumYTrack,
+          this._decodeWorldMap(
+            data.maps.momentumYTrack,
+            terrain.momentumYTrack.length,
+          ),
+        );
 
         terrain.updateBoundsCache();
         this.appcore.analyser.reinitialise();
@@ -421,7 +483,7 @@ class Media {
   }
 
   _copyArrayInto(target, source) {
-    if (!target || !Array.isArray(source)) {
+    if (!target || !ArrayBuffer.isView(source)) {
       throw new Error("[Fluvia] Invalid map buffer during world import");
     }
     if (source.length !== target.length) {
@@ -434,6 +496,42 @@ class Media {
       const value = Number(source[i]);
       target[i] = Number.isFinite(value) ? value : 0;
     }
+  }
+
+  _encodeWorldMap(source) {
+    if (!(source instanceof Float32Array)) {
+      throw new Error("[Fluvia] Invalid world map during export");
+    }
+
+    return {
+      encoding: "rle-f32-v1",
+      length: source.length,
+      data: RLECodec.encodeFloat32Array(source),
+    };
+  }
+
+  _isEncodedWorldMap(source) {
+    return (
+      source &&
+      typeof source === "object" &&
+      source.encoding === "rle-f32-v1" &&
+      typeof source.data === "string"
+    );
+  }
+
+  _decodeWorldMap(source, expectedLength) {
+    if (!this._isEncodedWorldMap(source)) {
+      throw new Error("[Fluvia] Invalid encoded world map during import");
+    }
+
+    const length = Number(source.length);
+    if (length !== expectedLength) {
+      throw new Error(
+        `[Fluvia] Invalid encoded world map length: expected ${expectedLength}, got ${length}`,
+      );
+    }
+
+    return RLECodec.decodeFloat32Array(source.data, length);
   }
 
   _assignColour(srcRoot, dstRoot, key) {
@@ -456,6 +554,17 @@ class Media {
 
   _serialiseParams(params) {
     return JSON.parse(JSON.stringify(params));
+  }
+
+  _getRecordingFPS() {
+    const fps = Number(this.appcore.params?.recordingFPS);
+    return Math.max(12, Math.min(120, Math.round(fps || 60)));
+  }
+
+  _getRecordingBitrateBps() {
+    const mbps = Number(this.appcore.params?.videoBitrateMbps);
+    const clampedMbps = Math.max(1, Math.min(64, mbps || 8));
+    return Math.round(clampedMbps * 1e6);
   }
 
   _serialiseStatistics() {

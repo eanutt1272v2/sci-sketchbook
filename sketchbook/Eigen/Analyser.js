@@ -114,10 +114,14 @@ class Analyser {
       }
     }
 
-    this.statistics.density = mean;
+    const safePeak = Math.max(peak, 1e-20);
+    const normMean = mean / safePeak;
+    const normStdDev = stdDev / safePeak;
+
+    this.statistics.density = normMean;
     this.statistics.peakDensity = peak;
-    this.statistics.mean = mean;
-    this.statistics.stdDev = stdDev;
+    this.statistics.mean = normMean;
+    this.statistics.stdDev = normStdDev;
     this.statistics.entropy = entropy;
     this.statistics.concentration = concentration;
     this.statistics.radialPeak = (radialPeakBin + 0.5) / radialBins;
@@ -129,6 +133,7 @@ class Analyser {
 
   recordStatistics(params) {
     const row = [
+      Number(params?.fps) || 0,
       this.statistics.density,
       this.statistics.peakDensity,
       this.statistics.mean,

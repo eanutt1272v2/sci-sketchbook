@@ -26,11 +26,11 @@ class GUI {
 
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Sim" },
-        { title: "Params" },
-        { title: "Render" },
+        { title: "Simulation" },
+        { title: "Parameters" },
+        { title: "Visuals" },
         { title: "Animals" },
-        { title: "Stats" },
+        { title: "Statistics" },
         { title: "Media" },
       ],
     });
@@ -43,24 +43,30 @@ class GUI {
     this.createMediaTab(tabs.pages[5]);
   }
 
+  addSeparator(target) {
+    target.addBlade({ view: "separator" });
+  }
+
   createSimulationTab(page) {
     const { params, statistics } = this;
 
-    page.addBinding(params, "running", { label: "Running" });
-
-    page
+    const run = page.addFolder({ title: "Run Controls", expanded: true });
+    run.addBinding(params, "running", { label: "Running" });
+    run
       .addButton({ title: "Step Once" })
       .on("click", () => this.appcore?.stepOnce());
-    page
+    run
       .addButton({ title: "Clear World" })
       .on("click", () => this.appcore?.clearWorld());
-    page
+    run
       .addButton({ title: "Randomise" })
       .on("click", () => this.appcore?.randomiseWorld());
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    page.addBinding(statistics, "fps", {
+    const perf = page.addFolder({ title: "Performance", expanded: true });
+
+    perf.addBinding(statistics, "fps", {
       readonly: true,
       label: "FPS",
       view: "graph",
@@ -68,14 +74,12 @@ class GUI {
       min: 0,
       max: 100,
     });
+    perf.addBinding(statistics, "time", { readonly: true, label: "Time (s)" });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    page.addBinding(statistics, "time", { readonly: true, label: "Time (s)" });
-
-    page.addBlade({ view: "separator" });
-
-    page
+    const world = page.addFolder({ title: "World", expanded: true });
+    world
       .addBinding(params, "gridSize", {
         label: "Grid Size",
         options: {
@@ -112,7 +116,7 @@ class GUI {
       label: "Width (σ)",
     });
 
-    this.growthBinding = bindAutomaton(growth, "gn", {
+    bindAutomaton(growth, "gn", {
       label: "Type",
       options: {
         Polynomial: 1,
@@ -132,7 +136,7 @@ class GUI {
       label: "Radius (R)",
     });
 
-    this.kernelBinding = bindAutomaton(kernel, "kn", {
+    bindAutomaton(kernel, "kn", {
       label: "Type",
       options: {
         Polynomial: 1,
@@ -182,7 +186,9 @@ class GUI {
   createRenderTab(page) {
     const { params } = this;
 
-    page
+    const maps = page.addFolder({ title: "State Maps", expanded: true });
+
+    maps
       .addBinding(params, "colourMap", {
         label: "Colour Map",
         options: this.appcore
@@ -193,28 +199,29 @@ class GUI {
         this.appcore?.renderer?.setColourMap(params.colourMap),
       );
 
-    page.addBlade({ view: "separator" });
-
-    page.addBinding(params, "renderMode", {
+    maps.addBinding(params, "renderMode", {
       label: "Render Mode",
       options: {
         World: "world",
-        "Potential Field": "potential",
-        "Growth Field": "field",
+        Potential: "potential",
+        Growth: "field",
         Kernel: "kernel",
       },
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    const overlay = page.addFolder({ title: "Overlay Options" });
+    const overlay = page.addFolder({ title: "Overlays" });
 
     overlay.addBinding(params, "renderGrid", { label: "Grid" });
     overlay.addBinding(params, "renderScale", { label: "Scale Bar" });
-    overlay.addBinding(params, "renderLegend", { label: "Legend" });
+    overlay.addBinding(params, "renderLegend", { label: "Colour Legend" });
     overlay.addBinding(params, "renderStats", { label: "Statistics" });
     overlay.addBinding(params, "renderMotionOverlay", {
       label: "Motion Overlay",
+    });
+    overlay.addBinding(params, "renderCalcPanels", {
+      label: "Calculation Panels",
     });
   }
 
@@ -277,7 +284,9 @@ class GUI {
         this.appcore.applyScaledAnimalParams(animal, params.placeScale);
         this.appcore.updateAutomatonParams();
         this.appcore.refreshGUI();
-        console.log(`[Lenia] Manually scaled params: R=${params.R}, T=${params.T}`);
+        console.log(
+          `[Lenia] Manually scaled params: R=${params.R}, T=${params.T}`,
+        );
       });
 
     scaleFolder
@@ -295,7 +304,7 @@ class GUI {
 
   createStatisticsTab(page) {
     const { statistics } = this;
-    const metrics = page.addFolder({ title: "Metrics" });
+    const metrics = page.addFolder({ title: "Core Metrics" });
     metrics.addBinding(statistics, "gen", {
       readonly: true,
       label: "Generation",
@@ -328,10 +337,26 @@ class GUI {
       readonly: true,
       label: "Centre Y",
     });
+    motion.addBinding(statistics, "growthCenterX", {
+      readonly: true,
+      label: "Growth Centre X",
+    });
+    motion.addBinding(statistics, "growthCenterY", {
+      readonly: true,
+      label: "Growth Centre Y",
+    });
+    motion.addBinding(statistics, "massGrowthDist", {
+      readonly: true,
+      label: "Mass-Growth Dist",
+    });
     motion.addBinding(statistics, "speed", { readonly: true, label: "Speed" });
     motion.addBinding(statistics, "angle", {
       readonly: true,
       label: "Angle (°)",
+    });
+    motion.addBinding(statistics, "rotationSpeed", {
+      readonly: true,
+      label: "Rotation Speed",
     });
 
     page.addBlade({ view: "separator" });
@@ -347,6 +372,18 @@ class GUI {
     symmetry.addBinding(statistics, "massAsym", {
       readonly: true,
       label: "Mass Asymmetry",
+    });
+    symmetry.addBinding(statistics, "lyapunov", {
+      readonly: true,
+      label: "Lyapunov",
+    });
+    symmetry.addBinding(statistics, "period", {
+      readonly: true,
+      label: "Period (s)",
+    });
+    symmetry.addBinding(statistics, "periodConfidence", {
+      readonly: true,
+      label: "Period Confidence",
     });
 
     page.addBlade({ view: "separator" });
@@ -367,7 +404,7 @@ class GUI {
       .addButton({ title: "Import World (JSON)" })
       .on("click", () => media?.importWorldJSON());
 
-    const data = page.addFolder({ title: "Data" });
+    const data = page.addFolder({ title: "Export" });
     data
       .addButton({ title: "Export Params (JSON)" })
       .on("click", () => media?.exportParamsJSON());
@@ -399,6 +436,20 @@ class GUI {
 
     exp.addBlade({ view: "separator" });
 
+    exp.addBinding(this.params, "recordingFPS", {
+      label: "Record FPS",
+      min: 12,
+      max: 120,
+      step: 1,
+    });
+
+    exp.addBinding(this.params, "videoBitrateMbps", {
+      label: "Bitrate (Mbps)",
+      min: 1,
+      max: 64,
+      step: 0.5,
+    });
+
     exp.addBinding(this.params, "imageFormat", {
       label: "Image Format",
       options: { PNG: "png", JPG: "jpg", WebP: "webp" },
@@ -408,20 +459,22 @@ class GUI {
       .addButton({ title: "Export Image" })
       .on("click", () => media?.exportImage());
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    page.addBinding(statistics, "gen", {
+    const session = page.addFolder({ title: "Session", expanded: true });
+
+    session.addBinding(statistics, "gen", {
       readonly: true,
       label: "Current Gen",
     });
 
-    page.addButton({ title: "Clear Statistics" }).on("click", () => {
+    session.addButton({ title: "Clear Statistics" }).on("click", () => {
       if (!analyser) return;
       analyser.series = [];
       analyser.reset();
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
     page.addButton({ title: "Print Statistics to Console" }).on("click", () => {
       if (!analyser) return;
@@ -442,8 +495,6 @@ class GUI {
       this.pane.dispose();
       this.pane = null;
       this.animalBinding = null;
-      this.kernelBinding = null;
-      this.growthBinding = null;
       this.recordButton = null;
     }
   }

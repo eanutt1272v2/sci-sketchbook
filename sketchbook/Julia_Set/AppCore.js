@@ -62,7 +62,7 @@ class AppCore {
       this._worker = new Worker("FractalWorker.js");
     } catch (e) {
       console.warn(
-        "[Julia Set] Worker unavailable — falling back to sync render.",
+        "[Julia Set] Worker unavailable, falling back to synchronous rendering",
         e,
       );
       this._worker = null;

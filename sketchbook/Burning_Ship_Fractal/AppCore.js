@@ -59,7 +59,7 @@ class AppCore {
       this._worker = new Worker("FractalWorker.js");
     } catch (e) {
       console.warn(
-        "[Burning Ship Fractal] Worker unavailable, falling back to sync render.",
+        "[Burning Ship Fractal] Worker unavailable, falling back to synchronous rendering",
         e,
       );
       this._worker = null;

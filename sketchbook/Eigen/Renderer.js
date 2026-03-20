@@ -8,8 +8,6 @@ class Renderer {
 
     this.lut = new Uint8ClampedArray(256 * 3);
     this.currentColourMap = "";
-    this.legendGradient = null;
-    this.legendGradientKey = "";
     this._lastPixelSmoothing = null;
   }
 
@@ -86,18 +84,44 @@ class Renderer {
       exposure,
       viewCentre,
     } = this.appcore.params;
+
+    const result = this.computeGridData({
+      n,
+      l,
+      m,
+      resolution: res,
+      viewRadius,
+      slicePlane,
+      sliceOffset,
+      viewCentre,
+    });
+
+    this.grid = result.grid;
+    this.renderToBuffer(result.grid, result.peak, res, colourMap, exposure);
+  }
+
+  computeGridData({
+    n,
+    l,
+    m,
+    resolution,
+    viewRadius,
+    slicePlane,
+    sliceOffset,
+    viewCentre,
+    allocateBuffer = true,
+  }) {
+    const res = Math.max(1, Number(resolution) || 1);
     const { fallbacksolver } = this.appcore;
-    let { buffer } = this;
-
-    if (!buffer || buffer.width !== res || buffer.height !== res) {
-      buffer = createImage(res, res);
+    let buffer = null;
+    if (allocateBuffer) {
+      buffer = this.buffer;
+      if (!buffer || buffer.width !== res || buffer.height !== res) {
+        buffer = createImage(res, res);
+      }
     }
 
-    if (this.grid.length !== res * res) {
-      this.grid = new Float32Array(res * res);
-    }
-
-    const grid = this.grid;
+    const grid = new Float32Array(res * res);
     const axisSamples = this.getAxisSamples(res, viewRadius);
     const { c1, c2, cFixed } = this.getSliceAxes(slicePlane);
     let peak = 1e-10;
@@ -138,8 +162,10 @@ class Renderer {
       }
     }
 
-    this.buffer = buffer;
-    this.renderToBuffer(grid, peak, res, colourMap, exposure);
+    if (allocateBuffer && buffer) {
+      this.buffer = buffer;
+    }
+    return { grid, peak };
   }
 
   renderFromGrid(gridBuffer, peak) {
@@ -160,10 +186,15 @@ class Renderer {
     this.updateLUT(colourMap || "rocket");
 
     const gamma = 1.0 / (1.0 + exposure);
+    const peakRef =
+      (typeof this.appcore.getNormalisationPeak === "function" &&
+        this.appcore.getNormalisationPeak()) ||
+      peak ||
+      1e-10;
     buffer.loadPixels();
 
     for (let i = 0; i < res * res; i++) {
-      let norm = grid[i] / peak;
+      let norm = grid[i] / peakRef;
       let val = Math.pow(constrain(norm, 0, 1), gamma);
       const lutIndex = Math.min(255, Math.max(0, Math.round(val * 255))) * 3;
 
@@ -211,19 +242,55 @@ class Renderer {
   }
 
   renderOverlay() {
-    const { n, l, m, viewRadius, sliceOffset, orbitalNotation, viewCentre } =
-      this.appcore.params;
+    const {
+      n,
+      l,
+      m,
+      viewRadius,
+      sliceOffset,
+      orbitalNotation,
+      viewCentre,
+      resolution,
+      slicePlane,
+      exposure,
+      colourMap,
+      pixelSmoothing,
+    } = this.appcore.params;
+    const stats = this.appcore.statistics;
     const { axis1, axis2, fixedLabel, axis1Label, axis2Label } =
       this.appcore.getPlaneAxes();
-    const fps = this.appcore.statistics.fps;
-    const overlay = `Orbital: ${orbitalNotation}\nn=${n}, l=${l}, m=${m}\nView Radius: ${viewRadius.toFixed(2)} a₀\nPan ${axis1Label}: ${viewCentre[axis1].toFixed(2)} a₀   ${axis2Label}: ${viewCentre[axis2].toFixed(2)} a₀\nSlice ${fixedLabel}: ${sliceOffset.toFixed(2)} a₀\nFPS: ${fps.toFixed(1)}`;
+    const lines = [
+      `Orbital: ${orbitalNotation}`,
+      `Quantum: n=${n}, l=${l}, m=${m}`,
+      `FPS: ${stats.fps.toFixed(1)}`,
+      `Resolution: ${resolution}`,
+      `Plane: ${slicePlane.toUpperCase()}`,
+      `Slice ${fixedLabel}: ${sliceOffset.toFixed(2)} a0`,
+      `View Radius: ${viewRadius.toFixed(2)} a0`,
+      `Pan ${axis1Label}: ${viewCentre[axis1].toFixed(2)} a0`,
+      `Pan ${axis2Label}: ${viewCentre[axis2].toFixed(2)} a0`,
+      `Density Mean: ${stats.mean.toFixed(4)}`,
+      `Density Std Dev: ${stats.stdDev.toFixed(4)}`,
+      `Density Peak: ${stats.peakDensity.toFixed(4)}`,
+      `Entropy: ${stats.entropy.toFixed(4)}`,
+      `Concentration: ${stats.concentration.toFixed(4)}`,
+      `Radial Peak: ${stats.radialPeak.toFixed(3)} a0`,
+      `Radial Spread: ${stats.radialSpread.toFixed(3)} a0`,
+      `Node Estimate: ${stats.nodeEstimate.toFixed(0)}`,
+      `Colour Map: ${colourMap}`,
+      `Exposure: ${exposure.toFixed(2)}`,
+      `Pixel Smoothing: ${pixelSmoothing ? "on" : "off"}`,
+    ];
 
-    fill(255);
-    noStroke();
+    push();
     textAlign(LEFT, TOP);
-    textSize(20);
-
-    text(overlay, 20, 20);
+    textSize(12);
+    noStroke();
+    const panelX = 20;
+    const panelY = 20;
+    fill(255);
+    text(lines.join("\n"), panelX, panelY);
+    pop();
   }
 
   renderLegend() {
@@ -231,48 +298,49 @@ class Renderer {
     const { colourMap } = this.appcore.params;
     this.updateLUT(colourMap || "rocket");
 
-    const x = width - 15;
-    const y1 = 15;
-    const y2 = height - 15;
-    const w = 20;
+    const x = width - 20;
+    const y1 = 20;
+    const y2 = height - 20;
+    const w = 15;
     const h = y2 - y1;
 
-    const legendKey = `${width}x${height}:${this.currentColourMap}`;
-    if (this.legendGradientKey !== legendKey || !this.legendGradient) {
-      const grad = drawingContext.createLinearGradient(0, y1, 0, y2);
-      for (let i = 0; i <= 10; i++) {
-        const t = i / 10;
-        const idx = (((1 - t) * 255) | 0) * 3;
-        grad.addColorStop(
-          t,
-          `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
-        );
-      }
-      this.legendGradient = grad;
-      this.legendGradientKey = legendKey;
+    const grad = drawingContext.createLinearGradient(0, y1, 0, y2);
+    const stops = 32;
+    for (let i = 0; i <= stops; i++) {
+      const t = i / stops;
+      const idx = (((1 - t) * 255) | 0) * 3;
+      grad.addColorStop(
+        t,
+        `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
+      );
     }
 
-    drawingContext.strokeStyle = "rgba(255, 255, 255, 0.78)";
-    drawingContext.lineWidth = 1;
-
-    drawingContext.fillStyle = this.legendGradient;
+    noStroke();
+    drawingContext.fillStyle = grad;
     drawingContext.fillRect(x - w, y1, w, h);
 
-    drawingContext.strokeRect(x - w, y1, w, h);
+    noFill();
+    stroke(255, 255, 255, 200);
+    strokeWeight(1.5);
+    rect(x - w, y1, w, h);
 
     const labels = [
-      { v: 1, y: y1 },
-      { v: 1 / 2, y: y1 + h / 2 },
-      { v: 0, y: y2 },
+      { val: "1.0", y: y1 },
+      { val: "0.75", y: y1 + h * 0.25 },
+      { val: "0.5", y: y1 + h * 0.5 },
+      { val: "0.25", y: y1 + h * 0.75 },
+      { val: "0.0", y: y2 },
     ];
 
     fill(255);
+    noStroke();
     textSize(11);
     textAlign(RIGHT, CENTER);
 
     labels.forEach((label) => {
-      text(label.v.toFixed(3), x - w - 6, label.y);
-      stroke(255, 100);
+      text(label.val, x - w - 6, label.y);
+      stroke(255, 255, 255, 150);
+      strokeWeight(1);
       line(x - w - 3, label.y, x - w, label.y);
     });
     pop();

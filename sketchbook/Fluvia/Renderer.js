@@ -14,7 +14,6 @@ class Renderer {
 
     this.lut = new Uint8ClampedArray(256 * 3);
     this.currentColourMap = "";
-    this.lutChannels = ["r", "g", "b"];
     this.textureUpdateIntervalMs = 50;
     this.lastTextureUpdateMs = 0;
     this.textureDirty = true;
@@ -109,7 +108,7 @@ class Renderer {
     if (!colourData) return;
 
     this.currentColourMap = colourMap;
-    const channels = this.lutChannels;
+    const channels = ["r", "g", "b"];
 
     for (let i = 0; i < 256; i++) {
       const intensity = i / 255;
@@ -364,25 +363,44 @@ class Renderer {
   }
 
   renderStats() {
-    push();
     const { statistics, params } = this.appcore;
-
-    fill(255);
-    textSize(15);
-    textAlign(LEFT, TOP);
-
     const lines = [
-      `FPS: ${statistics.fps.toFixed(2)}`,
-      `Time: ${statistics.simulationTime.toFixed(2)}s`,
-      `Render Method: ${params.renderMethod}`,
+      `FPS: ${statistics.fps.toFixed(1)}`,
+      `Sim Time: ${statistics.simulationTime.toFixed(1)} s`,
+      `Frame: ${statistics.frameCounter}`,
+      `Running: ${params.running ? "on" : "off"}`,
+      `Grid Size: ${params.terrainSize}`,
+      `Droplets Per Frame: ${params.dropletsPerFrame}`,
+      `Render Mode: ${params.renderMethod}`,
       `Surface Map: ${params.surfaceMap}`,
       `Colour Map: ${params.colourMap}`,
-      `Elevation Range: ${statistics.heightBounds.min.toFixed(3)} - ${statistics.heightBounds.max.toFixed(3)}`,
-      `Peak Discharge: ${statistics.peakDischarge.toFixed(3)}`,
-      `Rugosity Index: ${statistics.rugosity.toFixed(3)}`,
+      `Elevation Mean: ${statistics.avgElevation.toFixed(3)}`,
+      `Elevation Std Dev: ${statistics.elevationStdDev.toFixed(3)}`,
+      `Elevation Min: ${statistics.heightBounds.min.toFixed(3)}`,
+      `Elevation Max: ${statistics.heightBounds.max.toFixed(3)}`,
+      `Rugosity: ${statistics.rugosity.toFixed(3)}`,
+      `Slope Complexity: ${statistics.slopeComplexity.toFixed(3)}`,
+      `Water Total: ${statistics.totalWater.toFixed(2)}`,
+      `Active Water Cover: ${statistics.activeWaterCover.toFixed(2)} %`,
+      `Hydraulic Residence: ${statistics.hydraulicResidence.toFixed(2)}`,
+      `Drainage Density: ${statistics.drainageDensity.toFixed(2)} %`,
+      `Discharge peak: ${statistics.peakDischarge.toFixed(3)}`,
+      `Discharge Min: ${statistics.dischargeBounds.min.toFixed(3)}`,
+      `Discharge Max: ${statistics.dischargeBounds.max.toFixed(3)}`,
+      `Sediment Total: ${statistics.totalSediment.toFixed(2)}`,
+      `Bedrock Total: ${statistics.totalBedrock.toFixed(2)}`,
+      `Sediment Flux: ${statistics.sedimentFlux.toFixed(3)}`,
+      `Erosion Rate: ${statistics.erosionRate.toFixed(3)}`,
     ];
 
-    text(lines.join("\n"), 20, 20);
+    push();
+    textAlign(LEFT, TOP);
+    textSize(12);
+    noStroke();
+    const panelX = 20;
+    const panelY = 20;
+    fill(255);
+    text(lines.join("\n"), panelX, panelY);
     pop();
   }
 
@@ -421,15 +439,16 @@ class Renderer {
     const { surfaceMap, colourMap } = this.appcore.params;
     this.updateLUT(colourMap || "viridis");
 
-    const x = width - 15;
-    const y1 = 15;
-    const y2 = height - 15;
-    const w = 20;
+    const x = width - 20;
+    const y1 = 20;
+    const y2 = height - 20;
+    const w = 15;
     const h = y2 - y1;
 
     const grad = drawingContext.createLinearGradient(0, y1, 0, y2);
-    for (let i = 0; i <= 10; i++) {
-      const t = i / 10;
+    const stops = 32;
+    for (let i = 0; i <= stops; i++) {
+      const t = i / stops;
       const idx = (((1 - t) * 255) | 0) * 3;
       grad.addColorStop(
         t,
@@ -437,28 +456,33 @@ class Renderer {
       );
     }
 
-    drawingContext.strokeStyle = "rgba(255, 255, 255, 0.78)";
-    drawingContext.lineWidth = 1;
-
+    noStroke();
     drawingContext.fillStyle = grad;
     drawingContext.fillRect(x - w, y1, w, h);
 
-    drawingContext.strokeRect(x - w, y1, w, h);
+    noFill();
+    stroke(255, 255, 255, 200);
+    strokeWeight(1.5);
+    rect(x - w, y1, w, h);
 
     const b = this.calculateBounds(surfaceMap);
     const labels = [
-      { v: b.min + b.range, y: y1 },
-      { v: b.min + b.range / 2, y: y1 + h / 2 },
+      { v: b.min + b.range * 1.0, y: y1 },
+      { v: b.min + b.range * 0.75, y: y1 + h * 0.25 },
+      { v: b.min + b.range * 0.5, y: y1 + h * 0.5 },
+      { v: b.min + b.range * 0.25, y: y1 + h * 0.75 },
       { v: b.min, y: y2 },
     ];
 
     fill(255);
+    noStroke();
     textSize(11);
     textAlign(RIGHT, CENTER);
 
     labels.forEach((l) => {
       text(l.v.toFixed(3), x - w - 6, l.y);
-      stroke(255, 100);
+      stroke(255, 255, 255, 150);
+      strokeWeight(1);
       line(x - w - 3, l.y, x - w, l.y);
     });
     pop();

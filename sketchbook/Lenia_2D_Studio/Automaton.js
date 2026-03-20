@@ -215,6 +215,7 @@ class Automaton {
     const delta = new Float32Array(count);
 
     for (let i = 0; i < count; i++) {
+      const oldVal = cells[i];
       const growth = this._growthFunc(potential[i]);
       field[i] = growth;
 
@@ -223,8 +224,8 @@ class Automaton {
         D = 0.5 * (3 * field[i] - board.fieldOld[i]);
       }
 
-      let newVal = cells[i] + dt * D;
-      delta[i] = D;
+      const deltaTerm = dt * D;
+      let newVal = oldVal + deltaTerm;
 
       if (hasNoise) {
         newVal *= 1 + (Math.random() - 0.5) * noiseAmp;
@@ -239,6 +240,8 @@ class Automaton {
       if (quant > 0) {
         newVal = Math.round(newVal * quant) / quant;
       }
+
+      delta[i] = deltaTerm;
 
       if (!hasMask || Math.random() > maskRate) {
         cells[i] = newVal;

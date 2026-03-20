@@ -37,7 +37,7 @@ class Simulation {
       this._worker = new Worker("SimulationWorker.js");
     } catch (e) {
       console.warn(
-        "[Cellular Division] Worker unavailable, falling back to sync sim.",
+        "[Cellular Division] Worker unavailable, falling back to synchronous simulation",
         e,
       );
       this._worker = null;

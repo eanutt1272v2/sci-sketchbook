@@ -237,8 +237,9 @@ function _stepFFT(cells, potential, field, fieldOld, params, N) {
     let D = growth;
     if (hasOld) D = 0.5 * (3 * field[i] - fieldOld[i]);
 
-    let newVal = cells[i] + dt * D;
-    change[i] = D;
+    const deltaTerm = dt * D;
+    let newVal = cells[i] + deltaTerm;
+    change[i] = deltaTerm;
 
     if (hasNoise) newVal *= 1 + (Math.random() - 0.5) * noiseAmp;
 

@@ -18,7 +18,7 @@ class AppCore {
       pixelSmoothing: true,
       renderOverlay: true,
       renderLegend: true,
-      renderKeymapRef: false,
+      renderKeymapRef: true,
 
       viewRadius: 32,
       slicePlane: "xz",
@@ -26,6 +26,8 @@ class AppCore {
       viewCentre: { x: 0, y: 0, z: 0 },
 
       imageFormat: "png",
+      recordingFPS: 60,
+      videoBitrateMbps: 8,
     };
 
     this.statistics = {
@@ -42,6 +44,10 @@ class AppCore {
     };
 
     this._pendingActions = [];
+    this._analysisConfig = { resolution: 256, viewRadius: 32 };
+    this._analysisSignature = "";
+    this._normalisationPeak = 1e-10;
+    this._analysisGrid = null;
 
     this.fallbacksolver = new FallbackSolver(this);
     this.analyser = new Analyser(this.statistics);
@@ -237,12 +243,54 @@ class AppCore {
         this._dispatchRender();
       }
     } else {
+      this._updateCanonicalAnalysis(false);
       this.renderer.update();
-      if (this.renderer.grid && this.renderer.grid.length > 0) {
-        this.analyser.updateStatistics(this.renderer.grid, this.params);
-      }
       this.refreshGUI();
     }
+  }
+
+  _getAnalysisSignature() {
+    const { n, l, m, slicePlane, sliceOffset } = this.params;
+    return `${n}|${l}|${m}|${slicePlane}|${Number(sliceOffset).toFixed(5)}`;
+  }
+
+  _updateCanonicalAnalysis(force = false) {
+    const signature = this._getAnalysisSignature();
+    const shouldRecompute = force || signature !== this._analysisSignature;
+
+    if (shouldRecompute) {
+      const { n, l, m, slicePlane, sliceOffset } = this.params;
+      const { resolution, viewRadius } = this._analysisConfig;
+      const result = this.renderer.computeGridData({
+        n,
+        l,
+        m,
+        resolution,
+        viewRadius,
+        slicePlane,
+        sliceOffset,
+        viewCentre: { x: 0, y: 0, z: 0 },
+        allocateBuffer: false,
+      });
+
+      this._analysisGrid = result.grid;
+      this._normalisationPeak = Math.max(1e-10, Number(result.peak) || 0);
+      this._analysisSignature = signature;
+    }
+
+    if (!this._analysisGrid || this._analysisGrid.length === 0) return;
+
+    this.analyser.updateStatistics(this._analysisGrid, {
+      ...this.params,
+      resolution: this._analysisConfig.resolution,
+      viewRadius: this._analysisConfig.viewRadius,
+      viewCentre: { x: 0, y: 0, z: 0 },
+      fps: Number(this.statistics.fps) || 0,
+    });
+  }
+
+  getNormalisationPeak() {
+    return this._normalisationPeak;
   }
 
   _queueAction(name, handler) {
@@ -266,7 +314,7 @@ class AppCore {
       this._worker = new Worker("EigenWorker.js");
     } catch (e) {
       console.warn(
-        "[Eigen] Worker unavailable, falling back to synchronous render.",
+        "[Eigen] Worker unavailable, falling back to synchronous rendering",
         e,
       );
       this._worker = null;
@@ -276,10 +324,8 @@ class AppCore {
     this._worker.onerror = (e) => {
       console.error("[Eigen] Worker error:", e);
       this._workerBusy = false;
+      this._updateCanonicalAnalysis(false);
       this.renderer.update();
-      if (this.renderer.grid && this.renderer.grid.length > 0) {
-        this.analyser.updateStatistics(this.renderer.grid, this.params);
-      }
       this.refreshGUI();
     };
   }
@@ -312,10 +358,8 @@ class AppCore {
 
   _onWorkerMessage(data) {
     if (data.type !== "result") return;
+    this._updateCanonicalAnalysis(false);
     this.renderer.renderFromGrid(data.grid, data.peak);
-    if (this.renderer.grid && this.renderer.grid.length > 0) {
-      this.analyser.updateStatistics(this.renderer.grid, this.params);
-    }
     this._workerBusy = false;
     if (this._renderPending) {
       this._renderPending = false;

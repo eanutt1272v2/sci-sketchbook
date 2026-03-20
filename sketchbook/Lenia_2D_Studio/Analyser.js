@@ -1,21 +1,24 @@
 class Analyser {
   static STAT_NAMES = {
-    p_m: "Param m",
-    p_s: "Param s",
+    fps: "FPS",
     n: "Gen (#)",
     t: "Time (s)",
     m: "Mass (mg)",
     g: "Growth (mg/s)",
+    p: "Peak value",
     r: "Gyradius (mm)",
+    x: "Mass center X",
+    y: "Mass center Y",
+    gx: "Growth center X",
+    gy: "Growth center Y",
     d: "Mass-growth distance (mm)",
     s: "Speed (mm/s)",
-    w: "Angular speed (deg/s)",
-    m_a: "Mass asymmetry (mg)",
-    x: "X position (mm)",
-    y: "Y position (mm)",
-    l: "Lyapunov exponent",
-    k: "Rotational symmetry",
-    w_k: "Rotational speed",
+    a: "Direction angle (deg)",
+    ma: "Mass asymmetry (mg)",
+    k: "Rotational symmetry order",
+    ks: "Rotational symmetry strength",
+    wr: "Rotational speed (deg/s)",
+    ly: "Lyapunov exponent",
   };
 
   static STAT_HEADERS = Object.keys(Analyser.STAT_NAMES);
@@ -23,7 +26,6 @@ class Analyser {
   constructor(statistics = null, renderData = null) {
     this.epsilon = 1e-10;
     this.series = [];
-    this.segmentInit = 128;
     this.segmentLen = 512;
     this.statistics = statistics || {
       gen: 0,
@@ -34,17 +36,25 @@ class Analyser {
       gyradius: 0,
       centerX: 0,
       centerY: 0,
+      growthCenterX: 0,
+      growthCenterY: 0,
+      massGrowthDist: 0,
       massAsym: 0,
       speed: 0,
       angle: 0,
       symmSides: 0,
       symmStrength: 0,
+      rotationSpeed: 0,
+      lyapunov: 0,
       fps: 0,
     };
     this.renderData = renderData || {
       frameCount: 0,
       lastTime: 0,
     };
+
+    this.maxHistory = 512;
+    this.massHistory = [];
 
     this.reset();
   }
@@ -56,13 +66,16 @@ class Analyser {
     this.gyradius = 0;
     this.centerX = 0;
     this.centerY = 0;
+    this.growthCenterX = 0;
+    this.growthCenterY = 0;
+    this.massGrowthDist = 0;
     this.massAsym = 0;
     this.lyapunov = 0;
     this.symmSides = 0;
-    this.symmRotate = 0;
     this.lastCentreX = null;
     this.lastCentreY = null;
     this.totalShift = [0, 0];
+    this.massHistory = [];
   }
 
   analyse(board, automaton) {
@@ -76,6 +89,9 @@ class Analyser {
     stats.maxValue = 0;
     let mx = 0;
     let my = 0;
+    let gx = 0;
+    let gy = 0;
+    let gMass = 0;
     let cosX = 0;
     let sinX = 0;
     let cosY = 0;
@@ -84,13 +100,21 @@ class Analyser {
     for (let i = 0; i < count; i++) {
       const val = cells[i];
       stats.mass += val;
-      if (field[i] > 0) stats.growth += field[i];
+      const growthVal = Math.max(0, field[i]);
+      if (growthVal > 0) {
+        stats.growth += growthVal;
+        gMass += growthVal;
+      }
       if (val > stats.maxValue) stats.maxValue = val;
 
       const x = i % size;
       const y = Math.floor(i / size);
       mx += val * x;
       my += val * y;
+      if (growthVal > 0) {
+        gx += growthVal * x;
+        gy += growthVal * y;
+      }
 
       const ax = (2 * Math.PI * x) / size;
       const ay = (2 * Math.PI * y) / size;
@@ -108,6 +132,22 @@ class Analyser {
     } else {
       stats.centerX = 0;
       stats.centerY = 0;
+    }
+
+    if (gMass > this.epsilon) {
+      stats.growthCenterX = gx / gMass;
+      stats.growthCenterY = gy / gMass;
+    } else {
+      stats.growthCenterX = 0;
+      stats.growthCenterY = 0;
+    }
+
+    if (stats.mass > this.epsilon && gMass > this.epsilon) {
+      const mgDx = this._torusDelta(stats.centerX, stats.growthCenterX, size);
+      const mgDy = this._torusDelta(stats.centerY, stats.growthCenterY, size);
+      stats.massGrowthDist = Math.sqrt(mgDx * mgDx + mgDy * mgDy);
+    } else {
+      stats.massGrowthDist = 0;
     }
 
     let inertia = 0;
@@ -165,6 +205,7 @@ class Analyser {
       }
     }
     this._detectSymmetry(cells, size, stats);
+    this._detectPeriodicity(stats, automaton);
     if (this.lastCentreX !== null) {
       const dx = this._torusDelta(stats.centerX, this.lastCentreX, size);
       const dy = this._torusDelta(stats.centerY, this.lastCentreY, size);
@@ -241,7 +282,57 @@ class Analyser {
     stats.symmSides = maxIndex > 0 ? maxIndex : 0;
     stats.symmStrength = symmStrength;
     stats.rotationSpeed = rotSpeed;
-    this.lastAngles = angles;
+  }
+
+  _detectPeriodicity(stats, automaton) {
+    const currentMass = Number(stats.mass) || 0;
+    this.massHistory.push(currentMass);
+    if (this.massHistory.length > this.maxHistory) {
+      this.massHistory.splice(0, this.massHistory.length - this.maxHistory);
+    }
+
+    const values = this.massHistory;
+    if (values.length < 64) {
+      stats.period = 0;
+      stats.periodConfidence = 0;
+      return;
+    }
+
+    let mean = 0;
+    for (let i = 0; i < values.length; i++) mean += values[i];
+    mean /= values.length;
+
+    const centered = new Float64Array(values.length);
+    for (let i = 0; i < values.length; i++) centered[i] = values[i] - mean;
+
+    let bestLag = 0;
+    let bestCorr = 0;
+    const maxLag = Math.min(180, Math.floor(values.length / 2));
+    for (let lag = 2; lag <= maxLag; lag++) {
+      let num = 0;
+      let denA = 0;
+      let denB = 0;
+      for (let i = lag; i < centered.length; i++) {
+        const a = centered[i];
+        const b = centered[i - lag];
+        num += a * b;
+        denA += a * a;
+        denB += b * b;
+      }
+
+      const denom = Math.sqrt(denA * denB);
+      if (denom <= this.epsilon) continue;
+
+      const corr = num / denom;
+      if (corr > bestCorr) {
+        bestCorr = corr;
+        bestLag = lag;
+      }
+    }
+
+    const T = Number(automaton?.T) || 1;
+    stats.period = bestLag > 0 ? bestLag / T : 0;
+    stats.periodConfidence = Math.max(0, bestCorr);
   }
 
   updateStatistics(board, automaton) {
@@ -256,11 +347,18 @@ class Analyser {
     statistics.gyradius = stats.gyradius;
     statistics.centerX = stats.centerX;
     statistics.centerY = stats.centerY;
+    statistics.growthCenterX = stats.growthCenterX || 0;
+    statistics.growthCenterY = stats.growthCenterY || 0;
+    statistics.massGrowthDist = stats.massGrowthDist || 0;
     statistics.massAsym = stats.massAsym || 0;
     statistics.speed = stats.speed || 0;
     statistics.angle = stats.angle || 0;
     statistics.symmSides = stats.symmSides || 0;
     statistics.symmStrength = stats.symmStrength || 0;
+    statistics.rotationSpeed = stats.rotationSpeed || 0;
+    statistics.lyapunov = this.lyapunov || 0;
+    statistics.period = stats.period || 0;
+    statistics.periodConfidence = stats.periodConfidence || 0;
   }
 
   resetStatistics() {
@@ -273,11 +371,18 @@ class Analyser {
     statistics.gyradius = 0;
     statistics.centerX = 0;
     statistics.centerY = 0;
+    statistics.growthCenterX = 0;
+    statistics.growthCenterY = 0;
+    statistics.massGrowthDist = 0;
     statistics.massAsym = 0;
     statistics.speed = 0;
     statistics.angle = 0;
     statistics.symmSides = 0;
     statistics.symmStrength = 0;
+    statistics.rotationSpeed = 0;
+    statistics.lyapunov = 0;
+    statistics.period = 0;
+    statistics.periodConfidence = 0;
     statistics.fps = 0;
   }
 
@@ -303,19 +408,27 @@ class Analyser {
       statistics.time || 0,
       statistics.mass || 0,
       statistics.growth || 0,
+      statistics.maxValue || 0,
       statistics.gyradius || 0,
       statistics.centerX || 0,
       statistics.centerY || 0,
+      statistics.growthCenterX || 0,
+      statistics.growthCenterY || 0,
+      statistics.massGrowthDist || 0,
       statistics.massAsym || 0,
       statistics.speed || 0,
       statistics.angle || 0,
       statistics.symmSides || 0,
       statistics.symmStrength || 0,
+      statistics.rotationSpeed || 0,
+      statistics.lyapunov || 0,
+      statistics.period || 0,
+      statistics.periodConfidence || 0,
     ];
   }
   exportCSV() {
     const headers =
-      "FPS,Gen,Time,Mass,Growth,Gyradius,CentreX,CentreY,MassAsym,Speed,Angle,SymmSides,SymmStrength\n";
+      "FPS,Gen,Time,Mass,Growth,PeakValue,Gyradius,CentreX,CentreY,GrowthCentreX,GrowthCentreY,MassGrowthDist,MassAsym,Speed,Angle,SymmSides,SymmStrength,RotationSpeed,Lyapunov,Period,PeriodConfidence\n";
     let csv = headers;
 
     for (const row of this.series) {

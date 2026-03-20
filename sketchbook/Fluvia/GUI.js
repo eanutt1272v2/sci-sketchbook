@@ -15,35 +15,41 @@ class GUI {
   setupTabs() {
     const tabs = this.pane.addTab({
       pages: [
-        { title: "General" },
-        { title: "Erosion" },
+        { title: "Simulation" },
+        { title: "Parameters" },
         { title: "Visuals" },
+        { title: "Statistics" },
         { title: "Media" },
-        { title: "Stats" },
       ],
     });
 
-    const [general, erosion, visuals, media, stats] = tabs.pages;
+    const [general, erosion, visuals, stats, media] = tabs.pages;
     this.createGeneralTab(general);
     this.createErosionTab(erosion);
     this.createVisualTab(visuals);
-    this.createMediaTab(media);
     this.createStatsTab(stats);
+    this.createMediaTab(media);
+  }
+
+  addSeparator(target) {
+    target.addBlade({ view: "separator" });
   }
 
   createGeneralTab(page) {
     const { params, statistics } = this.appcore;
 
-    page
+    const controls = page.addFolder({ title: "Simulation Controls", expanded: true });
+    controls
       .addButton({ title: "Generate Terrain" })
       .on("click", () => this.appcore.generate());
-    page
+    controls
       .addButton({ title: "Reset Terrain" })
       .on("click", () => this.appcore.reset());
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    page.addBinding(statistics, "fps", {
+    const perf = page.addFolder({ title: "Performance", expanded: true });
+    perf.addBinding(statistics, "fps", {
       readonly: true,
       label: "FPS",
       view: "graph",
@@ -51,39 +57,39 @@ class GUI {
       min: 0,
       max: 100,
     });
-
-    page.addBlade({ view: "separator" });
-
-    page.addBinding(statistics, "simulationTime", {
+    perf.addBinding(statistics, "simulationTime", {
       label: "Simulation Time (s)",
       readonly: true,
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    page.addBinding(params, "running", { label: "Running" });
-    page.addBinding(params, "dropletsPerFrame", {
+    const droplets = page.addFolder({ title: "Droplets", expanded: true });
+    droplets.addBinding(params, "running", { label: "Running" });
+    droplets.addBinding(params, "dropletsPerFrame", {
       label: "Droplets/Frame",
       min: 0,
       max: 512,
       step: 1,
     });
 
-    page.addBinding(params, "maxAge", {
+    droplets.addBinding(params, "maxAge", {
       label: "Max Age",
       min: 128,
       max: 512,
       step: 1,
     });
 
-    page.addBinding(params, "minVolume", {
+    droplets.addBinding(params, "minVolume", {
       label: "Min Volume",
       min: 0.001,
       max: 0.1,
       step: 0.001,
     });
 
-    const genFolder = page.addFolder({ title: "Generation" });
+    this.addSeparator(page);
+
+    const genFolder = page.addFolder({ title: "Terrain Generation", expanded: true });
 
     genFolder.addBinding(params, "terrainSize", {
       label: "Size",
@@ -153,12 +159,14 @@ class GUI {
   createVisualTab(page) {
     const { params, colourMaps } = this.appcore;
 
-    page.addBinding(params, "renderMethod", {
+    const render = page.addFolder({ title: "Render", expanded: true });
+
+    render.addBinding(params, "renderMethod", {
       label: "Render Method",
       options: { "3D": "3D", "2D": "2D" },
     });
 
-    page.addBinding(params, "surfaceMap", {
+    render.addBinding(params, "surfaceMap", {
       label: "Surface Map",
       options: {
         Composite: "composite",
@@ -175,24 +183,28 @@ class GUI {
       return obj;
     }, {});
 
-    page.addBinding(params, "colourMap", {
+    render.addBinding(params, "colourMap", {
       options: colourMapOptions,
       label: "Colour Map",
     });
 
-    page.addBinding(params, "heightScale", {
+    render.addBinding(params, "heightScale", {
       label: "Height Scale",
       min: 1,
       max: 256,
     });
 
-    const overlay = page.addFolder({ title: "Overlay" });
+    this.addSeparator(page);
 
-    overlay.addBinding(params, "renderStats", { label: "Stats" });
+    const overlay = page.addFolder({ title: "Overlay", expanded: true });
 
-    overlay.addBinding(params, "renderLegend", { label: "Legend" });
+    overlay.addBinding(params, "renderStats", { label: "Statistics Overlay" });
 
-    const light = page.addFolder({ title: "Lighting" });
+    overlay.addBinding(params, "renderLegend", { label: "Colour Legend" });
+
+    this.addSeparator(page);
+
+    const light = page.addFolder({ title: "Lighting", expanded: true });
 
     light.addBinding(params, "lightDir", {
       label: "Direction",
@@ -207,73 +219,15 @@ class GUI {
       max: 1024,
     });
 
-    const colours = page.addFolder({ title: "Colour Pallete" });
+    this.addSeparator(page);
+
+    const colours = page.addFolder({ title: "Colour Palette", expanded: true });
 
     ["sky", "flat", "steep", "sediment", "water"].forEach((type) => {
       colours.addBinding(params, `${type}Colour`, {
         label: type.charAt(0).toUpperCase() + type.slice(1),
       });
     });
-  }
-
-  createMediaTab(page) {
-    const { media, params } = this.appcore;
-
-    const imp = page.addFolder({ title: "Import" });
-    imp
-      .addButton({ title: "Import Heightmap" })
-      .on("click", () => media.openImportDialog());
-    imp
-      .addButton({ title: "Import Params (JSON)" })
-      .on("click", () => media.importParamsJSON());
-    imp
-      .addButton({ title: "Import World (JSON)" })
-      .on("click", () => media.importWorldJSON());
-
-    const data = page.addFolder({ title: "Data" });
-    data
-      .addButton({ title: "Export Params (JSON)" })
-      .on("click", () => media.exportParamsJSON());
-    data
-      .addButton({ title: "Export Stats (JSON)" })
-      .on("click", () => media.exportStatisticsJSON());
-    data
-      .addButton({ title: "Export Stats (CSV)" })
-      .on("click", () => media.exportStatisticsCSV());
-    data
-      .addButton({ title: "Export World (JSON)" })
-      .on("click", () => media.exportWorldJSON());
-    data
-      .addButton({ title: "Export Heightmap (PNG)" })
-      .on("click", () => media.exportHeightmapPNG());
-
-    const exp = page.addFolder({ title: "Capture" });
-
-    const btn = exp.addButton({
-      title: media.isRecording ? "Stop Recording" : "Start Recording",
-    });
-    this.recordButton = btn;
-
-    btn.on("click", () => {
-      if (media.isRecording) {
-        media.stopRecording();
-      } else {
-        media.startRecording();
-      }
-
-      this.syncMediaControls();
-    });
-
-    exp.addBlade({ view: "separator" });
-
-    exp.addBinding(params, "imageFormat", {
-      label: "Format",
-      options: { PNG: "png", JPG: "jpg", WebP: "webp" },
-    });
-
-    exp
-      .addButton({ title: "Export Image" })
-      .on("click", () => media.exportImage());
   }
 
   createStatsTab(page) {
@@ -430,6 +384,80 @@ class GUI {
       label: "Slope Complexity",
       format: (v) => v.toFixed(4),
     });
+  }
+
+  createMediaTab(page) {
+    const { media, params } = this.appcore;
+
+    const imp = page.addFolder({ title: "Import" });
+    imp
+      .addButton({ title: "Import Heightmap" })
+      .on("click", () => media.openImportDialog());
+    imp
+      .addButton({ title: "Import Params (JSON)" })
+      .on("click", () => media.importParamsJSON());
+    imp
+      .addButton({ title: "Import World (JSON)" })
+      .on("click", () => media.importWorldJSON());
+
+    const data = page.addFolder({ title: "Export" });
+    data
+      .addButton({ title: "Export Params (JSON)" })
+      .on("click", () => media.exportParamsJSON());
+    data
+      .addButton({ title: "Export Stats (JSON)" })
+      .on("click", () => media.exportStatisticsJSON());
+    data
+      .addButton({ title: "Export Stats (CSV)" })
+      .on("click", () => media.exportStatisticsCSV());
+    data
+      .addButton({ title: "Export World (JSON)" })
+      .on("click", () => media.exportWorldJSON());
+    data
+      .addButton({ title: "Export Heightmap (PNG)" })
+      .on("click", () => media.exportHeightmapPNG());
+
+    const exp = page.addFolder({ title: "Capture" });
+
+    exp.addBinding(params, "recordingFPS", {
+      label: "Record FPS",
+      min: 12,
+      max: 120,
+      step: 1,
+    });
+
+    exp.addBinding(params, "videoBitrateMbps", {
+      label: "Bitrate (Mbps)",
+      min: 1,
+      max: 64,
+      step: 0.5,
+    });
+
+    const btn = exp.addButton({
+      title: media.isRecording ? "Stop Recording" : "Start Recording",
+    });
+    this.recordButton = btn;
+
+    btn.on("click", () => {
+      if (media.isRecording) {
+        media.stopRecording();
+      } else {
+        media.startRecording();
+      }
+
+      this.syncMediaControls();
+    });
+
+    exp.addBlade({ view: "separator" });
+
+    exp.addBinding(params, "imageFormat", {
+      label: "Format",
+      options: { PNG: "png", JPG: "jpg", WebP: "webp" },
+    });
+
+    exp
+      .addButton({ title: "Export Image" })
+      .on("click", () => media.exportImage());
   }
 
   syncMediaControls() {

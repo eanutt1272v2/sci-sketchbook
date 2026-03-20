@@ -15,7 +15,7 @@ class GUI {
   setupTabs() {
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Quantum" },
+        { title: "Simulation" },
         { title: "Visuals" },
         { title: "Statistics" },
         { title: "Media" },
@@ -30,8 +30,14 @@ class GUI {
     this.enforceConstraints();
   }
 
+  addSeparator(target) {
+    target.addBlade({ view: "separator" });
+  }
+
   createGeneralTab(page) {
-    page.addBinding(this.appcore.statistics, "fps", {
+    const perf = page.addFolder({ title: "Performance", expanded: true });
+
+    perf.addBinding(this.appcore.statistics, "fps", {
       readonly: true,
       label: "FPS",
       view: "graph",
@@ -40,35 +46,35 @@ class GUI {
       max: 100,
     });
 
-    page.addBinding(this.appcore.statistics, "fps", {
+    perf.addBinding(this.appcore.statistics, "fps", {
       label: "",
       readonly: true,
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    page.addBinding(this.appcore.params, "orbitalNotation", {
+    const quantum = page.addFolder({ title: "Quantum State", expanded: true });
+
+    quantum.addBinding(this.appcore.params, "orbitalNotation", {
       label: "Orbital Notation",
       readonly: true,
     });
 
-    page.addBlade({ view: "separator" });
-
-    this.bindings.n = page.addBinding(this.appcore.params, "n", {
+    this.bindings.n = quantum.addBinding(this.appcore.params, "n", {
       label: "n (principal)",
       min: 1,
       max: 7,
       step: 1,
     });
 
-    this.bindings.l = page.addBinding(this.appcore.params, "l", {
+    this.bindings.l = quantum.addBinding(this.appcore.params, "l", {
       label: "l (angular)",
       min: 0,
       max: 0,
       step: 1,
     });
 
-    this.bindings.m = page.addBinding(this.appcore.params, "m", {
+    this.bindings.m = quantum.addBinding(this.appcore.params, "m", {
       label: "m (magnetic)",
       min: 0,
       max: 0,
@@ -89,14 +95,16 @@ class GUI {
       {},
     );
 
-    page
+    const appearance = page.addFolder({ title: "Appearance", expanded: true });
+
+    appearance
       .addBinding(this.appcore.params, "colourMap", {
         label: "Colour Map",
         options: colourMapOptions,
       })
       .on("change", () => this.appcore.requestRender());
 
-    page
+    appearance
       .addBinding(this.appcore.params, "exposure", {
         label: "Exposure",
         min: 0,
@@ -104,8 +112,11 @@ class GUI {
       })
       .on("change", () => this.appcore.requestRender());
 
-    page.addBlade({ view: "separator" });
-    page
+    this.addSeparator(page);
+
+    const quality = page.addFolder({ title: "Sampling", expanded: true });
+
+    quality
       .addBinding(this.appcore.params, "resolution", {
         label: "Resolution (px)",
         min: 64,
@@ -114,27 +125,29 @@ class GUI {
       })
       .on("change", () => this.appcore.requestRender());
 
-    page
+    quality
       .addBinding(this.appcore.params, "pixelSmoothing", {
         label: "Pixel Smoothing",
       })
       .on("change", () => this.appcore.requestRender());
 
-    page
+    quality
       .addBinding(this.appcore.params, "renderOverlay", {
-        label: "Render Overlay",
+        label: "Statistics Overlay",
       })
       .on("change", () => this.appcore.requestRender());
 
-    page
+    quality
       .addBinding(this.appcore.params, "renderLegend", {
-        label: "Render Legend",
+        label: "Colour Legend",
       })
       .on("change", () => this.appcore.requestRender());
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    this.bindings.viewRadius = page.addBinding(
+    const slice = page.addFolder({ title: "Slice View", expanded: true });
+
+    this.bindings.viewRadius = slice.addBinding(
       this.appcore.params,
       "viewRadius",
       {
@@ -144,9 +157,7 @@ class GUI {
       },
     );
 
-    page.addBlade({ view: "separator" });
-
-    page
+    slice
       .addBinding(this.appcore.params, "slicePlane", {
         label: "Slice Plane",
         options: {
@@ -157,7 +168,7 @@ class GUI {
       })
       .on("change", () => this.appcore.requestRender());
 
-    this.bindings.sliceOffset = page.addBinding(
+    this.bindings.sliceOffset = slice.addBinding(
       this.appcore.params,
       "sliceOffset",
       {
@@ -170,9 +181,11 @@ class GUI {
     this.bindings.viewRadius.on("change", () => this.updateViewConstraints());
     this.bindings.sliceOffset.on("change", () => this.appcore.requestRender());
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    page
+    const pan = page.addFolder({ title: "View Centre", expanded: true });
+
+    pan
       .addBinding(this.appcore.params.viewCentre, "x", {
         label: "Pan X (a₀)",
         min: -256,
@@ -181,7 +194,7 @@ class GUI {
       })
       .on("change", () => this.appcore.requestRender());
 
-    page
+    pan
       .addBinding(this.appcore.params.viewCentre, "y", {
         label: "Pan Y (a₀)",
         min: -256,
@@ -190,7 +203,7 @@ class GUI {
       })
       .on("change", () => this.appcore.requestRender());
 
-    page
+    pan
       .addBinding(this.appcore.params.viewCentre, "z", {
         label: "Pan Z (a₀)",
         min: -256,
@@ -199,65 +212,69 @@ class GUI {
       })
       .on("change", () => this.appcore.requestRender());
 
-    page
+    pan
       .addButton({ title: "Reset View Centre" })
       .on("click", () => this.appcore.resetViewCentre());
-
-    page.addBlade({ view: "separator" });
   }
 
   createStatisticsTab(page) {
     const { statistics, analyser, media } = this.appcore;
 
-    page.addBinding(statistics, "density", {
+    const distribution = page.addFolder({ title: "Distribution", expanded: true });
+
+    distribution.addBinding(statistics, "density", {
       readonly: true,
       label: "Density",
       interval: 60,
     });
 
-    page.addBinding(statistics, "peakDensity", {
+    distribution.addBinding(statistics, "peakDensity", {
       readonly: true,
       label: "Peak Density",
     });
 
-    page.addBinding(statistics, "mean", {
+    distribution.addBinding(statistics, "mean", {
       readonly: true,
       label: "Mean Value",
     });
 
-    page.addBinding(statistics, "stdDev", {
+    distribution.addBinding(statistics, "stdDev", {
       readonly: true,
       label: "Std Dev",
     });
 
-    page.addBinding(statistics, "entropy", {
+    distribution.addBinding(statistics, "entropy", {
       readonly: true,
       label: "Entropy",
     });
 
-    page.addBinding(statistics, "concentration", {
+    distribution.addBinding(statistics, "concentration", {
       readonly: true,
       label: "Concentration",
     });
 
-    page.addBinding(statistics, "radialPeak", {
+    this.addSeparator(page);
+
+    const radial = page.addFolder({ title: "Radial Profile", expanded: true });
+
+    radial.addBinding(statistics, "radialPeak", {
       readonly: true,
       label: "Radial Peak",
     });
 
-    page.addBinding(statistics, "radialSpread", {
+    radial.addBinding(statistics, "radialSpread", {
       readonly: true,
       label: "Radial Spread",
     });
 
-    page.addBinding(statistics, "nodeEstimate", {
+    radial.addBinding(statistics, "nodeEstimate", {
       readonly: true,
       label: "Node Estimate",
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    const data = page.addFolder({ title: "Analysis Data" });
+    const data = page.addFolder({ title: "Analysis Data", expanded: true });
     data
       .addButton({ title: "Export Analysis (JSON)" })
       .on("click", () => media?.exportAnalysisJSON());
@@ -269,14 +286,23 @@ class GUI {
   createMediaTab(page) {
     const { media, params } = this.appcore;
 
-    const data = page.addFolder({ title: "Data" });
+    const imp = page.addFolder({ title: "Import" });
+
+    imp
+      .addButton({ title: "Import Params (JSON)" })
+      .on("click", () => media.importParamsJSON());
+    imp
+      .addButton({ title: "Import World (JSON)" })
+      .on("click", () => media.importWorldJSON());
+
+    const data = page.addFolder({ title: "Export" });
 
     data
       .addButton({ title: "Export Params (JSON)" })
       .on("click", () => media.exportParamsJSON());
     data
-      .addButton({ title: "Import Params (JSON)" })
-      .on("click", () => media.importParamsJSON());
+      .addButton({ title: "Export World (JSON)" })
+      .on("click", () => media.exportWorldJSON());
     data
       .addButton({ title: "Export Stats (JSON)" })
       .on("click", () => media.exportStatisticsJSON());
@@ -285,6 +311,20 @@ class GUI {
       .on("click", () => media.exportStatisticsCSV());
 
     const exp = page.addFolder({ title: "Capture" });
+
+    exp.addBinding(params, "recordingFPS", {
+      label: "Record FPS",
+      min: 12,
+      max: 120,
+      step: 1,
+    });
+
+    exp.addBinding(params, "videoBitrateMbps", {
+      label: "Bitrate (Mbps)",
+      min: 1,
+      max: 64,
+      step: 0.5,
+    });
 
     this.recordButton = exp.addButton({
       title: media.isRecording ? "Stop Recording" : "Start Recording",

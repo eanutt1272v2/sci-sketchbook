@@ -6,6 +6,7 @@ class Renderer {
     this.colourMaps = colourMaps;
     this.currentColourMap = "";
     this.lut = new Uint8ClampedArray(256 * 3);
+    this.calcPanelImage = null;
     this.setColourMap(initialColourMap);
   }
 
@@ -14,38 +15,67 @@ class Renderer {
     this.img = createImage(this.size, this.size);
   }
 
+  _getViewSpec(board, automaton, rawMode) {
+    const mode = rawMode;
+    const size = board?.size || this.size;
+
+    if (mode === "world") {
+      return {
+        mode,
+        label: "World",
+        data: board.cells,
+        srcSize: size,
+        vmin: 0,
+        vmax: 1,
+      };
+    }
+
+    if (mode === "potential") {
+      return {
+        mode,
+        label: "Potential",
+        data: board.potential,
+        srcSize: size,
+        vmin: 0,
+        vmax: 2 * (automaton?.m || 0.15),
+      };
+    }
+
+    if (mode === "field") {
+      return {
+        mode,
+        label: "Growth",
+        data: board.field,
+        srcSize: size,
+        vmin: -1,
+        vmax: 1,
+      };
+    }
+
+    if (mode === "kernel") {
+      return {
+        mode,
+        label: "Kernel",
+        data: automaton.kernel,
+        srcSize: automaton.kernelSize,
+        vmin: 0,
+        vmax: Math.max(automaton.kernelMax || 0, 1e-9),
+      };
+    }
+
+    return this._getViewSpec(board, automaton, "world");
+  }
+
   render(board, automaton, renderMode, colourMapName) {
     this.setColourMap(colourMapName);
+    const view = this._getViewSpec(board, automaton, renderMode);
+    const data = view.data;
+    const vmin = view.vmin;
+    const vmax = view.vmax;
+    const currentSize = view.srcSize;
 
-    let data = board.cells;
-    let vmin = 0;
-    let vmax = 1;
-    let currentSize = this.size;
-
-    if (renderMode === "potential") {
-      data = board.potential;
-      vmax = 2 * automaton.m;
-      if (this.img.width !== this.size) {
-        this.img = createImage(this.size, this.size);
-      }
-    } else if (renderMode === "field") {
-      data = board.field;
-      vmin = -1;
-      vmax = 1;
-      if (this.img.width !== this.size) {
-        this.img = createImage(this.size, this.size);
-      }
-    } else if (renderMode === "kernel") {
-      data = automaton.kernel;
-      currentSize = automaton.kernelSize;
-      if (this.img.width !== currentSize) {
-        this.img = createImage(currentSize, currentSize);
-      }
-      vmax = Math.max(automaton.kernelMax, 1e-9);
-    } else {
-      if (this.img.width !== this.size) {
-        this.img = createImage(this.size, this.size);
-      }
+    if (this.img.width !== currentSize || this.img.height !== currentSize) {
+      this.img = createImage(currentSize, currentSize);
     }
 
     const denom = Math.max(vmax - vmin, 1e-9);
@@ -222,9 +252,8 @@ class Renderer {
     const { name, version } = metadata;
 
     push();
-    fill(0, 215);
+    background(0);
     noStroke();
-    rect(0, 0, width, height);
 
     fill(255);
     textAlign(LEFT, TOP);
@@ -258,6 +287,7 @@ class Renderer {
         title: "Rendering",
         entries: [
           ["Tab", "Cycle render mode"],
+          ["4", "Toggle calc diagnostics panels"],
           ["T", "Cycle colour map"],
           ["G", "Toggle grid"],
           ["L", "Toggle colour legend"],
@@ -388,12 +418,16 @@ class Renderer {
     textAlign(LEFT, TOP);
     const labelX = cx + dotR + 4;
     const labelY = cy - 10;
-    fill(0, 150);
-    rect(labelX - 2, labelY - 1, 115, 20, 3);
+    fill(0, 200);
+    text(
+      `${angle.toFixed(1)} deg  speed=${speed.toFixed(3)}`,
+      labelX + 1,
+      labelY + 4,
+    );
     fill(255, 230);
     text(
-      `${angle.toFixed(1)}°  spd: ${speed.toFixed(3)}`,
-      labelX + 2,
+      `${angle.toFixed(1)} deg  speed=${speed.toFixed(3)}`,
+      labelX,
       labelY + 3,
     );
 
@@ -401,32 +435,137 @@ class Renderer {
   }
 
   renderStats(statistics, params) {
-    push();
-
-    const x = 20,
-      y = 20;
     const dt = 1 / params.T;
     const RN = Math.pow(params.R, 2);
 
-    fill(255);
-    textSize(14);
-    textAlign(LEFT, TOP);
     const stats = [
-      `Gen: ${String(statistics.gen)} | T: ${statistics.time.toFixed(3)}s`,
-      `Mass: ${(statistics.mass / RN).toFixed(3)} | Growth: ${(statistics.growth / RN).toFixed(4)}`,
-      `Peak: ${statistics.maxValue.toFixed(3)} | Gyrad: ${statistics.gyradius.toFixed(2)}`,
-      `Centre: (${statistics.centerX?.toFixed(1) || "0"}, ${statistics.centerY?.toFixed(1) || "0"})`,
-      `MassAsym: ${(statistics.massAsym || 0).toFixed(3)} | Speed: ${(statistics.speed || 0).toFixed(3)}`,
-      `Symmetry: ${statistics.symmSides || "?"}-fold (${((statistics.symmStrength || 0) * 100).toFixed(1)}%)`,
-      `FPS: ${statistics.fps}`,
+      `FPS: ${(Number(statistics.fps) || 0).toFixed(1)}`,
+      `Generation: ${String(statistics.gen)}`,
+      `Sim Time: ${statistics.time.toFixed(3)} s`,
+      `dt = 1/T: ${dt.toFixed(3)}`,
+      `Running: ${params.running ? "on" : "off"}`,
+      `Grid Size: ${this.size}`,
+      `Render Mode: ${params.renderMode}`,
+      `Colour Map: ${this.currentColourMap || params.colourMap}`,
+      `Kernel Radius: R=${params.R.toFixed(2)}`,
+      `Time Scale: T=${params.T.toFixed(2)}`,
+      `Growth Mean: m=${params.m.toFixed(3)}`,
+      `Growth Std Dev: s=${params.s.toFixed(3)}`,
+      `Functions: kn=${params.kn} | gn=${params.gn}`,
+      `Mass/R^2: ${(statistics.mass / RN).toFixed(3)}`,
+      `Growth/R^2: ${(statistics.growth / RN).toFixed(4)}`,
+      `Peak Value: ${statistics.maxValue.toFixed(3)}`,
+      `Gyradius: ${statistics.gyradius.toFixed(2)}`,
+      `Centroid: (${statistics.centerX?.toFixed(1) || "0.0"}, ${statistics.centerY?.toFixed(1) || "0.0"})`,
+      `Growth Center: (${statistics.growthCenterX?.toFixed(1) || "0.0"}, ${statistics.growthCenterY?.toFixed(1) || "0.0"})`,
+      `Mass-Growth Distance: ${(statistics.massGrowthDist || 0).toFixed(3)}`,
+      `Speed: ${(statistics.speed || 0).toFixed(3)}`,
+      `Angle: ${(statistics.angle || 0).toFixed(1)} deg`,
+      `Mass asymmetry: ${(statistics.massAsym || 0).toFixed(3)}`,
+      `Symmetry Order: ${statistics.symmSides || "?"}`,
+      `Symmetry Strength: ${((statistics.symmStrength || 0) * 100).toFixed(1)} %`,
+      `Rotation Speed: ${(statistics.rotationSpeed || 0).toFixed(2)} deg/s`,
+      `Lyapunov: ${(statistics.lyapunov || 0).toFixed(6)}`,
+      `Period: ${(statistics.period || 0).toFixed(3)} s`,
+      `Period Confidence: ${(statistics.periodConfidence || 0).toFixed(3)}`,
+      `Noise: ${params.addNoise.toFixed(3)}`,
+      `Mask Rate: ${params.maskRate.toFixed(3)}`,
     ];
 
-    let yOffset = y;
-    stats.forEach((line) => {
-      text(line, x, yOffset);
-      yOffset += 16;
-    });
+    push();
+    textAlign(LEFT, TOP);
+    textSize(12);
+    noStroke();
+    const panelX = 20;
+    const panelY = 20;
+    fill(255);
+    text(stats.join("\n"), panelX, panelY);
 
+    pop();
+  }
+
+  renderCalcPanels(board, automaton, params) {
+    if (!board || !automaton) return;
+
+    this.setColourMap(params.colourMap);
+
+    const panelSize = 96;
+    const gap = 8;
+    const cols = 2;
+    const rows = 2;
+    const totalW = cols * panelSize + (cols - 1) * gap;
+    const totalH = rows * panelSize + (rows - 1) * gap;
+    const baseX = 20;
+    const baseY = height - totalH - 20;
+
+    const views = [
+      this._getViewSpec(board, automaton, "world"),
+      this._getViewSpec(board, automaton, "potential"),
+      this._getViewSpec(board, automaton, "field"),
+      this._getViewSpec(board, automaton, "kernel"),
+    ];
+
+    for (let i = 0; i < views.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = baseX + col * (panelSize + gap);
+      const y = baseY + row * (panelSize + gap);
+      this._renderCalcPanel(views[i], x, y, panelSize);
+    }
+  }
+
+  _renderCalcPanel(view, x, y, panelSize) {
+    if (!view || !view.data || !view.srcSize) return;
+
+    if (
+      !this.calcPanelImage ||
+      this.calcPanelImage.width !== panelSize ||
+      this.calcPanelImage.height !== panelSize
+    ) {
+      this.calcPanelImage = createImage(panelSize, panelSize);
+    }
+
+    const img = this.calcPanelImage;
+    const srcSize = view.srcSize;
+    const src = view.data;
+    const denom = Math.max((view.vmax || 0) - (view.vmin || 0), 1e-9);
+
+    img.loadPixels();
+    for (let py = 0; py < panelSize; py++) {
+      const sy = Math.min(srcSize - 1, Math.floor((py / panelSize) * srcSize));
+      for (let px = 0; px < panelSize; px++) {
+        const sx = Math.min(
+          srcSize - 1,
+          Math.floor((px / panelSize) * srcSize),
+        );
+        const srcIndex = sy * srcSize + sx;
+        const v = Number(src[srcIndex]) || 0;
+        const t = constrain((v - (view.vmin || 0)) / denom, 0, 1);
+        const lutIndex = Math.min(255, Math.max(0, Math.round(t * 255))) * 3;
+        const p = (py * panelSize + px) * 4;
+        img.pixels[p] = this.lut[lutIndex];
+        img.pixels[p + 1] = this.lut[lutIndex + 1];
+        img.pixels[p + 2] = this.lut[lutIndex + 2];
+        img.pixels[p + 3] = 255;
+      }
+    }
+    img.updatePixels();
+
+    push();
+    noSmooth();
+    image(img, x, y, panelSize, panelSize);
+    noFill();
+    stroke(255, 210);
+    strokeWeight(1);
+    rect(x, y, panelSize, panelSize);
+
+    noStroke();
+    fill(0, 200);
+    textSize(10);
+    textAlign(LEFT, TOP);
+    text(view.label, x + 7, y + 5);
+    fill(255);
+    text(view.label, x + 6, y + 4);
     pop();
   }
 }

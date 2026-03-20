@@ -206,6 +206,15 @@ class InputHandler {
       return false;
     }
 
+    if (k === "4") {
+      this.appcore.params.renderCalcPanels = !this.appcore.params.renderCalcPanels;
+      this.appcore.refreshGUI();
+      console.log(
+        `[Lenia] Calc panels: ${this.appcore.params.renderCalcPanels}`,
+      );
+      return false;
+    }
+
     if (keyLower === "b") {
       this.appcore.params.renderScale = !this.appcore.params.renderScale;
       this.appcore.refreshGUI();
@@ -333,7 +342,8 @@ class InputHandler {
   _cycleRenderMode() {
     const modes = ["world", "potential", "field", "kernel"];
     const idx = modes.indexOf(this.appcore.params.renderMode);
-    this.appcore.params.renderMode = modes[(idx + 1) % modes.length];
+    const safeIdx = idx >= 0 ? idx : 0;
+    this.appcore.params.renderMode = modes[(safeIdx + 1) % modes.length];
     console.log(`[Lenia] Render: ${this.appcore.params.renderMode}`);
   }
 
