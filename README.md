@@ -8,17 +8,10 @@ Most active projects are implemented in `p5.js` with worker computation, but a s
 
 Live deployment: <https://sci-sketchbook.onrender.com/>
 
-## Themes
-
-- Fractals and complex dynamics
-- Continuous cellular automata and artificial life
-- Hydraulic erosion and terrain evolution
-- Wavefunction and field visualisation
-- Educational neural-network demonstrations
 
 ## Sketch Index
 
-| Sketch | Focus | Runtime |
+| Sketch | Summary | Implementation(s) |
 | :-- | :-- | :-- |
 | [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | Non-holomorphic escape-time fractal dynamics | p5.js + worker |
 | [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | Quadratic complex-set exploration | p5.js + worker |
@@ -40,7 +33,7 @@ cd sci-sketchbook
 docker compose up -d
 ```
 
-Then open `http://localhost` and browse to `sketchbook/<Sketch_Name>/`.
+Then open `http://localhost` and navigate to `sketchbook/<Sketch_Name>/`.
 
 ### Option 2: Run a single sketch via static server
 
