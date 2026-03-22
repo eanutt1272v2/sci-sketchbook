@@ -657,6 +657,7 @@ class Renderer {
     ];
 
     labels.forEach((l) => {
+      noStroke();
       text(l.v.toFixed(3), x - w - 6, l.y);
       stroke(255, 255, 255, 150);
       strokeWeight(1);

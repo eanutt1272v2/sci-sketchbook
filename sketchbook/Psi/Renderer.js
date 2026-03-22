@@ -385,6 +385,7 @@ class Renderer {
     textAlign(RIGHT, CENTER);
 
     labels.forEach((label) => {
+      noStroke();
       text(label.val.toFixed(decimals), x - w - 6, label.y);
       stroke(255, 255, 255, 150);
       strokeWeight(1);

@@ -6,7 +6,7 @@ class Renderer {
     this.colourMaps = colourMaps;
     this.currentColourMap = "";
     this.lut = new Uint8ClampedArray(256 * 3);
-    this.calcPanelImage = null;
+    this.calcPanelImages = [];
     this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
     this.lastLegendRange = { mode: "world", min: 0, max: 1 };
@@ -51,6 +51,7 @@ class Renderer {
     this.size = size;
     this.img = createImage(this.size, this.size);
     this.motionTrail = [];
+    this.calcPanelImages = [];
     this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
   }
@@ -365,6 +366,7 @@ class Renderer {
     ];
 
     labels.forEach((label) => {
+      noStroke();
       text(label.val.toFixed(3), x - w - 6, label.y);
 
       stroke(255, 255, 255, 150);
@@ -782,7 +784,7 @@ class Renderer {
       const row = Math.floor(i / cols);
       const x = col * (panelSize + gap);
       const y = row * (panelSize + gap);
-      this._renderCalcPanel(views[i], x, y, panelSize, panelCanvas);
+      this._renderCalcPanel(views[i], x, y, panelSize, panelCanvas, i);
     }
 
     this._renderCalcPanelBorders(0, 0, panelSize, gap, cols, rows, panelCanvas);
@@ -856,7 +858,20 @@ class Renderer {
     ctx.pop();
   }
 
-  _renderCalcPanel(view, x, y, panelSize, target = null) {
+  _getCalcPanelImage(panelIndex, panelSize) {
+    if (!Array.isArray(this.calcPanelImages)) {
+      this.calcPanelImages = [];
+    }
+
+    let img = this.calcPanelImages[panelIndex];
+    if (!img || img.width !== panelSize || img.height !== panelSize) {
+      img = createImage(panelSize, panelSize);
+      this.calcPanelImages[panelIndex] = img;
+    }
+    return img;
+  }
+
+  _renderCalcPanel(view, x, y, panelSize, target = null, panelIndex = 0) {
     const ctx = target || this;
     const label = view?.label || "Panel";
     const hasData = !!(
@@ -886,15 +901,7 @@ class Renderer {
       return;
     }
 
-    if (
-      !this.calcPanelImage ||
-      this.calcPanelImage.width !== panelSize ||
-      this.calcPanelImage.height !== panelSize
-    ) {
-      this.calcPanelImage = createImage(panelSize, panelSize);
-    }
-
-    const img = this.calcPanelImage;
+    const img = this._getCalcPanelImage(panelIndex, panelSize);
     const srcSize = view.srcSize;
     const src = view.data;
     const denom = Math.max((view.vmax || 0) - (view.vmin || 0), 1e-9);
@@ -995,7 +1002,7 @@ class Renderer {
     this.eqOverlaySig = "";
     this.motionTrail = [];
     this.img = null;
-    this.calcPanelImage = null;
+    this.calcPanelImages = [];
     this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
   }
