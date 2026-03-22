@@ -187,6 +187,8 @@ const _analysisState = {
   epsilon: 1e-10,
   lastCentreX: null,
   lastCentreY: null,
+  lastSymmPhase: null,
+  lastSymmOrder: 0,
   lyapunov: 0,
   massHistory: [],
   maxHistory: 512,
@@ -201,7 +203,7 @@ function _torusDelta(a, b, size) {
   return d;
 }
 
-function _detectSymmetry(cells, size, stats, state) {
+function _detectSymmetry(cells, size, stats, state, params) {
   const center = size / 2;
   const radius = Math.min(center * 0.8, 64);
   const angularBins = 64;
@@ -252,14 +254,39 @@ function _detectSymmetry(cells, size, stats, state) {
 
   const symmStrength = maxAll > state.epsilon ? maxHarmonic / maxAll : 0;
   let rotSpeed = 0;
-  if (state.lastCentreX !== null) {
-    const angleOffset = Math.atan2(angles[angularBins / 4], angles[0]);
-    rotSpeed = (angleOffset * 180) / Math.PI;
+
+  if (maxIndex > 0) {
+    let domCos = 0;
+    let domSin = 0;
+    for (let n = 0; n < angularBins; n++) {
+      const phase = (2 * Math.PI * maxIndex * n) / angularBins;
+      domCos += angles[n] * Math.cos(phase);
+      domSin += angles[n] * Math.sin(phase);
+    }
+
+    const symmPhase = Math.atan2(domSin, domCos);
+    const T = Math.max(1e-6, Number(params?.T) || 1);
+    const dt = 1 / T;
+
+    if (state.lastSymmPhase !== null && state.lastSymmOrder === maxIndex) {
+      let dPhase = symmPhase - state.lastSymmPhase;
+      if (dPhase > Math.PI) dPhase -= 2 * Math.PI;
+      if (dPhase < -Math.PI) dPhase += 2 * Math.PI;
+
+      const dTheta = dPhase / maxIndex;
+      rotSpeed = ((dTheta * 180) / Math.PI) / dt;
+    }
+
+    state.lastSymmPhase = symmPhase;
+    state.lastSymmOrder = maxIndex;
+  } else {
+    state.lastSymmPhase = null;
+    state.lastSymmOrder = 0;
   }
 
   stats.symmSides = maxIndex > 0 ? maxIndex : 0;
   stats.symmStrength = symmStrength;
-  stats.rotationSpeed = rotSpeed;
+  stats.rotationSpeed = Number.isFinite(rotSpeed) ? rotSpeed : 0;
 }
 
 function _detectPeriodicity(stats, params, state) {
@@ -453,7 +480,7 @@ function _analyseStep(cells, field, change, params, state) {
     }
   }
 
-  _detectSymmetry(cells, size, stats, state);
+  _detectSymmetry(cells, size, stats, state, params);
   _detectPeriodicity(stats, params, state);
 
   if (state.lastCentreX !== null) {
@@ -553,6 +580,8 @@ self.onmessage = function (e) {
   if (msg.type === "kernel") {
     _analysisState.lastCentreX = null;
     _analysisState.lastCentreY = null;
+    _analysisState.lastSymmPhase = null;
+    _analysisState.lastSymmOrder = 0;
     _analysisState.lyapunov = 0;
     _analysisState.massHistory = [];
     _analysisState.frames = 0;

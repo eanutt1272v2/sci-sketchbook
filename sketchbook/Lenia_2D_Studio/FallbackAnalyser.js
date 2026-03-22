@@ -74,6 +74,8 @@ class Analyser {
     this.symmSides = 0;
     this.lastCentreX = null;
     this.lastCentreY = null;
+    this.lastSymmPhase = null;
+    this.lastSymmOrder = 0;
     this.totalShift = [0, 0];
     this.massHistory = [];
   }
@@ -204,7 +206,7 @@ class Analyser {
         this.lyapunov += l / Math.max(1, automaton.gen || 1);
       }
     }
-    this._detectSymmetry(cells, size, stats);
+    this._detectSymmetry(cells, size, stats, automaton);
     this._detectPeriodicity(stats, automaton);
     if (this.lastCentreX !== null) {
       const dx = this._torusDelta(stats.centerX, this.lastCentreX, size);
@@ -230,7 +232,7 @@ class Analyser {
     return d;
   }
 
-  _detectSymmetry(cells, size, stats) {
+  _detectSymmetry(cells, size, stats, automaton) {
     const center = size / 2;
     const radius = Math.min(center * 0.8, 64);
     const angularBins = 64;
@@ -271,17 +273,45 @@ class Analyser {
         maxIndex = k;
       }
     }
-    let maxAll = Math.max(...harmonics);
+    let maxAll = 0;
+    for (let i = 0; i < harmonics.length; i++) {
+      if (harmonics[i] > maxAll) maxAll = harmonics[i];
+    }
     const symmStrength = maxAll > this.epsilon ? maxHarmonic / maxAll : 0;
     let rotSpeed = 0;
-    if (this.lastCentreX !== null) {
-      const angleOffset = Math.atan2(angles[angularBins / 4], angles[0]);
-      rotSpeed = (angleOffset * 180) / Math.PI;
+
+    if (maxIndex > 0) {
+      let domCos = 0;
+      let domSin = 0;
+      for (let n = 0; n < angularBins; n++) {
+        const phase = (2 * Math.PI * maxIndex * n) / angularBins;
+        domCos += angles[n] * Math.cos(phase);
+        domSin += angles[n] * Math.sin(phase);
+      }
+
+      const symmPhase = Math.atan2(domSin, domCos);
+      const T = Math.max(1e-6, Number(automaton?.T) || 1);
+      const dt = 1 / T;
+
+      if (this.lastSymmPhase !== null && this.lastSymmOrder === maxIndex) {
+        let dPhase = symmPhase - this.lastSymmPhase;
+        if (dPhase > Math.PI) dPhase -= 2 * Math.PI;
+        if (dPhase < -Math.PI) dPhase += 2 * Math.PI;
+
+        const dTheta = dPhase / maxIndex;
+        rotSpeed = ((dTheta * 180) / Math.PI) / dt;
+      }
+
+      this.lastSymmPhase = symmPhase;
+      this.lastSymmOrder = maxIndex;
+    } else {
+      this.lastSymmPhase = null;
+      this.lastSymmOrder = 0;
     }
 
     stats.symmSides = maxIndex > 0 ? maxIndex : 0;
     stats.symmStrength = symmStrength;
-    stats.rotationSpeed = rotSpeed;
+    stats.rotationSpeed = Number.isFinite(rotSpeed) ? rotSpeed : 0;
   }
 
   _detectPeriodicity(stats, automaton) {
@@ -394,6 +424,8 @@ class Analyser {
     this.lastCentreX = statistics.centerX;
     this.lastCentreY = statistics.centerY;
     this.lyapunov = statistics.lyapunov;
+    this.lastSymmPhase = null;
+    this.lastSymmOrder = statistics.symmSides || 0;
   }
 
   resetStatistics() {
@@ -419,6 +451,11 @@ class Analyser {
     statistics.period = 0;
     statistics.periodConfidence = 0;
     statistics.fps = 0;
+
+    this.lastCentreX = null;
+    this.lastCentreY = null;
+    this.lastSymmPhase = null;
+    this.lastSymmOrder = 0;
   }
 
   updateFps() {
