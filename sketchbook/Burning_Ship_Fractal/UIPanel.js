@@ -73,7 +73,7 @@ class UIPanel {
     );
   }
 
-  draw() {
+  render() {
     const t = this.appcore.theme;
     colorMode(RGB, 255);
 
@@ -201,6 +201,7 @@ class UIPanel {
       ["P", "Export PNG image"],
       ["R", "Reset view and iterations"],
       ["H", "Toggle UI"],
+      ["J", "Toggle equation overlay"],
       ["#", "Toggle keymap reference"],
     ];
 

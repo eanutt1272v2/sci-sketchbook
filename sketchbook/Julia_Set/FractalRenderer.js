@@ -22,6 +22,8 @@ class FractalRenderer {
     ];
 
     this.currentMapIndex = 2;
+    this.eqOverlayEl = null;
+    this.eqOverlaySig = "";
   }
 
   render() {
@@ -245,5 +247,50 @@ class FractalRenderer {
       [0, 1, 0, 0, 0, 0, 0],
       [0, 1, 0, 0, 0, 0, 0],
     ];
+  }
+
+  ensureEquationOverlay() {
+    if (this.eqOverlayEl && document.body.contains(this.eqOverlayEl)) {
+      return this.eqOverlayEl;
+    }
+    const panel = document.createElement("div");
+    panel.className = "equation-overlay";
+    panel.style.display = "none";
+    const title = document.createElement("p");
+    title.className = "equation-overlay__title";
+    title.textContent = "Julia Set";
+    const math = document.createElement("div");
+    math.className = "equation-overlay__math";
+    panel.appendChild(title);
+    panel.appendChild(math);
+    document.body.appendChild(panel);
+    this.eqOverlayEl = panel;
+    return panel;
+  }
+
+  hideEquationOverlay() {
+    if (this.eqOverlayEl) this.eqOverlayEl.style.display = "none";
+  }
+
+  renderEquationOverlay() {
+    const panel = this.ensureEquationOverlay();
+    panel.style.display = "block";
+    const mathEl = panel.querySelector(".equation-overlay__math");
+    const tex = String.raw`\mathcal{J}_c = \left\{z_0 \in \mathbb{C} : \limsup_{n \to \infty} |z_n| < \infty\right\}, \quad z_{n+1} = z_n^2 + c \quad (c \text{ fixed})`;
+    if (tex === this.eqOverlaySig) return;
+    const canRenderKatex =
+      typeof window !== "undefined" &&
+      window.katex &&
+      typeof window.katex.render === "function";
+    if (canRenderKatex) {
+      window.katex.render(tex, mathEl, {
+        displayMode: true,
+        throwOnError: false,
+        output: "mathml",
+      });
+    } else {
+      mathEl.textContent = "J_c = {z0 in C : limsup|z_n| < inf},  z(n+1) = z(n)^2 + c  (c fixed)";
+    }
+    this.eqOverlaySig = tex;
   }
 }

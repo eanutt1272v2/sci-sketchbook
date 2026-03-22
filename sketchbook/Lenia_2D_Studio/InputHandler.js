@@ -196,6 +196,23 @@ class InputHandler {
       return false;
     }
 
+    if (keyLower === "j") {
+      this.appcore.params.renderEquation = !this.appcore.params.renderEquation;
+      this.appcore.refreshGUI();
+      console.log(`[Lenia] Equation overlay: ${this.appcore.params.renderEquation}`);
+      return false;
+    }
+
+    if (k === "M") {
+      this.appcore.params.renderMotionTrail =
+        !this.appcore.params.renderMotionTrail;
+      this.appcore.refreshGUI();
+      console.log(
+        `[Lenia] Motion trail: ${this.appcore.params.renderMotionTrail}`,
+      );
+      return false;
+    }
+
     if (keyLower === "m") {
       this.appcore.params.renderMotionOverlay =
         !this.appcore.params.renderMotionOverlay;
@@ -340,7 +357,7 @@ class InputHandler {
   }
 
   _cycleRenderMode() {
-    const modes = ["world", "potential", "field", "kernel"];
+    const modes = ["world", "potential", "growth", "kernel"];
     const idx = modes.indexOf(this.appcore.params.renderMode);
     const safeIdx = idx >= 0 ? idx : 0;
     this.appcore.params.renderMode = modes[(safeIdx + 1) % modes.length];

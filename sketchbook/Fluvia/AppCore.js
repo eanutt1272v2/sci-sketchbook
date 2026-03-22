@@ -49,6 +49,7 @@ class AppCore {
       renderStats: true,
       renderLegend: true,
       renderKeymapRef: false,
+  renderEquation: true,
 
       renderMethod: "3D",
       heightScale: 100,
@@ -88,7 +89,6 @@ class AppCore {
       totalBedrock: 0,
       sedimentBounds: { min: 0, max: 0 },
 
-      peakDischarge: 0,
       activeWaterCover: 0,
       drainageDensity: 0,
       dischargeBounds: { min: 0, max: 0 },
@@ -128,28 +128,53 @@ class AppCore {
     this._workerBusy = false;
     this._workerRequestId = 0;
     this._pendingActions = [];
+    this._lastVisualSignature = this._computeVisualSignature();
     this._initWorker();
   }
 
+  _computeVisualSignature() {
+    const p = this.params;
+    return JSON.stringify({
+      renderMethod: p.renderMethod,
+      surfaceMap: p.surfaceMap,
+      colourMap: p.colourMap,
+      heightScale: p.heightScale,
+      lightDir: p.lightDir,
+      specularIntensity: p.specularIntensity,
+      skyColour: p.skyColour,
+      steepColour: p.steepColour,
+      flatColour: p.flatColour,
+      sedimentColour: p.sedimentColour,
+      waterColour: p.waterColour,
+    });
+  }
+
   update() {
-    const { fallbacksolver, camera, analyser, params } = this;
+    const { fallbacksolver, camera, params } = this;
 
     this.input.handleContinuousInput();
+
+    const visualSignature = this._computeVisualSignature();
+    if (visualSignature !== this._lastVisualSignature) {
+      this.renderer.textureDirty = true;
+      this._lastVisualSignature = visualSignature;
+    }
 
     if (params.running) {
       if (!this._worker) {
         fallbacksolver.hydraulicErosion();
         fallbacksolver.updateDischargeMap();
       }
+
+      this.analyser.update();
     }
 
     camera.update();
-    analyser.update();
   }
 
   _initWorker() {
     try {
-      this._worker = new Worker("SolverWorker.js");
+      this._worker = new Worker("FluviaWorker.js");
     } catch (e) {
       console.warn(
         "[Fluvia] Worker unavailable, falling back to main-thread fallback solver",
@@ -253,10 +278,12 @@ class AppCore {
     terrain.momentumXTrack = new Float32Array(data.momentumXTrack);
     terrain.momentumYTrack = new Float32Array(data.momentumYTrack);
 
+    this.analyser.applyWorkerAnalysis(data.analysis);
+
     this._workerBusy = false;
   }
 
-  draw() {
+  render() {
     this.renderer.render();
 
     if (this._pendingActions.length > 0) {

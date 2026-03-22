@@ -81,8 +81,8 @@ class Analyser {
   analyse(board, automaton) {
     const stats = {};
     const size = board.size;
-    const cells = board.cells;
-    const field = board.field;
+    const cells = board.world;
+    const field = board.growth;
     const count = size * size;
     stats.mass = 0;
     stats.growth = 0;
@@ -96,28 +96,37 @@ class Analyser {
     let sinX = 0;
     let cosY = 0;
     let sinY = 0;
+    let gCosX = 0;
+    let gSinX = 0;
+    let gCosY = 0;
+    let gSinY = 0;
 
     for (let i = 0; i < count; i++) {
       const val = cells[i];
       stats.mass += val;
       const growthVal = Math.max(0, field[i]);
+      const x = i % size;
+      const y = Math.floor(i / size);
+      const ax = (2 * Math.PI * x) / size;
+      const ay = (2 * Math.PI * y) / size;
+
       if (growthVal > 0) {
         stats.growth += growthVal;
         gMass += growthVal;
       }
       if (val > stats.maxValue) stats.maxValue = val;
 
-      const x = i % size;
-      const y = Math.floor(i / size);
       mx += val * x;
       my += val * y;
       if (growthVal > 0) {
         gx += growthVal * x;
         gy += growthVal * y;
+        gCosX += growthVal * Math.cos(ax);
+        gSinX += growthVal * Math.sin(ax);
+        gCosY += growthVal * Math.cos(ay);
+        gSinY += growthVal * Math.sin(ay);
       }
 
-      const ax = (2 * Math.PI * x) / size;
-      const ay = (2 * Math.PI * y) / size;
       cosX += val * Math.cos(ax);
       sinX += val * Math.sin(ax);
       cosY += val * Math.cos(ay);
@@ -135,8 +144,10 @@ class Analyser {
     }
 
     if (gMass > this.epsilon) {
-      stats.growthCenterX = gx / gMass;
-      stats.growthCenterY = gy / gMass;
+      const gThetaX = Math.atan2(gSinX, gCosX);
+      const gThetaY = Math.atan2(gSinY, gCosY);
+      stats.growthCenterX = ((gThetaX / (2 * Math.PI)) * size + size) % size;
+      stats.growthCenterY = ((gThetaY / (2 * Math.PI)) * size + size) % size;
     } else {
       stats.growthCenterX = 0;
       stats.growthCenterY = 0;
@@ -359,6 +370,41 @@ class Analyser {
     statistics.lyapunov = this.lyapunov || 0;
     statistics.period = stats.period || 0;
     statistics.periodConfidence = stats.periodConfidence || 0;
+  }
+
+  applyWorkerStatistics(workerStats, automaton) {
+    if (!workerStats || typeof workerStats !== "object") return;
+
+    const statistics = this.statistics;
+    const toFinite = (value) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    statistics.gen = automaton.gen || 0;
+    statistics.time = automaton.time || 0;
+    statistics.mass = toFinite(workerStats.mass);
+    statistics.growth = toFinite(workerStats.growth);
+    statistics.maxValue = toFinite(workerStats.maxValue);
+    statistics.gyradius = toFinite(workerStats.gyradius);
+    statistics.centerX = toFinite(workerStats.centerX);
+    statistics.centerY = toFinite(workerStats.centerY);
+    statistics.growthCenterX = toFinite(workerStats.growthCenterX);
+    statistics.growthCenterY = toFinite(workerStats.growthCenterY);
+    statistics.massGrowthDist = toFinite(workerStats.massGrowthDist);
+    statistics.massAsym = toFinite(workerStats.massAsym);
+    statistics.speed = toFinite(workerStats.speed);
+    statistics.angle = toFinite(workerStats.angle);
+    statistics.symmSides = toFinite(workerStats.symmSides);
+    statistics.symmStrength = toFinite(workerStats.symmStrength);
+    statistics.rotationSpeed = toFinite(workerStats.rotationSpeed);
+    statistics.lyapunov = toFinite(workerStats.lyapunov);
+    statistics.period = toFinite(workerStats.period);
+    statistics.periodConfidence = toFinite(workerStats.periodConfidence);
+
+    this.lastCentreX = statistics.centerX;
+    this.lastCentreY = statistics.centerY;
+    this.lyapunov = statistics.lyapunov;
   }
 
   resetStatistics() {

@@ -11,9 +11,9 @@ const metadata = {
 };
 
 function preload() {
-  font = loadFont("JetBrainsMono-Regular.ttf");
-  animalsData = loadJSON("animals.json");
-  colourMaps = loadJSON("colour-maps.json");
+  font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
+  animalsData = loadJSON("../../_shared/data/animals.json");
+  colourMaps = loadJSON("../../_shared/data/colour-maps.json");
 }
 
 function setup() {
@@ -22,18 +22,21 @@ function setup() {
 
   setupCanvasProperties(mainCanvas);
 
-  appcore = new AppCore({
-    metadata,
-    animalsData,
-    colourMaps,
-    font,
-  });
+  requestAnimationFrame(() => {
+    appcore = new AppCore({
+      metadata,
+      animalsData,
+      colourMaps,
+      font,
+    });
 
-  appcore.setup();
+    appcore.setup();
+  });
 }
 
 function draw() {
-  appcore.draw();
+  if (!appcore) return;
+  appcore.render();
 }
 
 function setupCanvasProperties(canvas) {
@@ -45,13 +48,13 @@ function setupCanvasProperties(canvas) {
   }, 100);
 
   noSmooth();
-  textFont(font);
+  textFont(font || "monospace");
   pixelDensity(1);
   frameRate(60);
 }
 
-function mouseClicked(e) { return appcore.handleMouseClicked(e); }
-function touchStarted(e) { return appcore.handleMouseClicked(e); }
-function windowResized() { return appcore.windowResized(); }
-function keyPressed() { return appcore.handleKeyPressed(key || event.key, keyCode); }
-function keyReleased() { return appcore.handleKeyReleased(key || event.key, keyCode); }
+function mouseClicked(e) { return appcore ? appcore.handleMouseClicked(e) : false; }
+function touchStarted(e) { return appcore ? appcore.handleMouseClicked(e) : false; }
+function windowResized() { return appcore ? appcore.windowResized() : false; }
+function keyPressed() { return appcore ? appcore.handleKeyPressed(key || event.key, keyCode) : false; }
+function keyReleased() { return appcore ? appcore.handleKeyReleased(key || event.key, keyCode) : false; }

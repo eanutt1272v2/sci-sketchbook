@@ -201,11 +201,11 @@ class Automaton {
     this.convolve(board);
 
     const dt = 1 / this.T;
-    const cells = board.cells;
+    const cells = board.world;
     const potential = board.potential;
-    const field = board.field;
+    const field = board.growth;
     const count = board.size * board.size;
-    const hasOld = this.multiStep && board.fieldOld;
+    const hasOld = this.multiStep && board.growthOld;
     const noiseAmp = this.addNoise / 10;
     const hasNoise = noiseAmp > 0;
     const maskRate = this.maskRate / 10;
@@ -221,7 +221,7 @@ class Automaton {
 
       let D = growth;
       if (hasOld) {
-        D = 0.5 * (3 * field[i] - board.fieldOld[i]);
+        D = 0.5 * (3 * field[i] - board.growthOld[i]);
       }
 
       const deltaTerm = dt * D;
@@ -251,8 +251,8 @@ class Automaton {
     this.change = delta;
 
     if (this.multiStep) {
-      if (!board.fieldOld) board.fieldOld = board._createGrid();
-      board.fieldOld.set(field);
+      if (!board.growthOld) board.growthOld = board._createGrid();
+      board.growthOld.set(field);
     }
 
     this.gen++;

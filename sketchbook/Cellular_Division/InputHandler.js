@@ -134,6 +134,11 @@ class InputHandler {
       return;
     }
 
+    if (key === "j" || key === "J") {
+      this.ui.toggleEquation();
+      return;
+    }
+
     if (key === "h" || key === "H") {
       this.ui.toggleVisibility();
       return;

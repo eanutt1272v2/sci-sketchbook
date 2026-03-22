@@ -45,12 +45,14 @@ class AppCore {
       renderLegend: true,
       renderStats: true,
       renderMotionOverlay: true,
+      renderMotionTrail: true,
       renderCalcPanels: true,
-      renderKeymapRef: true,
+      renderKeymapRef: false,
+      renderEquation: true,
 
       selectedAnimal: "",
       placeMode: true,
-      placeScale: 2,
+      placeScale: 1,
       autoScaleSimParams: true,
 
       imageFormat: "png",
@@ -125,7 +127,7 @@ class AppCore {
 
   _initWorker() {
     try {
-      this._worker = new Worker("FFTWorker.js");
+      this._worker = new Worker("LeniaWorker.js");
     } catch (e) {
       console.warn(
         "[Lenia] Worker unavailable, falling back to main-thread simulation",
@@ -181,10 +183,10 @@ class AppCore {
     if (data.type === "result") {
       const b = this.board;
 
-      b.cells = new Float32Array(data.cells);
+      b.world = new Float32Array(data.world);
       b.potential = new Float32Array(data.potential);
-      b.field = new Float32Array(data.field);
-      b.fieldOld = data.fieldOld ? new Float32Array(data.fieldOld) : null;
+      b.growth = new Float32Array(data.growth);
+      b.growthOld = data.growthOld ? new Float32Array(data.growthOld) : null;
 
       this.automaton.change = new Float32Array(data.change);
       this.automaton.gen++;
@@ -200,7 +202,7 @@ class AppCore {
 
       this._flushPendingMutations();
 
-      this._postStepUpdate();
+      this._postStepUpdate(data.analysis);
 
       if (this._kernelPending) {
         this._workerSendKernel();
@@ -244,7 +246,7 @@ class AppCore {
     }
 
     const b = this.board;
-    const transfers = [b.cells.buffer, b.potential.buffer, b.field.buffer];
+    const transfers = [b.world.buffer, b.potential.buffer, b.growth.buffer];
     const msg = {
       type: "step",
       params: {
@@ -253,21 +255,21 @@ class AppCore {
         gn: this.params.gn,
         kn: this.params.kn,
       },
-      cells: b.cells.buffer,
+      world: b.world.buffer,
       potential: b.potential.buffer,
-      field: b.field.buffer,
-      fieldOld: null,
+      growth: b.growth.buffer,
+      growthOld: null,
     };
 
-    if (this.params.multiStep && b.fieldOld) {
-      msg.fieldOld = b.fieldOld.buffer;
-      transfers.push(b.fieldOld.buffer);
+    if (this.params.multiStep && b.growthOld) {
+      msg.growthOld = b.growthOld.buffer;
+      transfers.push(b.growthOld.buffer);
     }
 
-    b.cells = null;
+    b.world = null;
     b.potential = null;
-    b.field = null;
-    b.fieldOld = null;
+    b.growth = null;
+    b.growthOld = null;
 
     this._workerBusy = true;
     this._worker.postMessage(msg, transfers);
@@ -277,16 +279,20 @@ class AppCore {
   _ensureBuffers() {
     const size = this.params.gridSize;
     const count = size * size;
-    if (!this.board.cells || this.board.cells.length !== count)
-      this.board.cells = new Float32Array(count);
+    if (!this.board.world || this.board.world.length !== count)
+      this.board.world = new Float32Array(count);
     if (!this.board.potential || this.board.potential.length !== count)
       this.board.potential = new Float32Array(count);
-    if (!this.board.field || this.board.field.length !== count)
-      this.board.field = new Float32Array(count);
+    if (!this.board.growth || this.board.growth.length !== count)
+      this.board.growth = new Float32Array(count);
   }
 
-  _postStepUpdate() {
-    this.analyser.updateStatistics(this.board, this.automaton, this.params);
+  _postStepUpdate(workerAnalysis = null) {
+    if (workerAnalysis) {
+      this.analyser.applyWorkerStatistics(workerAnalysis, this.automaton);
+    } else {
+      this.analyser.updateStatistics(this.board, this.automaton, this.params);
+    }
     if (this.automaton.gen % 10 === 0) {
       this.analyser.series.push(this.analyser.getStatRow());
     }
@@ -306,10 +312,10 @@ class AppCore {
     }
   }
 
-  draw() {
+  render() {
     this.input.handleContinuousInput();
 
-    if (this.board.cells) {
+    if (this.board.world) {
       this.renderer.render(
         this.board,
         this.automaton,
@@ -347,6 +353,12 @@ class AppCore {
       if (this.params.renderKeymapRef) {
         this.renderer.renderKeymapRef(this.metadata);
       }
+
+      if (this.params.renderEquation) {
+        this.renderer.renderEquationOverlay(this.params);
+      } else {
+        this.renderer.hideEquationOverlay();
+      }
     } else if (this.params.renderKeymapRef && !this._workerBusy) {
       this.renderer.renderKeymapRef(this.metadata);
     }
@@ -358,7 +370,7 @@ class AppCore {
 
     if (this.params.running) {
       if (this._worker) {
-        if (this.board.cells) {
+        if (this.board.world) {
           this._dispatchWorkerStep();
         }
       } else {
@@ -367,7 +379,9 @@ class AppCore {
       }
     }
 
-    this.analyser.updateFps();
+    if (this.params.running) {
+      this.analyser.updateFps();
+    }
   }
 
   stepOnce() {
@@ -439,21 +453,42 @@ class AppCore {
     return closest;
   }
 
-  _applyImportedWorldParams(rawParams) {
-    if (!rawParams || typeof rawParams !== "object") return;
+  _applyImportedParamsSnapshot(rawParams, { allowGridSize = true } = {}) {
+    if (!rawParams || typeof rawParams !== "object") {
+      return { gridSizeChanged: false };
+    }
 
     const p = this.params;
+    const beforeGridSize = p.gridSize;
     const toNumber = (value, fallback) => {
       const n = Number(value);
       return Number.isFinite(n) ? n : fallback;
     };
+    const toBoolean = (value, fallback) => {
+      if (typeof value === "boolean") return value;
+      if (value === "true") return true;
+      if (value === "false") return false;
+      return fallback;
+    };
 
-    if ("R" in rawParams) p.R = Math.round(constrain(toNumber(rawParams.R, p.R), 2, 50));
-    if ("T" in rawParams) p.T = Math.round(constrain(toNumber(rawParams.T, p.T), 1, 50));
+    if ("running" in rawParams)
+      p.running = toBoolean(rawParams.running, p.running);
+
+    if (allowGridSize && "gridSize" in rawParams) {
+      p.gridSize = this._normaliseGridSize(rawParams.gridSize);
+    }
+
+    if ("R" in rawParams)
+      p.R = Math.round(constrain(toNumber(rawParams.R, p.R), 2, 50));
+    if ("T" in rawParams)
+      p.T = Math.round(constrain(toNumber(rawParams.T, p.T), 1, 50));
     if ("m" in rawParams) p.m = constrain(toNumber(rawParams.m, p.m), 0, 0.5);
-    if ("s" in rawParams) p.s = constrain(toNumber(rawParams.s, p.s), 0.001, 0.1);
-    if ("kn" in rawParams) p.kn = Math.round(constrain(toNumber(rawParams.kn, p.kn), 1, 4));
-    if ("gn" in rawParams) p.gn = Math.round(constrain(toNumber(rawParams.gn, p.gn), 1, 3));
+    if ("s" in rawParams)
+      p.s = constrain(toNumber(rawParams.s, p.s), 0.001, 0.1);
+    if ("kn" in rawParams)
+      p.kn = Math.round(constrain(toNumber(rawParams.kn, p.kn), 1, 4));
+    if ("gn" in rawParams)
+      p.gn = Math.round(constrain(toNumber(rawParams.gn, p.gn), 1, 3));
     if ("addNoise" in rawParams) {
       p.addNoise = constrain(toNumber(rawParams.addNoise, p.addNoise), 0, 10);
     }
@@ -461,10 +496,14 @@ class AppCore {
       p.maskRate = constrain(toNumber(rawParams.maskRate, p.maskRate), 0, 10);
     }
     if ("paramP" in rawParams) {
-      p.paramP = Math.round(constrain(toNumber(rawParams.paramP, p.paramP), 0, 64));
+      p.paramP = Math.round(
+        constrain(toNumber(rawParams.paramP, p.paramP), 0, 64),
+      );
     }
-    if ("softClip" in rawParams) p.softClip = Boolean(rawParams.softClip);
-    if ("multiStep" in rawParams) p.multiStep = Boolean(rawParams.multiStep);
+    if ("softClip" in rawParams)
+      p.softClip = toBoolean(rawParams.softClip, p.softClip);
+    if ("multiStep" in rawParams)
+      p.multiStep = toBoolean(rawParams.multiStep, p.multiStep);
 
     if ("b" in rawParams) {
       const b = rawParams.b;
@@ -478,14 +517,127 @@ class AppCore {
       }
       if (!Array.isArray(p.b) || p.b.length === 0) p.b = [1];
     }
+
+    if (
+      "colourMap" in rawParams &&
+      this.colourMapKeys.includes(rawParams.colourMap)
+    ) {
+      p.colourMap = rawParams.colourMap;
+    }
+
+    if ("renderMode" in rawParams) {
+      const mode = String(rawParams.renderMode || "");
+      if (["world", "potential", "growth", "kernel"].includes(mode)) {
+        p.renderMode = mode;
+      }
+    }
+
+    if ("renderGrid" in rawParams)
+      p.renderGrid = toBoolean(rawParams.renderGrid, p.renderGrid);
+    if ("renderScale" in rawParams)
+      p.renderScale = toBoolean(rawParams.renderScale, p.renderScale);
+    if ("renderLegend" in rawParams)
+      p.renderLegend = toBoolean(rawParams.renderLegend, p.renderLegend);
+    if ("renderStats" in rawParams)
+      p.renderStats = toBoolean(rawParams.renderStats, p.renderStats);
+    if ("renderMotionOverlay" in rawParams) {
+      p.renderMotionOverlay = toBoolean(
+        rawParams.renderMotionOverlay,
+        p.renderMotionOverlay,
+      );
+    }
+    if ("renderMotionTrail" in rawParams) {
+      p.renderMotionTrail = toBoolean(
+        rawParams.renderMotionTrail,
+        p.renderMotionTrail,
+      );
+    }
+    if ("renderCalcPanels" in rawParams) {
+      p.renderCalcPanels = toBoolean(
+        rawParams.renderCalcPanels,
+        p.renderCalcPanels,
+      );
+    }
+    if ("renderKeymapRef" in rawParams) {
+      p.renderKeymapRef = toBoolean(
+        rawParams.renderKeymapRef,
+        p.renderKeymapRef,
+      );
+    }
+    if ("renderEquation" in rawParams) {
+      p.renderEquation = toBoolean(rawParams.renderEquation, p.renderEquation);
+    }
+
+    if ("selectedAnimal" in rawParams) {
+      const incoming = rawParams.selectedAnimal;
+      if (
+        incoming === "" ||
+        incoming === null ||
+        typeof incoming === "undefined"
+      ) {
+        p.selectedAnimal = "";
+      } else {
+        const idx = parseInt(String(incoming), 10);
+        if (
+          Number.isFinite(idx) &&
+          this.animalLibrary &&
+          idx >= 0 &&
+          idx < this.animalLibrary.animals.length
+        ) {
+          p.selectedAnimal = String(idx);
+        }
+      }
+    }
+
+    if ("placeMode" in rawParams)
+      p.placeMode = toBoolean(rawParams.placeMode, p.placeMode);
+    if ("placeScale" in rawParams) {
+      p.placeScale = constrain(
+        toNumber(rawParams.placeScale, p.placeScale),
+        0.25,
+        4,
+      );
+    }
+    if ("autoScaleSimParams" in rawParams) {
+      p.autoScaleSimParams = toBoolean(
+        rawParams.autoScaleSimParams,
+        p.autoScaleSimParams,
+      );
+    }
+
+    if ("imageFormat" in rawParams) {
+      const fmt = String(rawParams.imageFormat || "").toLowerCase();
+      if (["png", "jpg", "jpeg", "webm", "mp4"].includes(fmt)) {
+        p.imageFormat = fmt;
+      }
+    }
+    if ("recordingFPS" in rawParams) {
+      p.recordingFPS = Math.round(
+        constrain(toNumber(rawParams.recordingFPS, p.recordingFPS), 12, 120),
+      );
+    }
+    if ("videoBitrateMbps" in rawParams) {
+      p.videoBitrateMbps = constrain(
+        toNumber(rawParams.videoBitrateMbps, p.videoBitrateMbps),
+        1,
+        64,
+      );
+    }
+
+    this._skipNextAnimalParamsLoad = true;
+    this._lastAnimalParamsSelection = p.selectedAnimal || "";
+
+    return { gridSizeChanged: p.gridSize !== beforeGridSize };
   }
 
   importWorldPayload(payload) {
-    if (!payload || !payload.cells) return;
+    if (!payload || !payload.world) return;
 
     this._queueAction("importWorld", () =>
       this._queueOrRunMutation(() => {
-        const nextSize = this._normaliseGridSize(payload.size || this.params.gridSize);
+        const nextSize = this._normaliseGridSize(
+          payload.size || this.params.gridSize,
+        );
         const sizeChanged = nextSize !== this.params.gridSize;
 
         if (sizeChanged) {
@@ -501,23 +653,47 @@ class AppCore {
 
         this._ensureBuffers();
 
-        const src = payload.cells;
-        this.board.cells.fill(0);
+        const src = payload.world;
+        this.board.world.fill(0);
         if (src instanceof Float32Array) {
-          this.board.cells.set(src.subarray(0, this.board.cells.length));
+          this.board.world.set(src.subarray(0, this.board.world.length));
         } else if (Array.isArray(src)) {
-          const n = Math.min(src.length, this.board.cells.length);
+          const n = Math.min(src.length, this.board.world.length);
           for (let i = 0; i < n; i++) {
             const v = Number(src[i]);
-            this.board.cells[i] = Number.isFinite(v) ? constrain(v, 0, 1) : 0;
+            this.board.world[i] = Number.isFinite(v) ? constrain(v, 0, 1) : 0;
           }
         }
 
         this.board.potential.fill(0);
-        this.board.field.fill(0);
-        if (this.board.fieldOld) this.board.fieldOld.fill(0);
+        if (payload.potential instanceof Float32Array) {
+          this.board.potential.set(
+            payload.potential.subarray(0, this.board.potential.length),
+          );
+        }
 
-        this._applyImportedWorldParams(payload.params);
+        this.board.growth.fill(0);
+        const importedGrowth = payload.growth;
+        if (importedGrowth instanceof Float32Array) {
+          this.board.growth.set(
+            importedGrowth.subarray(0, this.board.growth.length),
+          );
+        }
+
+        if (this.board.growthOld) {
+          const importedGrowthOld = payload.growthOld;
+          if (importedGrowthOld instanceof Float32Array) {
+            this.board.growthOld.set(
+              importedGrowthOld.subarray(0, this.board.growthOld.length),
+            );
+          } else {
+            this.board.growthOld.fill(0);
+          }
+        }
+
+        this._applyImportedParamsSnapshot(payload.params, {
+          allowGridSize: false,
+        });
         this.automaton.reset();
         this.automaton.updateParameters(this.params);
 
@@ -534,7 +710,7 @@ class AppCore {
         this.refreshGUI();
 
         console.log(
-          `[Lenia] Imported world: size=${this.params.gridSize}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}`,
+          `[Lenia] Imported world: size=${this.params.gridSize}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}, potential=${payload.potential ? "restored" : "zeroed"}, growth=${payload.growth ? "restored" : "zeroed"}, growthOld=${payload.growthOld ? "restored" : "zeroed"}, selectedAnimal=${this.params.selectedAnimal || "none"}, placeScale=${this.params.placeScale || 1}`,
         );
       }),
     );
@@ -656,7 +832,7 @@ class AppCore {
 
     const scale = this.params.placeScale || 1;
 
-    if (!this.board.cells || (this._worker && this._workerBusy)) {
+    if (!this.board.world || (this._worker && this._workerBusy)) {
       this._pendingPlacement = { animal, cellX, cellY, scale };
       return;
     }
@@ -784,7 +960,9 @@ class AppCore {
 
   getColourMapOptions() {
     return this.colourMapKeys.reduce((options, name) => {
-      const label = name.charAt(0).toUpperCase() + name.slice(1);
+      const entry = this.colourMaps[name] || {};
+      const type = entry.type || "sequential";
+      const label = `${name} (${type})`;
       options[label] = name;
       return options;
     }, {});

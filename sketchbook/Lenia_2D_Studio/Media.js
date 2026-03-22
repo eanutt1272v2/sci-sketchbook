@@ -116,7 +116,12 @@ class Media {
       series: stats.series,
       world: {
         size: data.size,
-        cells: data.cells,
+        world: data.world,
+        potential: this._encodeFloatField(this.appcore.board?.potential, data.size),
+        growth: this._encodeFloatField(this.appcore.board?.growth, data.size),
+        growthOld: this.appcore.board?.growthOld
+          ? this._encodeFloatField(this.appcore.board.growthOld, data.size)
+          : null,
       },
       exportedAt: new Date().toISOString(),
     };
@@ -133,7 +138,9 @@ class Media {
           typeof data !== "object" ||
           data.format !== "simpipe.world" ||
           !data.world ||
-          !data.world.cells ||
+          !data.world.world ||
+          !data.world.potential ||
+          !data.world.growth ||
           !data.params ||
           !data.statistics ||
           !Array.isArray(data.series)
@@ -141,8 +148,11 @@ class Media {
           throw new Error("[Lenia] Invalid world JSON payload");
         }
 
+        this._applyMetadataSnapshot(data.metadata);
+
         const payload = this._normaliseWorldPayload(data);
         this.appcore.importWorldPayload(payload);
+        console.log("[Lenia] Imported world JSON with all params, stats, and field states");
       });
     });
   }
@@ -154,14 +164,25 @@ class Media {
     }
     const size = this.appcore._normaliseGridSize(rawSize);
 
-    if (typeof data.world.cells !== "string") {
-      throw new Error("[Lenia] Invalid world JSON: cells must be RLE string");
+    if (typeof data.world.world !== "string") {
+      throw new Error("[Lenia] Invalid world JSON: world must be RLE string");
     }
-    const cells = RLECodec.decode(data.world.cells, size, size);
+    const world = RLECodec.decode(data.world.world, size, size);
+    const expectedLength = size * size;
+    const potential = this._decodeFloatField(data.world.potential, expectedLength);
+    const growth = this._decodeFloatField(data.world.growth, expectedLength);
+    
+    let growthOld = null;
+    if (data.world.growthOld && typeof data.world.growthOld === "object") {
+      growthOld = this._decodeFloatField(data.world.growthOld, expectedLength);
+    }
 
     return {
       size,
-      cells,
+      world,
+      potential,
+      growth,
+      growthOld,
       params: data.params,
       statistics: data.statistics,
       series: data.series,
@@ -196,6 +217,40 @@ class Media {
     );
   }
 
+  importStatisticsJSON() {
+    this.openDataImportDialog((file) => {
+      this._readJSONFile(file, (data) => {
+        if (!data || typeof data !== "object") {
+          throw new Error("[Lenia] Invalid statistics JSON payload");
+        }
+
+        if (data.format !== "simpipe.stats") {
+          throw new Error("[Lenia] Invalid statistics JSON format version");
+        }
+
+        if (!data.statistics || typeof data.statistics !== "object") {
+          throw new Error("[Lenia] Invalid statistics JSON: missing statistics");
+        }
+
+        if (!Array.isArray(data.series)) {
+          throw new Error("[Lenia] Invalid statistics JSON: missing series");
+        }
+
+        this._applyMetadataSnapshot(data.metadata);
+
+        this.appcore.analyser.resetStatistics();
+        this.appcore.analyser.reset();
+        Object.assign(this.appcore.statistics, this._cloneJSONCompatible(data.statistics));
+        this.appcore.analyser.series = this._cloneJSONCompatible(data.series);
+        this.appcore.refreshGUI();
+
+        console.log(
+          `[Lenia] Imported statistics JSON: ${this.appcore.analyser.series.length} rows`,
+        );
+      });
+    });
+  }
+
   exportParamsJSON() {
     const payload = {
       format: "simpipe.params",
@@ -218,50 +273,17 @@ class Media {
           throw new Error("[Lenia] Invalid params JSON format version");
         }
 
+        this._applyMetadataSnapshot(data.metadata);
+
         if (!data.params || typeof data.params !== "object") {
           throw new Error("[Lenia] Invalid params JSON format");
         }
 
-        const incoming = data.params;
-        const target = this.appcore.params;
-        const oldSize = target.gridSize;
+        const result = this.appcore._applyImportedParamsSnapshot(data.params, {
+          allowGridSize: true,
+        });
 
-        const allowed = [
-          "running",
-          "gridSize",
-          "R",
-          "T",
-          "m",
-          "s",
-          "b",
-          "kn",
-          "gn",
-          "softClip",
-          "multiStep",
-          "addNoise",
-          "maskRate",
-          "paramP",
-          "colourMap",
-          "renderMode",
-          "renderGrid",
-          "renderScale",
-          "renderLegend",
-          "renderStats",
-          "renderMotionOverlay",
-          "renderCalcPanels",
-          "renderKeymapRef",
-          "selectedAnimal",
-          "placeMode",
-          "imageFormat",
-          "recordingFPS",
-          "videoBitrateMbps",
-        ];
-
-        for (const key of allowed) {
-          if (key in incoming) target[key] = incoming[key];
-        }
-
-        if (target.gridSize !== oldSize) {
+        if (result.gridSizeChanged) {
           this.appcore.changeResolution();
         }
 
@@ -287,11 +309,16 @@ class Media {
   }
 
   _getFullParamsSnapshot() {
-    return JSON.parse(JSON.stringify(this.appcore.params || {}));
+    return this._cloneJSONCompatible(this.appcore.params || {});
   }
 
   _getMetadataSnapshot() {
-    return JSON.parse(JSON.stringify(this.appcore.metadata || {}));
+    return this._cloneJSONCompatible(this.appcore.metadata || {});
+  }
+
+  _applyMetadataSnapshot(metadata) {
+    if (!metadata || typeof metadata !== "object") return;
+    this.appcore.metadata = this._cloneJSONCompatible(metadata);
   }
 
   _getRecordingFPS() {
@@ -307,15 +334,70 @@ class Media {
 
   _getFullStatsSnapshot() {
     return {
-      statistics: JSON.parse(JSON.stringify(this.appcore.statistics || {})),
-      series: JSON.parse(
-        JSON.stringify(
-          Array.isArray(this.appcore.analyser?.series)
-            ? this.appcore.analyser.series
-            : [],
-        ),
+      statistics: this._cloneJSONCompatible(this.appcore.statistics || {}),
+      series: this._cloneJSONCompatible(
+        Array.isArray(this.appcore.analyser?.series)
+          ? this.appcore.analyser.series
+          : [],
       ),
     };
+  }
+
+  _isPlainObject(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  }
+
+  _cloneJSONCompatible(value) {
+    if (ArrayBuffer.isView(value)) {
+      return Array.from(value);
+    }
+    if (Array.isArray(value)) {
+      return value.map((entry) => this._cloneJSONCompatible(entry));
+    }
+    if (this._isPlainObject(value)) {
+      const out = {};
+      for (const [key, entry] of Object.entries(value)) {
+        out[key] = this._cloneJSONCompatible(entry);
+      }
+      return out;
+    }
+    return value;
+  }
+
+  _encodeFloatField(source, size) {
+    if (!(source instanceof Float32Array)) {
+      throw new Error("[Lenia] Invalid world JSON export: missing Float32 field");
+    }
+    const expectedLength = Number(size) * Number(size);
+    if (source.length !== expectedLength) {
+      throw new Error("[Lenia] Invalid world JSON export: field length mismatch");
+    }
+
+    return {
+      encoding: "rle-f32-v1",
+      length: source.length,
+      data: RLECodec.encodeFloat32Array(source),
+    };
+  }
+
+  _decodeFloatField(source, expectedLength) {
+    if (
+      !source ||
+      typeof source !== "object" ||
+      source.encoding !== "rle-f32-v1" ||
+      typeof source.data !== "string"
+    ) {
+      throw new Error("[Lenia] Invalid world JSON: malformed float field encoding");
+    }
+
+    const length = Number(source.length);
+    if (length !== expectedLength) {
+      throw new Error(
+        `[Lenia] Invalid world JSON: encoded float field length mismatch (expected ${expectedLength}, got ${length})`,
+      );
+    }
+
+    return RLECodec.decodeFloat32Array(source.data, length);
   }
 
   _downloadJSON(payload, filename) {

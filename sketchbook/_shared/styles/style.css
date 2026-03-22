@@ -1,0 +1,27 @@
+@font-face {
+  font-family: "Iosevka";
+  src: url("../fonts/Iosevka-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Iosevka", monospace;
+  background-color: #323232;
+  color: #ffffff;
+  overflow: hidden;
+  align-items: center;
+}
+
+canvas {
+  display: block;
+  border: 1px solid #666666;
+  outline: none;
+}
+
+.tp-dfwv {
+  width: 400px !important;
+}

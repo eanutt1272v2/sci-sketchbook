@@ -11,10 +11,11 @@ class AppCore {
     this.defaultOffsetY = -0.08;
     this.defaultZoom = 1.0;
     this.defaultIterations = 128;
-    this.needsRedraw = true;
+    this.needsRerender = true;
     this.showUI = true;
     this.showKeymapRef = false;
     this.justPressed = false;
+    this.showEquation = true;
 
     this.theme = null;
     this.panel = null;
@@ -40,7 +41,7 @@ class AppCore {
       this.panel = new UIPanel(this);
     }
 
-    this.needsRedraw = true;
+    this.needsRerender = true;
   }
 
   setup() {
@@ -103,7 +104,7 @@ class AppCore {
     if (data.w === width && data.h === height) {
       this.renderer.renderFromPixels(data.pixels);
     } else {
-      this.needsRedraw = true;
+      this.needsRerender = true;
     }
     if (this._renderPending) {
       this._renderPending = false;
@@ -111,11 +112,11 @@ class AppCore {
     }
   }
 
-  draw() {
+  render() {
     background(0);
     this.input.handleContinuousInput();
 
-    if (this.needsRedraw) {
+    if (this.needsRerender) {
       if (this._worker) {
         if (!this._workerBusy) {
           this._dispatchRender();
@@ -125,13 +126,13 @@ class AppCore {
       } else {
         this.renderer.render();
       }
-      this.needsRedraw = false;
+      this.needsRerender = false;
     }
 
     image(this.renderer.buffer, 0, 0);
 
     if (this.showUI) {
-      this.panel.draw();
+      this.panel.render();
     }
 
     if (this.showKeymapRef) {
@@ -139,6 +140,12 @@ class AppCore {
     }
 
     this.justPressed = false;
+
+    if (this.showEquation) {
+      this.renderer.renderEquationOverlay();
+    } else {
+      this.renderer.hideEquationOverlay();
+    }
   }
 
   doZoom(factor, tx, ty) {
@@ -159,14 +166,14 @@ class AppCore {
     if (this.panel && this.panel.slider) {
       this.panel.slider.val = this.maxIterations;
     }
-    this.needsRedraw = true;
+    this.needsRerender = true;
   }
 
   cycleColorMap(step) {
     const count = this.renderer.mapNames.length;
     const next = (this.renderer.currentMapIndex + step + count) % count;
     this.renderer.setMap(next);
-    this.needsRedraw = true;
+    this.needsRerender = true;
   }
 
   exportImagePNG() {

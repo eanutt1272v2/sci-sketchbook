@@ -125,7 +125,7 @@ class GUI {
       },
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
     const kernel = page.addFolder({ title: "Kernel Function", expanded: true });
 
@@ -146,7 +146,7 @@ class GUI {
       },
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
     const time = page.addFolder({ title: "Time Integration" });
 
@@ -204,7 +204,7 @@ class GUI {
       options: {
         World: "world",
         Potential: "potential",
-        Growth: "field",
+        Growth: "growth",
         Kernel: "kernel",
       },
     });
@@ -220,9 +220,13 @@ class GUI {
     overlay.addBinding(params, "renderMotionOverlay", {
       label: "Motion Overlay",
     });
+    overlay.addBinding(params, "renderMotionTrail", {
+      label: "Motion Trail",
+    });
     overlay.addBinding(params, "renderCalcPanels", {
       label: "Calculation Panels",
     });
+    overlay.addBinding(params, "renderEquation", { label: "Equation Overlay" });
   }
 
   createAnimalsTab(page) {
@@ -239,18 +243,16 @@ class GUI {
       .addButton({ title: "Load Selected Animal" })
       .on("click", () => this.appcore?.loadSelectedAnimal());
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
-    page.addBinding(params, "placeMode", { label: "Place Mode" });
-
-    page.addBlade({ view: "separator" });
-
-    const scaleFolder = page.addFolder({
-      title: "Placement Scale (animals may not tolerate scaling well)",
+    const placementFolder = page.addFolder({
+      title: "Placement (animals may not tolerate scaling well)",
       expanded: true,
     });
 
-    scaleFolder
+    placementFolder.addBinding(params, "placeMode", { label: "Place Mode" });
+
+    placementFolder
       .addBinding(params, "placeScale", {
         label: "Scale",
         min: 0.25,
@@ -262,9 +264,9 @@ class GUI {
         this.appcore.updatePlacementScale(params.placeScale);
       });
 
-    scaleFolder
+    placementFolder
       .addBinding(params, "autoScaleSimParams", {
-        label: "Auto-scale sim params to scale",
+        label: "Auto-scale Params",
       })
       .on("change", () => {
         if (!this.appcore || !params.autoScaleSimParams) return;
@@ -275,8 +277,8 @@ class GUI {
         this.appcore.refreshGUI();
       });
 
-    scaleFolder
-      .addButton({ title: "Manually scale sim params to scale" })
+    placementFolder
+      .addButton({ title: "Manually Scale Params" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
@@ -289,8 +291,8 @@ class GUI {
         );
       });
 
-    scaleFolder
-      .addButton({ title: "Reset to sim params from animal" })
+    placementFolder
+      .addButton({ title: "Reset to Params from Animal" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
@@ -327,7 +329,8 @@ class GUI {
       label: "Gyradius",
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
+
     const motion = page.addFolder({ title: "Position & Motion" });
     motion.addBinding(statistics, "centerX", {
       readonly: true,
@@ -359,7 +362,8 @@ class GUI {
       label: "Rotation Speed",
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
+
     const symmetry = page.addFolder({ title: "Symmetry" });
     symmetry.addBinding(statistics, "symmSides", {
       readonly: true,
@@ -386,7 +390,7 @@ class GUI {
       label: "Period Confidence",
     });
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
     metrics.addBinding(statistics, "fps", { readonly: true, label: "FPS" });
   }
@@ -403,24 +407,43 @@ class GUI {
     imp
       .addButton({ title: "Import World (JSON)" })
       .on("click", () => media?.importWorldJSON());
+    imp
+      .addButton({ title: "Import Stats (JSON)" })
+      .on("click", () => media?.importStatisticsJSON());
 
-    const data = page.addFolder({ title: "Export" });
-    data
+    this.addSeparator(page);
+
+    const exp = page.addFolder({ title: "Export" });
+    exp
       .addButton({ title: "Export Params (JSON)" })
       .on("click", () => media?.exportParamsJSON());
-    data
+    exp
       .addButton({ title: "Export Stats (JSON)" })
       .on("click", () => media?.exportStatisticsJSON());
-    data
+    exp
       .addButton({ title: "Export Stats (CSV)" })
       .on("click", () => media?.exportStatisticsCSV());
-    data
+    exp
       .addButton({ title: "Export World (JSON)" })
       .on("click", () => media?.exportWorldJSON());
 
-    const exp = page.addFolder({ title: "Capture" });
+    const capture = exp.addFolder({ title: "Capture" });
 
-    this.recordButton = exp.addButton({
+    capture.addBinding(this.params, "recordingFPS", {
+      label: "Record FPS",
+      min: 12,
+      max: 120,
+      step: 1,
+    });
+
+    capture.addBinding(this.params, "videoBitrateMbps", {
+      label: "Bitrate (Mbps)",
+      min: 1,
+      max: 64,
+      step: 0.5,
+    });
+
+    this.recordButton = capture.addButton({
       title: media?.isRecording ? "Stop Recording" : "Start Recording",
     });
 
@@ -434,28 +457,14 @@ class GUI {
       this.syncMediaControls();
     });
 
-    exp.addBlade({ view: "separator" });
+    this.addSeparator(capture);
 
-    exp.addBinding(this.params, "recordingFPS", {
-      label: "Record FPS",
-      min: 12,
-      max: 120,
-      step: 1,
-    });
-
-    exp.addBinding(this.params, "videoBitrateMbps", {
-      label: "Bitrate (Mbps)",
-      min: 1,
-      max: 64,
-      step: 0.5,
-    });
-
-    exp.addBinding(this.params, "imageFormat", {
+    capture.addBinding(this.params, "imageFormat", {
       label: "Image Format",
       options: { PNG: "png", JPG: "jpg", WebP: "webp" },
     });
 
-    exp
+    capture
       .addButton({ title: "Export Image" })
       .on("click", () => media?.exportImage());
 

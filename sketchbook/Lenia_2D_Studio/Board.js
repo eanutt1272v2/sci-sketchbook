@@ -1,10 +1,36 @@
 class Board {
   constructor(size) {
     this.size = size;
-    this.cells = this._createGrid();
-    this.potential = this._createGrid();
-    this.field = this._createGrid();
-    this.fieldOld = null;
+    this._world = this._createGrid();
+    this._potential = this._createGrid();
+    this._growth = this._createGrid();
+    this._growthOld = null;
+
+    Object.defineProperty(this, "world", {
+      get: () => this._world,
+      set: (v) => {
+        this._world = v;
+      },
+    });
+    Object.defineProperty(this, "potential", {
+      get: () => this._potential,
+      set: (v) => {
+        this._potential = v;
+      },
+    });
+    Object.defineProperty(this, "growth", {
+      get: () => this._growth,
+      set: (v) => {
+        this._growth = v;
+      },
+    });
+    Object.defineProperty(this, "growthOld", {
+      get: () => this._growthOld,
+      set: (v) => {
+        this._growthOld = v;
+      },
+    });
+
     this.params = {
       R: 13,
       T: 10,
@@ -33,10 +59,10 @@ class Board {
   }
 
   clear() {
-    this.cells.fill(0);
+    this.world.fill(0);
     this.potential.fill(0);
-    this.field.fill(0);
-    if (this.fieldOld) this.fieldOld.fill(0);
+    this.growth.fill(0);
+    if (this.growthOld) this.growthOld.fill(0);
   }
 
   randomise(kernelRadius) {
@@ -52,7 +78,7 @@ class Board {
         for (let dx = 0; dx < dim; dx++) {
           const y = (cy + dy - Math.floor(dim / 2) + this.size) % this.size;
           const x = (cx + dx - Math.floor(dim / 2) + this.size) % this.size;
-          this.cells[this._index(x, y)] = Math.random() * 0.9;
+          this.world[this._index(x, y)] = Math.random() * 0.9;
         }
       }
     }
@@ -78,7 +104,7 @@ class Board {
           targetX >= 0 &&
           targetX < this.size
         ) {
-          this.cells[this._index(targetX, targetY)] = grid[y][x];
+          this.world[this._index(targetX, targetY)] = grid[y][x];
         }
       }
     }
@@ -109,7 +135,7 @@ class Board {
       for (let x = 0; x < w; x++) {
         const ty = (sy + y + this.size) % this.size;
         const tx = (sx + x + this.size) % this.size;
-        this.cells[this._index(tx, ty)] = grid[y][x];
+        this.world[this._index(tx, ty)] = grid[y][x];
       }
     }
   }
@@ -156,17 +182,17 @@ class Board {
 
         const ty = (sy + dy + this.size * 100) % this.size;
         const tx = (sx + dx + this.size * 100) % this.size;
-        this.cells[this._index(tx, ty)] = v;
+        this.world[this._index(tx, ty)] = v;
       }
     }
   }
 
   resize(newSize) {
     this.size = newSize;
-    this.cells = this._createGrid();
+    this.world = this._createGrid();
     this.potential = this._createGrid();
-    this.field = this._createGrid();
-    this.fieldOld = null;
+    this.growth = this._createGrid();
+    this.growthOld = null;
   }
   add(board, shift = [0, 0], isCentred = true) {
     const shift0 = shift[0] || 0;
@@ -186,8 +212,8 @@ class Board {
         const iy0 = (((start0 + iy) % size0) + size0) % size0;
         const iy1 = (start1 + iy) % size1;
 
-        if (board.cells[iy1 * size1 + idx1] > 1e-10) {
-          this.cells[iy0 * size0 + idx0] = board.cells[iy1 * size1 + idx1];
+        if (board.world[iy1 * size1 + idx1] > 1e-10) {
+          this.world[iy0 * size0 + idx0] = board.world[iy1 * size1 + idx1];
         }
       }
     }
@@ -212,12 +238,12 @@ class Board {
         const iy = Math.round(ry);
 
         if (ix >= 0 && ix < this.size && iy >= 0 && iy < this.size) {
-          newCells[y * this.size + x] = this.cells[iy * this.size + ix];
+          newCells[y * this.size + x] = this.world[iy * this.size + ix];
         }
       }
     }
 
-    this.cells.set(newCells);
+    this.world.set(newCells);
     return this;
   }
   scale(factor) {
@@ -233,14 +259,14 @@ class Board {
         const oldY = Math.round((y / newSize) * oldSize);
         const ox = Math.min(oldX, oldSize - 1);
         const oy = Math.min(oldY, oldSize - 1);
-        newCells[y * newSize + x] = this.cells[oy * oldSize + ox];
+        newCells[y * newSize + x] = this.world[oy * oldSize + ox];
       }
     }
 
     this.size = newSize;
-    this.cells = newCells;
+    this.world = newCells;
     this.potential = this._createGrid();
-    this.field = this._createGrid();
+    this.growth = this._createGrid();
     return this;
   }
   flip(flipMode = 0) {
@@ -250,25 +276,25 @@ class Board {
       for (let y = 0; y < this.size; y++) {
         for (let x = 0; x < this.size; x++) {
           newCells[y * this.size + x] =
-            this.cells[y * this.size + (this.size - 1 - x)];
+            this.world[y * this.size + (this.size - 1 - x)];
         }
       }
     } else if (flipMode === 1) {
       for (let y = 0; y < this.size; y++) {
         for (let x = 0; x < this.size; x++) {
           newCells[y * this.size + x] =
-            this.cells[(this.size - 1 - y) * this.size + x];
+            this.world[(this.size - 1 - y) * this.size + x];
         }
       }
     } else if (flipMode === 2) {
       for (let y = 0; y < this.size; y++) {
         for (let x = 0; x < this.size; x++) {
-          newCells[y * this.size + x] = this.cells[x * this.size + y];
+          newCells[y * this.size + x] = this.world[x * this.size + y];
         }
       }
     }
 
-    this.cells.set(newCells);
+    this.world.set(newCells);
     return this;
   }
   shift(shiftX, shiftY) {
@@ -278,11 +304,11 @@ class Board {
       for (let x = 0; x < this.size; x++) {
         const oldX = (x - shiftX + this.size * 100) % this.size;
         const oldY = (y - shiftY + this.size * 100) % this.size;
-        newCells[y * this.size + x] = this.cells[oldY * this.size + oldX];
+        newCells[y * this.size + x] = this.world[oldY * this.size + oldX];
       }
     }
 
-    this.cells.set(newCells);
+    this.world.set(newCells);
     return this;
   }
   crop() {
@@ -294,7 +320,7 @@ class Board {
 
     for (let y = 0; y < this.size; y++) {
       for (let x = 0; x < this.size; x++) {
-        if (this.cells[y * this.size + x] > EPSILON) {
+        if (this.world[y * this.size + x] > EPSILON) {
           minX = Math.min(minX, x);
           maxX = Math.max(maxX, x);
           minY = Math.min(minY, y);
@@ -304,7 +330,7 @@ class Board {
     }
 
     if (maxX === -1) {
-      this.cells.fill(0);
+      this.world.fill(0);
       return this;
     }
 
@@ -317,23 +343,23 @@ class Board {
       for (let x = 0; x < newW; x++) {
         if (minX + x < this.size && minY + y < this.size) {
           newCells[y * newSize + x] =
-            this.cells[(minY + y) * this.size + (minX + x)];
+            this.world[(minY + y) * this.size + (minX + x)];
         }
       }
     }
 
     this.size = newSize;
-    this.cells = newCells;
+    this.world = newCells;
     this.potential = this._createGrid();
-    this.field = this._createGrid();
+    this.growth = this._createGrid();
     return this;
   }
   getStats() {
     let mass = 0;
     let max = 0;
 
-    for (let i = 0; i < this.cells.length; i++) {
-      const val = this.cells[i];
+    for (let i = 0; i < this.world.length; i++) {
+      const val = this.world[i];
       mass += val;
       if (val > max) max = val;
     }
@@ -345,7 +371,7 @@ class Board {
     return {
       size: this.size,
       params: this.params,
-      cells: this._cellsToRLE(),
+      world: this._worldToRLE(),
       stats: stats,
     };
   }
@@ -354,19 +380,19 @@ class Board {
     if (data.params) {
       board.params = { ...board.params, ...data.params };
     }
-    if (data.cells) {
-      board._cellsFromRLE(data.cells);
+    if (data.world) {
+      board._worldFromRLE(data.world);
     }
     return board;
   }
 
-  _cellsToRLE() {
-    return RLECodec.encode(this.cells, this.size, this.size);
+  _worldToRLE() {
+    return RLECodec.encode(this.world, this.size, this.size);
   }
 
-  _cellsFromRLE(rle) {
+  _worldFromRLE(rle) {
     const decoded = RLECodec.decode(rle, this.size, this.size);
-    this.cells.set(decoded);
+    this.world.set(decoded);
   }
 
   static get EPSILON() {

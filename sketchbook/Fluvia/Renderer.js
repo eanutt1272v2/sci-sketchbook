@@ -17,6 +17,7 @@ class Renderer {
     this.textureUpdateIntervalMs = 50;
     this.lastTextureUpdateMs = 0;
     this.textureDirty = true;
+    this.lastLegendRange = null;
     this.compositeLegendItems = [
       { l: "Water", cKey: "waterColour" },
       { l: "Sediment", cKey: "sedimentColour" },
@@ -37,6 +38,7 @@ class Renderer {
         entries: [
           ["1 / 2", "Switch render method: 2D / 3D"],
           ["O / L", "Toggle stats / legend overlays"],
+          ["J", "Toggle equation overlay"],
           ["C", "Cycle colour map (Shift reverse)"],
           ["M", "Cycle surface map (Shift reverse)"],
           ["[ / ]", "Height scale -/+ (Shift large)"],
@@ -126,6 +128,45 @@ class Renderer {
     }
   }
 
+  _samplePolyMapColour(mapName, t) {
+    const map = this.appcore.colourMaps?.[mapName];
+    if (!map) return [255, 255, 255];
+
+    const clamped = constrain(t, 0, 1);
+    const channels = ["r", "g", "b"];
+    const out = [0, 0, 0];
+
+    for (let c = 0; c < 3; c++) {
+      const coeffs = map[channels[c]];
+      let val = 0;
+      for (let i = coeffs.length - 1; i >= 0; i--) {
+        val = val * clamped + coeffs[i];
+      }
+      out[c] = constrain(Math.round(val * 255), 0, 255);
+    }
+
+    return out;
+  }
+
+  _sampleDeltaDivergentColour(t) {
+    const center = 236;
+    const a = constrain(t, 0, 1);
+    const distance = Math.abs(a - 0.5) * 2;
+
+    let sideColour;
+    if (a < 0.5) {
+      sideColour = this._samplePolyMapColour("mako", 1 - a * 2);
+    } else {
+      sideColour = this._samplePolyMapColour("plasma", (a - 0.5) * 2);
+    }
+
+    return [
+      Math.round(center * (1 - distance) + sideColour[0] * distance),
+      Math.round(center * (1 - distance) + sideColour[1] * distance),
+      Math.round(center * (1 - distance) + sideColour[2] * distance),
+    ];
+  }
+
   generateTextures(is3D) {
     const { params, terrain, camera } = this.appcore;
     const {
@@ -162,6 +203,8 @@ class Renderer {
     }
 
     const bounds = this.calculateBounds(surfaceMap);
+    let fieldMin = Number.POSITIVE_INFINITY;
+    let fieldMax = Number.NEGATIVE_INFINITY;
 
     this.canvas2D.loadPixels();
     this.heightMapTexture.loadPixels();
@@ -231,16 +274,27 @@ class Renderer {
         }
       } else {
         let v = 0;
+        let rawFieldValue = 0;
         if (surfaceMap === "height") {
+          rawFieldValue = hVal;
           v = (hVal - bounds.min) / bounds.range;
         } else if (surfaceMap === "slope") {
-          v = 1 - terrain.getSurfaceNormal(i % size, (i / size) | 0).y;
+          rawFieldValue = 1 - terrain.getSurfaceNormal(i % size, (i / size) | 0).y;
+          v = rawFieldValue;
         } else if (surfaceMap === "discharge") {
-          v = terrain.getDischarge(i);
+          rawFieldValue = terrain.getDischarge(i);
+          v = rawFieldValue;
         } else if (surfaceMap === "sediment") {
+          rawFieldValue = sedimentMap[i];
           v = (sedimentMap[i] - bounds.min) / bounds.range;
         } else if (surfaceMap === "delta") {
-          v = 0.5 + (hVal - originalHeightMap[i]) * 10;
+          rawFieldValue = hVal - originalHeightMap[i];
+          v = (rawFieldValue - bounds.min) / bounds.range;
+        }
+
+        if (Number.isFinite(rawFieldValue)) {
+          if (rawFieldValue < fieldMin) fieldMin = rawFieldValue;
+          if (rawFieldValue > fieldMax) fieldMax = rawFieldValue;
         }
 
         const lIdx = constrain((v * 255) | 0, 0, 255) * 3;
@@ -257,6 +311,20 @@ class Renderer {
 
     this.canvas2D.updatePixels();
     this.heightMapTexture.updatePixels();
+
+    if (surfaceMap !== "composite") {
+      const fallbackMin = Number.isFinite(bounds.min) ? bounds.min : 0;
+      const fallbackMax = Number.isFinite(bounds.max)
+        ? bounds.max
+        : fallbackMin + (Number.isFinite(bounds.range) ? bounds.range : 1);
+      this.lastLegendRange = {
+        map: surfaceMap,
+        min: Number.isFinite(fieldMin) ? fieldMin : fallbackMin,
+        max: Number.isFinite(fieldMax) ? fieldMax : fallbackMax,
+      };
+    } else {
+      this.lastLegendRange = null;
+    }
   }
 
   calculateBounds(mode) {
@@ -264,20 +332,53 @@ class Renderer {
 
     if (mode === "height") {
       const bounds = terrain.getMapBounds(terrain.heightMap);
-      return { min: bounds.min, range: bounds.max - bounds.min || 1 };
+      return {
+        min: bounds.min,
+        max: bounds.max,
+        range: bounds.max - bounds.min || 1,
+      };
     }
 
     if (mode === "discharge") {
       const bounds = terrain.getDischargeBounds();
-      return { min: bounds.min, range: bounds.max - bounds.min || 1 };
+      return {
+        min: bounds.min,
+        max: bounds.max,
+        range: bounds.max - bounds.min || 1,
+      };
     }
 
     if (mode === "sediment") {
       const bounds = terrain.getMapBounds(terrain.sedimentMap);
-      return { min: bounds.min, range: bounds.max - bounds.min || 1 };
+      return {
+        min: bounds.min,
+        max: bounds.max,
+        range: bounds.max - bounds.min || 1,
+      };
     }
 
-    return { min: 0, range: 1 };
+    if (mode === "delta") {
+      const { area, heightMap, originalHeightMap } = terrain;
+      if (!area || !heightMap || !originalHeightMap) {
+        return { min: -0.05, max: 0.05, range: 0.1 };
+      }
+
+      let min = Number.POSITIVE_INFINITY;
+      let max = Number.NEGATIVE_INFINITY;
+      for (let i = 0; i < area; i++) {
+        const d = heightMap[i] - originalHeightMap[i];
+        if (d < min) min = d;
+        if (d > max) max = d;
+      }
+
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        return { min: -0.05, max: 0.05, range: 0.1 };
+      }
+
+      return { min, max, range: max - min || 1 };
+    }
+
+    return { min: 0, max: 1, range: 1 };
   }
 
   render() {
@@ -360,6 +461,11 @@ class Renderer {
     if (this.appcore.params.renderStats) this.renderStats();
     if (this.appcore.params.renderLegend) this.renderLegend();
     if (this.appcore.params.renderKeymapRef) this.renderKeymapRef();
+      if (this.appcore.params.renderEquation) {
+        this.renderEquationOverlay();
+      } else {
+        this.hideEquationOverlay();
+      }
   }
 
   renderStats() {
@@ -388,9 +494,8 @@ class Renderer {
       `Comp Steep: ${statistics.compositeSteepCoveragePct.toFixed(1)} %`,
       `Hydraulic Residence: ${statistics.hydraulicResidence.toFixed(2)}`,
       `Drainage Density: ${statistics.drainageDensity.toFixed(2)} %`,
-      `Discharge peak: ${statistics.peakDischarge.toFixed(3)}`,
-      `Discharge Min: ${statistics.dischargeBounds.min.toFixed(3)}`,
-      `Discharge Max: ${statistics.dischargeBounds.max.toFixed(3)}`,
+      `Discharge Min (norm): ${statistics.dischargeBounds.min.toFixed(3)}`,
+      `Discharge Max (norm): ${statistics.dischargeBounds.max.toFixed(3)}`,
       `Sediment Total: ${statistics.totalSediment.toFixed(2)}`,
       `Bedrock Total: ${statistics.totalBedrock.toFixed(2)}`,
       `Sediment Flux: ${statistics.sedimentFlux.toFixed(3)}`,
@@ -411,6 +516,15 @@ class Renderer {
   renderLegend() {
     push();
     const { surfaceMap, colourMap } = this.appcore.params;
+    const legendTitleByMap = {
+      composite: "Composite surface blend",
+      height: "Terrain elevation",
+      slope: "Slope magnitude",
+      discharge: "Water discharge",
+      sediment: "Sediment depth",
+      delta: "Relative relief (delta)",
+    };
+    const legendTitle = legendTitleByMap[surfaceMap] || "Surface field";
 
     if (surfaceMap === "composite") {
       const params = this.appcore.params;
@@ -477,6 +591,16 @@ class Renderer {
         line(x - w - 3, y, x - w, y);
       });
 
+      noStroke();
+      fill(255);
+      push();
+      translate(x + w * 0.5, y1 + h * 0.5);
+      rotate(-HALF_PI);
+      textAlign(CENTER, CENTER);
+      textSize(12);
+      text(legendTitle, 0, 0);
+      pop();
+
       pop();
       return;
     }
@@ -488,34 +612,15 @@ class Renderer {
     const h = y2 - y1;
 
     const grad = drawingContext.createLinearGradient(0, y1, 0, y2);
-    if (surfaceMap === "composite") {
-      const params = this.appcore.params;
-      const stops = compositeAnchors
-        .map((anchor) => ({ stop: 1 - anchor.t, cKey: anchor.cKey }))
-        .sort((a, b) => a.stop - b.stop);
-
-      const firstColour = params[stops[0].cKey];
-      const lastColour = params[stops[stops.length - 1].cKey];
+    this.updateLUT(colourMap || "viridis");
+    const stops = 32;
+    for (let i = 0; i <= stops; i++) {
+      const t = i / stops;
+      const idx = (((1 - t) * 255) | 0) * 3;
       grad.addColorStop(
-        0,
-        `rgb(${firstColour.r}, ${firstColour.g}, ${firstColour.b})`,
+        t,
+        `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
       );
-      stops.forEach((stop) => {
-        const c = params[stop.cKey];
-        grad.addColorStop(stop.stop, `rgb(${c.r}, ${c.g}, ${c.b})`);
-      });
-      grad.addColorStop(1, `rgb(${lastColour.r}, ${lastColour.g}, ${lastColour.b})`);
-    } else {
-      this.updateLUT(colourMap || "viridis");
-      const stops = 32;
-      for (let i = 0; i <= stops; i++) {
-        const t = i / stops;
-        const idx = (((1 - t) * 255) | 0) * 3;
-        grad.addColorStop(
-          t,
-          `rgb(${this.lut[idx]}, ${this.lut[idx + 1]}, ${this.lut[idx + 2]})`,
-        );
-      }
     }
 
     noStroke();
@@ -532,13 +637,23 @@ class Renderer {
     textSize(11);
     textAlign(RIGHT, CENTER);
 
-    const b = this.calculateBounds(surfaceMap);
+    const b =
+      this.lastLegendRange && this.lastLegendRange.map === surfaceMap
+        ? {
+          min: this.lastLegendRange.min,
+          max: this.lastLegendRange.max,
+          range: this.lastLegendRange.max - this.lastLegendRange.min,
+        }
+        : this.calculateBounds(surfaceMap);
+    const safeRange = Number.isFinite(b.range) && b.range !== 0 ? b.range : 1;
+    const minV = Number.isFinite(b.min) ? b.min : 0;
+
     const labels = [
-      { v: b.min + b.range * 1.0, y: y1 },
-      { v: b.min + b.range * 0.75, y: y1 + h * 0.25 },
-      { v: b.min + b.range * 0.5, y: y1 + h * 0.5 },
-      { v: b.min + b.range * 0.25, y: y1 + h * 0.75 },
-      { v: b.min, y: y2 },
+      { v: minV + safeRange * 1.0, y: y1 },
+      { v: minV + safeRange * 0.75, y: y1 + h * 0.25 },
+      { v: minV + safeRange * 0.5, y: y1 + h * 0.5 },
+      { v: minV + safeRange * 0.25, y: y1 + h * 0.75 },
+      { v: minV, y: y2 },
     ];
 
     labels.forEach((l) => {
@@ -547,6 +662,16 @@ class Renderer {
       strokeWeight(1);
       line(x - w - 3, l.y, x - w, l.y);
     });
+
+    noStroke();
+    fill(255);
+    push();
+    translate(x + w * 0.5, y1 + h * 0.5);
+    rotate(-HALF_PI);
+    textAlign(CENTER, CENTER);
+    textSize(12);
+    text(legendTitle, 0, 0);
+    pop();
 
     pop();
   }
@@ -618,5 +743,76 @@ class Renderer {
       this.canvas3D.resizeCanvas(s, s);
     }
     this.textureDirty = true;
+  }
+
+  ensureEquationOverlay() {
+    if (this.eqOverlayEl && document.body.contains(this.eqOverlayEl)) {
+      return this.eqOverlayEl;
+    }
+    const panel = document.createElement("div");
+    panel.className = "equation-overlay";
+    panel.style.display = "none";
+    panel.style.maxWidth = "min(560px, calc(100vw - 36px))";
+    panel.style.padding = "8px 10px 6px";
+    const title = document.createElement("p");
+    title.className = "equation-overlay__title";
+    title.textContent = "Fluvia's Hydraulic Erosion Model";
+    title.style.fontSize = "12px";
+    title.style.margin = "0 0 4px";
+    const math = document.createElement("div");
+    math.className = "equation-overlay__math";
+    math.style.fontSize = "0.6rem";
+    math.style.lineHeight = "1.15";
+    math.style.margin = "0";
+    panel.appendChild(title);
+    panel.appendChild(math);
+    document.body.appendChild(panel);
+    this.eqOverlayEl = panel;
+    return panel;
+  }
+
+  hideEquationOverlay() {
+    if (this.eqOverlayEl) this.eqOverlayEl.style.display = "none";
+  }
+
+  renderEquationOverlay() {
+    const panel = this.ensureEquationOverlay();
+    panel.style.display = "block";
+    const mathEl = panel.querySelector(".equation-overlay__math");
+    const tex = String.raw`\begin{aligned}
+	ilde{\mathbf{v}}_{t+1} &= \mathbf{v}_t + \frac{g\,\hat{\mathbf{n}}_{xz}(\mathbf{x})}{V_t}
++ \frac{m\,\alpha_t}{V_t + D_i}\,\mathbf{p}_i,
+\qquad \alpha_t = \frac{\mathbf{p}_i \cdot \mathbf{v}_t}{\lVert\mathbf{p}_i\rVert\,\lVert\mathbf{v}_t\rVert},\\
+\mathbf{v}_{t+1} &= \sqrt{2}\,\frac{\tilde{\mathbf{v}}_{t+1}}{\lVert\tilde{\mathbf{v}}_{t+1}\rVert},
+\qquad Q_i = \operatorname{erf}(0.4\,D_i),\\
+C_i &= \max\!\bigl(0,\,(1 + e\,Q_i)(h_i - h_j)\bigr),
+\qquad \Delta_i = C_i - s_t,\\
+\Delta_i > 0 &:~E_s = \min(S_i,\,\Delta_i\,k_s),\; E_b = \max\!\bigl(0,\,\Delta_i - E_s/k_s\bigr)k_b,\\
+&\quad S_i \leftarrow S_i - E_s,\; B_i \leftarrow B_i - E_b,\; s_{t+1} = s_t + E_s + E_b,\\
+\Delta_i < 0 &:~\operatorname{dep} = (-\Delta_i)k_d,\; S_i \leftarrow S_i + \operatorname{dep},\; s_{t+1} = s_t - \operatorname{dep},\\
+V_{t+1} &= (1-\varepsilon)V_t,
+\qquad s_{t+1} \leftarrow (1-\varepsilon)s_{t+1},\\
+D_i &\leftarrow (1-\eta)D_i + \eta T_i,
+\qquad \mathbf{p}_i \leftarrow (1-\eta)\mathbf{p}_i + \eta\mathbf{M}_i.
+\end{aligned}`;
+    if (tex === this.eqOverlaySig) return;
+    const canRenderKatex =
+      typeof window !== "undefined" &&
+      window.katex &&
+      typeof window.katex.render === "function";
+    if (canRenderKatex) {
+      window.katex.render(tex, mathEl, {
+        displayMode: true,
+        throwOnError: false,
+        output: "mathml",
+      });
+    } else {
+      mathEl.textContent =
+        "v~ = v + g*n_xz/V + m*alpha*p/(V + D); v = sqrt(2)*v~/|v~|; " +
+        "Q = erf(0.4*D); C = max(0,(1+e*Q)*(h_i-h_j)); " +
+        "if Delta>0: erode sed/bedrock, else deposit; " +
+        "V,s *= (1-eps); D,p = (1-eta)*(D,p) + eta*(track,momentum).";
+    }
+    this.eqOverlaySig = tex;
   }
 }

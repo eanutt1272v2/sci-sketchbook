@@ -11,15 +11,18 @@ const metadata = {
 };
 
 function preload() {
-  font = loadFont("JetBrainsMono-Regular.ttf");
+  font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
 }
 
 function setup() {
   const canvasSize = min(windowWidth, windowHeight);
   mainCanvas = createCanvas(canvasSize, canvasSize);
   setupCanvasProperties(mainCanvas);
-  appcore = new AppCore({ metadata });
-  appcore.setup();
+
+  requestAnimationFrame(() => {
+    appcore = new AppCore({ metadata });
+    appcore.setup();
+  });
 }
 
 function setupCanvasProperties(canvas) {
@@ -31,51 +34,19 @@ function setupCanvasProperties(canvas) {
   }, 100);
 
   noSmooth();
-  textFont(font);
+  textFont(font || "monospace");
   pixelDensity(1);
   frameRate(60);
 }
 
-function windowResized() {
-  if (appcore !== null) appcore.windowResized();
-}
-
-function draw() {
-  appcore.draw();
-}
-function mousePressed() {
-  appcore.input.onMousePressed();
-  return false;
-}
-function mouseReleased() {
-  appcore.input.onMouseReleased();
-  return false;
-}
-function mouseDragged() {
-  appcore.input.onMouseDragged();
-  return false;
-}
-function touchStarted() {
-  appcore.input.onTouchStarted();
-  return false;
-}
-function touchEnded() {
-  appcore.input.onTouchEnded();
-  return false;
-}
-function touchMoved() {
-  appcore.input.onTouchMoved();
-  return false;
-}
-function mouseWheel(event) {
-  appcore.input.onMouseWheel(event);
-  return false;
-}
-function keyPressed() {
-  appcore.input.onKeyPressed();
-  return false;
-}
-function keyReleased() {
-  appcore.input.onKeyReleased();
-  return false;
-}
+function draw() { if (!appcore) return; appcore.render(); }
+function windowResized() { if (!appcore) return; appcore.windowResized(); }
+function mousePressed() { if (!appcore) return false; appcore.input.onMousePressed(); return false; }
+function mouseReleased() { if (!appcore) return false; appcore.input.onMouseReleased(); return false; }
+function mouseDragged() { if (!appcore) return false; appcore.input.onMouseDragged(); return false; }
+function touchStarted() { if (!appcore) return false; appcore.input.onTouchStarted(); return false; }
+function touchEnded() { if (!appcore) return false; appcore.input.onTouchEnded(); return false; }
+function touchMoved() { if (!appcore) return false; appcore.input.onTouchMoved(); return false; }
+function mouseWheel(event) { if (!appcore) return false; appcore.input.onMouseWheel(event); return false; }
+function keyPressed() { if (!appcore) return false; appcore.input.onKeyPressed(); return false; }
+function keyReleased() { if (!appcore) return false; appcore.input.onKeyReleased(); return false; }

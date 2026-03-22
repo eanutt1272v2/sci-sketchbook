@@ -35,6 +35,41 @@ class GUI {
     target.addBlade({ view: "separator" });
   }
 
+  addGraphWithValue(target, objectRef, key, options = {}) {
+    const {
+      label,
+      format,
+      min,
+      max,
+      interval = 200,
+      bufferSize = 100,
+    } = options;
+
+    const graphBinding = {
+      readonly: true,
+      label,
+      view: "graph",
+      interval,
+      bufferSize,
+    };
+
+    if (typeof min !== "undefined") graphBinding.min = min;
+    if (typeof max !== "undefined") graphBinding.max = max;
+
+    target.addBinding(objectRef, key, graphBinding);
+
+    const valueBinding = {
+      readonly: true,
+      label: "",
+    };
+
+    if (typeof format === "function") {
+      valueBinding.format = format;
+    }
+
+    target.addBinding(objectRef, key, valueBinding);
+  }
+
   createGeneralTab(page) {
     const { params, statistics } = this.appcore;
 
@@ -139,7 +174,7 @@ class GUI {
 
     hydraulicSettings.forEach((s) => hydraulic.addBinding(params, s.key, s));
 
-    page.addBlade({ view: "separator" });
+    this.addSeparator(page);
 
     const thermal = page.addFolder({ title: "Thermal" });
 
@@ -179,7 +214,8 @@ class GUI {
     });
 
     const colourMapOptions = Object.keys(colourMaps).reduce((obj, name) => {
-      obj[name.charAt(0).toUpperCase() + name.slice(1)] = name;
+      const type = (colourMaps[name] && colourMaps[name].type) || "sequential";
+      obj[`${name} (${type})`] = name;
       return obj;
     }, {});
 
@@ -201,6 +237,7 @@ class GUI {
     overlay.addBinding(params, "renderStats", { label: "Statistics Overlay" });
 
     overlay.addBinding(params, "renderLegend", { label: "Colour Legend" });
+  overlay.addBinding(params, "renderEquation", { label: "Equation Overlay" });
 
     this.addSeparator(page);
 
@@ -235,10 +272,9 @@ class GUI {
 
     const perfFolder = page.addFolder({ title: "Performance & Time" });
 
-    perfFolder.addBinding(statistics, "fps", {
-      readonly: true,
+    this.addGraphWithValue(perfFolder, statistics, "fps", {
       label: "FPS",
-      view: "graph",
+      format: (v) => v.toFixed(1),
       interval: 100,
       bufferSize: 60,
       min: 0,
@@ -246,14 +282,15 @@ class GUI {
     });
 
     perfFolder.addBinding(statistics, "simulationTime", {
-      readonly: true,
       label: "Simulation Time (s)",
-      format: (v) => v.toFixed(1),
+      readonly: true,
+      format: (v) => v.toFixed(2),
     });
 
     perfFolder.addBinding(statistics, "frameCounter", {
       readonly: true,
       label: "Frame Counter",
+      format: (v) => v.toFixed(0),
     });
 
     const elevationFolder = page.addFolder({ title: "Topography" });
@@ -266,7 +303,7 @@ class GUI {
 
     elevationFolder.addBinding(statistics, "elevationStdDev", {
       readonly: true,
-      label: "Roughness (Standard Deviation)",
+      label: "Elevation Std Dev (Roughness)",
       format: (v) => v.toFixed(3),
     });
 
@@ -282,151 +319,159 @@ class GUI {
       format: (v) => v.toFixed(3),
     });
 
-    elevationFolder.addBinding(statistics, "rugosity", {
-      readonly: true,
+    this.addGraphWithValue(elevationFolder, statistics, "rugosity", {
       label: "Rugosity Index",
       format: (v) => v.toFixed(4),
+      min: 0,
+      max: 2,
     });
 
     const hydroFolder = page.addFolder({ title: "Hydrology" });
 
-    hydroFolder.addBinding(statistics, "totalWater", {
-      readonly: true,
+    this.addGraphWithValue(hydroFolder, statistics, "totalWater", {
       label: "Volume of Water",
       format: (v) => v.toFixed(2),
+      min: 0,
+      max: 128000,
     });
 
-    hydroFolder.addBinding(statistics, "peakDischarge", {
-      readonly: true,
-      label: "Peak Discharge",
-      view: "graph",
-      bufferSize: 60,
-      max: 150,
-    });
-
-    hydroFolder.addBinding(statistics, "activeWaterCover", {
-      readonly: true,
+    this.addGraphWithValue(hydroFolder, statistics, "activeWaterCover", {
       label: "Active Water Cells",
+      format: (v) => v.toFixed(2),
+      min: 0,
+      max: 65536,
     });
 
-    hydroFolder.addBinding(statistics, "drainageDensity", {
-      readonly: true,
+    this.addGraphWithValue(hydroFolder, statistics, "drainageDensity", {
       label: "Drainage Density (%)",
       format: (v) => v.toFixed(2),
+      min: 0,
+      max: 50,
     });
 
-    hydroFolder.addBinding(statistics, "hydraulicResidence", {
-      readonly: true,
+    this.addGraphWithValue(hydroFolder, statistics, "hydraulicResidence", {
       label: "Residence Time",
       format: (v) => v.toFixed(2),
+      min: 0,
+      max: 1500,
     });
 
     hydroFolder.addBinding(statistics.dischargeBounds, "min", {
       readonly: true,
       label: "Discharge Min",
       format: (v) => v.toFixed(3),
+      min: 0,
+      max: 1,
     });
 
     hydroFolder.addBinding(statistics.dischargeBounds, "max", {
       readonly: true,
       label: "Discharge Max",
       format: (v) => v.toFixed(3),
+      min: 0,
+      max: 1,
     });
 
     const geomorphFolder = page.addFolder({ title: "Mass Balance" });
 
-    geomorphFolder.addBinding(statistics, "erosionRate", {
-      readonly: true,
+    this.addGraphWithValue(geomorphFolder, statistics, "erosionRate", {
       label: "Total Erosion Rate",
-      view: "graph",
-      interval: 200,
-      bufferSize: 100,
+      format: (v) => v.toFixed(3),
       min: 0,
       max: 750,
     });
 
-    geomorphFolder.addBinding(statistics, "sedimentFlux", {
-      readonly: true,
+    this.addGraphWithValue(geomorphFolder, statistics, "sedimentFlux", {
       label: "Sediment Flux",
-      view: "graph",
-      interval: 200,
-      bufferSize: 100,
+      format: (v) => v.toFixed(3),
       min: -50,
-      max: 750,
+      max: 512,
     });
 
-    geomorphFolder.addBinding(statistics, "totalSediment", {
-      readonly: true,
+    this.addGraphWithValue(geomorphFolder, statistics, "totalSediment", {
       label: "Total Sediment",
       format: (v) => v.toFixed(2),
+      min: 0,
+      max: 2048,
     });
 
-    geomorphFolder.addBinding(statistics, "totalBedrock", {
-      readonly: true,
+    this.addGraphWithValue(geomorphFolder, statistics, "totalBedrock", {
       label: "Total Bedrock",
       format: (v) => v.toFixed(2),
+      min: 0,
+      max: 40000,
     });
 
-    geomorphFolder.addBinding(statistics.sedimentBounds, "min", {
-      readonly: true,
+    this.addGraphWithValue(geomorphFolder, statistics.sedimentBounds, "min", {
       label: "Sediment Min",
       format: (v) => v.toFixed(3),
+      min: 0,
+      max: 1,
     });
 
-    geomorphFolder.addBinding(statistics.sedimentBounds, "max", {
-      readonly: true,
+    this.addGraphWithValue(geomorphFolder, statistics.sedimentBounds, "max", {
       label: "Sediment Max",
       format: (v) => v.toFixed(3),
+      min: 0,
+      max: 1,
     });
 
-    geomorphFolder.addBinding(statistics, "slopeComplexity", {
-      readonly: true,
+    this.addGraphWithValue(geomorphFolder, statistics, "slopeComplexity", {
       label: "Slope Complexity",
       format: (v) => v.toFixed(4),
+      min: 0,
+      max: 1,
     });
 
     const compositeFolder = page.addFolder({ title: "Composite Blend" });
 
-    compositeFolder.addBinding(statistics, "compositeWaterCoveragePct", {
-      readonly: true,
+    this.addGraphWithValue(compositeFolder, statistics, "compositeWaterCoveragePct", {
       label: "Water Contribution (%)",
       format: (v) => v.toFixed(1),
+      min: 0,
+      max: 100,
     });
 
-    compositeFolder.addBinding(statistics, "compositeSedimentCoveragePct", {
-      readonly: true,
+    this.addGraphWithValue(compositeFolder, statistics, "compositeSedimentCoveragePct", {
       label: "Sediment Contribution (%)",
       format: (v) => v.toFixed(1),
+      min: 0,
+      max: 100,
     });
 
-    compositeFolder.addBinding(statistics, "compositeFlatCoveragePct", {
-      readonly: true,
+    this.addGraphWithValue(compositeFolder, statistics, "compositeFlatCoveragePct", {
       label: "Flat Contribution (%)",
       format: (v) => v.toFixed(1),
+      min: 0,
+      max: 100,
     });
 
-    compositeFolder.addBinding(statistics, "compositeSteepCoveragePct", {
-      readonly: true,
+    this.addGraphWithValue(compositeFolder, statistics, "compositeSteepCoveragePct", {
       label: "Steep Contribution (%)",
       format: (v) => v.toFixed(1),
+      min: 0,
+      max: 100,
     });
 
-    compositeFolder.addBinding(statistics, "compositeMeanSlopeWeight", {
-      readonly: true,
+    this.addGraphWithValue(compositeFolder, statistics, "compositeMeanSlopeWeight", {
       label: "Mean Slope Weight",
       format: (v) => v.toFixed(3),
+      min: 0,
+      max: 1,
     });
 
-    compositeFolder.addBinding(statistics, "compositeMeanSedimentAlpha", {
-      readonly: true,
+    this.addGraphWithValue(compositeFolder, statistics, "compositeMeanSedimentAlpha", {
       label: "Mean Sediment Alpha",
       format: (v) => v.toFixed(3),
+      min: 0,
+      max: 1,
     });
 
-    compositeFolder.addBinding(statistics, "compositeMeanWaterAlpha", {
-      readonly: true,
+    this.addGraphWithValue(compositeFolder, statistics, "compositeMeanWaterAlpha", {
       label: "Mean Water Alpha",
       format: (v) => v.toFixed(3),
+      min: 0,
+      max: 1,
     });
   }
 
@@ -492,7 +537,7 @@ class GUI {
       this.syncMediaControls();
     });
 
-    exp.addBlade({ view: "separator" });
+    this.addSeparator(exp);
 
     exp.addBinding(params, "imageFormat", {
       label: "Format",

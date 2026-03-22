@@ -42,7 +42,7 @@ class InputHandler {
 
     this.appcore.offsetX = this.panAnchorWorldX - worldDeltaX;
     this.appcore.offsetY = this.panAnchorWorldY - worldDeltaY;
-    this.appcore.needsRedraw = true;
+    this.appcore.needsRerender = true;
   }
 
   stopPan() {
@@ -104,7 +104,7 @@ class InputHandler {
     }
 
     if (changed) {
-      this.appcore.needsRedraw = true;
+      this.appcore.needsRerender = true;
     }
   }
 
@@ -120,7 +120,7 @@ class InputHandler {
       const clicked = p.dropdown.getClickedIndex();
       if (clicked !== -1 && !this.appcore.justPressed) {
         this.appcore.renderer.setMap(clicked);
-        this.appcore.needsRedraw = true;
+        this.appcore.needsRerender = true;
         this.appcore.justPressed = true;
       }
       p.dropdown.isOpen = false;
@@ -161,7 +161,7 @@ class InputHandler {
         p.slider.max,
       );
       this.appcore.maxIterations = int(p.slider.val);
-      this.appcore.needsRedraw = true;
+      this.appcore.needsRerender = true;
     }
 
     const amounts = [-64, -16, 16, 64];
@@ -173,20 +173,20 @@ class InputHandler {
           int(p.slider.max),
         );
         p.slider.val = this.appcore.maxIterations;
-        this.appcore.needsRedraw = true;
+        this.appcore.needsRerender = true;
         this.appcore.justPressed = true;
       }
     }
 
     if (p.zoomInBtn.isMouseOver() && !this.appcore.justPressed) {
       this.appcore.doZoom(1.05, width / 2, height / 2);
-      this.appcore.needsRedraw = true;
+      this.appcore.needsRerender = true;
       this.appcore.justPressed = true;
     }
 
     if (p.zoomOutBtn.isMouseOver() && !this.appcore.justPressed) {
       this.appcore.doZoom(1.0 / 1.05, width / 2, height / 2);
-      this.appcore.needsRedraw = true;
+      this.appcore.needsRerender = true;
       this.appcore.justPressed = true;
     }
 
@@ -240,7 +240,7 @@ class InputHandler {
         const factor = distance / this.pinchDistance;
         if (isFinite(factor) && factor > 0) {
           this.appcore.doZoom(factor, cx, cy);
-          this.appcore.needsRedraw = true;
+          this.appcore.needsRerender = true;
         }
       }
 
@@ -276,7 +276,7 @@ class InputHandler {
         p.slider.max,
       );
       this.appcore.maxIterations = int(p.slider.val);
-      this.appcore.needsRedraw = true;
+      this.appcore.needsRerender = true;
       return;
     }
 
@@ -298,7 +298,7 @@ class InputHandler {
       return;
     }
     this.appcore.doZoom(event.delta < 0 ? 1.15 : 1.0 / 1.15, mouseX, mouseY);
-    this.appcore.needsRedraw = true;
+    this.appcore.needsRerender = true;
   }
 
   onKeyPressed() {
@@ -318,7 +318,7 @@ class InputHandler {
             int(this.appcore.panel.slider.max),
           );
           this.appcore.panel.slider.val = this.appcore.maxIterations;
-          this.appcore.needsRedraw = true;
+          this.appcore.needsRerender = true;
         }
         this.isTypingIter = false;
       } else if (keyCode === ESCAPE) {
@@ -355,7 +355,7 @@ class InputHandler {
         int(this.appcore.panel.slider.max),
       );
       this.appcore.panel.slider.val = this.appcore.maxIterations;
-      this.appcore.needsRedraw = true;
+      this.appcore.needsRerender = true;
       return;
     }
     if (key === "]" || key === "}") {
@@ -365,7 +365,7 @@ class InputHandler {
         int(this.appcore.panel.slider.max),
       );
       this.appcore.panel.slider.val = this.appcore.maxIterations;
-      this.appcore.needsRedraw = true;
+      this.appcore.needsRerender = true;
       return;
     }
 
@@ -373,7 +373,7 @@ class InputHandler {
       const idx = int(key) - 1;
       if (idx < this.appcore.renderer.mapNames.length) {
         this.appcore.renderer.setMap(idx);
-        this.appcore.needsRedraw = true;
+        this.appcore.needsRerender = true;
       }
       return;
     }
@@ -403,3 +403,7 @@ class InputHandler {
     if (key === "q" || key === "Q" || key === "-") this.keyZoomOut = false;
   }
 }
+    if (key === "j" || key === "J") {
+      this.appcore.showEquation = !this.appcore.showEquation;
+      return;
+    }

@@ -38,11 +38,11 @@ This behaviour is strengthened by introducing stream-level momentum coupling (ap
 ## Architecture
 
 - `AppCore.js`: simulation lifecycle and worker management
-- `SolverWorker.js`: worker-based hydraulic+thermal solver
+- `FluviaWorker.js`: worker-based hydraulic+thermal solver
 - `FallbackSolver.js`: synchronous fallback solver
 - `Terrain.js`: typed-array terrain field storage
 - `Renderer.js`: 2D/3D rendering and partially shader-based render pipeline
-- `Analyser.js`: terrain and hydrology statistics
+- `FallbackAnalyser.js`: terrain and hydrology statistics
 - `Camera.js`, `GUI.js`, `InputHandler.js`, `Media.js`: interaction and export systems
 - `vert.glsl`, `frag.glsl`: texture application shaders (used in 3D render mode)
 

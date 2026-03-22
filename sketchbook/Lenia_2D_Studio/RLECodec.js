@@ -80,6 +80,101 @@ class RLECodec {
       : parseFloat(parts[0]) / parseFloat(parts[1]);
   }
 
+  static encodeByteArray(bytes) {
+    if (!bytes || typeof bytes.length !== "number") return "!";
+
+    let out = "";
+    let runToken = "";
+    let runCount = 0;
+
+    for (let i = 0; i < bytes.length; i++) {
+      const token = this._byteToToken(Number(bytes[i]) & 255);
+      if (runCount === 0) {
+        runToken = token;
+        runCount = 1;
+      } else if (token === runToken) {
+        runCount++;
+      } else {
+        out += this._formatRun(runCount, runToken);
+        runToken = token;
+        runCount = 1;
+      }
+    }
+
+    if (runCount > 0) out += this._formatRun(runCount, runToken);
+    return `${out}!`;
+  }
+
+  static decodeByteArray(rleString, expectedLength) {
+    const length = Number(expectedLength) || 0;
+    const out = new Uint8Array(Math.max(0, length));
+    if (!rleString || length <= 0) return out;
+
+    const input = this._normaliseInput(rleString);
+    let outIndex = 0;
+
+    for (let i = 0; i < input.length && outIndex < length; ) {
+      let count = 0;
+      while (i < input.length) {
+        const code = input.charCodeAt(i);
+        if (code >= 48 && code <= 57) {
+          count = count * 10 + (code - 48);
+          i++;
+          continue;
+        }
+        break;
+      }
+
+      if (i >= input.length) break;
+      const ch = input[i];
+      if (ch === "!") break;
+      if (ch === "$") {
+        i++;
+        continue;
+      }
+
+      const tokenInfo = this._readToken(input, i);
+      if (!tokenInfo) {
+        i++;
+        continue;
+      }
+
+      const byte = this._tokenToByte(tokenInfo.token);
+      const run = count > 0 ? count : 1;
+      for (let k = 0; k < run && outIndex < length; k++) {
+        out[outIndex++] = byte;
+      }
+
+      i = tokenInfo.nextIndex;
+    }
+
+    return out;
+  }
+
+  static encodeFloat32Array(values) {
+    if (!(values instanceof Float32Array)) {
+      throw new Error("[Lenia] encodeFloat32Array expects Float32Array");
+    }
+
+    const bytes = new Uint8Array(
+      values.buffer,
+      values.byteOffset,
+      values.byteLength,
+    );
+    return this.encodeByteArray(bytes);
+  }
+
+  static decodeFloat32Array(rleString, floatLength) {
+    const length = Number(floatLength) || 0;
+    if (length <= 0) return new Float32Array(0);
+
+    const byteLength = length * 4;
+    const decoded = this.decodeByteArray(rleString, byteLength);
+    const copy = new Uint8Array(byteLength);
+    copy.set(decoded);
+    return new Float32Array(copy.buffer);
+  }
+
   static _parseGridRows(rleString) {
     const rows = [[]];
     const input = this._normaliseInput(rleString);
@@ -180,6 +275,20 @@ class RLECodec {
 
     byte = Math.max(0, Math.min(255, byte));
     return byte / 255;
+  }
+
+  static _tokenToByte(token) {
+    if (token === "." || token === "b") return 0;
+    if (token === "o") return 255;
+
+    let byte = 0;
+    if (token.length === 1 && token >= "A" && token <= "X") {
+      byte = token.charCodeAt(0) - 65 + 1;
+    } else if (token.length === 2) {
+      byte = (token.charCodeAt(0) - 112) * 24 + (token.charCodeAt(1) - 65 + 25);
+    }
+
+    return Math.max(0, Math.min(255, byte));
   }
 
   static _byteToToken(byte) {

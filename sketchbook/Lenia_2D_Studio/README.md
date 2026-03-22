@@ -25,15 +25,15 @@ Control parameters include `R`, `T`, `m`, `s`, kernel/growth families (`kn`, `gn
 - `m`: growth-centre (preferred potential)
 - `s`: growth-width (tolerance around `m`)
 
-For larger grids, convolution is accelerated in `FFTWorker.js`.
+For larger grids, convolution is accelerated in `LeniaWorker.js`.
 
 ## Architecture
 
 - `AppCore.js`: management of worker and other components
-- `FFTWorker.js`: kernel generation and world-step execution
+- `LeniaWorker.js`: kernel generation and world-step execution
 - `Automaton.js`, `Board.js`: world state and updating
 - `Renderer.js`: world/potential/field/kernel render modes
-- `Analyser.js`: motion and morphology statistics
+- `FallbackAnalyser.js`: motion and morphology statistics
 - `AnimalLibrary.js`, `animals.json`: preset management
 - `GUI.js`, `InputHandler.js`, `Media.js`: controls and export systems
 

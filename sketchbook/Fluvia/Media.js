@@ -193,6 +193,8 @@ class Media {
           throw new Error("[Fluvia] Invalid params JSON format version");
         }
 
+        this._applyMetadataSnapshot(data.metadata);
+
         const oldSize = this.appcore.params.terrainSize;
         const incoming = data.params;
         const target = this.appcore.params;
@@ -223,46 +225,15 @@ class Media {
   exportStatisticsCSV() {
     const metadataJson = JSON.stringify(this.appcore.metadata || {});
     const exportedAt = new Date().toISOString();
-    const stats = this.appcore.statistics;
     const rows = [["key", "value"]];
-    const scalarKeys = [
-      "fps",
-      "frameCounter",
-      "simulationTime",
-      "avgElevation",
-      "elevationStdDev",
-      "totalWater",
-      "totalSediment",
-      "totalBedrock",
-      "peakDischarge",
-      "activeWaterCover",
-      "drainageDensity",
-      "hydraulicResidence",
-      "rugosity",
-      "slopeComplexity",
-      "sedimentFlux",
-      "erosionRate",
-      "compositeWaterCoveragePct",
-      "compositeSedimentCoveragePct",
-      "compositeFlatCoveragePct",
-      "compositeSteepCoveragePct",
-      "compositeMeanSlopeWeight",
-      "compositeMeanSedimentAlpha",
-      "compositeMeanWaterAlpha",
-    ];
-
-    for (const k of scalarKeys) rows.push([k, Number(stats[k]) || 0]);
-    rows.push(["heightBounds.min", Number(stats.heightBounds?.min) || 0]);
-    rows.push(["heightBounds.max", Number(stats.heightBounds?.max) || 0]);
-    rows.push(["sedimentBounds.min", Number(stats.sedimentBounds?.min) || 0]);
-    rows.push(["sedimentBounds.max", Number(stats.sedimentBounds?.max) || 0]);
-    rows.push(["dischargeBounds.min", Number(stats.dischargeBounds?.min) || 0]);
-    rows.push(["dischargeBounds.max", Number(stats.dischargeBounds?.max) || 0]);
+    this._flattenToRows(this._serialiseStatistics(), "", rows);
 
     const csv =
       `# exportedAt: ${exportedAt}\n` +
       `# metadata: ${metadataJson}\n` +
-      rows.map((r) => `${r[0]},${r[1]}`).join("\n");
+      rows
+        .map((r) => `${this._toCSVCell(r[0])},${this._toCSVCell(r[1])}`)
+        .join("\n");
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
     console.log("[Fluvia] Exported stats CSV");
   }
@@ -319,6 +290,8 @@ class Media {
         ) {
           throw new Error("[Fluvia] Invalid world JSON payload");
         }
+
+        this._applyMetadataSnapshot(data.metadata);
 
         const world = data.world;
         const maps = world.maps;
@@ -513,71 +486,16 @@ class Media {
     return RLECodec.decodeFloat32Array(source.data, length);
   }
 
-  _assignColour(srcRoot, dstRoot, key) {
-    if (!srcRoot[key] || typeof srcRoot[key] !== "object") return;
-    const s = srcRoot[key];
-    if (!dstRoot[key]) dstRoot[key] = { r: 0, g: 0, b: 0 };
-    dstRoot[key].r = Number(s.r) || 0;
-    dstRoot[key].g = Number(s.g) || 0;
-    dstRoot[key].b = Number(s.b) || 0;
-  }
-
-  _assignVec3(srcRoot, dstRoot, key) {
-    if (!srcRoot[key] || typeof srcRoot[key] !== "object") return;
-    const s = srcRoot[key];
-    if (!dstRoot[key]) dstRoot[key] = { x: 0, y: 0, z: 0 };
-    dstRoot[key].x = Number(s.x) || 0;
-    dstRoot[key].y = Number(s.y) || 0;
-    dstRoot[key].z = Number(s.z) || 0;
+  _applyMetadataSnapshot(metadata) {
+    if (!metadata || typeof metadata !== "object") return;
+    this.appcore.metadata = JSON.parse(JSON.stringify(metadata));
   }
 
   _applyParamsSnapshot(incoming, options = {}) {
     if (!incoming || typeof incoming !== "object") return;
 
     const target = this.appcore.params;
-    const scalarKeys = [
-      "running",
-      "dropletsPerFrame",
-      "maxAge",
-      "minVolume",
-      "terrainSize",
-      "noiseScale",
-      "noiseOctaves",
-      "amplitudeFalloff",
-      "sedimentErosionRate",
-      "bedrockErosionRate",
-      "depositionRate",
-      "evaporationRate",
-      "precipitationRate",
-      "entrainment",
-      "gravity",
-      "momentumTransfer",
-      "learningRate",
-      "maxHeightDiff",
-      "settlingRate",
-      "renderStats",
-      "renderLegend",
-      "renderKeymapRef",
-      "renderMethod",
-      "heightScale",
-      "surfaceMap",
-      "colourMap",
-      "specularIntensity",
-      "imageFormat",
-      "recordingFPS",
-      "videoBitrateMbps",
-    ];
-
-    for (const key of scalarKeys) {
-      if (key in incoming) target[key] = incoming[key];
-    }
-
-    this._assignColour(incoming, target, "skyColour");
-    this._assignColour(incoming, target, "steepColour");
-    this._assignColour(incoming, target, "flatColour");
-    this._assignColour(incoming, target, "sedimentColour");
-    this._assignColour(incoming, target, "waterColour");
-    this._assignVec3(incoming, target, "lightDir");
+    this._mergeByTargetSchema(target, incoming);
 
     if (typeof options.forceTerrainSize === "number") {
       target.terrainSize = options.forceTerrainSize;
@@ -586,68 +504,7 @@ class Media {
 
   _applyStatisticsSnapshot(incoming) {
     if (!incoming || typeof incoming !== "object") return;
-
-    const stats = this.appcore.statistics;
-    const scalarKeys = [
-      "fps",
-      "frameCounter",
-      "simulationTime",
-      "avgElevation",
-      "elevationStdDev",
-      "totalWater",
-      "totalSediment",
-      "totalBedrock",
-      "peakDischarge",
-      "activeWaterCover",
-      "drainageDensity",
-      "hydraulicResidence",
-      "rugosity",
-      "slopeComplexity",
-      "sedimentFlux",
-      "erosionRate",
-      "compositeWaterCoveragePct",
-      "compositeSedimentCoveragePct",
-      "compositeFlatCoveragePct",
-      "compositeSteepCoveragePct",
-      "compositeMeanSlopeWeight",
-      "compositeMeanSedimentAlpha",
-      "compositeMeanWaterAlpha",
-    ];
-
-    for (const key of scalarKeys) {
-      if (key in incoming) {
-        const n = Number(incoming[key]);
-        stats[key] = Number.isFinite(n) ? n : 0;
-      }
-    }
-
-    if (incoming.heightBounds && typeof incoming.heightBounds === "object") {
-      stats.heightBounds.min = Number(incoming.heightBounds.min) || 0;
-      stats.heightBounds.max = Number(incoming.heightBounds.max) || 0;
-    }
-    if (incoming.sedimentBounds && typeof incoming.sedimentBounds === "object") {
-      stats.sedimentBounds.min = Number(incoming.sedimentBounds.min) || 0;
-      stats.sedimentBounds.max = Number(incoming.sedimentBounds.max) || 0;
-    }
-    if (incoming.dischargeBounds && typeof incoming.dischargeBounds === "object") {
-      stats.dischargeBounds.min = Number(incoming.dischargeBounds.min) || 0;
-      stats.dischargeBounds.max = Number(incoming.dischargeBounds.max) || 0;
-    }
-
-    const hist = incoming.heightHistogram;
-    const norm = incoming.normHistogram;
-    if (Array.isArray(hist)) {
-      const out = new Int32Array(256);
-      const limit = Math.min(256, hist.length);
-      for (let i = 0; i < limit; i++) out[i] = Number(hist[i]) || 0;
-      stats.heightHistogram = out;
-    }
-    if (Array.isArray(norm)) {
-      const out = new Float32Array(256);
-      const limit = Math.min(256, norm.length);
-      for (let i = 0; i < limit; i++) out[i] = Number(norm[i]) || 0;
-      stats.normHistogram = out;
-    }
+    this._mergeByTargetSchema(this.appcore.statistics, incoming);
   }
 
   _serialiseParams(params) {
@@ -666,15 +523,114 @@ class Media {
   }
 
   _serialiseStatistics() {
-    const s = this.appcore.statistics;
-    return {
-      ...s,
-      heightHistogram: Array.from(s.heightHistogram || []),
-      normHistogram: Array.from(s.normHistogram || []),
-      heightBounds: { ...(s.heightBounds || { min: 0, max: 0 }) },
-      sedimentBounds: { ...(s.sedimentBounds || { min: 0, max: 0 }) },
-      dischargeBounds: { ...(s.dischargeBounds || { min: 0, max: 0 }) },
-    };
+    return this._cloneJSONCompatible(this.appcore.statistics || {});
+  }
+
+  _isPlainObject(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  }
+
+  _cloneJSONCompatible(value) {
+    if (ArrayBuffer.isView(value)) {
+      return Array.from(value);
+    }
+    if (Array.isArray(value)) {
+      return value.map((entry) => this._cloneJSONCompatible(entry));
+    }
+    if (this._isPlainObject(value)) {
+      const out = {};
+      for (const [key, entry] of Object.entries(value)) {
+        out[key] = this._cloneJSONCompatible(entry);
+      }
+      return out;
+    }
+    return value;
+  }
+
+  _mergeByTargetSchema(target, incoming) {
+    if (!this._isPlainObject(target) || !this._isPlainObject(incoming)) {
+      return;
+    }
+
+    for (const key of Object.keys(target)) {
+      if (!(key in incoming)) continue;
+
+      const sourceValue = incoming[key];
+      const targetValue = target[key];
+
+      if (ArrayBuffer.isView(targetValue)) {
+        if (!Array.isArray(sourceValue) && !ArrayBuffer.isView(sourceValue)) {
+          continue;
+        }
+        const typed = new targetValue.constructor(targetValue.length);
+        const limit = Math.min(typed.length, sourceValue.length || 0);
+        for (let i = 0; i < limit; i++) {
+          const n = Number(sourceValue[i]);
+          typed[i] = Number.isFinite(n) ? n : 0;
+        }
+        target[key] = typed;
+        continue;
+      }
+
+      if (Array.isArray(targetValue)) {
+        if (Array.isArray(sourceValue)) {
+          target[key] = this._cloneJSONCompatible(sourceValue);
+        }
+        continue;
+      }
+
+      if (this._isPlainObject(targetValue)) {
+        if (this._isPlainObject(sourceValue)) {
+          this._mergeByTargetSchema(targetValue, sourceValue);
+        }
+        continue;
+      }
+
+      if (typeof targetValue === "number") {
+        const n = Number(sourceValue);
+        if (Number.isFinite(n)) {
+          target[key] = n;
+        }
+        continue;
+      }
+
+      if (typeof targetValue === "boolean") {
+        target[key] = Boolean(sourceValue);
+        continue;
+      }
+
+      if (typeof targetValue === "string") {
+        target[key] = String(sourceValue);
+        continue;
+      }
+
+      target[key] = this._cloneJSONCompatible(sourceValue);
+    }
+  }
+
+  _flattenToRows(value, prefix, rows) {
+    if (Array.isArray(value)) {
+      rows.push([prefix || "value", JSON.stringify(value)]);
+      return;
+    }
+
+    if (this._isPlainObject(value)) {
+      for (const [key, entry] of Object.entries(value)) {
+        const nextPrefix = prefix ? `${prefix}.${key}` : key;
+        this._flattenToRows(entry, nextPrefix, rows);
+      }
+      return;
+    }
+
+    rows.push([prefix || "value", value]);
+  }
+
+  _toCSVCell(value) {
+    const text = String(value ?? "");
+    if (!/[",\n]/.test(text)) {
+      return text;
+    }
+    return `"${text.replace(/"/g, '""')}"`;
   }
 
   _readJSONFile(file, onSuccess) {

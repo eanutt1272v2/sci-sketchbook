@@ -189,7 +189,7 @@ class Simulation {
   }
 
   render() {
-    this.drawTrail();
+    this.renderTrail();
     strokeWeight(1);
     colorMode(RGB, 255);
 
@@ -201,7 +201,7 @@ class Simulation {
       ctx.lineWidth = 2;
       ctx.lineCap = "round";
 
-      const drawCategory = (strokeStyle, predicate) => {
+      const renderCategory = (strokeStyle, predicate) => {
         ctx.strokeStyle = strokeStyle;
         ctx.beginPath();
         for (let i = 0; i < particleCount; i++) {
@@ -217,22 +217,22 @@ class Simulation {
         ctx.stroke();
       };
 
-      drawCategory("rgb(255,80,255)", (closeCount) => closeCount > 15);
-      drawCategory(
+      renderCategory("rgb(255,80,255)", (closeCount) => closeCount > 15);
+      renderCategory(
         "rgb(255,255,100)",
         (closeCount, neighbourCount) => closeCount <= 15 && neighbourCount > 35,
       );
-      drawCategory(
+      renderCategory(
         "rgb(0,0,255)",
         (closeCount, neighbourCount) =>
           closeCount <= 15 && neighbourCount > 15 && neighbourCount <= 35,
       );
-      drawCategory(
+      renderCategory(
         "rgb(180,100,50)",
         (closeCount, neighbourCount) =>
           closeCount <= 15 && neighbourCount >= 13 && neighbourCount <= 15,
       );
-      drawCategory(
+      renderCategory(
         "rgb(80,255,80)",
         (closeCount, neighbourCount) => closeCount <= 15 && neighbourCount < 13,
       );
@@ -244,7 +244,7 @@ class Simulation {
     }
   }
 
-  drawTrail() {
+  renderTrail() {
     noStroke();
     fill(0, 255 - this.trailAlpha);
     rect(0, 0, width, height);

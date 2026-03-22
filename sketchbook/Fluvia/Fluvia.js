@@ -11,8 +11,8 @@ const metadata = {
 };
 
 function preload() {
-  font = loadFont("JetBrainsMono-Regular.ttf");
-  colourMaps = loadJSON("colour-maps.json");
+  font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
+  colourMaps = loadJSON("../../_shared/data/colour-maps.json");
   loadStrings("vert.glsl", (lines) => (vertShader = lines.join("\n")));
   loadStrings("frag.glsl", (lines) => (fragShader = lines.join("\n")));
 }
@@ -23,12 +23,14 @@ function setup() {
 
   setupCanvasProperties(mainCanvas);
 
-  appcore = new AppCore({
-    metadata,
-    vertShader,
-    fragShader,
-    colourMaps,
-    font: font,
+  requestAnimationFrame(() => {
+    appcore = new AppCore({
+      metadata,
+      vertShader,
+      fragShader,
+      colourMaps,
+      font,
+    });
   });
 }
 
@@ -41,21 +43,22 @@ function setupCanvasProperties(canvas) {
   }, 100);
 
   noSmooth();
-  textFont(font);
+  textFont(font || "monospace");
   pixelDensity(1);
   frameRate(60);
 }
 
 function draw() {
+  if (!appcore) return;
   appcore.update();
-  appcore.draw();
+  appcore.render();
 }
 
-function windowResized() { appcore.resize(); }
-function keyPressed() { return appcore.handleKeyPressed(key, keyCode); }
-function keyReleased() { return appcore.handleKeyReleased(key, keyCode); }
-function mouseWheel(event) { return appcore.handleWheel(event); }
-function mouseDragged(event) { return appcore.handlePointer(event); }
-function touchStarted(event) { return appcore.handlePointer(event); }
-function touchMoved(event) { return appcore.handlePointer(event); }
-function touchEnded(event) { return appcore.handlePointer(event); }
+function windowResized() { if (!appcore) return; appcore.resize(); }
+function keyPressed() { return appcore ? appcore.handleKeyPressed(key, keyCode) : false; }
+function keyReleased() { return appcore ? appcore.handleKeyReleased(key, keyCode) : false; }
+function mouseWheel(event) { return appcore ? appcore.handleWheel(event) : false; }
+function mouseDragged(event) { return appcore ? appcore.handlePointer(event) : false; }
+function touchStarted(event) { return appcore ? appcore.handlePointer(event) : false; }
+function touchMoved(event) { return appcore ? appcore.handlePointer(event) : false; }
+function touchEnded(event) { return appcore ? appcore.handlePointer(event) : false; }

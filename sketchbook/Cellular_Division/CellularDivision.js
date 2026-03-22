@@ -23,14 +23,17 @@ let font;
 let mainCanvas;
 
 function preload() {
-  font = loadFont("JetBrainsMono-Regular.ttf");
+  font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
 }
 
 function setup() {
   const canvasSize = min(windowWidth, windowHeight);
   mainCanvas = createCanvas(canvasSize, canvasSize);
   setupCanvasProperties(mainCanvas);
-  appcore = new AppCore({ metadata });
+
+  requestAnimationFrame(() => {
+    appcore = new AppCore({ metadata });
+  });
 }
 
 function setupCanvasProperties(canvas) {
@@ -42,20 +45,23 @@ function setupCanvasProperties(canvas) {
   }, 100);
 
   noSmooth();
-  textFont(font);
+  textFont(font || "monospace");
   pixelDensity(1);
   frameRate(60);
 }
 
 function draw() {
+  if (!appcore) return;
   appcore.update();
   appcore.render();
 }
 
 function keyPressed() {
+  if (!appcore) return;
   appcore.onKeyPressed();
 }
 
 function windowResized() {
-  if (appcore !== null) appcore.windowResized();
+  if (!appcore) return;
+  appcore.windowResized();
 }

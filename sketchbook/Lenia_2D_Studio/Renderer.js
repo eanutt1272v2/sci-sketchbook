@@ -7,12 +7,105 @@ class Renderer {
     this.currentColourMap = "";
     this.lut = new Uint8ClampedArray(256 * 3);
     this.calcPanelImage = null;
+    this.lastLegendRange = { mode: "world", min: 0, max: 1 };
+    this.eqOverlayEl = null;
+    this.eqOverlaySig = "";
+    this.motionTrail = [];
+    this.maxMotionTrailPoints = 180;
     this.setColourMap(initialColourMap);
+  }
+
+  _computeDataRange(data) {
+    if (!data || typeof data.length !== "number" || data.length === 0) {
+      return { min: 0, max: 1 };
+    }
+
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+
+    for (let i = 0; i < data.length; i++) {
+      const v = Number(data[i]);
+      if (!Number.isFinite(v)) continue;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      return { min: 0, max: 1 };
+    }
+
+    return { min, max };
   }
 
   resize(size) {
     this.size = size;
     this.img = createImage(this.size, this.size);
+    this.motionTrail = [];
+  }
+
+  _resetMotionTrail() {
+    this.motionTrail = [];
+  }
+
+  _wrapCoord(value) {
+    return ((value % this.size) + this.size) % this.size;
+  }
+
+  _torusDelta(a, b, size = this.size) {
+    let delta = a - b;
+    if (delta > size / 2) delta -= size;
+    if (delta < -size / 2) delta += size;
+    return delta;
+  }
+
+  _worldToScreen(x, y) {
+    return {
+      x: (x / this.size) * width,
+      y: (y / this.size) * height,
+    };
+  }
+
+  _nearestWrappedPoint(anchorX, anchorY, pointX, pointY) {
+    return {
+      x: anchorX + this._torusDelta(pointX, anchorX),
+      y: anchorY + this._torusDelta(pointY, anchorY),
+    };
+  }
+
+  _nearestWrappedShift(value, anchor) {
+    return Math.round((anchor - value) / this.size) * this.size;
+  }
+
+  _updateMotionTrail(centerX, centerY) {
+    if (!Number.isFinite(centerX) || !Number.isFinite(centerY)) return;
+    const wrappedX = this._wrapCoord(centerX);
+    const wrappedY = this._wrapCoord(centerY);
+    const last = this.motionTrail[this.motionTrail.length - 1];
+    let point = {
+      x: wrappedX,
+      y: wrappedY,
+      ux: wrappedX,
+      uy: wrappedY,
+    };
+
+    if (last) {
+      const lastWrappedX = this._wrapCoord(last.ux);
+      const lastWrappedY = this._wrapCoord(last.uy);
+      const dx = this._torusDelta(wrappedX, lastWrappedX);
+      const dy = this._torusDelta(wrappedY, lastWrappedY);
+      if (Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05) return;
+      point = {
+        x: wrappedX,
+        y: wrappedY,
+        ux: last.ux + dx,
+        uy: last.uy + dy,
+      };
+    }
+
+    this.motionTrail.push(point);
+    if (this.motionTrail.length > this.maxMotionTrailPoints) {
+      this.motionTrail.splice(0, this.motionTrail.length - this.maxMotionTrailPoints);
+    }
   }
 
   _getViewSpec(board, automaton, rawMode) {
@@ -23,7 +116,7 @@ class Renderer {
       return {
         mode,
         label: "World",
-        data: board.cells,
+        data: board.world,
         srcSize: size,
         vmin: 0,
         vmax: 1,
@@ -41,11 +134,11 @@ class Renderer {
       };
     }
 
-    if (mode === "field") {
+    if (mode === "growth") {
       return {
-        mode,
+        mode: "growth",
         label: "Growth",
-        data: board.field,
+        data: board.growth,
         srcSize: size,
         vmin: -1,
         vmax: 1,
@@ -73,6 +166,12 @@ class Renderer {
     const vmin = view.vmin;
     const vmax = view.vmax;
     const currentSize = view.srcSize;
+    const liveRange = this._computeDataRange(data);
+    this.lastLegendRange = {
+      mode: view.mode,
+      min: liveRange.min,
+      max: liveRange.max,
+    };
 
     if (this.img.width !== currentSize || this.img.height !== currentSize) {
       this.img = createImage(currentSize, currentSize);
@@ -229,21 +328,44 @@ class Renderer {
     textSize(11);
     textAlign(RIGHT, CENTER);
 
+    const range = this.lastLegendRange || { min: 0, max: 1 };
+    const minV = Number.isFinite(range.min) ? range.min : 0;
+    const maxV = Number.isFinite(range.max) ? range.max : 1;
+    const span = maxV - minV;
+
     const labels = [
-      { val: "1.0", y: y1 },
-      { val: "0.75", y: y1 + h * 0.25 },
-      { val: "0.5", y: y1 + h * 0.5 },
-      { val: "0.25", y: y1 + h * 0.75 },
-      { val: "0.0", y: y2 },
+      { val: maxV, y: y1 },
+      { val: minV + span * 0.75, y: y1 + h * 0.25 },
+      { val: minV + span * 0.5, y: y1 + h * 0.5 },
+      { val: minV + span * 0.25, y: y1 + h * 0.75 },
+      { val: minV, y: y2 },
     ];
 
     labels.forEach((label) => {
-      text(label.val, x - w - 6, label.y);
+      text(label.val.toFixed(3), x - w - 6, label.y);
 
       stroke(255, 255, 255, 150);
       strokeWeight(1);
       line(x - w - 3, label.y, x - w, label.y);
     });
+
+    const mode = (this.lastLegendRange && this.lastLegendRange.mode) || "world";
+    const legendTitleByMode = {
+      world: "Cell state A(x)",
+      potential: "Potential U(x)",
+      growth: "Growth G(x)",
+      kernel: "Kernel K(x)",
+    };
+
+    noStroke();
+    fill(255);
+    push();
+    translate(x + w * 0.5, y1 + h * 0.5);
+    rotate(-HALF_PI);
+    textAlign(CENTER, CENTER);
+    textSize(12);
+    text(legendTitleByMode[mode] || "Field value", 0, 0);
+    pop();
 
     pop();
   }
@@ -292,8 +414,10 @@ class Renderer {
           ["T", "Cycle colour map"],
           ["G", "Toggle grid"],
           ["L", "Toggle colour legend"],
+          ["J", "Toggle equation overlay"],
           ["O", "Toggle stats overlay"],
           ["M", "Toggle motion overlay"],
+          ["Shift+M", "Toggle motion trail"],
           ["B", "Toggle scale bar"],
           ["V", "Cycle grid size"],
           ["H", "Hide / show GUI panel"],
@@ -372,13 +496,55 @@ class Renderer {
     pop();
   }
 
-  renderMotionOverlay(statistics) {
-    const { centerX, centerY, speed, angle } = statistics;
-    if (centerX === 0 && centerY === 0 && speed === 0) return;
+  renderMotionOverlay(statistics, params = {}) {
+    const {
+      mass,
+      centerX,
+      centerY,
+      growthCenterX,
+      growthCenterY,
+      massGrowthDist,
+      speed,
+      angle,
+      gyradius,
+      rotationSpeed,
+      symmSides,
+      symmStrength,
+    } = statistics;
 
-    const cx = (centerX / this.size) * width;
-    const cy = (centerY / this.size) * height;
+    const hasValidCenter = Number.isFinite(centerX) && Number.isFinite(centerY);
+    const hasVisibleMass = Number.isFinite(mass) && mass > 1e-10;
+
+    if (!hasValidCenter || !hasVisibleMass) {
+      this._resetMotionTrail();
+      return;
+    }
+
+    const wrappedCenterX = this._wrapCoord(centerX);
+    const wrappedCenterY = this._wrapCoord(centerY);
+    const centerScreen = this._worldToScreen(wrappedCenterX, wrappedCenterY);
+    const cx = centerScreen.x;
+    const cy = centerScreen.y;
+    const growthPoint =
+      Number.isFinite(growthCenterX) && Number.isFinite(growthCenterY)
+        ? this._nearestWrappedPoint(
+            wrappedCenterX,
+            wrappedCenterY,
+            this._wrapCoord(growthCenterX),
+            this._wrapCoord(growthCenterY),
+          )
+        : null;
+    const growthScreen = growthPoint
+      ? this._worldToScreen(growthPoint.x, growthPoint.y)
+      : null;
+    const gx = growthScreen?.x;
+    const gy = growthScreen?.y;
     const cellPx = width / this.size;
+    const gyradiusPx = Math.max(0, (Number(gyradius) || 0) * cellPx);
+
+    if (params.renderMotionTrail) {
+      this._updateMotionTrail(centerX, centerY);
+    }
 
     const arrowLen = Math.max(24, speed * cellPx * 8);
     const rad = (angle * Math.PI) / 180;
@@ -393,6 +559,64 @@ class Renderer {
     const ay2 = ty - headLen * Math.sin(rad + headAngle);
 
     push();
+
+    if (params.renderMotionTrail && this.motionTrail.length > 1) {
+      noFill();
+      const latestTrailPoint = this.motionTrail[this.motionTrail.length - 1];
+      const trailShiftX = latestTrailPoint
+        ? this._nearestWrappedShift(latestTrailPoint.ux, wrappedCenterX)
+        : 0;
+      const trailShiftY = latestTrailPoint
+        ? this._nearestWrappedShift(latestTrailPoint.uy, wrappedCenterY)
+        : 0;
+
+      for (let i = 1; i < this.motionTrail.length; i++) {
+        const previous = this.motionTrail[i - 1];
+        const point = this.motionTrail[i];
+        const baseStartX = previous.ux + trailShiftX;
+        const baseStartY = previous.uy + trailShiftY;
+        const baseEndX = point.ux + trailShiftX;
+        const baseEndY = point.uy + trailShiftY;
+        const alpha = map(i, 1, Math.max(1, this.motionTrail.length - 1), 40, 180);
+        stroke(120, 220, 255, alpha);
+        strokeWeight(1.5);
+        for (let ox = -1; ox <= 1; ox++) {
+          for (let oy = -1; oy <= 1; oy++) {
+            const start = this._worldToScreen(
+              baseStartX + ox * this.size,
+              baseStartY + oy * this.size,
+            );
+            const end = this._worldToScreen(
+              baseEndX + ox * this.size,
+              baseEndY + oy * this.size,
+            );
+            if (
+              Math.max(start.x, end.x) < -6 ||
+              Math.min(start.x, end.x) > width + 6 ||
+              Math.max(start.y, end.y) < -6 ||
+              Math.min(start.y, end.y) > height + 6
+            ) {
+              continue;
+            }
+            line(start.x, start.y, end.x, end.y);
+          }
+        }
+      }
+    }
+
+    if (gyradiusPx > 1) {
+      noFill();
+      stroke(255, 255, 255, 65);
+      strokeWeight(1);
+      ellipse(cx, cy, gyradiusPx * 2, gyradiusPx * 2);
+    }
+
+    if (growthScreen) {
+      stroke(255, 210, 120, 140);
+      strokeWeight(1.2);
+      line(cx, cy, gx, gy);
+    }
+
     stroke(0, 0, 0, 160);
     strokeWeight(3);
     noFill();
@@ -413,24 +637,51 @@ class Renderer {
     fill(220, 220, 220, 230);
     ellipse(cx, cy, dotR * 2, dotR * 2);
 
+    if (growthPoint) {
+      for (let ox = -1; ox <= 1; ox++) {
+        for (let oy = -1; oy <= 1; oy++) {
+          const marker = this._worldToScreen(
+            growthPoint.x + ox * this.size,
+            growthPoint.y + oy * this.size,
+          );
+          if (
+            marker.x < -8 ||
+            marker.x > width + 8 ||
+            marker.y < -8 ||
+            marker.y > height + 8
+          ) {
+            continue;
+          }
+          stroke(0, 0, 0, 180);
+          strokeWeight(3);
+          line(marker.x - 5, marker.y, marker.x + 5, marker.y);
+          line(marker.x, marker.y - 5, marker.x, marker.y + 5);
+          stroke(255, 210, 120, 230);
+          strokeWeight(1.4);
+          line(marker.x - 5, marker.y, marker.x + 5, marker.y);
+          line(marker.x, marker.y - 5, marker.x, marker.y + 5);
+          noStroke();
+          fill(255, 210, 120, 190);
+          ellipse(marker.x, marker.y, 4, 4);
+        }
+      }
+    }
+
     fill(220, 220, 220, 210);
     noStroke();
     textSize(10);
     textAlign(LEFT, TOP);
     const labelX = cx + dotR + 4;
-    const labelY = cy - 10;
+    const labelY = cy - 24;
+    const labelLines = [
+      `pos=(${centerX.toFixed(1)}, ${centerY.toFixed(1)})  growth=(${(growthCenterX || 0).toFixed(1)}, ${(growthCenterY || 0).toFixed(1)})`,
+      `angle=${angle.toFixed(1)} deg  speed=${speed.toFixed(3)}  sep=${(massGrowthDist || 0).toFixed(3)}`,
+      `rot=${(rotationSpeed || 0).toFixed(2)} deg/s  sym=${symmSides || 0} @ ${(((symmStrength || 0) * 100)).toFixed(1)}%`,
+    ].join("\n");
     fill(0, 200);
-    text(
-      `${angle.toFixed(1)} deg  speed=${speed.toFixed(3)}`,
-      labelX + 1,
-      labelY + 4,
-    );
+    text(labelLines, labelX + 1, labelY + 4);
     fill(255, 230);
-    text(
-      `${angle.toFixed(1)} deg  speed=${speed.toFixed(3)}`,
-      labelX,
-      labelY + 3,
-    );
+    text(labelLines, labelX, labelY + 3);
 
     pop();
   }
@@ -502,7 +753,7 @@ class Renderer {
     const views = [
       this._getViewSpec(board, automaton, "world"),
       this._getViewSpec(board, automaton, "potential"),
-      this._getViewSpec(board, automaton, "field"),
+      this._getViewSpec(board, automaton, "growth"),
       this._getViewSpec(board, automaton, "kernel"),
     ];
 
@@ -568,5 +819,65 @@ class Renderer {
     fill(255);
     text(view.label, x + 6, y + 4);
     pop();
+  }
+
+  ensureEquationOverlay() {
+    if (this.eqOverlayEl && document.body.contains(this.eqOverlayEl)) {
+      return this.eqOverlayEl;
+    }
+    const panel = document.createElement("div");
+    panel.className = "equation-overlay";
+    panel.style.display = "none";
+    const title = document.createElement("p");
+    title.className = "equation-overlay__title";
+    title.textContent = "Lenia's Continuous Cellular Automata Model";
+    const math = document.createElement("div");
+    math.className = "equation-overlay__math";
+    panel.appendChild(title);
+    panel.appendChild(math);
+    document.body.appendChild(panel);
+    this.eqOverlayEl = panel;
+    return panel;
+  }
+
+  hideEquationOverlay() {
+    if (this.eqOverlayEl) this.eqOverlayEl.style.display = "none";
+  }
+
+  renderEquationOverlay(params = {}) {
+    const panel = this.ensureEquationOverlay();
+    panel.style.display = "block";
+    const leftMargin = 20;
+    const areCalcPanelsVisible = !!params.renderCalcPanels;
+    if (areCalcPanelsVisible) {
+      const calcPanelBaseX = 20;
+      const calcPanelSize = 96;
+      const calcPanelGap = 8;
+      const calcPanelCols = 2;
+      const calcPanelsTotalW =
+        calcPanelCols * calcPanelSize + (calcPanelCols - 1) * calcPanelGap;
+      panel.style.left = `${calcPanelBaseX + calcPanelsTotalW + 16}px`;
+    } else {
+      panel.style.left = `${leftMargin}px`;
+    }
+    panel.style.right = "auto";
+    panel.style.bottom = "20px";
+    const mathEl = panel.querySelector(".equation-overlay__math");
+    const tex = String.raw`A^{t+1}(x) = \mathcal{C}\!\left[A^t(x) + \tfrac{1}{T}\,G_{\mu,\sigma}\!\left((K * A^t)(x)\right)\right]`;
+    if (tex === this.eqOverlaySig) return;
+    const canRenderKatex =
+      typeof window !== "undefined" &&
+      window.katex &&
+      typeof window.katex.render === "function";
+    if (canRenderKatex) {
+      window.katex.render(tex, mathEl, {
+        displayMode: true,
+        throwOnError: false,
+        output: "mathml",
+      });
+    } else {
+      mathEl.textContent = "A(t+1)(x) = clip[ A(t)(x) + (1/T) * G(m,s)( (K * A(t))(x) ) ]";
+    }
+    this.eqOverlaySig = tex;
   }
 }
