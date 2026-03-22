@@ -355,6 +355,10 @@ class Board {
     return this;
   }
   getStats() {
+    if (!this.world || typeof this.world.length !== "number") {
+      return { mass: 0, max: 0 };
+    }
+
     let mass = 0;
     let max = 0;
 

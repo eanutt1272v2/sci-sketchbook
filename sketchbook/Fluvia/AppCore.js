@@ -49,7 +49,7 @@ class AppCore {
       renderStats: true,
       renderLegend: true,
       renderKeymapRef: false,
-  renderEquation: true,
+      renderEquation: true,
 
       renderMethod: "3D",
       heightScale: 100,

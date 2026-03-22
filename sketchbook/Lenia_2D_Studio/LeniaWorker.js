@@ -1,6 +1,54 @@
 "use strict";
 
+let _fftCtor = null;
+try {
+  importScripts("https://cdn.jsdelivr.net/npm/fft.js@4.0.4/dist/fft.min.js");
+  if (typeof globalThis.FFT === "function") {
+    _fftCtor = globalThis.FFT;
+  }
+} catch (_err) {
+  // Fallback to local radix-2 FFT implementation when CDN is unavailable.
+}
+
+const _fftPlanCache = new Map();
+
+function getFFTPlan(N) {
+  if (!_fftCtor) return null;
+  let plan = _fftPlanCache.get(N);
+  if (!plan) {
+    plan = new _fftCtor(N);
+    _fftPlanCache.set(N, plan);
+  }
+  return plan;
+}
+
+function fftWithLibrary(buf, inverse) {
+  const N = buf.length >>> 1;
+  const plan = getFFTPlan(N);
+  if (!plan) return false;
+
+  const out = plan.createComplexArray();
+  if (inverse) {
+    plan.inverseTransform(out, buf);
+    const scale = 1 / N;
+    for (let i = 0; i < out.length; i++) {
+      buf[i] = out[i] * scale;
+    }
+  } else {
+    plan.transform(out, buf);
+    for (let i = 0; i < out.length; i++) {
+      buf[i] = out[i];
+    }
+  }
+
+  return true;
+}
+
 function fftRadix2(buf, inverse) {
+  if (fftWithLibrary(buf, inverse)) {
+    return;
+  }
+
   const N = buf.length >>> 1;
   let j = 0;
   for (let i = 1; i < N; i++) {

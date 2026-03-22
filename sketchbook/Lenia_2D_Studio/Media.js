@@ -2,6 +2,7 @@ class Media {
   constructor(appcore) {
     this.appcore = appcore;
     this.logTag = "[Lenia][Media]";
+    this._worldExportDeferred = false;
     this.mediaRecorder = null;
     this.recordingStream = null;
     this.recordedChunks = [];
@@ -140,7 +141,35 @@ class Media {
   }
 
   exportWorldJSON() {
-    const data = this.appcore.board.toJSON();
+    const board = this.appcore?.board;
+    const hasBuffers = !!(
+      board?.world &&
+      board?.potential &&
+      board?.growth
+    );
+
+    if (!hasBuffers) {
+      if (!this._worldExportDeferred) {
+        this._worldExportDeferred = true;
+        if (typeof this.appcore?._queueAction === "function") {
+          this.appcore._queueAction("exportWorldJSON", () => {
+            this._worldExportDeferred = false;
+            this.exportWorldJSON();
+          });
+          this._logInfo(
+            "World export deferred until worker returns board buffers",
+          );
+        } else {
+          this._worldExportDeferred = false;
+          this._logWarn("Cannot export world while worker holds board buffers");
+        }
+      }
+      return;
+    }
+
+    this._worldExportDeferred = false;
+
+    const data = board.toJSON();
     if (!data) return;
 
     const stats = this._getFullStatsSnapshot();
@@ -153,17 +182,17 @@ class Media {
       world: {
         size: data.size,
         world: data.world,
-        potential: this._encodeFloatField(this.appcore.board?.potential, data.size),
-        growth: this._encodeFloatField(this.appcore.board?.growth, data.size),
-        growthOld: this.appcore.board?.growthOld
-          ? this._encodeFloatField(this.appcore.board.growthOld, data.size)
+        potential: this._encodeFloatField(board.potential, data.size),
+        growth: this._encodeFloatField(board.growth, data.size),
+        growthOld: board.growthOld
+          ? this._encodeFloatField(board.growthOld, data.size)
           : null,
       },
       exportedAt: new Date().toISOString(),
     };
 
     this._downloadJSON(payload, this._getFilename("world.json"));
-    this._logInfo(`World JSON exported: size=${this.appcore.board.size}`);
+    this._logInfo(`World JSON exported: size=${board.size}`);
   }
 
   importWorldJSON() {

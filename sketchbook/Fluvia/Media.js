@@ -2,6 +2,8 @@ class Media {
   constructor(appcore) {
     this.appcore = appcore;
     this.logTag = "[Fluvia][Media]";
+    this._heightmapExportDeferred = false;
+    this._worldExportDeferred = false;
 
     this.mediaRecorder = null;
     this.recordingStream = null;
@@ -301,9 +303,28 @@ class Media {
   exportWorldJSON() {
     const { terrain } = this.appcore;
     if (!terrain.heightMap) {
-      this._logWarn("Cannot export world while worker holds terrain buffers");
+      if (!this._worldExportDeferred) {
+        this._worldExportDeferred = true;
+        if (typeof this.appcore._queueAction === "function") {
+          this.appcore._queueAction("exportWorldJSON", () => {
+            this._worldExportDeferred = false;
+            this.exportWorldJSON();
+          });
+          this._logInfo(
+            "World export deferred until worker returns terrain buffers",
+          );
+        } else {
+          this._worldExportDeferred = false;
+          this._logWarn(
+            "Cannot export world while worker holds terrain buffers",
+          );
+        }
+      }
       return;
     }
+
+    this._worldExportDeferred = false;
+
     const payload = {
       format: "simpipe.world",
       metadata: this.appcore.metadata,
@@ -455,10 +476,48 @@ class Media {
 
   exportHeightmapPNG() {
     const { terrain } = this.appcore;
-    if (!terrain || !terrain.heightMap) return;
+    if (!terrain || !terrain.heightMap) {
+      if (!this._heightmapExportDeferred) {
+        this._heightmapExportDeferred = true;
+        if (typeof this.appcore._queueAction === "function") {
+          this.appcore._queueAction("exportHeightmapPNG", () => {
+            this._heightmapExportDeferred = false;
+            this.exportHeightmapPNG();
+          });
+          this._logInfo(
+            "Heightmap export deferred until worker returns terrain buffers",
+          );
+        } else {
+          this._heightmapExportDeferred = false;
+          this._logWarn(
+            "Cannot export heightmap while worker holds terrain buffers",
+          );
+        }
+      }
+      return;
+    }
+
+    this._heightmapExportDeferred = false;
+
+    // Yield one tick so button interaction remains snappy before PNG work starts.
+    setTimeout(() => this._exportHeightmapPNGNow(), 0);
+  }
+
+  _exportHeightmapPNGNow() {
+    const { terrain } = this.appcore;
+    if (!terrain || !terrain.heightMap) {
+      this._logWarn("Heightmap export aborted: terrain buffers unavailable");
+      return;
+    }
 
     const size = terrain.size;
-    const bounds = terrain.getMapBounds(terrain.heightMap);
+    const statsBounds = this.appcore?.statistics?.heightBounds;
+    const statsMin = Number(statsBounds?.min);
+    const statsMax = Number(statsBounds?.max);
+    const bounds =
+      Number.isFinite(statsMin) && Number.isFinite(statsMax)
+        ? { min: statsMin, max: statsMax }
+        : terrain.getMapBounds(terrain.heightMap);
     const range = Math.max(1e-9, bounds.max - bounds.min);
 
     const canvas = document.createElement("canvas");

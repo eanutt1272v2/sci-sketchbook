@@ -489,40 +489,44 @@ class GUI {
       .addButton({ title: "Import World (JSON)" })
       .on("click", () => media.importWorldJSON());
 
-    const data = page.addFolder({ title: "Export" });
-    data
+    this.addSeparator(page);
+
+    const exp = page.addFolder({ title: "Export" });
+    exp
       .addButton({ title: "Export Params (JSON)" })
       .on("click", () => media.exportParamsJSON());
-    data
+    exp
       .addButton({ title: "Export Stats (JSON)" })
       .on("click", () => media.exportStatisticsJSON());
-    data
+    exp
       .addButton({ title: "Export Stats (CSV)" })
       .on("click", () => media.exportStatisticsCSV());
-    data
+    exp
       .addButton({ title: "Export World (JSON)" })
       .on("click", () => media.exportWorldJSON());
-    data
+    exp
       .addButton({ title: "Export Heightmap (PNG)" })
       .on("click", () => media.exportHeightmapPNG());
 
-    const exp = page.addFolder({ title: "Capture" });
+    this.addSeparator(exp);
 
-    exp.addBinding(params, "recordingFPS", {
+    const capture = exp.addFolder({ title: "Capture" });
+
+    capture.addBinding(params, "recordingFPS", {
       label: "Record FPS",
       min: 12,
       max: 120,
       step: 1,
     });
 
-    exp.addBinding(params, "videoBitrateMbps", {
+    capture.addBinding(params, "videoBitrateMbps", {
       label: "Bitrate (Mbps)",
       min: 1,
       max: 64,
       step: 0.5,
     });
 
-    const btn = exp.addButton({
+    const btn = capture.addButton({
       title: media.isRecording ? "Stop Recording" : "Start Recording",
     });
     this.recordButton = btn;
@@ -537,14 +541,14 @@ class GUI {
       this.syncMediaControls();
     });
 
-    this.addSeparator(exp);
+    this.addSeparator(capture);
 
-    exp.addBinding(params, "imageFormat", {
+    capture.addBinding(params, "imageFormat", {
       label: "Format",
       options: { PNG: "png", JPG: "jpg", WebP: "webp" },
     });
 
-    exp
+    capture
       .addButton({ title: "Export Image" })
       .on("click", () => media.exportImage());
   }
