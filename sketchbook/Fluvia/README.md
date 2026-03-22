@@ -15,8 +15,6 @@ The complete terrain state is represented by coupled scalar fields/maps:
 - total surface height
 - flow/discharge
 
-Droplets fall down local slopes and exchange mass with the surface through erosion and deposition processes, and momentum and evaporation control the transport length and channel persistence.
-
 Each simulation cycle follows this basic loop:
 
 1. Spawn many droplets over the terrain (rainfall approximation).
