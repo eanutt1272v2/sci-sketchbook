@@ -7,6 +7,7 @@ class Renderer {
     this.currentColourMap = "";
     this.lut = new Uint8ClampedArray(256 * 3);
     this.calcPanelImage = null;
+    this.lastCalcPanelsFrame = null;
     this.lastLegendRange = { mode: "world", min: 0, max: 1 };
     this.eqOverlayEl = null;
     this.eqOverlaySig = "";
@@ -41,6 +42,7 @@ class Renderer {
     this.size = size;
     this.img = createImage(this.size, this.size);
     this.motionTrail = [];
+    this.lastCalcPanelsFrame = null;
   }
 
   _resetMotionTrail() {
@@ -198,6 +200,17 @@ class Renderer {
     this.img.updatePixels();
     noSmooth();
     image(this.img, 0, 0, width, height);
+  }
+
+  renderCachedFrame() {
+    if (this.img && this.img.width > 0 && this.img.height > 0) {
+      noSmooth();
+      image(this.img, 0, 0, width, height);
+      return true;
+    }
+
+    background(0);
+    return false;
   }
 
   setColourMap(name) {
@@ -741,14 +754,8 @@ class Renderer {
 
     this.setColourMap(params.colourMap);
 
-    const panelSize = 96;
-    const gap = 8;
-    const cols = 2;
-    const rows = 2;
-    const totalW = cols * panelSize + (cols - 1) * gap;
-    const totalH = rows * panelSize + (rows - 1) * gap;
-    const baseX = 20;
-    const baseY = height - totalH - 20;
+    const layout = this._getCalcPanelLayout();
+    const { panelSize, gap, cols, rows, totalW, totalH, baseX, baseY } = layout;
 
     const views = [
       this._getViewSpec(board, automaton, "world"),
@@ -764,6 +771,58 @@ class Renderer {
       const y = baseY + row * (panelSize + gap);
       this._renderCalcPanel(views[i], x, y, panelSize);
     }
+
+    this.lastCalcPanelsFrame = get(baseX, baseY, totalW, totalH);
+    this._renderCalcPanelBorders(baseX, baseY, panelSize, gap, cols, rows);
+  }
+
+  renderCachedCalcPanels() {
+    if (!this.lastCalcPanelsFrame) {
+      return false;
+    }
+
+    const layout = this._getCalcPanelLayout();
+    const b = {
+      x: layout.baseX,
+      y: layout.baseY,
+      w: layout.totalW,
+      h: layout.totalH,
+    };
+    noSmooth();
+    image(this.lastCalcPanelsFrame, b.x, b.y, b.w, b.h);
+
+    const { panelSize, gap, cols, rows } = layout;
+
+    this._renderCalcPanelBorders(b.x, b.y, panelSize, gap, cols, rows);
+
+    return true;
+  }
+
+  _getCalcPanelLayout() {
+    const panelSize = 96;
+    const gap = 8;
+    const cols = 2;
+    const rows = 2;
+    const totalW = cols * panelSize + (cols - 1) * gap;
+    const totalH = rows * panelSize + (rows - 1) * gap;
+    const baseX = 20;
+    const baseY = height - totalH - 20;
+    return { panelSize, gap, cols, rows, totalW, totalH, baseX, baseY };
+  }
+
+  _renderCalcPanelBorders(baseX, baseY, panelSize, gap, cols, rows) {
+    push();
+    noFill();
+    stroke(255, 210);
+    strokeWeight(1);
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x = baseX + col * (panelSize + gap);
+        const y = baseY + row * (panelSize + gap);
+        rect(x, y, panelSize, panelSize);
+      }
+    }
+    pop();
   }
 
   _renderCalcPanel(view, x, y, panelSize) {
@@ -806,10 +865,6 @@ class Renderer {
     push();
     noSmooth();
     image(img, x, y, panelSize, panelSize);
-    noFill();
-    stroke(255, 210);
-    strokeWeight(1);
-    rect(x, y, panelSize, panelSize);
 
     noStroke();
     fill(0, 200);
@@ -844,6 +899,35 @@ class Renderer {
     if (this.eqOverlayEl) this.eqOverlayEl.style.display = "none";
   }
 
+  positionEquationOverlay(preferredLeftPx = null) {
+    const panel = this.eqOverlayEl;
+    const canvasEl = _renderer?.elt;
+    if (!panel || !canvasEl) return;
+
+    const rect = canvasEl.getBoundingClientRect();
+    const margin = 12;
+    const maxWidth = Math.max(220, Math.floor(rect.width - margin * 2));
+    panel.style.maxWidth = `${maxWidth}px`;
+
+    const panelWidth = panel.offsetWidth;
+    const panelHeight = panel.offsetHeight;
+
+    const minLeft = rect.left + margin;
+    const maxLeft = rect.right - panelWidth - margin;
+    const minTop = rect.top + margin;
+    const maxTop = rect.bottom - panelHeight - margin;
+
+    const wantedLeft =
+      Number.isFinite(preferredLeftPx) ? preferredLeftPx : rect.left + margin;
+    const left = Math.max(minLeft, Math.min(wantedLeft, Math.max(minLeft, maxLeft)));
+    const top = Math.max(minTop, Math.min(maxTop, Math.max(minTop, maxTop)));
+
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+    panel.style.right = "auto";
+    panel.style.bottom = "auto";
+  }
+
   dispose() {
     if (this.eqOverlayEl && this.eqOverlayEl.parentNode === document.body) {
       document.body.removeChild(this.eqOverlayEl);
@@ -853,6 +937,7 @@ class Renderer {
     this.motionTrail = [];
     this.img = null;
     this.calcPanelImage = null;
+    this.lastCalcPanelsFrame = null;
   }
 
   renderEquationOverlay(params = {}) {
@@ -860,6 +945,7 @@ class Renderer {
     panel.style.display = "block";
     const leftMargin = 20;
     const areCalcPanelsVisible = !!params.renderCalcPanels;
+    let preferredLeft = leftMargin;
     if (areCalcPanelsVisible) {
       const calcPanelBaseX = 20;
       const calcPanelSize = 96;
@@ -867,12 +953,9 @@ class Renderer {
       const calcPanelCols = 2;
       const calcPanelsTotalW =
         calcPanelCols * calcPanelSize + (calcPanelCols - 1) * calcPanelGap;
-      panel.style.left = `${calcPanelBaseX + calcPanelsTotalW + 16}px`;
-    } else {
-      panel.style.left = `${leftMargin}px`;
+      preferredLeft = calcPanelBaseX + calcPanelsTotalW + 16;
     }
-    panel.style.right = "auto";
-    panel.style.bottom = "20px";
+    this.positionEquationOverlay(preferredLeft);
     const mathEl = panel.querySelector(".equation-overlay__math");
     const tex = String.raw`A^{t+1}(x) = \mathcal{C}\!\left[A^t(x) + \tfrac{1}{T}\,G_{\mu,\sigma}\!\left((K * A^t)(x)\right)\right]`;
     if (tex === this.eqOverlaySig) return;

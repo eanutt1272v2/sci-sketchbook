@@ -20,8 +20,6 @@ Live deployment: <https://sci-sketchbook.onrender.com/>
 | [Psi](./sketchbook/Psi) | Hydrogen orbital probability-density slices | p5.js + worker |
 | [Fluvia](./sketchbook/Fluvia) | Lagrangian hydraulic erosion simulation | p5.js + worker + GLSL |
 | [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia cellular automata | p5.js + FFT worker |
-| [MandelBulber](./sketchbook/MandelBulber) | Legacy Mandelbulb point-cloud rendering | Processing |
-| [Neural Network](./sketchbook/Neural_Network) | Legacy handwritten-digit classifier | Processing |
 
 ## Running Locally
 

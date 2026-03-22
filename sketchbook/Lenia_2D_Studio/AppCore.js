@@ -52,7 +52,7 @@ class AppCore {
 
       selectedAnimal: "",
       placeMode: true,
-      placeScale: 1,
+      placeScale: 2,
       autoScaleSimParams: true,
 
       imageFormat: "png",
@@ -362,8 +362,45 @@ class AppCore {
       } else {
         this.renderer.hideEquationOverlay();
       }
-    } else if (this.params.renderKeymapRef && !this._workerBusy) {
-      this.renderer.renderKeymapRef(this.metadata);
+    } else {
+      this.renderer.renderCachedFrame();
+
+      if (this.params.renderGrid && this.params.renderMode !== "kernel") {
+        this.renderer.renderGrid(this.params.R);
+      }
+
+      if (
+        this.params.renderMotionOverlay &&
+        this.params.renderMode !== "kernel"
+      ) {
+        this.renderer.renderMotionOverlay(this.statistics, this.params);
+      }
+
+      if (this.params.renderScale) {
+        this.renderer.renderScale(this.params.R);
+      }
+
+      if (this.params.renderLegend) {
+        this.renderer.renderLegend();
+      }
+
+      if (this.params.renderStats) {
+        this.renderer.renderStats(this.statistics, this.params);
+      }
+
+      if (this.params.renderCalcPanels) {
+        this.renderer.renderCachedCalcPanels();
+      }
+
+      if (this.params.renderEquation) {
+        this.renderer.renderEquationOverlay(this.params);
+      } else {
+        this.renderer.hideEquationOverlay();
+      }
+
+      if (this.params.renderKeymapRef && !this._workerBusy) {
+        this.renderer.renderKeymapRef(this.metadata);
+      }
     }
 
     if (this._pendingActions.length > 0) {
@@ -981,7 +1018,12 @@ class AppCore {
 
   windowResized() {
     const canvasSize = min(windowWidth, windowHeight);
-    resizeCanvas(canvasSize, canvasSize);
+    if (width === canvasSize && height === canvasSize) {
+      return false;
+    }
+
+    resizeCanvas(canvasSize, canvasSize, true);
+    return false;
   }
 
   dispose() {

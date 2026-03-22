@@ -338,9 +338,6 @@ class GUI {
     imp
       .addButton({ title: "Import Params (JSON)" })
       .on("click", () => media.importParamsJSON());
-    imp
-      .addButton({ title: "Import World (JSON)" })
-      .on("click", () => media.importWorldJSON());
 
     this.addSeparator(page);
 
@@ -349,9 +346,6 @@ class GUI {
     exp
       .addButton({ title: "Export Params (JSON)" })
       .on("click", () => media.exportParamsJSON());
-    exp
-      .addButton({ title: "Export World (JSON)" })
-      .on("click", () => media.exportWorldJSON());
     exp
       .addButton({ title: "Export Stats (JSON)" })
       .on("click", () => media.exportStatisticsJSON());

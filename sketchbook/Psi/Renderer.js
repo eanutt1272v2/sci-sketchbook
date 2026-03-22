@@ -45,6 +45,33 @@ class Renderer {
     }
   }
 
+  positionEquationOverlay() {
+    const panel = this.eqOverlayEl;
+    const canvasEl = _renderer?.elt;
+    if (!panel || !canvasEl) return;
+
+    const rect = canvasEl.getBoundingClientRect();
+    const margin = 12;
+    const maxWidth = Math.max(180, Math.floor(rect.width - margin * 2));
+    panel.style.maxWidth = `${maxWidth}px`;
+
+    const panelWidth = panel.offsetWidth;
+    const panelHeight = panel.offsetHeight;
+
+    const minLeft = rect.left + margin;
+    const maxLeft = rect.right - panelWidth - margin;
+    const minTop = rect.top + margin;
+    const maxTop = rect.bottom - panelHeight - margin;
+
+    const left = Math.max(minLeft, Math.min(minLeft, Math.max(minLeft, maxLeft)));
+    const top = Math.max(minTop, Math.min(maxTop, Math.max(minTop, maxTop)));
+
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+    panel.style.right = "auto";
+    panel.style.bottom = "auto";
+  }
+
   dispose() {
     if (this.eqOverlayEl && this.eqOverlayEl.parentNode === document.body) {
       document.body.removeChild(this.eqOverlayEl);
@@ -365,6 +392,7 @@ class Renderer {
   renderEquationOverlay() {
     const panel = this.ensureEquationOverlay();
     panel.style.display = "block";
+    this.positionEquationOverlay();
 
     const mathEl = panel.querySelector(".equation-overlay__math");
 

@@ -33,7 +33,7 @@ Meandering is mainly driven by two reinforcing processes:
 - Higher effective flow at outer bends increases suspension/erosion.
 - Lower effective flow at inner bends increases deposition.
 
-This behaviour is strengthened by introducing stream-level momentum coupling (approximated from accumulated particle motion), which gives curved channels some directional persistence. Tiny curvature disturbances then give rise to positive feedback loops, thus producing migrating bends, cut-off events, and meander scars in the surface of the terrain.
+This behaviour is strengthened by introducing stream-level momentum coupling (approximated from accumulated particle motion), which gives curved channels some directional persistence. Tiny curvature disturbances then give rise to positive feedback loops, thus producing evident migrating bends, cut-off events, and meander scarring in the surface of the terrain.
 
 ## Architecture
 

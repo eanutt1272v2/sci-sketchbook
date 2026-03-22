@@ -775,6 +775,35 @@ class Renderer {
     if (this.eqOverlayEl) this.eqOverlayEl.style.display = "none";
   }
 
+  positionEquationOverlay(preferredLeftPx = null) {
+    const panel = this.eqOverlayEl;
+    const canvasEl = _renderer?.elt;
+    if (!panel || !canvasEl) return;
+
+    const rect = canvasEl.getBoundingClientRect();
+    const margin = 12;
+    const maxWidth = Math.max(220, Math.floor(rect.width - margin * 2));
+    panel.style.maxWidth = `${maxWidth}px`;
+
+    const panelWidth = panel.offsetWidth;
+    const panelHeight = panel.offsetHeight;
+
+    const minLeft = rect.left + margin;
+    const maxLeft = rect.right - panelWidth - margin;
+    const minTop = rect.top + margin;
+    const maxTop = rect.bottom - panelHeight - margin;
+
+    const wantedLeft =
+      Number.isFinite(preferredLeftPx) ? preferredLeftPx : rect.left + margin;
+    const left = Math.max(minLeft, Math.min(wantedLeft, Math.max(minLeft, maxLeft)));
+    const top = Math.max(minTop, Math.min(maxTop, Math.max(minTop, maxTop)));
+
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+    panel.style.right = "auto";
+    panel.style.bottom = "auto";
+  }
+
   dispose() {
     if (this.eqOverlayEl && this.eqOverlayEl.parentNode === document.body) {
       document.body.removeChild(this.eqOverlayEl);
@@ -794,6 +823,7 @@ class Renderer {
   renderEquationOverlay() {
     const panel = this.ensureEquationOverlay();
     panel.style.display = "block";
+    this.positionEquationOverlay();
     const mathEl = panel.querySelector(".equation-overlay__math");
     const tex = String.raw`\begin{aligned}
 	ilde{\mathbf{v}}_{t+1} &= \mathbf{v}_t + \frac{g\,\hat{\mathbf{n}}_{xz}(\mathbf{x})}{V_t}
