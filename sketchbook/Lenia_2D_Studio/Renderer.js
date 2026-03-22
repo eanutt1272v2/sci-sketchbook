@@ -830,7 +830,7 @@ class Renderer {
     panel.style.display = "none";
     const title = document.createElement("p");
     title.className = "equation-overlay__title";
-    title.textContent = "Lenia's Continuous Cellular Automata Model";
+    title.textContent = "Lenia: Continuous Cellular Automata";
     const math = document.createElement("div");
     math.className = "equation-overlay__math";
     panel.appendChild(title);

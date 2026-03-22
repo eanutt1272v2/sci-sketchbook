@@ -26,7 +26,7 @@ class Renderer {
 
     const title = document.createElement("p");
     title.className = "equation-overlay__title";
-    title.textContent = "Psi's Hydrogenic Wavefunction Probability Density Model";
+    title.textContent = "Hydrogen Wavefunctions: Probability Density";
 
     const math = document.createElement("div");
     math.className = "equation-overlay__math";

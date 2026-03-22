@@ -756,7 +756,7 @@ class Renderer {
     panel.style.padding = "8px 10px 6px";
     const title = document.createElement("p");
     title.className = "equation-overlay__title";
-    title.textContent = "Fluvia's Hydraulic Erosion Model";
+    title.textContent = "Hydraulic Erosion Model";
     title.style.fontSize = "12px";
     title.style.margin = "0 0 4px";
     const math = document.createElement("div");

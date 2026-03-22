@@ -50,7 +50,7 @@ function setupCanvasProperties(canvas) {
   noSmooth();
   textFont(font || "monospace");
   pixelDensity(1);
-  frameRate(60);
+  frameRate(120);
 }
 
 function mouseClicked(e) { return appcore ? appcore.handleMouseClicked(e) : false; }
