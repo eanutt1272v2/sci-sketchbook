@@ -22,6 +22,12 @@ let appcore;
 let font;
 let mainCanvas;
 
+function disposeAppCore() {
+  if (!appcore || typeof appcore.dispose !== "function") return;
+  appcore.dispose();
+  appcore = null;
+}
+
 function preload() {
   font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
 }
@@ -32,9 +38,12 @@ function setup() {
   setupCanvasProperties(mainCanvas);
 
   requestAnimationFrame(() => {
+    disposeAppCore();
     appcore = new AppCore({ metadata });
   });
 }
+
+window.addEventListener("pagehide", disposeAppCore);
 
 function setupCanvasProperties(canvas) {
   const canvasEl = canvas.elt;

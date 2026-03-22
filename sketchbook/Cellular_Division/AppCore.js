@@ -28,9 +28,27 @@ class AppCore {
   windowResized() {
     const canvasSize = min(windowWidth, windowHeight);
     resizeCanvas(canvasSize, canvasSize);
+
+    if (this.ui && typeof this.ui.dispose === "function") {
+      this.ui.dispose();
+    }
+
     this.ui = new UIManager(this);
     this.sim.particleCount = this.sim.defaultParticleCount();
     this.restartSimulation();
+  }
+
+  dispose() {
+    if (this.ui && typeof this.ui.dispose === "function") {
+      this.ui.dispose();
+    }
+
+    if (this.sim && typeof this.sim.dispose === "function") {
+      this.sim.dispose();
+    }
+
+    this.ui = null;
+    this.sim = null;
   }
 
   restartSimulation() {

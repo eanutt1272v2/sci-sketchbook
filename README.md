@@ -13,11 +13,8 @@ Live deployment: <https://sci-sketchbook.onrender.com/>
 
 | Sketch | Summary | Implementation(s) |
 | :-- | :-- | :-- |
-| [Burning Ship Fractal](./sketchbook/Burning_Ship_Fractal) | Non-holomorphic escape-time fractal | p5.js + worker |
-| [Mandelbrot Set](./sketchbook/Mandelbrot_Set) | Quadratic complex-set exploration | p5.js + worker |
-| [Julia Set](./sketchbook/Julia_Set) | Parameter-fixed quadratic Julia Set fractal | p5.js + worker |
 | [Cellular Division](./sketchbook/Cellular_Division) | Primordial Particle System implementation | p5.js + worker |
-| [Psi](./sketchbook/Psi) | Hydrogen orbital probability-density slices | p5.js + worker |
+| [Psi (ψ)](./sketchbook/Psi) | Hydrogen orbital probability-density slices | p5.js + worker |
 | [Fluvia](./sketchbook/Fluvia) | Lagrangian hydraulic erosion simulation | p5.js + worker + GLSL |
 | [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia cellular automata | p5.js + FFT worker |
 

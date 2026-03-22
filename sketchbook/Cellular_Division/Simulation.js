@@ -50,6 +50,17 @@ class Simulation {
     };
   }
 
+  _terminateWorker() {
+    if (!this._worker) return;
+
+    this._worker.onmessage = null;
+    this._worker.onerror = null;
+    this._worker.terminate();
+    this._worker = null;
+    this._workerBusy = false;
+    this._workerReady = false;
+  }
+
   _sendWorkerInit() {
     if (!this._worker) return;
     this._workerReady = false;
@@ -359,5 +370,15 @@ class Simulation {
 
   updateSpecies() {
     this.species = new Species(this.alpha, this.beta, this.gamma, this.radius);
+  }
+
+  dispose() {
+    this._terminateWorker();
+    this._lastResult = null;
+    this._history.length = 0;
+    this.particles.length = 0;
+    this.spatialGrid = null;
+    this.cellTracker = null;
+    this.species = null;
   }
 }
