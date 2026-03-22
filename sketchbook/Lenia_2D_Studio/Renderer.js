@@ -1,5 +1,5 @@
 class Renderer {
-  constructor(size, colourMaps = {}, initialColourMap = "greyscale") {
+  constructor(size, colourMaps = {}, initialColourMap = "greyscale", uiFont = null) {
     this.size = size;
     this.img = createImage(this.size, this.size);
 
@@ -7,13 +7,22 @@ class Renderer {
     this.currentColourMap = "";
     this.lut = new Uint8ClampedArray(256 * 3);
     this.calcPanelImage = null;
+    this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
     this.lastLegendRange = { mode: "world", min: 0, max: 1 };
     this.eqOverlayEl = null;
     this.eqOverlaySig = "";
     this.motionTrail = [];
     this.maxMotionTrailPoints = 180;
+    this.uiFont = uiFont;
     this.setColourMap(initialColourMap);
+  }
+
+  _applyTextFont(ctx = null) {
+    const target = ctx || this;
+    if (!this.uiFont) return;
+    if (typeof target.textFont !== "function") return;
+    target.textFont(this.uiFont);
   }
 
   _computeDataRange(data) {
@@ -42,6 +51,7 @@ class Renderer {
     this.size = size;
     this.img = createImage(this.size, this.size);
     this.motionTrail = [];
+    this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
   }
 
@@ -756,6 +766,9 @@ class Renderer {
 
     const layout = this._getCalcPanelLayout();
     const { panelSize, gap, cols, rows, totalW, totalH, baseX, baseY } = layout;
+    const panelCanvas = this._ensureCalcPanelsCanvas(layout);
+
+    panelCanvas.clear();
 
     const views = [
       this._getViewSpec(board, automaton, "world"),
@@ -767,13 +780,16 @@ class Renderer {
     for (let i = 0; i < views.length; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const x = baseX + col * (panelSize + gap);
-      const y = baseY + row * (panelSize + gap);
-      this._renderCalcPanel(views[i], x, y, panelSize);
+      const x = col * (panelSize + gap);
+      const y = row * (panelSize + gap);
+      this._renderCalcPanel(views[i], x, y, panelSize, panelCanvas);
     }
 
-    this.lastCalcPanelsFrame = get(baseX, baseY, totalW, totalH);
-    this._renderCalcPanelBorders(baseX, baseY, panelSize, gap, cols, rows);
+    this._renderCalcPanelBorders(0, 0, panelSize, gap, cols, rows, panelCanvas);
+    this.lastCalcPanelsFrame = panelCanvas;
+
+    noSmooth();
+    image(panelCanvas, baseX, baseY, totalW, totalH);
   }
 
   renderCachedCalcPanels() {
@@ -791,11 +807,25 @@ class Renderer {
     noSmooth();
     image(this.lastCalcPanelsFrame, b.x, b.y, b.w, b.h);
 
-    const { panelSize, gap, cols, rows } = layout;
-
-    this._renderCalcPanelBorders(b.x, b.y, panelSize, gap, cols, rows);
-
     return true;
+  }
+
+  _ensureCalcPanelsCanvas(layout) {
+    const { totalW, totalH } = layout;
+    if (
+      !this.calcPanelsCanvas ||
+      this.calcPanelsCanvas.width !== totalW ||
+      this.calcPanelsCanvas.height !== totalH
+    ) {
+      this.calcPanelsCanvas = createGraphics(totalW, totalH);
+      if (typeof this.calcPanelsCanvas.pixelDensity === "function") {
+        this.calcPanelsCanvas.pixelDensity(1);
+      }
+      if (typeof this.calcPanelsCanvas.noSmooth === "function") {
+        this.calcPanelsCanvas.noSmooth();
+      }
+    }
+    return this.calcPanelsCanvas;
   }
 
   _getCalcPanelLayout() {
@@ -810,23 +840,51 @@ class Renderer {
     return { panelSize, gap, cols, rows, totalW, totalH, baseX, baseY };
   }
 
-  _renderCalcPanelBorders(baseX, baseY, panelSize, gap, cols, rows) {
-    push();
-    noFill();
-    stroke(255, 210);
-    strokeWeight(1);
+  _renderCalcPanelBorders(baseX, baseY, panelSize, gap, cols, rows, target = null) {
+    const ctx = target || this;
+    ctx.push();
+    ctx.noFill();
+    ctx.stroke(255, 210);
+    ctx.strokeWeight(1);
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const x = baseX + col * (panelSize + gap);
         const y = baseY + row * (panelSize + gap);
-        rect(x, y, panelSize, panelSize);
+        ctx.rect(x, y, panelSize, panelSize);
       }
     }
-    pop();
+    ctx.pop();
   }
 
-  _renderCalcPanel(view, x, y, panelSize) {
-    if (!view || !view.data || !view.srcSize) return;
+  _renderCalcPanel(view, x, y, panelSize, target = null) {
+    const ctx = target || this;
+    const label = view?.label || "Panel";
+    const hasData = !!(
+      view &&
+      view.data &&
+      Number.isFinite(view.srcSize) &&
+      view.srcSize > 0
+    );
+
+    ctx.push();
+    ctx.noStroke();
+    ctx.fill(0, 190);
+    ctx.rect(x, y, panelSize, panelSize);
+    ctx.pop();
+
+    if (!hasData) {
+      ctx.push();
+      ctx.noStroke();
+      ctx.fill(0, 170);
+      ctx.rect(x + 1, y + 1, panelSize - 2, panelSize - 2);
+      this._applyTextFont(ctx);
+      ctx.textSize(10);
+      ctx.textAlign(LEFT, TOP);
+      ctx.fill(255, 220);
+      ctx.text(`${label} (pending)`, x + 6, y + 4);
+      ctx.pop();
+      return;
+    }
 
     if (
       !this.calcPanelImage ||
@@ -862,18 +920,19 @@ class Renderer {
     }
     img.updatePixels();
 
-    push();
-    noSmooth();
-    image(img, x, y, panelSize, panelSize);
+    ctx.push();
+    if (typeof ctx.noSmooth === "function") ctx.noSmooth();
+    ctx.image(img, x, y, panelSize, panelSize);
 
-    noStroke();
-    fill(0, 200);
-    textSize(10);
-    textAlign(LEFT, TOP);
-    text(view.label, x + 7, y + 5);
-    fill(255);
-    text(view.label, x + 6, y + 4);
-    pop();
+    ctx.noStroke();
+    ctx.fill(0, 200);
+    this._applyTextFont(ctx);
+    ctx.textSize(10);
+    ctx.textAlign(LEFT, TOP);
+    ctx.text(label, x + 7, y + 5);
+    ctx.fill(255);
+    ctx.text(label, x + 6, y + 4);
+    ctx.pop();
   }
 
   ensureEquationOverlay() {
@@ -937,6 +996,7 @@ class Renderer {
     this.motionTrail = [];
     this.img = null;
     this.calcPanelImage = null;
+    this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
   }
 

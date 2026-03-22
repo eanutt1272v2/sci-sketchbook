@@ -100,6 +100,7 @@ class AppCore {
       this.params.gridSize,
       this.colourMaps,
       this.params.colourMap,
+      this.font,
     );
     this.media = new Media(this);
     this.gui = new GUI(
@@ -129,12 +130,7 @@ class AppCore {
     try {
       this._worker = new Worker("LeniaWorker.js");
     } catch (e) {
-      console.warn(
-        "[Lenia] Worker unavailable, falling back to main-thread simulation",
-        e,
-      );
-      this._worker = null;
-      return;
+      throw new Error("[Lenia] Worker is required but could not be created.");
     }
 
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
@@ -408,15 +404,8 @@ class AppCore {
       return;
     }
 
-    if (this.params.running) {
-      if (this._worker) {
-        if (this.board.world) {
-          this._dispatchWorkerStep();
-        }
-      } else {
-        this.automaton.step(this.board);
-        this._postStepUpdate();
-      }
+    if (this.params.running && this.board.world) {
+      this._dispatchWorkerStep();
     }
 
     if (this.params.running) {
@@ -427,12 +416,7 @@ class AppCore {
   stepOnce() {
     if (this._workerBusy) return;
     this._ensureBuffers();
-    if (this._worker) {
-      this._dispatchWorkerStep();
-    } else {
-      this.automaton.step(this.board);
-      this._postStepUpdate();
-    }
+    if (this._worker) this._dispatchWorkerStep();
   }
 
   clearWorld() {

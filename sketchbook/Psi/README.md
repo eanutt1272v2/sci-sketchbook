@@ -16,7 +16,6 @@ where `R_{n,l}` is the normalised radial basis term and `Y_l^m` is the normalise
 
 - `AppCore.js`: state, render queue, and worker management
 - `PsiWorker.js`: density-grid computation kernel
-- `FallbackSolver.js`: synchronous compute fallback
 - `Renderer.js`: LUT rendering, overlays, and legend
 - `FallbackAnalyser.js`: advanced field statistics
 - `GUI.js`, `InputHandler.js`, `Media.js`: controls, interaction, and output

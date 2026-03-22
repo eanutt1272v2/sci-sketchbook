@@ -50,12 +50,10 @@ class AppCore {
     this._pendingActions = [];
     this._analysisConfig = { resolution: 384 };
     this._analysisSignature = "";
-    this._analysisGrid = null;
     this._normalisationPeak = 1e-30;
     this._lastStableNormalisationPeak = 1e-30;
     this.aMuMeters = 5.29177210903e-11;
 
-    this.fallbacksolver = new FallbackSolver(this);
     this.analyser = new Analyser(this.statistics);
     this.renderer = new Renderer(this);
     this.media = new Media(this);
@@ -107,7 +105,7 @@ class AppCore {
     const maps = this.colourMapKeys;
     const currentIndex = maps.indexOf(this.params.colourMap);
     this.params.colourMap = maps[(currentIndex + 1) % maps.length];
-    this.renderer.update();
+    this.requestRender();
   }
 
   toggleOverlay() {
@@ -244,16 +242,14 @@ class AppCore {
 
   _requestRenderNow() {
     this._sanitisePhysicalParams();
-    if (this._worker) {
-      if (this._workerBusy) {
-        this._renderPending = true;
-      } else {
-        this._dispatchRender();
-      }
+    if (!this._worker) {
+      return;
+    }
+
+    if (this._workerBusy) {
+      this._renderPending = true;
     } else {
-      this._updateCanonicalAnalysis(false, this.params.renderOverlay);
-      this.renderer.update();
-      this.refreshGUI();
+      this._dispatchRender();
     }
   }
 
@@ -306,54 +302,6 @@ class AppCore {
       Number.isFinite(rawMass) && rawMass > 0 ? rawMass : fallbackMass;
   }
 
-  _updateCanonicalAnalysis(force = false, updateStats = true) {
-    this._sanitisePhysicalParams();
-    const signature = this._getAnalysisSignature();
-    const shouldRecompute = force || signature !== this._analysisSignature;
-
-    if (shouldRecompute) {
-      const { n, l, m, slicePlane, sliceOffset } = this.params;
-      const canonicalRadius = this._getCanonicalViewRadius();
-      const result = this.renderer.computeGridData({
-        n,
-        l,
-        m,
-        resolution: this._analysisConfig.resolution,
-        viewRadius: canonicalRadius,
-        slicePlane,
-        sliceOffset,
-        viewCentre: { x: 0, y: 0, z: 0 },
-        allocateBuffer: false,
-      });
-
-      this._analysisGrid = result.grid;
-      const nextPeak = Number(result.peak);
-      if (Number.isFinite(nextPeak) && nextPeak > 0) {
-        this._normalisationPeak = Math.max(1e-30, nextPeak);
-        this._lastStableNormalisationPeak = this._normalisationPeak;
-      } else {
-        this._normalisationPeak = this._lastStableNormalisationPeak;
-      }
-      if (Number.isFinite(Number(result.aMu))) {
-        this.aMuMeters = Number(result.aMu);
-      }
-      this._analysisSignature = signature;
-    }
-
-    if (!this._analysisGrid || this._analysisGrid.length === 0) return;
-
-    if (!updateStats) return;
-
-    this.analyser.updateStatistics(this._analysisGrid, {
-      ...this.params,
-      fps: Number(this.statistics.fps) || 0,
-      resolution: this._analysisConfig.resolution,
-      viewRadius: this._getCanonicalViewRadius(),
-      viewCentre: { x: 0, y: 0, z: 0 },
-      aMuMeters: this.aMuMeters,
-    });
-  }
-
   getNormalisationPeak() {
     const peak = Number(this._normalisationPeak);
     if (Number.isFinite(peak) && peak > 0) {
@@ -382,20 +330,12 @@ class AppCore {
     try {
       this._worker = new Worker("PsiWorker.js");
     } catch (e) {
-      console.warn(
-        "[Psi] Worker unavailable, falling back to synchronous rendering",
-        e,
-      );
-      this._worker = null;
-      return;
+      throw new Error("[Psi] Worker is required but could not be created.");
     }
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
     this._worker.onerror = (e) => {
       console.error("[Psi] Worker error:", e);
       this._workerBusy = false;
-      this._updateCanonicalAnalysis(false, this.params.renderOverlay);
-      this.renderer.update();
-      this.refreshGUI();
     };
   }
 

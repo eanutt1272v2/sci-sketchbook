@@ -1,6 +1,6 @@
 "use strict";
 
-function _fftRadix2(buf, inverse) {
+function fftRadix2(buf, inverse) {
   const N = buf.length >>> 1;
   let j = 0;
   for (let i = 1; i < N; i++) {
@@ -11,8 +11,8 @@ function _fftRadix2(buf, inverse) {
     }
     j ^= bit;
     if (i < j) {
-      let ti = i * 2,
-        tj = j * 2;
+      const ti = i * 2;
+      const tj = j * 2;
       let t = buf[ti];
       buf[ti] = buf[tj];
       buf[tj] = t;
@@ -29,8 +29,8 @@ function _fftRadix2(buf, inverse) {
     const wRe = Math.cos(ang);
     const wIm = Math.sin(ang);
     for (let i = 0; i < N; i += len) {
-      let uRe = 1,
-        uIm = 0;
+      let uRe = 1;
+      let uIm = 0;
       for (let k = 0; k < half; k++) {
         const a = (i + k) * 2;
         const b = (i + k + half) * 2;
@@ -46,27 +46,29 @@ function _fftRadix2(buf, inverse) {
       }
     }
   }
+
   if (inverse) {
     const inv = 1 / N;
     for (let i = 0; i < buf.length; i++) buf[i] *= inv;
   }
 }
 
-function _fft2D(buf, N, inverse) {
+function fft2D(buf, N, inverse) {
   const row = new Float64Array(N * 2);
   for (let r = 0; r < N; r++) {
     const off = r * N * 2;
     for (let i = 0; i < N * 2; i++) row[i] = buf[off + i];
-    _fftRadix2(row, inverse);
+    fftRadix2(row, inverse);
     for (let i = 0; i < N * 2; i++) buf[off + i] = row[i];
   }
+
   const col = new Float64Array(N * 2);
   for (let c = 0; c < N; c++) {
     for (let r = 0; r < N; r++) {
       col[r * 2] = buf[(r * N + c) * 2];
       col[r * 2 + 1] = buf[(r * N + c) * 2 + 1];
     }
-    _fftRadix2(col, inverse);
+    fftRadix2(col, inverse);
     for (let r = 0; r < N; r++) {
       buf[(r * N + c) * 2] = col[r * 2];
       buf[(r * N + c) * 2 + 1] = col[r * 2 + 1];
@@ -74,10 +76,42 @@ function _fft2D(buf, N, inverse) {
   }
 }
 
-function _nextPow2(n) {
+function nextPow2(n) {
   let p = 1;
   while (p < n) p <<= 1;
   return p;
+}
+
+function createAnalysisState(epsilon = 1e-10, maxHistory = 512) {
+  return {
+    epsilon,
+    maxHistory,
+    lastCentreX: null,
+    lastCentreY: null,
+    lastSymmPhase: null,
+    lastSymmOrder: 0,
+    lyapunov: 0,
+    massHistory: [],
+    frames: 0,
+  };
+}
+
+function resetAnalysisState(state) {
+  state.lastCentreX = null;
+  state.lastCentreY = null;
+  state.lastSymmPhase = null;
+  state.lastSymmOrder = 0;
+  state.lyapunov = 0;
+  state.massHistory = [];
+  state.frames = 0;
+}
+
+function torusDelta(a, b, size) {
+  let d = a - b;
+  const half = size * 0.5;
+  if (d > half) d -= size;
+  if (d < -half) d += size;
+  return d;
 }
 
 const KERNEL_CORE = [
@@ -91,22 +125,22 @@ const KERNEL_CORE = [
   },
 ];
 
-function _kernelCore(r, kn) {
+function kernelCore(r, kn) {
   const fn = KERNEL_CORE[Math.max(0, Math.min(3, kn - 1))];
   return fn ? fn(r) : KERNEL_CORE[0](r);
 }
 
-function _kernelShell(r, b, kn) {
+function kernelShell(r, b, kn) {
   if (r >= 1) return 0;
   const B = b.length;
   const Br = B * r;
   const idx = Math.min(Math.floor(Br), B - 1);
   const bVal = b[idx];
   const frac = Br % 1;
-  return _kernelCore(frac, kn) * bVal;
+  return kernelCore(frac, kn) * bVal;
 }
 
-function _buildKernel(params) {
+function buildKernel(params) {
   const R = params.R;
   const kn = params.kn || 1;
   const b = Array.isArray(params.b) ? params.b : [params.b || 1];
@@ -114,15 +148,13 @@ function _buildKernel(params) {
   const kernelRadius = Math.ceil(R);
   const kernelSize = kernelRadius * 2 + 1;
   const kernel = new Float32Array(kernelSize * kernelSize);
-  const cx = kernelRadius;
-  const cy = kernelRadius;
 
   for (let y = 0; y < kernelSize; y++) {
     for (let x = 0; x < kernelSize; x++) {
-      const dx = x - cx;
-      const dy = y - cy;
+      const dx = x - kernelRadius;
+      const dy = y - kernelRadius;
       const d = Math.sqrt(dx * dx + dy * dy) / R;
-      kernel[y * kernelSize + x] = _kernelShell(d, b, kn);
+      kernel[y * kernelSize + x] = kernelShell(d, b, kn);
     }
   }
 
@@ -132,14 +164,15 @@ function _buildKernel(params) {
     sum += kernel[i];
     if (kernel[i] > maxVal) maxVal = kernel[i];
   }
+
   if (sum > 0) {
     for (let i = 0; i < kernel.length; i++) kernel[i] /= sum;
     maxVal /= sum;
   }
 
-  const dxArr = [],
-    dyArr = [],
-    kvArr = [];
+  const dxArr = [];
+  const dyArr = [];
+  const kvArr = [];
   for (let y = 0; y < kernelSize; y++) {
     for (let x = 0; x < kernelSize; x++) {
       const val = kernel[y * kernelSize + x];
@@ -162,7 +195,7 @@ function _buildKernel(params) {
   };
 }
 
-function _buildKernelFFT(kernel, kernelSize, N) {
+function buildKernelFFT(kernel, kernelSize, N) {
   const buf = new Float64Array(N * N * 2);
   const kr = Math.floor(kernelSize / 2);
 
@@ -175,35 +208,89 @@ function _buildKernelFFT(kernel, kernelSize, N) {
       buf[(destY * N + destX) * 2] = val;
     }
   }
-  _fft2D(buf, N, false);
+
+  fft2D(buf, N, false);
   return buf;
 }
 
-let _N = 0;
-let _kernelFFT = null;
-let _kernelInfo = null;
-
-const _analysisState = {
-  epsilon: 1e-10,
-  lastCentreX: null,
-  lastCentreY: null,
-  lastSymmPhase: null,
-  lastSymmOrder: 0,
-  lyapunov: 0,
-  massHistory: [],
-  maxHistory: 512,
-  frames: 0,
-};
-
-function _torusDelta(a, b, size) {
-  let d = a - b;
-  const half = size * 0.5;
-  if (d > half) d -= size;
-  if (d < -half) d += size;
-  return d;
+function growthFunc(n, m, s, gn) {
+  if (gn === 2) return Math.exp(-((n - m) ** 2) / (2 * s ** 2)) * 2 - 1;
+  if (gn === 3) return Math.abs(n - m) <= s ? 1 : -1;
+  const val = Math.max(0, 1 - (n - m) ** 2 / (9 * s ** 2));
+  return Math.pow(val, 4) * 2 - 1;
 }
 
-function _detectSymmetry(cells, size, stats, state, params) {
+function stepFFT(cells, potential, field, fieldOld, params, kernelFFT, N) {
+  const size = params.size;
+
+  const cellBuf = new Float64Array(N * N * 2);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      cellBuf[(y * N + x) * 2] = cells[y * size + x];
+    }
+  }
+  fft2D(cellBuf, N, false);
+
+  const result = new Float64Array(N * N * 2);
+  for (let i = 0; i < N * N; i++) {
+    const ar = cellBuf[i * 2];
+    const ai = cellBuf[i * 2 + 1];
+    const br = kernelFFT[i * 2];
+    const bi = kernelFFT[i * 2 + 1];
+    result[i * 2] = ar * br - ai * bi;
+    result[i * 2 + 1] = ar * bi + ai * br;
+  }
+  fft2D(result, N, true);
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      potential[y * size + x] = Math.max(0, result[(y * N + x) * 2]);
+    }
+  }
+
+  const { T, m, s, gn, softClip, multiStep, addNoise, maskRate, paramP } =
+    params;
+  const dt = 1 / T;
+  const count = size * size;
+  const noiseAmp = addNoise / 10;
+  const hasNoise = noiseAmp > 0;
+  const mr = maskRate / 10;
+  const hasMask = mr > 0;
+  const hasOld = multiStep && fieldOld;
+
+  const change = new Float32Array(count);
+
+  for (let i = 0; i < count; i++) {
+    const growth = growthFunc(potential[i], m, s, gn);
+    field[i] = growth;
+
+    let D = growth;
+    if (hasOld) D = 0.5 * (3 * field[i] - fieldOld[i]);
+
+    const deltaTerm = dt * D;
+    let newVal = cells[i] + deltaTerm;
+    change[i] = deltaTerm;
+
+    if (hasNoise) newVal *= 1 + (Math.random() - 0.5) * noiseAmp;
+
+    if (softClip) {
+      const k = 1 / dt;
+      const a = Math.exp(k * newVal);
+      const b2 = Math.exp(0);
+      const c2 = Math.exp(-k);
+      newVal = Math.log(1 / (a + b2) + c2) / -k;
+    } else {
+      newVal = Math.max(0, Math.min(1, newVal));
+    }
+
+    if (paramP > 0) newVal = Math.round(newVal * paramP) / paramP;
+    if (!hasMask || Math.random() > mr) cells[i] = newVal;
+  }
+
+  return change;
+}
+
+function detectSymmetry(cells, size, stats, state, params) {
   const center = size / 2;
   const radius = Math.min(center * 0.8, 64);
   const angularBins = 64;
@@ -213,7 +300,6 @@ function _detectSymmetry(cells, size, stats, state, params) {
     const angle = (theta / angularBins) * 2 * Math.PI;
     let sum = 0;
     let count = 0;
-
     for (let r = 1; r < radius; r += 1) {
       const x = Math.round(center + r * Math.cos(angle));
       const y = Math.round(center + r * Math.sin(angle));
@@ -222,7 +308,6 @@ function _detectSymmetry(cells, size, stats, state, params) {
         count++;
       }
     }
-
     angles[theta] = count > 0 ? sum / count : 0;
   }
 
@@ -289,7 +374,7 @@ function _detectSymmetry(cells, size, stats, state, params) {
   stats.rotationSpeed = Number.isFinite(rotSpeed) ? rotSpeed : 0;
 }
 
-function _detectPeriodicity(stats, params, state) {
+function detectPeriodicity(stats, params, state) {
   const currentMass = Number(stats.mass) || 0;
   state.massHistory.push(currentMass);
   if (state.massHistory.length > state.maxHistory) {
@@ -340,7 +425,7 @@ function _detectPeriodicity(stats, params, state) {
   stats.periodConfidence = Math.max(0, bestCorr);
 }
 
-function _analyseStep(cells, field, change, params, state) {
+function analyseStep(cells, field, change, params, state) {
   const stats = {
     mass: 0,
     growth: 0,
@@ -364,10 +449,6 @@ function _analyseStep(cells, field, change, params, state) {
 
   const size = params.size;
   const count = size * size;
-  let mx = 0;
-  let my = 0;
-  let gx = 0;
-  let gy = 0;
   let gMass = 0;
   let cosX = 0;
   let sinX = 0;
@@ -395,11 +476,7 @@ function _analyseStep(cells, field, change, params, state) {
 
     if (val > stats.maxValue) stats.maxValue = val;
 
-    mx += val * x;
-    my += val * y;
     if (growthVal > 0) {
-      gx += growthVal * x;
-      gy += growthVal * y;
       gCosX += growthVal * Math.cos(ax);
       gSinX += growthVal * Math.sin(ax);
       gCosY += growthVal * Math.cos(ay);
@@ -411,6 +488,7 @@ function _analyseStep(cells, field, change, params, state) {
     cosY += val * Math.cos(ay);
     sinY += val * Math.sin(ay);
   }
+
   if (stats.mass > state.epsilon) {
     const thetaX = Math.atan2(sinX, cosX);
     const thetaY = Math.atan2(sinY, cosY);
@@ -423,8 +501,8 @@ function _analyseStep(cells, field, change, params, state) {
     const gThetaY = Math.atan2(gSinY, gCosY);
     stats.growthCenterX = ((gThetaX / (2 * Math.PI)) * size + size) % size;
     stats.growthCenterY = ((gThetaY / (2 * Math.PI)) * size + size) % size;
-    const mgDx = _torusDelta(stats.centerX, stats.growthCenterX, size);
-    const mgDy = _torusDelta(stats.centerY, stats.growthCenterY, size);
+    const mgDx = torusDelta(stats.centerX, stats.growthCenterX, size);
+    const mgDy = torusDelta(stats.centerY, stats.growthCenterY, size);
     stats.massGrowthDist = Math.sqrt(mgDx * mgDx + mgDy * mgDy);
   }
 
@@ -435,16 +513,16 @@ function _analyseStep(cells, field, change, params, state) {
       if (val <= state.epsilon) continue;
       const x = i % size;
       const y = Math.floor(i / size);
-      const dx = _torusDelta(x, stats.centerX, size);
-      const dy = _torusDelta(y, stats.centerY, size);
+      const dx = torusDelta(x, stats.centerX, size);
+      const dy = torusDelta(y, stats.centerY, size);
       inertia += val * (dx * dx + dy * dy);
     }
   }
   stats.gyradius = stats.mass > state.epsilon ? Math.sqrt(inertia / stats.mass) : 0;
 
   if (state.lastCentreX !== null && stats.mass > state.epsilon) {
-    const dx = _torusDelta(stats.centerX, state.lastCentreX, size);
-    const dy = _torusDelta(stats.centerY, state.lastCentreY, size);
+    const dx = torusDelta(stats.centerX, state.lastCentreX, size);
+    const dy = torusDelta(stats.centerY, state.lastCentreY, size);
     const norm = Math.sqrt(dx * dx + dy * dy);
     if (norm > state.epsilon) {
       const nx = dx / norm;
@@ -457,8 +535,8 @@ function _analyseStep(cells, field, change, params, state) {
         if (val <= state.epsilon) continue;
         const x = i % size;
         const y = Math.floor(i / size);
-        const px = _torusDelta(x, stats.centerX, size);
-        const py = _torusDelta(y, stats.centerY, size);
+        const px = torusDelta(x, stats.centerX, size);
+        const py = torusDelta(y, stats.centerY, size);
         const side = px * ny - py * nx;
         if (side > 0) massRight += val;
         else massLeft += val;
@@ -470,22 +548,20 @@ function _analyseStep(cells, field, change, params, state) {
 
   if (change && stats.maxValue > state.epsilon) {
     let sum = 0;
-    for (let i = 0; i < change.length; i++) {
-      sum += Math.abs(change[i]);
-    }
+    for (let i = 0; i < change.length; i++) sum += Math.abs(change[i]);
     if (sum > state.epsilon) {
-      const frameIndex = Math.max(1, state.frames);
+      const frameIndex = Math.max(1, state.frames || 1);
       const l = Math.log(sum) - state.lyapunov;
       state.lyapunov += l / frameIndex;
     }
   }
 
-  _detectSymmetry(cells, size, stats, state, params);
-  _detectPeriodicity(stats, params, state);
+  detectSymmetry(cells, size, stats, state, params);
+  detectPeriodicity(stats, params, state);
 
   if (state.lastCentreX !== null) {
-    const dx = _torusDelta(stats.centerX, state.lastCentreX, size);
-    const dy = _torusDelta(stats.centerY, state.lastCentreY, size);
+    const dx = torusDelta(stats.centerX, state.lastCentreX, size);
+    const dy = torusDelta(stats.centerY, state.lastCentreY, size);
     stats.speed = Math.sqrt(dx * dx + dy * dy);
     stats.angle = (Math.atan2(dy, dx) * 180) / Math.PI;
   }
@@ -497,102 +573,20 @@ function _analyseStep(cells, field, change, params, state) {
   return stats;
 }
 
-function _growthFunc(n, m, s, gn) {
-  if (gn === 2) return Math.exp(-((n - m) ** 2) / (2 * s ** 2)) * 2 - 1;
-  if (gn === 3) return Math.abs(n - m) <= s ? 1 : -1;
-  const val = Math.max(0, 1 - (n - m) ** 2 / (9 * s ** 2));
-  return Math.pow(val, 4) * 2 - 1;
-}
-
-function _stepFFT(cells, potential, field, fieldOld, params, N) {
-  const size = params.size;
-
-  const cellBuf = new Float64Array(N * N * 2);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      cellBuf[(y * N + x) * 2] = cells[y * size + x];
-    }
-  }
-  _fft2D(cellBuf, N, false);
-
-  const result = new Float64Array(N * N * 2);
-  for (let i = 0; i < N * N; i++) {
-    const ar = cellBuf[i * 2],
-      ai = cellBuf[i * 2 + 1];
-    const br = _kernelFFT[i * 2],
-      bi = _kernelFFT[i * 2 + 1];
-    result[i * 2] = ar * br - ai * bi;
-    result[i * 2 + 1] = ar * bi + ai * br;
-  }
-  _fft2D(result, N, true);
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      potential[y * size + x] = Math.max(0, result[(y * N + x) * 2]);
-    }
-  }
-
-  const { T, m, s, gn, softClip, multiStep, addNoise, maskRate, paramP } =
-    params;
-  const dt = 1 / T;
-  const count = size * size;
-  const noiseAmp = addNoise / 10;
-  const hasNoise = noiseAmp > 0;
-  const mr = maskRate / 10;
-  const hasMask = mr > 0;
-  const hasOld = multiStep && fieldOld;
-
-  const change = new Float32Array(count);
-
-  for (let i = 0; i < count; i++) {
-    const growth = _growthFunc(potential[i], m, s, gn);
-    field[i] = growth;
-
-    let D = growth;
-    if (hasOld) D = 0.5 * (3 * field[i] - fieldOld[i]);
-
-    const deltaTerm = dt * D;
-    let newVal = cells[i] + deltaTerm;
-    change[i] = deltaTerm;
-
-    if (hasNoise) newVal *= 1 + (Math.random() - 0.5) * noiseAmp;
-
-    if (softClip) {
-      const k = 1 / dt;
-      const a = Math.exp(k * newVal);
-      const b2 = Math.exp(0);
-      const c2 = Math.exp(-k);
-      newVal = Math.log(1 / (a + b2) + c2) / -k;
-    } else {
-      newVal = Math.max(0, Math.min(1, newVal));
-    }
-
-    if (paramP > 0) newVal = Math.round(newVal * paramP) / paramP;
-    if (!hasMask || Math.random() > mr) cells[i] = newVal;
-  }
-
-  return change;
-}
+let _N = 0;
+let _kernelFFT = null;
+const _analysisState = createAnalysisState();
 
 self.onmessage = function (e) {
   const msg = e.data;
 
   if (msg.type === "kernel") {
-    _analysisState.lastCentreX = null;
-    _analysisState.lastCentreY = null;
-    _analysisState.lastSymmPhase = null;
-    _analysisState.lastSymmOrder = 0;
-    _analysisState.lyapunov = 0;
-    _analysisState.massHistory = [];
-    _analysisState.frames = 0;
+    resetAnalysisState(_analysisState);
 
-    const info = _buildKernel(msg.params);
-    _kernelInfo = info;
-
+    const info = buildKernel(msg.params);
     const size = msg.params.size || 128;
-    _N = _nextPow2(size);
-
-    _kernelFFT = _buildKernelFFT(info.kernel, info.kernelSize, _N);
+    _N = nextPow2(size);
+    _kernelFFT = buildKernelFFT(info.kernel, info.kernelSize, _N);
 
     self.postMessage(
       {
@@ -618,33 +612,40 @@ self.onmessage = function (e) {
     const world = new Float32Array(msg.world);
     const potential = new Float32Array(msg.potential);
     const growth = new Float32Array(msg.growth);
-    const growthOld = msg.growthOld
-      ? new Float32Array(msg.growthOld)
-      : null;
+    const growthOld = msg.growthOld ? new Float32Array(msg.growthOld) : null;
     const params = msg.params;
 
-    if (!_kernelFFT || _N < _nextPow2(params.size)) {
-      const info = _buildKernel(params);
-      _kernelInfo = info;
-      _N = _nextPow2(params.size);
-      _kernelFFT = _buildKernelFFT(info.kernel, info.kernelSize, _N);
+    if (!_kernelFFT || _N < nextPow2(params.size)) {
+      const info = buildKernel(params);
+      _N = nextPow2(params.size);
+      _kernelFFT = buildKernelFFT(info.kernel, info.kernelSize, _N);
     }
 
-    const change = _stepFFT(world, potential, growth, growthOld, params, _N);
+    const change = stepFFT(
+      world,
+      potential,
+      growth,
+      growthOld,
+      params,
+      _kernelFFT,
+      _N,
+    );
+
     _analysisState.frames += 1;
-    const analysis = _analyseStep(world, growth, change, params, _analysisState);
+    const analysis = analyseStep(
+      world,
+      growth,
+      change,
+      { size: params.size, T: params.T },
+      _analysisState,
+    );
 
     let newGrowthOld = null;
     if (params.multiStep) {
       newGrowthOld = new Float32Array(growth);
     }
 
-    const transfers = [
-      world.buffer,
-      potential.buffer,
-      growth.buffer,
-      change.buffer,
-    ];
+    const transfers = [world.buffer, potential.buffer, growth.buffer, change.buffer];
     if (newGrowthOld) transfers.push(newGrowthOld.buffer);
 
     self.postMessage(
@@ -659,6 +660,5 @@ self.onmessage = function (e) {
       },
       transfers,
     );
-    return;
   }
 };

@@ -29,11 +29,11 @@ For larger grids, convolution is accelerated in `LeniaWorker.js`.
 
 ## Architecture
 
-- `AppCore.js`: management of worker and other components
-- `LeniaWorker.js`: kernel generation and world-step execution
-- `Automaton.js`, `Board.js`: world state and updating
+- `AppCore.js`: orchestrates worker execution, UI, and lifecycle
+- `LeniaWorker.js`: worker-side FFT solver and analysis pipeline
+- `Automaton.js`, `Board.js`: parameter/state container and world buffers mirrored from worker updates
+- `FallbackAnalyser.js`: worker-statistics adapter and integration helpers
 - `Renderer.js`: world/potential/field/kernel render modes
-- `FallbackAnalyser.js`: motion and morphology statistics
 - `AnimalLibrary.js`, `animals.json`: preset management
 - `GUI.js`, `InputHandler.js`, `Media.js`: controls and export systems
 

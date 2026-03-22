@@ -116,7 +116,6 @@ class AppCore {
 
   initialiseModules() {
     this.terrain = new Terrain(this);
-    this.fallbacksolver = new FallbackSolver(this);
     this.camera = new Camera(this);
     this.renderer = new Renderer(this);
     this.analyser = new Analyser(this);
@@ -150,7 +149,7 @@ class AppCore {
   }
 
   update() {
-    const { fallbacksolver, camera, params } = this;
+    const { camera, params } = this;
 
     this.input.handleContinuousInput();
 
@@ -161,11 +160,6 @@ class AppCore {
     }
 
     if (params.running) {
-      if (!this._worker) {
-        fallbacksolver.hydraulicErosion();
-        fallbacksolver.updateDischargeMap();
-      }
-
       this.analyser.update();
     }
 
@@ -176,12 +170,7 @@ class AppCore {
     try {
       this._worker = new Worker("FluviaWorker.js");
     } catch (e) {
-      console.warn(
-        "[Fluvia] Worker unavailable, falling back to main-thread fallback solver",
-        e,
-      );
-      this._worker = null;
-      return;
+      throw new Error("[Fluvia] Worker is required but could not be created.");
     }
 
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
@@ -333,7 +322,6 @@ class AppCore {
   _reinitialiseNow() {
     this._terminateWorker();
     this.terrain = new Terrain(this);
-    this.fallbacksolver = new FallbackSolver(this);
     this.renderer.reinitialise();
     this.terrain.generate();
     this.analyser.reinitialise();
