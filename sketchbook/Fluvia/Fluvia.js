@@ -4,6 +4,12 @@ let appcore;
 let vertShader, fragShader, colourMaps, font;
 let mainCanvas;
 
+function disposeAppCore() {
+  if (!appcore || typeof appcore.dispose !== "function") return;
+  appcore.dispose();
+  appcore = null;
+}
+
 const metadata = {
   name: "Fluvia",
   version: "v5.1.2-dev",
@@ -24,6 +30,7 @@ function setup() {
   setupCanvasProperties(mainCanvas);
 
   requestAnimationFrame(() => {
+    disposeAppCore();
     appcore = new AppCore({
       metadata,
       vertShader,
@@ -33,6 +40,8 @@ function setup() {
     });
   });
 }
+
+window.addEventListener("pagehide", disposeAppCore);
 
 function setupCanvasProperties(canvas) {
   const canvasEl = canvas.elt;

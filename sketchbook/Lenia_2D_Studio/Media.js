@@ -2,6 +2,7 @@ class Media {
   constructor(appcore) {
     this.appcore = appcore;
     this.mediaRecorder = null;
+    this.recordingStream = null;
     this.recordedChunks = [];
     this.isRecording = false;
 
@@ -59,6 +60,7 @@ class Media {
       const captureFps = this._getRecordingFPS();
       const bitrateBps = this._getRecordingBitrateBps();
       const stream = sourceCanvas.captureStream(captureFps);
+      this.recordingStream = stream;
       const options = { mimeType: supportedType };
       if (bitrateBps > 0) {
         options.videoBitsPerSecond = bitrateBps;
@@ -70,12 +72,16 @@ class Media {
       };
 
       this.mediaRecorder.onstop = () => {
-        const blob = new Blob(this.recordedChunks, { type: supportedType });
+        const chunks = this.recordedChunks.slice();
+        this.recordedChunks = [];
+        const blob = new Blob(chunks, { type: supportedType });
         const ext = supportedType.includes("mp4") ? "mp4" : "webm";
         this._triggerDownload(
           URL.createObjectURL(blob),
           this._getFilename(ext),
         );
+
+        this._releaseRecordingResources();
       };
 
       this.mediaRecorder.start();
@@ -95,8 +101,24 @@ class Media {
     if (!this.mediaRecorder || !this.isRecording) return;
     this.mediaRecorder.stop();
     this.isRecording = false;
-    this.recordedChunks = [];
     this.appcore.refreshGUI();
+  }
+
+  _releaseRecordingResources() {
+    if (this.mediaRecorder) {
+      this.mediaRecorder.ondataavailable = null;
+      this.mediaRecorder.onstop = null;
+      this.mediaRecorder.onerror = null;
+      this.mediaRecorder = null;
+    }
+
+    if (this.recordingStream) {
+      const tracks = this.recordingStream.getTracks();
+      for (const track of tracks) {
+        track.stop();
+      }
+      this.recordingStream = null;
+    }
   }
 
   exportImage() {
@@ -241,7 +263,9 @@ class Media {
         this.appcore.analyser.resetStatistics();
         this.appcore.analyser.reset();
         Object.assign(this.appcore.statistics, this._cloneJSONCompatible(data.statistics));
-        this.appcore.analyser.series = this._cloneJSONCompatible(data.series);
+        this.appcore.analyser.series = this._capSeries(
+          this._cloneJSONCompatible(data.series),
+        );
         this.appcore.refreshGUI();
 
         console.log(
@@ -335,12 +359,20 @@ class Media {
   _getFullStatsSnapshot() {
     return {
       statistics: this._cloneJSONCompatible(this.appcore.statistics || {}),
-      series: this._cloneJSONCompatible(
-        Array.isArray(this.appcore.analyser?.series)
-          ? this.appcore.analyser.series
-          : [],
+      series: this._capSeries(
+        this._cloneJSONCompatible(
+          Array.isArray(this.appcore.analyser?.series)
+            ? this.appcore.analyser.series
+            : [],
+        ),
       ),
     };
+  }
+
+  _capSeries(series, limit = 10000) {
+    if (!Array.isArray(series)) return [];
+    if (series.length <= limit) return series;
+    return series.slice(series.length - limit);
   }
 
   _isPlainObject(value) {
@@ -432,5 +464,19 @@ class Media {
     const { renderMode, gridSize } = this.appcore.params;
     const ts = Date.now();
     return `${name}_${version}_${renderMode}_${gridSize}_${ts}.${extension}`;
+  }
+
+  dispose() {
+    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+      this.mediaRecorder.stop();
+    }
+    this._releaseRecordingResources();
+    this.recordedChunks = [];
+    this.pendingDataImportHandler = null;
+
+    if (this.dataImportInput && this.dataImportInput.parentNode === document.body) {
+      document.body.removeChild(this.dataImportInput);
+    }
+    this.dataImportInput = null;
   }
 }

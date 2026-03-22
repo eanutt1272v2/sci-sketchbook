@@ -45,6 +45,15 @@ class Renderer {
     }
   }
 
+  dispose() {
+    if (this.eqOverlayEl && this.eqOverlayEl.parentNode === document.body) {
+      document.body.removeChild(this.eqOverlayEl);
+    }
+    this.eqOverlayEl = null;
+    this.eqOverlaySig = "";
+    this.buffer = null;
+  }
+
   _fmtSci(v, digits = 3) {
     if (!Number.isFinite(v)) return "0";
     if (v === 0) return "0";

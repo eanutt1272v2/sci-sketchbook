@@ -844,6 +844,17 @@ class Renderer {
     if (this.eqOverlayEl) this.eqOverlayEl.style.display = "none";
   }
 
+  dispose() {
+    if (this.eqOverlayEl && this.eqOverlayEl.parentNode === document.body) {
+      document.body.removeChild(this.eqOverlayEl);
+    }
+    this.eqOverlayEl = null;
+    this.eqOverlaySig = "";
+    this.motionTrail = [];
+    this.img = null;
+    this.calcPanelImage = null;
+  }
+
   renderEquationOverlay(params = {}) {
     const panel = this.ensureEquationOverlay();
     panel.style.display = "block";

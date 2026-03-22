@@ -295,6 +295,9 @@ class AppCore {
     }
     if (this.automaton.gen % 10 === 0) {
       this.analyser.series.push(this.analyser.getStatRow());
+      if (this.analyser.series.length > 10000) {
+        this.analyser.series.splice(0, this.analyser.series.length - 10000);
+      }
     }
   }
 
@@ -979,5 +982,29 @@ class AppCore {
   windowResized() {
     const canvasSize = min(windowWidth, windowHeight);
     resizeCanvas(canvasSize, canvasSize);
+  }
+
+  dispose() {
+    if (this._worker) {
+      this._worker.terminate();
+      this._worker = null;
+    }
+    this._workerBusy = false;
+    this._stepPending = false;
+    this._kernelPending = false;
+    this._pendingActions = [];
+    this._pendingMutations = [];
+
+    if (this.media && typeof this.media.dispose === "function") {
+      this.media.dispose();
+    }
+
+    if (this.gui && typeof this.gui.dispose === "function") {
+      this.gui.dispose();
+    }
+
+    if (this.renderer && typeof this.renderer.dispose === "function") {
+      this.renderer.dispose();
+    }
   }
 }

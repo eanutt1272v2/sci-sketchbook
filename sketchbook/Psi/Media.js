@@ -2,6 +2,7 @@ class Media {
   constructor(appcore) {
     this.appcore = appcore;
     this.mediaRecorder = null;
+    this.recordingStream = null;
     this.recordedChunks = [];
     this.isRecording = false;
 
@@ -49,6 +50,7 @@ class Media {
       const captureFps = this._getRecordingFPS();
       const bitrateBps = this._getRecordingBitrateBps();
       const stream = sourceCanvas.captureStream(captureFps);
+      this.recordingStream = stream;
       const options = { mimeType: supportedType };
       if (bitrateBps > 0) {
         options.videoBitsPerSecond = bitrateBps;
@@ -60,12 +62,16 @@ class Media {
       };
 
       this.mediaRecorder.onstop = () => {
-        const blob = new Blob(this.recordedChunks, { type: supportedType });
+        const chunks = this.recordedChunks.slice();
+        this.recordedChunks = [];
+        const blob = new Blob(chunks, { type: supportedType });
         const ext = supportedType.includes("mp4") ? "mp4" : "webm";
         this._triggerDownload(
           URL.createObjectURL(blob),
           this._getFilename(ext),
         );
+
+        this._releaseRecordingResources();
       };
 
       this.mediaRecorder.start();
@@ -85,8 +91,41 @@ class Media {
     if (!this.mediaRecorder || !this.isRecording) return;
     this.mediaRecorder.stop();
     this.isRecording = false;
-    this.recordedChunks = [];
     this.appcore.refreshGUI();
+  }
+
+  _releaseRecordingResources() {
+    if (this.mediaRecorder) {
+      this.mediaRecorder.ondataavailable = null;
+      this.mediaRecorder.onstop = null;
+      this.mediaRecorder.onerror = null;
+      this.mediaRecorder = null;
+    }
+
+    if (this.recordingStream) {
+      const tracks = this.recordingStream.getTracks();
+      for (const track of tracks) {
+        track.stop();
+      }
+      this.recordingStream = null;
+    }
+  }
+
+  dispose() {
+    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+      this.mediaRecorder.stop();
+    }
+    this._releaseRecordingResources();
+    this.recordedChunks = [];
+    this.pendingImportHandler = null;
+
+    if (
+      this.dataImportInput &&
+      this.dataImportInput.parentNode === document.body
+    ) {
+      document.body.removeChild(this.dataImportInput);
+    }
+    this.dataImportInput = null;
   }
 
   exportImage() {

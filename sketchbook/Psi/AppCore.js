@@ -503,4 +503,22 @@ class AppCore {
       this.gui.refresh();
     }
   }
+
+  dispose() {
+    if (this._worker) {
+      this._worker.terminate();
+      this._worker = null;
+    }
+    this._workerBusy = false;
+    this._renderPending = false;
+    this._pendingActions = [];
+
+    if (this.media && typeof this.media.dispose === "function") {
+      this.media.dispose();
+    }
+
+    if (this.renderer && typeof this.renderer.dispose === "function") {
+      this.renderer.dispose();
+    }
+  }
 }

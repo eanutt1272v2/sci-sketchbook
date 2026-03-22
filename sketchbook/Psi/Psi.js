@@ -3,6 +3,12 @@ p5.disableFriendlyErrors = true;
 let appcore;
 let colourMaps, font;
 
+function disposeAppCore() {
+  if (!appcore || typeof appcore.dispose !== "function") return;
+  appcore.dispose();
+  appcore = null;
+}
+
 const metadata = {
   name: "Psi",
   version: "v2.6.7-dev",
@@ -21,6 +27,7 @@ function setup() {
   setupCanvasProperties(mainCanvas);
 
   requestAnimationFrame(() => {
+    disposeAppCore();
     appcore = new AppCore({
       metadata,
       colourMaps,
@@ -28,6 +35,8 @@ function setup() {
     });
   });
 }
+
+window.addEventListener("pagehide", disposeAppCore);
 
 function setupCanvasProperties(canvas) {
   const canvasEl = canvas.elt;

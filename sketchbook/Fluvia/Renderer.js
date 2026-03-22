@@ -775,6 +775,22 @@ class Renderer {
     if (this.eqOverlayEl) this.eqOverlayEl.style.display = "none";
   }
 
+  dispose() {
+    if (this.eqOverlayEl && this.eqOverlayEl.parentNode === document.body) {
+      document.body.removeChild(this.eqOverlayEl);
+    }
+    this.eqOverlayEl = null;
+    this.eqOverlaySig = "";
+
+    if (this.canvas3D && typeof this.canvas3D.remove === "function") {
+      this.canvas3D.remove();
+    }
+    this.canvas3D = null;
+    this.canvas2D = null;
+    this.heightMapTexture = null;
+    this.calcPanelImage = null;
+  }
+
   renderEquationOverlay() {
     const panel = this.ensureEquationOverlay();
     panel.style.display = "block";

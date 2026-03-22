@@ -4,6 +4,12 @@ let appcore;
 let font, animalsData, colourMaps;
 let mainCanvas;
 
+function disposeAppCore() {
+  if (!appcore || typeof appcore.dispose !== "function") return;
+  appcore.dispose();
+  appcore = null;
+}
+
 const metadata = {
   name: "Lenia 2D Studio",
   version: "v1.6.9-dev",
@@ -23,6 +29,7 @@ function setup() {
   setupCanvasProperties(mainCanvas);
 
   requestAnimationFrame(() => {
+    disposeAppCore();
     appcore = new AppCore({
       metadata,
       animalsData,
@@ -33,6 +40,8 @@ function setup() {
     appcore.setup();
   });
 }
+
+window.addEventListener("pagehide", disposeAppCore);
 
 function draw() {
   if (!appcore) return;

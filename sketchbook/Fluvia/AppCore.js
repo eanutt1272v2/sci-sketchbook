@@ -441,4 +441,17 @@ class AppCore {
       this.gui.pane.refresh();
     }
   }
+
+  dispose() {
+    this._terminateWorker();
+    this._pendingActions = [];
+
+    if (this.media && typeof this.media.dispose === "function") {
+      this.media.dispose();
+    }
+
+    if (this.renderer && typeof this.renderer.dispose === "function") {
+      this.renderer.dispose();
+    }
+  }
 }
