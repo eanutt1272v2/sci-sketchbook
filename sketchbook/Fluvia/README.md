@@ -41,7 +41,7 @@ This behaviour is strengthened by introducing stream-level momentum coupling (ap
 - `FluviaWorker.js`: worker-based hydraulic+thermal solver
 - `Terrain.js`: typed-array terrain field storage
 - `Renderer.js`: 2D/3D rendering and partially shader-based render pipeline
-- `FallbackAnalyser.js`: terrain and hydrology statistics
+- `Analyser.js`: worker-analysis adapter and terrain/hydrology statistics integration
 - `Camera.js`, `GUI.js`, `InputHandler.js`, `Media.js`: interaction and export systems
 - `vert.glsl`, `frag.glsl`: texture application shaders (used in 3D render mode)
 

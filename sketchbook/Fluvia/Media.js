@@ -1,6 +1,7 @@
 class Media {
   constructor(appcore) {
     this.appcore = appcore;
+    this.logTag = "[Fluvia][Media]";
 
     this.mediaRecorder = null;
     this.recordingStream = null;
@@ -20,6 +21,18 @@ class Media {
       },
     );
     this.pendingDataImportHandler = null;
+  }
+
+  _logInfo(message, ...rest) {
+    console.log(`${this.logTag} ${message}`, ...rest);
+  }
+
+  _logWarn(message, ...rest) {
+    console.warn(`${this.logTag} ${message}`, ...rest);
+  }
+
+  _logError(message, ...rest) {
+    console.error(`${this.logTag} ${message}`, ...rest);
   }
 
   _createHiddenInput(accept, onFile) {
@@ -49,7 +62,7 @@ class Media {
 
   handleHeightmapImport(file) {
     if (!file?.type.startsWith("image")) {
-      console.error("[Fluvia] Import failed: provided file is not an image");
+      this._logError("Heightmap import failed: provided file is not an image");
       return;
     }
 
@@ -94,12 +107,12 @@ class Media {
 
             terrain.reset();
             this.appcore.refreshGUI();
-            console.log(`[Fluvia] Heightmap imported: ${size}x${size}`);
+            this._logInfo(`Heightmap imported: ${size}x${size}`);
           } catch (err) {
-            console.error("[Fluvia] Import failed during processing:", err);
+            this._logError("Heightmap import failed during processing:", err);
           }
         },
-        (err) => console.error("[Fluvia] Import failed: load error", err),
+        (err) => this._logError("Heightmap import failed: load error", err),
       );
     };
 
@@ -110,14 +123,20 @@ class Media {
     if (this.isRecording) return;
 
     const sourceCanvas = _renderer?.elt;
-    if (!sourceCanvas) return console.error("[Fluvia] No valid canvas found");
+    if (!sourceCanvas) {
+      this._logError("No valid canvas found");
+      return;
+    }
 
     this.recordedChunks = [];
 
     const types = ["video/webm;codecs=vp8", "video/mp4", "video/webm"];
     const supportedType = types.find((t) => MediaRecorder.isTypeSupported(t));
 
-    if (!supportedType) return console.error("[Fluvia] No supported video format found");
+    if (!supportedType) {
+      this._logError("No supported video format found");
+      return;
+    }
 
     try {
       const captureFps = this._getRecordingFPS();
@@ -151,11 +170,11 @@ class Media {
       this.isRecording = true;
       this.appcore.refreshGUI();
       const bitrateMbps = bitrateBps > 0 ? bitrateBps / 1e6 : 0;
-      console.log(
-        `[Fluvia] Recording: ${supportedType}, fps=${captureFps}, bitrate=${bitrateMbps.toFixed(2)}Mbps`,
+      this._logInfo(
+        `Recording started: ${supportedType}, fps=${captureFps}, bitrate=${bitrateMbps.toFixed(2)}Mbps`,
       );
     } catch (err) {
-      console.error("[Fluvia] Recording failed:", err);
+      this._logError("Recording failed:", err);
       this.stopRecording();
     }
   }
@@ -207,9 +226,9 @@ class Media {
     const { imageFormat } = this.appcore.params;
     try {
       save(_renderer, this._getFilename(imageFormat));
-      console.log("[Fluvia] Exported image");
+      this._logInfo("Image exported");
     } catch (err) {
-      console.error(`[Fluvia] Export failed: ${err}`);
+      this._logError("Image export failed:", err);
     }
   }
 
@@ -221,7 +240,7 @@ class Media {
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("params.json"));
-    console.log("[Fluvia] Exported params JSON");
+    this._logInfo("Params JSON exported");
   }
 
   importParamsJSON() {
@@ -246,7 +265,7 @@ class Media {
         }
 
         this.appcore.refreshGUI();
-        console.log("[Fluvia] Imported params JSON");
+        this._logInfo("Params JSON imported");
       });
     });
   }
@@ -260,7 +279,7 @@ class Media {
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("stats.json"));
-    console.log("[Fluvia] Exported stats JSON");
+    this._logInfo("Stats JSON exported");
   }
 
   exportStatisticsCSV() {
@@ -276,15 +295,13 @@ class Media {
         .map((r) => `${this._toCSVCell(r[0])},${this._toCSVCell(r[1])}`)
         .join("\n");
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
-    console.log("[Fluvia] Exported stats CSV");
+    this._logInfo("Stats CSV exported");
   }
 
   exportWorldJSON() {
     const { terrain } = this.appcore;
     if (!terrain.heightMap) {
-      console.warn(
-        "[Fluvia] Cannot export world while worker holds terrain buffers.",
-      );
+      this._logWarn("Cannot export world while worker holds terrain buffers");
       return;
     }
     const payload = {
@@ -312,7 +329,7 @@ class Media {
     };
 
     this._downloadJSON(payload, this._getFilename("world.json"));
-    console.log(`[Fluvia] Exported world JSON: size=${terrain.size}`);
+    this._logInfo(`World JSON exported: size=${terrain.size}`);
   }
 
   importWorldJSON() {
@@ -431,7 +448,7 @@ class Media {
         this._applyStatisticsSnapshot(data.statistics);
         this.appcore._initWorker();
         this.appcore.refreshGUI();
-        console.log(`[Fluvia] Imported world JSON: size=${terrain.size}`);
+        this._logInfo(`World JSON imported: size=${terrain.size}`);
       });
     });
   }
@@ -464,14 +481,14 @@ class Media {
     ctx.putImageData(imageData, 0, 0);
     canvas.toBlob((blob) => {
       if (!blob) {
-        console.error("[Fluvia] Failed to export heightmap PNG blob");
+        this._logError("Failed to export heightmap PNG blob");
         return;
       }
       this._triggerDownload(
         URL.createObjectURL(blob),
         this._getFilename("heightmap.png"),
       );
-      console.log(`[Fluvia] Exported heightmap PNG: ${size}x${size}`);
+      this._logInfo(`Heightmap PNG exported: ${size}x${size}`);
     }, "image/png");
   }
 
@@ -681,10 +698,10 @@ class Media {
         const parsed = JSON.parse(String(reader.result || "{}"));
         onSuccess(parsed);
       } catch (err) {
-        console.error("[Fluvia] JSON import failed:", err);
+        this._logError("JSON import failed:", err);
       }
     };
-    reader.onerror = () => console.error("[Fluvia] File read failed");
+    reader.onerror = () => this._logError("File read failed");
     reader.readAsText(file);
   }
 

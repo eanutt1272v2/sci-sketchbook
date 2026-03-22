@@ -1,6 +1,7 @@
 class Media {
   constructor(appcore) {
     this.appcore = appcore;
+    this.logTag = "[Psi][Media]";
     this.mediaRecorder = null;
     this.recordingStream = null;
     this.recordedChunks = [];
@@ -22,6 +23,18 @@ class Media {
     document.body.appendChild(this.dataImportInput);
   }
 
+  _logInfo(message, ...rest) {
+    console.log(`${this.logTag} ${message}`, ...rest);
+  }
+
+  _logWarn(message, ...rest) {
+    console.warn(`${this.logTag} ${message}`, ...rest);
+  }
+
+  _logError(message, ...rest) {
+    console.error(`${this.logTag} ${message}`, ...rest);
+  }
+
   openDataImportDialog(handler) {
     this.pendingImportHandler = handler;
     this.dataImportInput.value = "";
@@ -33,7 +46,7 @@ class Media {
 
     const sourceCanvas = _renderer?.elt;
     if (!sourceCanvas) {
-      console.error("[Psi] No valid canvas found");
+      this._logError("No valid canvas found");
       return;
     }
 
@@ -42,7 +55,7 @@ class Media {
     const supportedType = types.find((t) => MediaRecorder.isTypeSupported(t));
 
     if (!supportedType) {
-      console.error("[Psi] No supported video format found");
+      this._logError("No supported video format found");
       return;
     }
 
@@ -78,11 +91,11 @@ class Media {
       this.isRecording = true;
       this.appcore.refreshGUI();
       const bitrateMbps = bitrateBps > 0 ? bitrateBps / 1e6 : 0;
-      console.log(
-        `[Psi] Recording: ${supportedType}, fps=${captureFps}, bitrate=${bitrateMbps.toFixed(2)}Mbps`,
+      this._logInfo(
+        `Recording started: ${supportedType}, fps=${captureFps}, bitrate=${bitrateMbps.toFixed(2)}Mbps`,
       );
     } catch (err) {
-      console.error("[Psi] Recording failed:", err);
+      this._logError("Recording failed:", err);
       this.stopRecording();
     }
   }
@@ -131,9 +144,9 @@ class Media {
   exportImage() {
     try {
       save(_renderer, this._getFilename(this.appcore.params.imageFormat));
-      console.log("[Psi] Exported image");
+      this._logInfo("Image exported");
     } catch (err) {
-      console.error("[Psi] Export failed:", err);
+      this._logError("Image export failed:", err);
     }
   }
 
@@ -145,7 +158,7 @@ class Media {
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("params.json"));
-    console.log("[Psi] Exported params JSON");
+    this._logInfo("Params JSON exported");
   }
 
   importParamsJSON() {
@@ -154,7 +167,7 @@ class Media {
         this._applyMetadataPayload(data.metadata);
         this._applyParamsPayload(data);
         this.appcore.refreshGUI();
-        console.log("[Psi] Imported params JSON");
+        this._logInfo("Params JSON imported");
       });
     });
   }
@@ -170,7 +183,7 @@ class Media {
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("stats.json"));
-    console.log(`[Psi] Exported stats JSON: ${payload.series.length} rows`);
+    this._logInfo(`Stats JSON exported: rows=${payload.series.length}`);
   }
 
   exportStatisticsCSV() {
@@ -211,7 +224,7 @@ class Media {
       this._getFilename("stats.csv"),
       "text/csv",
     );
-    console.log(`[Psi] Exported stats CSV: ${series.length} rows`);
+    this._logInfo(`Stats CSV exported: rows=${series.length}`);
   }
 
   _applyParamsPayload(data) {
@@ -358,16 +371,23 @@ class Media {
         const parsed = JSON.parse(String(reader.result || "{}"));
         onSuccess(parsed);
       } catch (err) {
-        console.error("[Psi] JSON import failed:", err);
+        this._logError("JSON import failed:", err);
       }
     };
-    reader.onerror = () => console.error("[Psi] File read failed");
+    reader.onerror = () => this._logError("File read failed");
     reader.readAsText(file);
   }
 
   _downloadJSON(payload, filename) {
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
+    });
+    this._triggerDownload(URL.createObjectURL(blob), filename);
+  }
+
+  _downloadText(text, filename, mimeType = "text/plain") {
+    const blob = new Blob([String(text ?? "")], {
+      type: mimeType,
     });
     this._triggerDownload(URL.createObjectURL(blob), filename);
   }

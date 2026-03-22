@@ -1,6 +1,7 @@
 class Media {
   constructor(appcore) {
     this.appcore = appcore;
+    this.logTag = "[Lenia][Media]";
     this.mediaRecorder = null;
     this.recordingStream = null;
     this.recordedChunks = [];
@@ -16,6 +17,18 @@ class Media {
       },
     );
     this.pendingDataImportHandler = null;
+  }
+
+  _logInfo(message, ...rest) {
+    console.log(`${this.logTag} ${message}`, ...rest);
+  }
+
+  _logWarn(message, ...rest) {
+    console.warn(`${this.logTag} ${message}`, ...rest);
+  }
+
+  _logError(message, ...rest) {
+    console.error(`${this.logTag} ${message}`, ...rest);
   }
 
   _createHiddenInput(accept, onFile) {
@@ -43,7 +56,7 @@ class Media {
 
     const sourceCanvas = _renderer?.elt;
     if (!sourceCanvas) {
-      console.error("[Lenia] No valid canvas found");
+      this._logError("No valid canvas found");
       return;
     }
 
@@ -52,7 +65,7 @@ class Media {
     const supportedType = types.find((t) => MediaRecorder.isTypeSupported(t));
 
     if (!supportedType) {
-      console.error("[Lenia] No supported video format found");
+      this._logError("No supported video format found");
       return;
     }
 
@@ -88,11 +101,11 @@ class Media {
       this.isRecording = true;
       this.appcore.refreshGUI();
       const bitrateMbps = bitrateBps > 0 ? bitrateBps / 1e6 : 0;
-      console.log(
-        `[Lenia] Recording: ${supportedType}, fps=${captureFps}, bitrate=${bitrateMbps.toFixed(2)}Mbps`,
+      this._logInfo(
+        `Recording started: ${supportedType}, fps=${captureFps}, bitrate=${bitrateMbps.toFixed(2)}Mbps`,
       );
     } catch (err) {
-      console.error("[Lenia] Recording failed:", err);
+      this._logError("Recording failed:", err);
       this.stopRecording();
     }
   }
@@ -123,6 +136,7 @@ class Media {
 
   exportImage() {
     save(_renderer, this._getFilename(this.appcore.params.imageFormat));
+    this._logInfo("Image exported");
   }
 
   exportWorldJSON() {
@@ -149,7 +163,7 @@ class Media {
     };
 
     this._downloadJSON(payload, this._getFilename("world.json"));
-    console.log(`[Lenia] Exported world JSON: size=${this.appcore.board.size}`);
+    this._logInfo(`World JSON exported: size=${this.appcore.board.size}`);
   }
 
   importWorldJSON() {
@@ -174,7 +188,7 @@ class Media {
 
         const payload = this._normaliseWorldPayload(data);
         this.appcore.importWorldPayload(payload);
-        console.log("[Lenia] Imported world JSON with all params, stats, and field states");
+        this._logInfo("World JSON imported (params, stats, and field states)");
       });
     });
   }
@@ -221,7 +235,7 @@ class Media {
       csvBody;
     if (!csv) return;
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
-    console.log(`[Lenia] Exported statistics CSV`);
+    this._logInfo("Stats CSV exported");
   }
 
   exportStatisticsJSON() {
@@ -234,8 +248,8 @@ class Media {
       exportedAt: new Date().toISOString(),
     };
     this._downloadJSON(payload, this._getFilename("stats.json"));
-    console.log(
-      `[Lenia] Exported statistics JSON: ${this.appcore.analyser.series.length} rows`,
+    this._logInfo(
+      `Stats JSON exported: rows=${this.appcore.analyser.series.length}`,
     );
   }
 
@@ -268,8 +282,8 @@ class Media {
         );
         this.appcore.refreshGUI();
 
-        console.log(
-          `[Lenia] Imported statistics JSON: ${this.appcore.analyser.series.length} rows`,
+        this._logInfo(
+          `Stats JSON imported: rows=${this.appcore.analyser.series.length}`,
         );
       });
     });
@@ -283,7 +297,7 @@ class Media {
       params: this._getFullParamsSnapshot(),
     };
     this._downloadJSON(payload, this._getFilename("params.json"));
-    console.log(`[Lenia] Exported params JSON`);
+    this._logInfo("Params JSON exported");
   }
 
   importParamsJSON() {
@@ -313,7 +327,7 @@ class Media {
 
         this.appcore.updateAutomatonParams();
         this.appcore.refreshGUI();
-        console.log(`[Lenia] Imported params JSON`);
+        this._logInfo("Params JSON imported");
       });
     });
   }
@@ -325,10 +339,10 @@ class Media {
         const parsed = JSON.parse(String(reader.result || "{}"));
         onSuccess(parsed);
       } catch (err) {
-        console.error("[Lenia] JSON import failed:", err);
+        this._logError("JSON import failed:", err);
       }
     };
-    reader.onerror = () => console.error("[Lenia] File read failed");
+    reader.onerror = () => this._logError("File read failed");
     reader.readAsText(file);
   }
 
