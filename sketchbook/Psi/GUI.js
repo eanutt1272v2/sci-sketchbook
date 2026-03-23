@@ -191,7 +191,7 @@ class GUI {
 
     this.addSeparator(page);
 
-    const overlay = page.addFolder({ title: "Overlay", expanded: true });
+    const overlay = page.addFolder({ title: "Overlays", expanded: true });
 
     overlay
       .addBinding(this.appcore.params, "renderOverlay", {
