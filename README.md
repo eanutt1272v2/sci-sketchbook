@@ -13,7 +13,7 @@ Live deployed instance(s): <https://sci-sketchbook.onrender.com/>, <https://sci-
 | [Cellular Division](./sketchbook/Cellular_Division) | Primordial Particle System (PPS) model implementation with custom-built UI framework | p5.js + worker |
 | [Psi](./sketchbook/Psi) | Hydrogen orbital probability density slices | p5.js + worker |
 | [Fluvia](./sketchbook/Fluvia) | Lagrangian hydraulic erosion simulation | p5.js + worker + GLSL |
-| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia cellular automata studio | p5.js + FFT worker |
+| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia cellular automata studio | p5.js + worker |
 
 ## Running Locally
 
