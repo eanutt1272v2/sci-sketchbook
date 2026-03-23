@@ -216,6 +216,26 @@ class Renderer {
     pop();
   }
 
+  getSuperscript(num) {
+    const map = {
+      0: "⁰",
+      1: "¹",
+      2: "²",
+      3: "³",
+      4: "⁴",
+      5: "⁵",
+      6: "⁶",
+      7: "⁷",
+      8: "⁸",
+      9: "⁹",
+      "-": "⁻",
+    };
+    return String(num)
+      .split("")
+      .map((char) => map[char] || char)
+      .join("");
+  }
+
   renderLegend() {
     push();
     const { colourMap, exposure } = this.appcore.params;
@@ -294,8 +314,9 @@ class Renderer {
     noStroke();
     fill(255);
     textAlign(CENTER, BOTTOM);
-    textSize(12);
-    text(`×10^${k}`, x - w * 0.5, y1 - 6);
+    textSize(14);
+    let kSuper = this.getSuperscript(k); 
+    text(`×10${kSuper}`, x - w * 0.6, y1 - 6);
 
     push();
     translate(x + w * 0.5, y1 + h * 0.5);
