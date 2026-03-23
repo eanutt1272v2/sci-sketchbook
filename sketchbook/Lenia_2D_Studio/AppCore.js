@@ -19,7 +19,7 @@ class AppCore {
 
     this.params = {
       running: true,
-      gridSize: 256,
+      gridSize: 128,
 
       R: 13,
       T: 10,
