@@ -4,17 +4,16 @@
 
 An collection of advanced interactive mathematical and scientific sketches implemented in `p5.js`.
 
-Live deployment: <https://sci-sketchbook.onrender.com/>
-
+Live deployment instance(s): <https://sci-sketchbook.onrender.com/>, <https://sci-sketchbook.up.railway.app>.
 
 ## Sketch Index
 
 | Sketch | Summary | Implementation(s) |
 | :-- | :-- | :-- |
-| [Cellular Division](./sketchbook/Cellular_Division) | Primordial Particle System implementation | p5.js + worker |
-| [Psi](./sketchbook/Psi) | Hydrogen orbital probability-density slices | p5.js + worker |
+| [Cellular Division](./sketchbook/Cellular_Division) | Primordial Particle System (PPS) model implementation with custom-built UI framework | p5.js + worker |
+| [Psi](./sketchbook/Psi) | Hydrogen orbital probability density slices | p5.js + worker |
 | [Fluvia](./sketchbook/Fluvia) | Lagrangian hydraulic erosion simulation | p5.js + worker + GLSL |
-| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia cellular automata | p5.js + FFT worker |
+| [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia cellular automata studio | p5.js + FFT worker |
 
 ## Running Locally
 
