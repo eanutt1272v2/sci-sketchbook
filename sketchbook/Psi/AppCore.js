@@ -17,7 +17,7 @@ class AppCore {
       colourMap: "rocket",
       exposure: 0.75,
 
-      resolution: 256,
+      resolution: 512,
       pixelSmoothing: true,
       renderOverlay: true,
       renderLegend: true,
