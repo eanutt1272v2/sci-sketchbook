@@ -4,7 +4,7 @@
 
 An collection of advanced interactive mathematical and scientific sketches implemented in `p5.js`.
 
-Live deployed instance(s): <https://sci-sketchbook.onrender.com/>, <https://sci-sketchbook.up.railway.app>.
+Live deployed instance(s): <https://sci-sketchbook.onrender.com/> (will wind down), <https://sci-sketchbook.up.railway.app> (always up).
 
 ## Sketch Index
 
