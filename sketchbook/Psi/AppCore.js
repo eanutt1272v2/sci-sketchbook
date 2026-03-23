@@ -23,7 +23,7 @@ class AppCore {
       renderLegend: true,
       renderKeymapRef: false,
 
-      viewRadius: 32,
+      viewRadius: 45,
       slicePlane: "xz",
       sliceOffset: 0,
       viewCentre: { x: 0, y: 0, z: 0 },

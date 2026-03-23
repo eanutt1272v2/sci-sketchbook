@@ -235,8 +235,8 @@ class GUI {
       "sliceOffset",
       {
         label: "Slice Offset (a₀)",
-        min: -250,
-        max: 250,
+        min: -1024,
+        max: 1024,
       },
     );
 
