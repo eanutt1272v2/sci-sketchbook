@@ -202,7 +202,7 @@ class Renderer {
       `Node Estimate=${stats.nodeEstimate.toFixed(0)}`,
       `Colour Map: ${colourMap}`,
       `Exposure=${exposure.toFixed(2)}`,
-      `Pixel Smoothing: ${pixelSmoothing ? "on" : "off"}`,
+      `Pixel Smoothing: ${pixelSmoothing ? "true" : "false"}`,
     ];
 
     push();
