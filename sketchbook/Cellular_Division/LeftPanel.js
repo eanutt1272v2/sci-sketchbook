@@ -260,7 +260,6 @@ class LeftPanel {
       ["H", "Toggle UI panels"],
       ["R", "Restart simulation"],
       ["P / Space", "Pause or play simulation"],
-      ["J", "Toggle equation overlay"],
       ["#", "Toggle this keymap reference"],
       ["1 / 2", "Alpha - / +"],
       ["3 / 4", "Beta - / +"],
@@ -286,17 +285,13 @@ class LeftPanel {
 
   renderCredits() {
     const { name, version, author } = metadata;
-    
+
     push();
     noStroke();
     fill(255, 170);
     textSize(12);
     textAlign(LEFT, BOTTOM);
-    text(
-      `${name} ${version} by ${author}`,
-      12,
-      height - 12,
-    );
+    text(`${name} ${version} by ${author}`, 12, height - 12);
     pop();
   }
 }

@@ -48,7 +48,6 @@ class AppCore {
       renderMotionTrail: true,
       renderCalcPanels: true,
       renderKeymapRef: false,
-      renderEquation: true,
 
       selectedAnimal: "",
       placeMode: true,
@@ -348,16 +347,6 @@ class AppCore {
       if (this.params.renderCalcPanels) {
         this.renderer.renderCalcPanels(this.board, this.automaton, this.params);
       }
-
-      if (this.params.renderKeymapRef) {
-        this.renderer.renderKeymapRef(this.metadata);
-      }
-
-      if (this.params.renderEquation) {
-        this.renderer.renderEquationOverlay(this.params);
-      } else {
-        this.renderer.hideEquationOverlay();
-      }
     } else {
       this.renderer.renderCachedFrame();
 
@@ -387,16 +376,10 @@ class AppCore {
       if (this.params.renderCalcPanels) {
         this.renderer.renderCachedCalcPanels();
       }
+    }
 
-      if (this.params.renderEquation) {
-        this.renderer.renderEquationOverlay(this.params);
-      } else {
-        this.renderer.hideEquationOverlay();
-      }
-
-      if (this.params.renderKeymapRef && !this._workerBusy) {
-        this.renderer.renderKeymapRef(this.metadata);
-      }
+    if (this.params.renderKeymapRef) {
+      this.renderer.renderKeymapRef(this.metadata);
     }
 
     if (this._pendingActions.length > 0) {
@@ -588,10 +571,6 @@ class AppCore {
         p.renderKeymapRef,
       );
     }
-    if ("renderEquation" in rawParams) {
-      p.renderEquation = toBoolean(rawParams.renderEquation, p.renderEquation);
-    }
-
     if ("selectedAnimal" in rawParams) {
       const incoming = rawParams.selectedAnimal;
       if (

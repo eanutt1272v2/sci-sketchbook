@@ -428,10 +428,7 @@ class Media {
         );
         this._copyArrayInto(
           terrain.dischargeMap,
-          this._decodeWorldMap(
-            maps.dischargeMap,
-            terrain.dischargeMap.length,
-          ),
+          this._decodeWorldMap(maps.dischargeMap, terrain.dischargeMap.length),
         );
         this._copyArrayInto(
           terrain.dischargeTrack,
@@ -465,7 +462,9 @@ class Media {
 
         terrain.updateBoundsCache();
         this.appcore.analyser.reinitialise();
-        this._applyParamsSnapshot(data.params, { forceTerrainSize: incomingSize });
+        this._applyParamsSnapshot(data.params, {
+          forceTerrainSize: incomingSize,
+        });
         this._applyStatisticsSnapshot(data.statistics);
         this.appcore._initWorker();
         this.appcore.refreshGUI();
@@ -499,7 +498,6 @@ class Media {
 
     this._heightmapExportDeferred = false;
 
-    // Yield one tick so button interaction remains snappy before PNG work starts.
     setTimeout(() => this._exportHeightmapPNGNow(), 0);
   }
 

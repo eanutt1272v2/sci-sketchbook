@@ -8,18 +8,15 @@ const CONSTS = {
 
 function logGamma(z) {
   const coeffs = [
-    676.5203681218851,
-    -1259.1392167224028,
-    771.32342877765313,
-    -176.61502916214059,
-    12.507343278686905,
-    -0.13857109526572012,
-    9.9843695780195716e-6,
-    1.5056327351493116e-7,
+    676.5203681218851, -1259.1392167224028, 771.32342877765313,
+    -176.61502916214059, 12.507343278686905, -0.13857109526572012,
+    9.9843695780195716e-6, 1.5056327351493116e-7,
   ];
 
   if (z < 0.5) {
-    return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - logGamma(1 - z);
+    return (
+      Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - logGamma(1 - z)
+    );
   }
 
   let x = 0.99999999999980993;
@@ -29,7 +26,9 @@ function logGamma(z) {
   }
 
   const t = tZ + coeffs.length - 0.5;
-  return 0.5 * Math.log(2 * Math.PI) + (tZ + 0.5) * Math.log(t) - t + Math.log(x);
+  return (
+    0.5 * Math.log(2 * Math.PI) + (tZ + 0.5) * Math.log(t) - t + Math.log(x)
+  );
 }
 
 function reducedElectronNucleusMass(Z, nucleusMassKg) {
@@ -94,15 +93,23 @@ function _updateCache(n, l, m, Z, useReducedMass, nucleusMassKg) {
   const aMu = reducedBohrRadius(muKg);
 
   let logNormR = 1.5 * Math.log((2.0 * Z) / (n * aMu));
-  logNormR += 0.5 * (
-    logGamma(n - l) -
-    (Math.log(2.0 * n) + logGamma(n + l + 1))
-  );
+  logNormR +=
+    0.5 * (logGamma(n - l) - (Math.log(2.0 * n) + logGamma(n + l + 1)));
 
   _cache = { key, logNormR, l, absM, aMu };
 }
 
-function getProbabilityDensity(x, y, z, n, l, m, Z, useReducedMass, nucleusMassKg) {
+function getProbabilityDensity(
+  x,
+  y,
+  z,
+  n,
+  l,
+  m,
+  Z,
+  useReducedMass,
+  nucleusMassKg,
+) {
   _updateCache(n, l, m, Z, useReducedMass, nucleusMassKg);
   const { logNormR, absM, aMu } = _cache;
 

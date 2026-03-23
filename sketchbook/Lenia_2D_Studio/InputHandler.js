@@ -196,13 +196,6 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "j") {
-      this.appcore.params.renderEquation = !this.appcore.params.renderEquation;
-      this.appcore.refreshGUI();
-      console.log(`[Lenia] Equation overlay: ${this.appcore.params.renderEquation}`);
-      return false;
-    }
-
     if (k === "M") {
       this.appcore.params.renderMotionTrail =
         !this.appcore.params.renderMotionTrail;
@@ -224,7 +217,8 @@ class InputHandler {
     }
 
     if (k === "4") {
-      this.appcore.params.renderCalcPanels = !this.appcore.params.renderCalcPanels;
+      this.appcore.params.renderCalcPanels =
+        !this.appcore.params.renderCalcPanels;
       this.appcore.refreshGUI();
       console.log(
         `[Lenia] Calculationpanels: ${this.appcore.params.renderCalcPanels}`,

@@ -38,7 +38,6 @@ class Renderer {
         entries: [
           ["1 / 2", "Switch render method: 2D / 3D"],
           ["O / L", "Toggle stats / legend overlays"],
-          ["J", "Toggle equation overlay"],
           ["C", "Cycle colour map (Shift reverse)"],
           ["M", "Cycle surface map (Shift reverse)"],
           ["[ / ]", "Height scale -/+ (Shift large)"],
@@ -279,7 +278,8 @@ class Renderer {
           rawFieldValue = hVal;
           v = (hVal - bounds.min) / bounds.range;
         } else if (surfaceMap === "slope") {
-          rawFieldValue = 1 - terrain.getSurfaceNormal(i % size, (i / size) | 0).y;
+          rawFieldValue =
+            1 - terrain.getSurfaceNormal(i % size, (i / size) | 0).y;
           v = rawFieldValue;
         } else if (surfaceMap === "discharge") {
           rawFieldValue = terrain.getDischarge(i);
@@ -461,11 +461,6 @@ class Renderer {
     if (this.appcore.params.renderStats) this.renderStats();
     if (this.appcore.params.renderLegend) this.renderLegend();
     if (this.appcore.params.renderKeymapRef) this.renderKeymapRef();
-      if (this.appcore.params.renderEquation) {
-        this.renderEquationOverlay();
-      } else {
-        this.hideEquationOverlay();
-      }
   }
 
   renderStats() {
@@ -543,10 +538,10 @@ class Renderer {
         },
       };
       const anchors = [
-        { l: "Water", cKey: "waterColour", t: 0.10 },
+        { l: "Water", cKey: "waterColour", t: 0.1 },
         { l: "Sediment", cKey: "sedimentColour", t: 0.34 },
         { l: "Flat", cKey: "flatColour", t: 0.66 },
-        { l: "Steep", cKey: "steepColour", t: 0.90 },
+        { l: "Steep", cKey: "steepColour", t: 0.9 },
       ];
 
       const x = width - 20;
@@ -562,12 +557,18 @@ class Renderer {
 
       const firstColour = params[stops[0].cKey];
       const lastColour = params[stops[stops.length - 1].cKey];
-      grad.addColorStop(0, `rgb(${firstColour.r}, ${firstColour.g}, ${firstColour.b})`);
+      grad.addColorStop(
+        0,
+        `rgb(${firstColour.r}, ${firstColour.g}, ${firstColour.b})`,
+      );
       stops.forEach((stop) => {
         const c = params[stop.cKey];
         grad.addColorStop(stop.stop, `rgb(${c.r}, ${c.g}, ${c.b})`);
       });
-      grad.addColorStop(1, `rgb(${lastColour.r}, ${lastColour.g}, ${lastColour.b})`);
+      grad.addColorStop(
+        1,
+        `rgb(${lastColour.r}, ${lastColour.g}, ${lastColour.b})`,
+      );
 
       noStroke();
       drawingContext.fillStyle = grad;
@@ -640,10 +641,10 @@ class Renderer {
     const b =
       this.lastLegendRange && this.lastLegendRange.map === surfaceMap
         ? {
-          min: this.lastLegendRange.min,
-          max: this.lastLegendRange.max,
-          range: this.lastLegendRange.max - this.lastLegendRange.min,
-        }
+            min: this.lastLegendRange.min,
+            max: this.lastLegendRange.max,
+            range: this.lastLegendRange.max - this.lastLegendRange.min,
+          }
         : this.calculateBounds(surfaceMap);
     const safeRange = Number.isFinite(b.range) && b.range !== 0 ? b.range : 1;
     const minV = Number.isFinite(b.min) ? b.min : 0;
@@ -746,72 +747,7 @@ class Renderer {
     this.textureDirty = true;
   }
 
-  ensureEquationOverlay() {
-    if (this.eqOverlayEl && document.body.contains(this.eqOverlayEl)) {
-      return this.eqOverlayEl;
-    }
-    const panel = document.createElement("div");
-    panel.className = "equation-overlay";
-    panel.style.display = "none";
-    panel.style.maxWidth = "min(560px, calc(100vw - 36px))";
-    panel.style.padding = "8px 10px 6px";
-    const title = document.createElement("p");
-    title.className = "equation-overlay__title";
-    title.textContent = "Hydraulic Erosion Model";
-    title.style.fontSize = "12px";
-    title.style.margin = "0 0 4px";
-    const math = document.createElement("div");
-    math.className = "equation-overlay__math";
-    math.style.fontSize = "0.6rem";
-    math.style.lineHeight = "1.15";
-    math.style.margin = "0";
-    panel.appendChild(title);
-    panel.appendChild(math);
-    document.body.appendChild(panel);
-    this.eqOverlayEl = panel;
-    return panel;
-  }
-
-  hideEquationOverlay() {
-    if (this.eqOverlayEl) this.eqOverlayEl.style.display = "none";
-  }
-
-  positionEquationOverlay(preferredLeftPx = null) {
-    const panel = this.eqOverlayEl;
-    const canvasEl = _renderer?.elt;
-    if (!panel || !canvasEl) return;
-
-    const rect = canvasEl.getBoundingClientRect();
-    const margin = 12;
-    const maxWidth = Math.max(220, Math.floor(rect.width - margin * 2));
-    panel.style.maxWidth = `${maxWidth}px`;
-
-    const panelWidth = panel.offsetWidth;
-    const panelHeight = panel.offsetHeight;
-
-    const minLeft = rect.left + margin;
-    const maxLeft = rect.right - panelWidth - margin;
-    const minTop = rect.top + margin;
-    const maxTop = rect.bottom - panelHeight - margin;
-
-    const wantedLeft =
-      Number.isFinite(preferredLeftPx) ? preferredLeftPx : rect.left + margin;
-    const left = Math.max(minLeft, Math.min(wantedLeft, Math.max(minLeft, maxLeft)));
-    const top = Math.max(minTop, Math.min(maxTop, Math.max(minTop, maxTop)));
-
-    panel.style.left = `${Math.round(left)}px`;
-    panel.style.top = `${Math.round(top)}px`;
-    panel.style.right = "auto";
-    panel.style.bottom = "auto";
-  }
-
   dispose() {
-    if (this.eqOverlayEl && this.eqOverlayEl.parentNode === document.body) {
-      document.body.removeChild(this.eqOverlayEl);
-    }
-    this.eqOverlayEl = null;
-    this.eqOverlaySig = "";
-
     if (this.canvas3D && typeof this.canvas3D.remove === "function") {
       this.canvas3D.remove();
     }
@@ -819,47 +755,5 @@ class Renderer {
     this.canvas2D = null;
     this.heightMapTexture = null;
     this.calcPanelImage = null;
-  }
-
-  renderEquationOverlay() {
-    const panel = this.ensureEquationOverlay();
-    panel.style.display = "block";
-    this.positionEquationOverlay();
-    const mathEl = panel.querySelector(".equation-overlay__math");
-    const tex = String.raw`\begin{aligned}
-	ilde{\mathbf{v}}_{t+1} &= \mathbf{v}_t + \frac{g\,\hat{\mathbf{n}}_{xz}(\mathbf{x})}{V_t}
-+ \frac{m\,\alpha_t}{V_t + D_i}\,\mathbf{p}_i,
-\qquad \alpha_t = \frac{\mathbf{p}_i \cdot \mathbf{v}_t}{\lVert\mathbf{p}_i\rVert\,\lVert\mathbf{v}_t\rVert},\\
-\mathbf{v}_{t+1} &= \sqrt{2}\,\frac{\tilde{\mathbf{v}}_{t+1}}{\lVert\tilde{\mathbf{v}}_{t+1}\rVert},
-\qquad Q_i = \operatorname{erf}(0.4\,D_i),\\
-C_i &= \max\!\bigl(0,\,(1 + e\,Q_i)(h_i - h_j)\bigr),
-\qquad \Delta_i = C_i - s_t,\\
-\Delta_i > 0 &:~E_s = \min(S_i,\,\Delta_i\,k_s),\; E_b = \max\!\bigl(0,\,\Delta_i - E_s/k_s\bigr)k_b,\\
-&\quad S_i \leftarrow S_i - E_s,\; B_i \leftarrow B_i - E_b,\; s_{t+1} = s_t + E_s + E_b,\\
-\Delta_i < 0 &:~\operatorname{dep} = (-\Delta_i)k_d,\; S_i \leftarrow S_i + \operatorname{dep},\; s_{t+1} = s_t - \operatorname{dep},\\
-V_{t+1} &= (1-\varepsilon)V_t,
-\qquad s_{t+1} \leftarrow (1-\varepsilon)s_{t+1},\\
-D_i &\leftarrow (1-\eta)D_i + \eta T_i,
-\qquad \mathbf{p}_i \leftarrow (1-\eta)\mathbf{p}_i + \eta\mathbf{M}_i.
-\end{aligned}`;
-    if (tex === this.eqOverlaySig) return;
-    const canRenderKatex =
-      typeof window !== "undefined" &&
-      window.katex &&
-      typeof window.katex.render === "function";
-    if (canRenderKatex) {
-      window.katex.render(tex, mathEl, {
-        displayMode: true,
-        throwOnError: false,
-        output: "mathml",
-      });
-    } else {
-      mathEl.textContent =
-        "v~ = v + g*n_xz/V + m*alpha*p/(V + D); v = sqrt(2)*v~/|v~|; " +
-        "Q = erf(0.4*D); C = max(0,(1+e*Q)*(h_i-h_j)); " +
-        "if Delta>0: erode sed/bedrock, else deposit; " +
-        "V,s *= (1-eps); D,p = (1-eta)*(D,p) + eta*(track,momentum).";
-    }
-    this.eqOverlaySig = tex;
   }
 }

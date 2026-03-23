@@ -21,7 +21,6 @@ class AppCore {
       pixelSmoothing: true,
       renderOverlay: true,
       renderLegend: true,
-      renderEquation: true,
       renderKeymapRef: false,
 
       viewRadius: 32,
@@ -353,7 +352,8 @@ class AppCore {
     } = this.params;
     const analysisSignature = this._getAnalysisSignature();
     const includeAnalysis =
-      this.params.renderOverlay && analysisSignature !== this._analysisSignature;
+      this.params.renderOverlay &&
+      analysisSignature !== this._analysisSignature;
     const analysisViewRadius = this._getCanonicalViewRadius();
     const requestId = ++this._renderRequestId;
     this._workerBusy = true;
@@ -364,9 +364,13 @@ class AppCore {
       n,
       l,
       m,
-      nuclearCharge: Math.max(1, Math.round(Number(this.params.nuclearCharge) || 1)),
+      nuclearCharge: Math.max(
+        1,
+        Math.round(Number(this.params.nuclearCharge) || 1),
+      ),
       useReducedMass: this.params.useReducedMass !== false,
-      nucleusMassKg: Number(this.params.nucleusMassKg) || this.params.nucleusMassKg,
+      nucleusMassKg:
+        Number(this.params.nucleusMassKg) || this.params.nucleusMassKg,
       res,
       viewRadius,
       slicePlane,
@@ -401,8 +405,10 @@ class AppCore {
     this.analyser.applyWorkerStatistics(data.analysisStats, {
       ...this.params,
       fps: Number(this.statistics.fps) || 0,
-      resolution: Number(data.analysisResolution) || this._analysisConfig.resolution,
-      viewRadius: Number(data.analysisViewRadius) || this._getCanonicalViewRadius(),
+      resolution:
+        Number(data.analysisResolution) || this._analysisConfig.resolution,
+      viewRadius:
+        Number(data.analysisViewRadius) || this._getCanonicalViewRadius(),
       viewCentre: { x: 0, y: 0, z: 0 },
       aMuMeters: this.aMuMeters,
     });

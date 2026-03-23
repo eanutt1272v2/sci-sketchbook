@@ -62,8 +62,18 @@ function setupCanvasProperties(canvas) {
   frameRate(120);
 }
 
-function mouseClicked(e) { return appcore ? appcore.handleMouseClicked(e) : false; }
-function touchStarted(e) { return appcore ? appcore.handleMouseClicked(e) : false; }
-function windowResized() { return appcore ? appcore.windowResized() : false; }
-function keyPressed() { return appcore ? appcore.handleKeyPressed(key || event.key, keyCode) : false; }
-function keyReleased() { return appcore ? appcore.handleKeyReleased(key || event.key, keyCode) : false; }
+function mouseClicked(e) {
+  return appcore ? appcore.handleMouseClicked(e) : false;
+}
+function touchStarted(e) {
+  return appcore ? appcore.handleMouseClicked(e) : false;
+}
+function windowResized() {
+  return appcore ? appcore.windowResized() : false;
+}
+function keyPressed() {
+  return appcore ? appcore.handleKeyPressed(key || event.key, keyCode) : false;
+}
+function keyReleased() {
+  return appcore ? appcore.handleKeyReleased(key || event.key, keyCode) : false;
+}

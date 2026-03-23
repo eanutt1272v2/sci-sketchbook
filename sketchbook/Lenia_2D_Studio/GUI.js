@@ -50,7 +50,10 @@ class GUI {
   createSimulationTab(page) {
     const { params, statistics } = this;
 
-    const run = page.addFolder({ title: "Simulation Controls", expanded: true });
+    const run = page.addFolder({
+      title: "Simulation Controls",
+      expanded: true,
+    });
     run.addBinding(params, "running", { label: "Running" });
     run
       .addButton({ title: "Step Once" })
@@ -226,7 +229,6 @@ class GUI {
     overlay.addBinding(params, "renderCalcPanels", {
       label: "Calculation Panels",
     });
-    overlay.addBinding(params, "renderEquation", { label: "Equation Overlay" });
   }
 
   createAnimalsTab(page) {
@@ -467,29 +469,6 @@ class GUI {
     capture
       .addButton({ title: "Export Image" })
       .on("click", () => media?.exportImage());
-
-    this.addSeparator(page);
-
-    const session = page.addFolder({ title: "Session", expanded: true });
-
-    session.addBinding(statistics, "gen", {
-      readonly: true,
-      label: "Current Gen",
-    });
-
-    session.addButton({ title: "Clear Statistics" }).on("click", () => {
-      if (!analyser) return;
-      analyser.series = [];
-      analyser.reset();
-    });
-
-    this.addSeparator(page);
-
-    page.addButton({ title: "Print Statistics to Console" }).on("click", () => {
-      if (!analyser) return;
-      console.log("[Lenia] Statistics Series:", analyser.series);
-      console.log("[Lenia] Current Stats Row:", analyser.getStatRow());
-    });
   }
 
   syncMediaControls() {

@@ -1,5 +1,10 @@
 class Renderer {
-  constructor(size, colourMaps = {}, initialColourMap = "greyscale", uiFont = null) {
+  constructor(
+    size,
+    colourMaps = {},
+    initialColourMap = "greyscale",
+    uiFont = null,
+  ) {
     this.size = size;
     this.img = createImage(this.size, this.size);
 
@@ -10,8 +15,6 @@ class Renderer {
     this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
     this.lastLegendRange = { mode: "world", min: 0, max: 1 };
-    this.eqOverlayEl = null;
-    this.eqOverlaySig = "";
     this.motionTrail = [];
     this.maxMotionTrailPoints = 180;
     this.uiFont = uiFont;
@@ -117,7 +120,10 @@ class Renderer {
 
     this.motionTrail.push(point);
     if (this.motionTrail.length > this.maxMotionTrailPoints) {
-      this.motionTrail.splice(0, this.motionTrail.length - this.maxMotionTrailPoints);
+      this.motionTrail.splice(
+        0,
+        this.motionTrail.length - this.maxMotionTrailPoints,
+      );
     }
   }
 
@@ -198,8 +204,8 @@ class Renderer {
         const val = data[row + x];
         const normVal = (val - vmin) / denom;
         const clamped = Math.max(0, Math.min(1, normVal));
-        const lutIndex = Math.min(255, Math.max(0, Math.round(clamped * 255))) *
-          3;
+        const lutIndex =
+          Math.min(255, Math.max(0, Math.round(clamped * 255))) * 3;
         const idx = (row + x) * 4;
         this.img.pixels[idx] = this.lut[lutIndex];
         this.img.pixels[idx + 1] = this.lut[lutIndex + 1];
@@ -439,7 +445,6 @@ class Renderer {
           ["T", "Cycle colour map"],
           ["G", "Toggle grid"],
           ["L", "Toggle colour legend"],
-          ["J", "Toggle equation overlay"],
           ["O", "Toggle stats overlay"],
           ["M", "Toggle motion overlay"],
           ["Shift+M", "Toggle motion trail"],
@@ -602,7 +607,13 @@ class Renderer {
         const baseStartY = previous.uy + trailShiftY;
         const baseEndX = point.ux + trailShiftX;
         const baseEndY = point.uy + trailShiftY;
-        const alpha = map(i, 1, Math.max(1, this.motionTrail.length - 1), 40, 180);
+        const alpha = map(
+          i,
+          1,
+          Math.max(1, this.motionTrail.length - 1),
+          40,
+          180,
+        );
         stroke(120, 220, 255, alpha);
         strokeWeight(1.5);
         for (let ox = -1; ox <= 1; ox++) {
@@ -701,7 +712,7 @@ class Renderer {
     const labelLines = [
       `pos=(${centerX.toFixed(1)}, ${centerY.toFixed(1)})  growth=(${(growthCenterX || 0).toFixed(1)}, ${(growthCenterY || 0).toFixed(1)})`,
       `angle=${angle.toFixed(1)} deg  speed=${speed.toFixed(3)}  sep=${(massGrowthDist || 0).toFixed(3)}`,
-      `rot=${(rotationSpeed || 0).toFixed(2)} deg/s  sym=${symmSides || 0} @ ${(((symmStrength || 0) * 100)).toFixed(1)}%`,
+      `rot=${(rotationSpeed || 0).toFixed(2)} deg/s  sym=${symmSides || 0} @ ${((symmStrength || 0) * 100).toFixed(1)}%`,
     ].join("\n");
     fill(0, 200);
     text(labelLines, labelX + 1, labelY + 4);
@@ -842,7 +853,15 @@ class Renderer {
     return { panelSize, gap, cols, rows, totalW, totalH, baseX, baseY };
   }
 
-  _renderCalcPanelBorders(baseX, baseY, panelSize, gap, cols, rows, target = null) {
+  _renderCalcPanelBorders(
+    baseX,
+    baseY,
+    panelSize,
+    gap,
+    cols,
+    rows,
+    target = null,
+  ) {
     const ctx = target || this;
     ctx.push();
     ctx.noFill();
@@ -942,103 +961,11 @@ class Renderer {
     ctx.pop();
   }
 
-  ensureEquationOverlay() {
-    if (this.eqOverlayEl && document.body.contains(this.eqOverlayEl)) {
-      return this.eqOverlayEl;
-    }
-    const panel = document.createElement("div");
-    panel.className = "equation-overlay";
-    panel.style.display = "none";
-    const title = document.createElement("p");
-    title.className = "equation-overlay__title";
-    title.textContent = "Lenia: Continuous Cellular Automata";
-    const math = document.createElement("div");
-    math.className = "equation-overlay__math";
-    panel.appendChild(title);
-    panel.appendChild(math);
-    document.body.appendChild(panel);
-    this.eqOverlayEl = panel;
-    return panel;
-  }
-
-  hideEquationOverlay() {
-    if (this.eqOverlayEl) this.eqOverlayEl.style.display = "none";
-  }
-
-  positionEquationOverlay(preferredLeftPx = null) {
-    const panel = this.eqOverlayEl;
-    const canvasEl = _renderer?.elt;
-    if (!panel || !canvasEl) return;
-
-    const rect = canvasEl.getBoundingClientRect();
-    const margin = 12;
-    const maxWidth = Math.max(220, Math.floor(rect.width - margin * 2));
-    panel.style.maxWidth = `${maxWidth}px`;
-
-    const panelWidth = panel.offsetWidth;
-    const panelHeight = panel.offsetHeight;
-
-    const minLeft = rect.left + margin;
-    const maxLeft = rect.right - panelWidth - margin;
-    const minTop = rect.top + margin;
-    const maxTop = rect.bottom - panelHeight - margin;
-
-    const wantedLeft =
-      Number.isFinite(preferredLeftPx) ? preferredLeftPx : rect.left + margin;
-    const left = Math.max(minLeft, Math.min(wantedLeft, Math.max(minLeft, maxLeft)));
-    const top = Math.max(minTop, Math.min(maxTop, Math.max(minTop, maxTop)));
-
-    panel.style.left = `${Math.round(left)}px`;
-    panel.style.top = `${Math.round(top)}px`;
-    panel.style.right = "auto";
-    panel.style.bottom = "auto";
-  }
-
   dispose() {
-    if (this.eqOverlayEl && this.eqOverlayEl.parentNode === document.body) {
-      document.body.removeChild(this.eqOverlayEl);
-    }
-    this.eqOverlayEl = null;
-    this.eqOverlaySig = "";
     this.motionTrail = [];
     this.img = null;
     this.calcPanelImages = [];
     this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
-  }
-
-  renderEquationOverlay(params = {}) {
-    const panel = this.ensureEquationOverlay();
-    panel.style.display = "block";
-    const leftMargin = 20;
-    const areCalcPanelsVisible = !!params.renderCalcPanels;
-    let preferredLeft = leftMargin;
-    if (areCalcPanelsVisible) {
-      const calcPanelBaseX = 20;
-      const calcPanelSize = 96;
-      const calcPanelGap = 8;
-      const calcPanelCols = 2;
-      const calcPanelsTotalW =
-        calcPanelCols * calcPanelSize + (calcPanelCols - 1) * calcPanelGap;
-      preferredLeft = calcPanelBaseX + calcPanelsTotalW + 16;
-    }
-    this.positionEquationOverlay(preferredLeft);
-    const mathEl = panel.querySelector(".equation-overlay__math");
-    const tex = String.raw`A^{t+1}(x) = \mathcal{C}\!\left[A^t(x) + \tfrac{1}{T}\,G_{\mu,\sigma}\!\left((K * A^t)(x)\right)\right]`;
-    if (tex === this.eqOverlaySig) return;
-    const canRenderKatex =
-      typeof window !== "undefined" &&
-      window.katex &&
-      typeof window.katex.render === "function";
-    if (canRenderKatex) {
-      window.katex.render(tex, mathEl, {
-        displayMode: true,
-        throwOnError: false,
-        output: "mathml",
-      });
-    } else {
-      mathEl.textContent = "A(t+1)(x) = clip[ A(t)(x) + (1/T) * G(m,s)( (K * A(t))(x) ) ]";
-    }
-    this.eqOverlaySig = tex;
   }
 }

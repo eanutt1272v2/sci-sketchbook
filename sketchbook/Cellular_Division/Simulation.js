@@ -316,25 +316,45 @@ class Simulation {
   setAlpha(value) {
     this.alpha = constrain(value, 0, 360);
     this.updateSpecies();
-    if (this._worker) this._worker.postMessage({ type: "setParam", key: "alpha", value: this.alpha });
+    if (this._worker)
+      this._worker.postMessage({
+        type: "setParam",
+        key: "alpha",
+        value: this.alpha,
+      });
   }
 
   setBeta(value) {
     this.beta = constrain(value, 0, 90);
     this.updateSpecies();
-    if (this._worker) this._worker.postMessage({ type: "setParam", key: "beta", value: this.beta });
+    if (this._worker)
+      this._worker.postMessage({
+        type: "setParam",
+        key: "beta",
+        value: this.beta,
+      });
   }
 
   setGamma(value) {
     this.gamma = constrain(value, 0, 50);
     this.updateSpecies();
-    if (this._worker) this._worker.postMessage({ type: "setParam", key: "gamma", value: this.gamma });
+    if (this._worker)
+      this._worker.postMessage({
+        type: "setParam",
+        key: "gamma",
+        value: this.gamma,
+      });
   }
 
   setRadius(value) {
     this.radius = constrain(value, 5, 50);
     this.updateSpecies();
-    if (this._worker) this._worker.postMessage({ type: "setParam", key: "radius", value: this.radius });
+    if (this._worker)
+      this._worker.postMessage({
+        type: "setParam",
+        key: "radius",
+        value: this.radius,
+      });
   }
 
   setTrailAlpha(value) {
@@ -343,7 +363,12 @@ class Simulation {
 
   setDensityThreshold(value) {
     this.densityThreshold = constrain(value, 1, 60);
-    if (this._worker) this._worker.postMessage({ type: "setParam", key: "densityThreshold", value: this.densityThreshold });
+    if (this._worker)
+      this._worker.postMessage({
+        type: "setParam",
+        key: "densityThreshold",
+        value: this.densityThreshold,
+      });
   }
 
   setParticleCount(value) {

@@ -434,7 +434,13 @@ function computeAnalysis(state, analysisState) {
     const y = (i / size) | 0;
 
     if (x < size - 1 && y < size - 1) {
-      const surfaceArea = calcCellSurfaceArea(x, y, size, heightMap, heightScale);
+      const surfaceArea = calcCellSurfaceArea(
+        x,
+        y,
+        size,
+        heightMap,
+        heightScale,
+      );
       totalSA += surfaceArea;
       slopeSum += surfaceArea - 1.0;
     }

@@ -124,11 +124,6 @@ class InputHandler {
         this.appcore.toggleLegend();
         logMsg = `Legend: ${this.appcore.params.renderLegend}`;
         break;
-      case "j":
-        this.appcore.params.renderEquation = !this.appcore.params.renderEquation;
-        this.appcore.requestRender();
-        logMsg = `Equation overlay: ${this.appcore.params.renderEquation}`;
-        break;
       case "m":
         this.appcore.toggleSmoothing();
         logMsg = `Smoothing: ${this.appcore.params.pixelSmoothing}`;

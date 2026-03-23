@@ -113,8 +113,10 @@ class Analyser {
       statistics.sedimentBounds.max = Number(analysis.sedimentBounds.max) || 0;
     }
     if (analysis.dischargeBounds) {
-      statistics.dischargeBounds.min = Number(analysis.dischargeBounds.min) || 0;
-      statistics.dischargeBounds.max = Number(analysis.dischargeBounds.max) || 0;
+      statistics.dischargeBounds.min =
+        Number(analysis.dischargeBounds.min) || 0;
+      statistics.dischargeBounds.max =
+        Number(analysis.dischargeBounds.max) || 0;
     }
   }
 

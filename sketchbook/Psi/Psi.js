@@ -57,12 +57,31 @@ function draw() {
   appcore.render();
 }
 
-function windowResized() { if (!appcore) return; appcore.resize(); }
-function keyPressed() { return appcore ? appcore.handleKeyPressed(key, keyCode) : false; }
-function keyReleased() { return appcore ? appcore.handleKeyReleased(key, keyCode) : false; }
-function mouseWheel(event) { return appcore ? appcore.handleWheel(event) : false; }
-function mouseDragged(event) { return appcore ? appcore.handlePointer(event) : false; }
-function mouseReleased(event) { return appcore ? appcore.handlePointerEnd(event) : false; }
-function touchStarted(event) { return appcore ? appcore.handlePointer(event) : false; }
-function touchMoved(event) { return appcore ? appcore.handlePointer(event) : false; }
-function touchEnded(event) { return appcore ? appcore.handlePointerEnd(event) : false; }
+function windowResized() {
+  if (!appcore) return;
+  appcore.resize();
+}
+function keyPressed() {
+  return appcore ? appcore.handleKeyPressed(key, keyCode) : false;
+}
+function keyReleased() {
+  return appcore ? appcore.handleKeyReleased(key, keyCode) : false;
+}
+function mouseWheel(event) {
+  return appcore ? appcore.handleWheel(event) : false;
+}
+function mouseDragged(event) {
+  return appcore ? appcore.handlePointer(event) : false;
+}
+function mouseReleased(event) {
+  return appcore ? appcore.handlePointerEnd(event) : false;
+}
+function touchStarted(event) {
+  return appcore ? appcore.handlePointer(event) : false;
+}
+function touchMoved(event) {
+  return appcore ? appcore.handlePointer(event) : false;
+}
+function touchEnded(event) {
+  return appcore ? appcore.handlePointerEnd(event) : false;
+}

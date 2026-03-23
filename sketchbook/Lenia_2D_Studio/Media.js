@@ -142,11 +142,7 @@ class Media {
 
   exportWorldJSON() {
     const board = this.appcore?.board;
-    const hasBuffers = !!(
-      board?.world &&
-      board?.potential &&
-      board?.growth
-    );
+    const hasBuffers = !!(board?.world && board?.potential && board?.growth);
 
     if (!hasBuffers) {
       if (!this._worldExportDeferred) {
@@ -234,9 +230,12 @@ class Media {
     }
     const world = RLECodec.decode(data.world.world, size, size);
     const expectedLength = size * size;
-    const potential = this._decodeFloatField(data.world.potential, expectedLength);
+    const potential = this._decodeFloatField(
+      data.world.potential,
+      expectedLength,
+    );
     const growth = this._decodeFloatField(data.world.growth, expectedLength);
-    
+
     let growthOld = null;
     if (data.world.growthOld && typeof data.world.growthOld === "object") {
       growthOld = this._decodeFloatField(data.world.growthOld, expectedLength);
@@ -294,7 +293,9 @@ class Media {
         }
 
         if (!data.statistics || typeof data.statistics !== "object") {
-          throw new Error("[Lenia] Invalid statistics JSON: missing statistics");
+          throw new Error(
+            "[Lenia] Invalid statistics JSON: missing statistics",
+          );
         }
 
         if (!Array.isArray(data.series)) {
@@ -305,7 +306,10 @@ class Media {
 
         this.appcore.analyser.resetStatistics();
         this.appcore.analyser.reset();
-        Object.assign(this.appcore.statistics, this._cloneJSONCompatible(data.statistics));
+        Object.assign(
+          this.appcore.statistics,
+          this._cloneJSONCompatible(data.statistics),
+        );
         this.appcore.analyser.series = this._capSeries(
           this._cloneJSONCompatible(data.series),
         );
@@ -441,11 +445,15 @@ class Media {
 
   _encodeFloatField(source, size) {
     if (!(source instanceof Float32Array)) {
-      throw new Error("[Lenia] Invalid world JSON export: missing Float32 field");
+      throw new Error(
+        "[Lenia] Invalid world JSON export: missing Float32 field",
+      );
     }
     const expectedLength = Number(size) * Number(size);
     if (source.length !== expectedLength) {
-      throw new Error("[Lenia] Invalid world JSON export: field length mismatch");
+      throw new Error(
+        "[Lenia] Invalid world JSON export: field length mismatch",
+      );
     }
 
     return {
@@ -462,7 +470,9 @@ class Media {
       source.encoding !== "rle-f32-v1" ||
       typeof source.data !== "string"
     ) {
-      throw new Error("[Lenia] Invalid world JSON: malformed float field encoding");
+      throw new Error(
+        "[Lenia] Invalid world JSON: malformed float field encoding",
+      );
     }
 
     const length = Number(source.length);
@@ -517,7 +527,10 @@ class Media {
     this.recordedChunks = [];
     this.pendingDataImportHandler = null;
 
-    if (this.dataImportInput && this.dataImportInput.parentNode === document.body) {
+    if (
+      this.dataImportInput &&
+      this.dataImportInput.parentNode === document.body
+    ) {
       document.body.removeChild(this.dataImportInput);
     }
     this.dataImportInput = null;

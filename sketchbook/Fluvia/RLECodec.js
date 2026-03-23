@@ -85,7 +85,9 @@ class RLECodec {
     const source =
       values instanceof Float32Array ? values : Float32Array.from(values || []);
     const bytes = new Uint8Array(source.byteLength);
-    bytes.set(new Uint8Array(source.buffer, source.byteOffset, source.byteLength));
+    bytes.set(
+      new Uint8Array(source.buffer, source.byteOffset, source.byteLength),
+    );
     return this.encodeByteArray(bytes);
   }
 
@@ -133,9 +135,7 @@ class RLECodec {
     if (token.length === 1 && token >= "A" && token <= "X") {
       byte = token.charCodeAt(0) - 65 + 1;
     } else if (token.length === 2) {
-      byte =
-        (token.charCodeAt(0) - 112) * 24 +
-        (token.charCodeAt(1) - 65 + 25);
+      byte = (token.charCodeAt(0) - 112) * 24 + (token.charCodeAt(1) - 65 + 25);
     }
 
     return Math.max(0, Math.min(255, byte));

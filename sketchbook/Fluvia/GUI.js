@@ -73,7 +73,10 @@ class GUI {
   createGeneralTab(page) {
     const { params, statistics } = this.appcore;
 
-    const controls = page.addFolder({ title: "Simulation Controls", expanded: true });
+    const controls = page.addFolder({
+      title: "Simulation Controls",
+      expanded: true,
+    });
     controls.addBinding(params, "running", { label: "Running" });
     controls
       .addButton({ title: "Generate Terrain" })
@@ -124,7 +127,10 @@ class GUI {
 
     this.addSeparator(page);
 
-    const genFolder = page.addFolder({ title: "Terrain Generation", expanded: true });
+    const genFolder = page.addFolder({
+      title: "Terrain Generation",
+      expanded: true,
+    });
 
     genFolder.addBinding(params, "terrainSize", {
       label: "Size",
@@ -237,7 +243,6 @@ class GUI {
     overlay.addBinding(params, "renderStats", { label: "Statistics Overlay" });
 
     overlay.addBinding(params, "renderLegend", { label: "Colour Legend" });
-  overlay.addBinding(params, "renderEquation", { label: "Equation Overlay" });
 
     this.addSeparator(page);
 
@@ -293,6 +298,8 @@ class GUI {
       format: (v) => v.toFixed(0),
     });
 
+    this.addSeparator(page);
+
     const elevationFolder = page.addFolder({ title: "Topography" });
 
     elevationFolder.addBinding(statistics, "avgElevation", {
@@ -325,6 +332,8 @@ class GUI {
       min: 0,
       max: 2,
     });
+
+    this.addSeparator(page);
 
     const hydroFolder = page.addFolder({ title: "Hydrology" });
 
@@ -371,6 +380,8 @@ class GUI {
       min: 0,
       max: 1,
     });
+
+    this.addSeparator(page);
 
     const geomorphFolder = page.addFolder({ title: "Mass Balance" });
 
@@ -423,56 +434,93 @@ class GUI {
       max: 1,
     });
 
+    this.addSeparator(page);
+
     const compositeFolder = page.addFolder({ title: "Composite Blend" });
 
-    this.addGraphWithValue(compositeFolder, statistics, "compositeWaterCoveragePct", {
-      label: "Water Contribution (%)",
-      format: (v) => v.toFixed(1),
-      min: 0,
-      max: 100,
-    });
+    this.addGraphWithValue(
+      compositeFolder,
+      statistics,
+      "compositeWaterCoveragePct",
+      {
+        label: "Water Contribution (%)",
+        format: (v) => v.toFixed(1),
+        min: 0,
+        max: 100,
+      },
+    );
 
-    this.addGraphWithValue(compositeFolder, statistics, "compositeSedimentCoveragePct", {
-      label: "Sediment Contribution (%)",
-      format: (v) => v.toFixed(1),
-      min: 0,
-      max: 100,
-    });
+    this.addGraphWithValue(
+      compositeFolder,
+      statistics,
+      "compositeSedimentCoveragePct",
+      {
+        label: "Sediment Contribution (%)",
+        format: (v) => v.toFixed(1),
+        min: 0,
+        max: 100,
+      },
+    );
 
-    this.addGraphWithValue(compositeFolder, statistics, "compositeFlatCoveragePct", {
-      label: "Flat Contribution (%)",
-      format: (v) => v.toFixed(1),
-      min: 0,
-      max: 100,
-    });
+    this.addGraphWithValue(
+      compositeFolder,
+      statistics,
+      "compositeFlatCoveragePct",
+      {
+        label: "Flat Contribution (%)",
+        format: (v) => v.toFixed(1),
+        min: 0,
+        max: 100,
+      },
+    );
 
-    this.addGraphWithValue(compositeFolder, statistics, "compositeSteepCoveragePct", {
-      label: "Steep Contribution (%)",
-      format: (v) => v.toFixed(1),
-      min: 0,
-      max: 100,
-    });
+    this.addGraphWithValue(
+      compositeFolder,
+      statistics,
+      "compositeSteepCoveragePct",
+      {
+        label: "Steep Contribution (%)",
+        format: (v) => v.toFixed(1),
+        min: 0,
+        max: 100,
+      },
+    );
 
-    this.addGraphWithValue(compositeFolder, statistics, "compositeMeanSlopeWeight", {
-      label: "Mean Slope Weight",
-      format: (v) => v.toFixed(3),
-      min: 0,
-      max: 1,
-    });
+    this.addGraphWithValue(
+      compositeFolder,
+      statistics,
+      "compositeMeanSlopeWeight",
+      {
+        label: "Mean Slope Weight",
+        format: (v) => v.toFixed(3),
+        min: 0,
+        max: 1,
+      },
+    );
 
-    this.addGraphWithValue(compositeFolder, statistics, "compositeMeanSedimentAlpha", {
-      label: "Mean Sediment Alpha",
-      format: (v) => v.toFixed(3),
-      min: 0,
-      max: 1,
-    });
+    this.addGraphWithValue(
+      compositeFolder,
+      statistics,
+      "compositeMeanSedimentAlpha",
+      {
+        label: "Mean Sediment Alpha",
+        format: (v) => v.toFixed(3),
+        min: 0,
+        max: 1,
+      },
+    );
 
-    this.addGraphWithValue(compositeFolder, statistics, "compositeMeanWaterAlpha", {
-      label: "Mean Water Alpha",
-      format: (v) => v.toFixed(3),
-      min: 0,
-      max: 1,
-    });
+    this.addGraphWithValue(
+      compositeFolder,
+      statistics,
+      "compositeMeanWaterAlpha",
+      {
+        label: "Mean Water Alpha",
+        format: (v) => v.toFixed(3),
+        min: 0,
+        max: 1,
+      },
+    );
   }
 
   createMediaTab(page) {

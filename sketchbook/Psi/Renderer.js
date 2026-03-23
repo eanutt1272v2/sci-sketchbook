@@ -11,73 +11,9 @@ class Renderer {
     this._lastPixelSmoothing = null;
     this.lastLegendPeak = 1e-30;
     this.lastAMu = 5.29177210903e-11;
-    this.eqOverlayEl = null;
-    this.eqOverlaySig = "";
-  }
-
-  ensureEquationOverlay() {
-    if (this.eqOverlayEl && document.body.contains(this.eqOverlayEl)) {
-      return this.eqOverlayEl;
-    }
-
-    const panel = document.createElement("div");
-    panel.className = "equation-overlay";
-    panel.style.display = "none";
-
-    const title = document.createElement("p");
-    title.className = "equation-overlay__title";
-    title.textContent = "Hydrogen Wavefunctions: Probability Density";
-
-    const math = document.createElement("div");
-    math.className = "equation-overlay__math";
-
-    panel.appendChild(title);
-    panel.appendChild(math);
-    document.body.appendChild(panel);
-
-    this.eqOverlayEl = panel;
-    return panel;
-  }
-
-  hideEquationOverlay() {
-    if (this.eqOverlayEl) {
-      this.eqOverlayEl.style.display = "none";
-    }
-  }
-
-  positionEquationOverlay() {
-    const panel = this.eqOverlayEl;
-    const canvasEl = _renderer?.elt;
-    if (!panel || !canvasEl) return;
-
-    const rect = canvasEl.getBoundingClientRect();
-    const margin = 12;
-    const maxWidth = Math.max(180, Math.floor(rect.width - margin * 2));
-    panel.style.maxWidth = `${maxWidth}px`;
-
-    const panelWidth = panel.offsetWidth;
-    const panelHeight = panel.offsetHeight;
-
-    const minLeft = rect.left + margin;
-    const maxLeft = rect.right - panelWidth - margin;
-    const minTop = rect.top + margin;
-    const maxTop = rect.bottom - panelHeight - margin;
-
-    const left = Math.max(minLeft, Math.min(minLeft, Math.max(minLeft, maxLeft)));
-    const top = Math.max(minTop, Math.min(maxTop, Math.max(minTop, maxTop)));
-
-    panel.style.left = `${Math.round(left)}px`;
-    panel.style.top = `${Math.round(top)}px`;
-    panel.style.right = "auto";
-    panel.style.bottom = "auto";
   }
 
   dispose() {
-    if (this.eqOverlayEl && this.eqOverlayEl.parentNode === document.body) {
-      document.body.removeChild(this.eqOverlayEl);
-    }
-    this.eqOverlayEl = null;
-    this.eqOverlaySig = "";
     this.buffer = null;
   }
 
@@ -194,13 +130,7 @@ class Renderer {
   }
 
   render() {
-    const {
-      pixelSmoothing,
-      renderOverlay,
-      renderLegend,
-      renderEquation,
-      renderKeymapRef,
-    } =
+    const { pixelSmoothing, renderOverlay, renderLegend, renderKeymapRef } =
       this.appcore.params;
     const { buffer } = this;
 
@@ -221,12 +151,6 @@ class Renderer {
 
     if (renderOverlay) {
       this.renderOverlay();
-    }
-
-    if (renderEquation) {
-      this.renderEquationOverlay();
-    } else {
-      this.hideEquationOverlay();
     }
 
     if (renderLegend) {
@@ -290,36 +214,6 @@ class Renderer {
     pop();
   }
 
-  renderEquationOverlay() {
-    const panel = this.ensureEquationOverlay();
-    panel.style.display = "block";
-    this.positionEquationOverlay();
-
-    const mathEl = panel.querySelector(".equation-overlay__math");
-
-    const tex = String.raw`\left|\psi_{n\ell m}(r,\theta,\phi)\right|^2 = \left|R_{n\ell}(r)Y_{\ell}^{m}(\theta,\phi)\right|^2`;
-    if (tex === this.eqOverlaySig) {
-      return;
-    }
-
-    const canRenderKatex =
-      typeof window !== "undefined" &&
-      window.katex &&
-      typeof window.katex.render === "function";
-
-    if (canRenderKatex) {
-      window.katex.render(tex, mathEl, {
-        displayMode: true,
-        throwOnError: false,
-        output: "mathml",
-      });
-    } else {
-      mathEl.textContent = "|psi_nlm(r,theta,phi)|^2 = |R_nl(r)Y_l^m(theta,phi)|^2";
-    }
-
-    this.eqOverlaySig = tex;
-  }
-
   renderLegend() {
     push();
     const { colourMap, exposure } = this.appcore.params;
@@ -358,7 +252,10 @@ class Renderer {
 
     const gamma = 1.0 / (1.0 + exposure);
     const rawStep = scaledMax / 7;
-    const stepMag = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1e-9))));
+    const stepMag = Math.pow(
+      10,
+      Math.floor(Math.log10(Math.max(rawStep, 1e-9))),
+    );
     const stepNorm = rawStep / stepMag;
     let niceNorm = 1;
     if (stepNorm > 1 && stepNorm <= 2) niceNorm = 2;
@@ -456,7 +353,6 @@ class Renderer {
           ["M", "Toggle pixel smoothing"],
           ["O", "Toggle overlay"],
           ["L", "Toggle legend"],
-          ["J", "Toggle equation overlay"],
           ["H", "Toggle GUI"],
         ],
       },

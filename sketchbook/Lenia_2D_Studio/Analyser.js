@@ -58,10 +58,6 @@ class Analyser {
     this.series = [];
   }
 
-  updateStatistics() {
-    // Worker-only architecture: this method is intentionally a no-op.
-  }
-
   applyWorkerStatistics(workerStats, automaton) {
     if (!workerStats || typeof workerStats !== "object") return;
 

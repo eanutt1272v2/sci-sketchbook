@@ -96,12 +96,6 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "j") {
-      this.appcore.params.renderEquation = !this.appcore.params.renderEquation;
-      this.appcore.refreshGUI();
-      return false;
-    }
-
     if (keyLower === "v") {
       if (this.appcore.media.isRecording) {
         this.appcore.media.stopRecording();

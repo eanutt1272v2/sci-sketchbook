@@ -1,54 +1,6 @@
 "use strict";
 
-let _fftCtor = null;
-try {
-  importScripts("https://cdn.jsdelivr.net/npm/fft.js@4.0.4/dist/fft.min.js");
-  if (typeof globalThis.FFT === "function") {
-    _fftCtor = globalThis.FFT;
-  }
-} catch (_err) {
-  // Fallback to local radix-2 FFT implementation when CDN is unavailable.
-}
-
-const _fftPlanCache = new Map();
-
-function getFFTPlan(N) {
-  if (!_fftCtor) return null;
-  let plan = _fftPlanCache.get(N);
-  if (!plan) {
-    plan = new _fftCtor(N);
-    _fftPlanCache.set(N, plan);
-  }
-  return plan;
-}
-
-function fftWithLibrary(buf, inverse) {
-  const N = buf.length >>> 1;
-  const plan = getFFTPlan(N);
-  if (!plan) return false;
-
-  const out = plan.createComplexArray();
-  if (inverse) {
-    plan.inverseTransform(out, buf);
-    const scale = 1 / N;
-    for (let i = 0; i < out.length; i++) {
-      buf[i] = out[i] * scale;
-    }
-  } else {
-    plan.transform(out, buf);
-    for (let i = 0; i < out.length; i++) {
-      buf[i] = out[i];
-    }
-  }
-
-  return true;
-}
-
 function fftRadix2(buf, inverse) {
-  if (fftWithLibrary(buf, inverse)) {
-    return;
-  }
-
   const N = buf.length >>> 1;
   let j = 0;
   for (let i = 1; i < N; i++) {
@@ -339,24 +291,21 @@ function stepFFT(cells, potential, field, fieldOld, params, kernelFFT, N) {
 }
 
 function detectSymmetry(cells, size, stats, state, params) {
-  const center = size / 2;
-  const radius = Math.min(center * 0.8, 64);
+  const cx = stats.mass > state.epsilon ? stats.centerX : size / 2;
+  const cy = stats.mass > state.epsilon ? stats.centerY : size / 2;
+  const maxRadius = Math.min(size * 0.4, 64);
   const angularBins = 64;
   const angles = new Float32Array(angularBins);
 
   for (let theta = 0; theta < angularBins; theta++) {
     const angle = (theta / angularBins) * 2 * Math.PI;
     let sum = 0;
-    let count = 0;
-    for (let r = 1; r < radius; r += 1) {
-      const x = Math.round(center + r * Math.cos(angle));
-      const y = Math.round(center + r * Math.sin(angle));
-      if (x >= 0 && x < size && y >= 0 && y < size) {
-        sum += cells[y * size + x];
-        count++;
-      }
+    for (let r = 1; r < maxRadius; r += 1) {
+      const x = ((Math.round(cx + r * Math.cos(angle)) % size) + size) % size;
+      const y = ((Math.round(cy + r * Math.sin(angle)) % size) + size) % size;
+      sum += cells[y * size + x];
     }
-    angles[theta] = count > 0 ? sum / count : 0;
+    angles[theta] = sum / (maxRadius - 1);
   }
 
   const harmonics = new Float32Array(angularBins / 2);
@@ -407,7 +356,7 @@ function detectSymmetry(cells, size, stats, state, params) {
       if (dPhase < -Math.PI) dPhase += 2 * Math.PI;
 
       const dTheta = dPhase / maxIndex;
-      rotSpeed = ((dTheta * 180) / Math.PI) / dt;
+      rotSpeed = (dTheta * 180) / Math.PI / dt;
     }
 
     state.lastSymmPhase = symmPhase;
@@ -566,7 +515,8 @@ function analyseStep(cells, field, change, params, state) {
       inertia += val * (dx * dx + dy * dy);
     }
   }
-  stats.gyradius = stats.mass > state.epsilon ? Math.sqrt(inertia / stats.mass) : 0;
+  stats.gyradius =
+    stats.mass > state.epsilon ? Math.sqrt(inertia / stats.mass) : 0;
 
   if (state.lastCentreX !== null && stats.mass > state.epsilon) {
     const dx = torusDelta(stats.centerX, state.lastCentreX, size);
@@ -693,7 +643,12 @@ self.onmessage = function (e) {
       newGrowthOld = new Float32Array(growth);
     }
 
-    const transfers = [world.buffer, potential.buffer, growth.buffer, change.buffer];
+    const transfers = [
+      world.buffer,
+      potential.buffer,
+      growth.buffer,
+      change.buffer,
+    ];
     if (newGrowthOld) transfers.push(newGrowthOld.buffer);
 
     self.postMessage(

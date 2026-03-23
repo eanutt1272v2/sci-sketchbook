@@ -82,42 +82,49 @@ class GUI {
       step: 1,
     });
 
-    this.bindings.nuclearCharge = quantum.addBinding(this.appcore.params, "nuclearCharge", {
-      label: "Z (nuclear charge)",
-      min: 1,
-      max: 20,
-      step: 1,
-      format: (v) => String(Math.max(1, Math.min(20, Math.round(Number(v) || 1)))),
-    }).on("change", (ev) => {
-      const z = Math.max(1, Math.min(20, Math.round(Number(ev.value) || 1)));
-      if (this.appcore.params.nuclearCharge !== z) {
-        this.appcore.params.nuclearCharge = z;
-        this.pane.refresh();
-      }
-      this.appcore.requestRender();
-    });
+    this.bindings.nuclearCharge = quantum
+      .addBinding(this.appcore.params, "nuclearCharge", {
+        label: "Z (nuclear charge)",
+        min: 1,
+        max: 20,
+        step: 1,
+        format: (v) =>
+          String(Math.max(1, Math.min(20, Math.round(Number(v) || 1)))),
+      })
+      .on("change", (ev) => {
+        const z = Math.max(1, Math.min(20, Math.round(Number(ev.value) || 1)));
+        if (this.appcore.params.nuclearCharge !== z) {
+          this.appcore.params.nuclearCharge = z;
+          this.pane.refresh();
+        }
+        this.appcore.requestRender();
+      });
 
-    quantum.addBinding(this.appcore.params, "useReducedMass", {
-      label: "Use reduced mass",
-    }).on("change", () => {
-      this.appcore.requestRender();
-    });
+    quantum
+      .addBinding(this.appcore.params, "useReducedMass", {
+        label: "Use reduced mass",
+      })
+      .on("change", () => {
+        this.appcore.requestRender();
+      });
 
     this.syncMassControlFromParams();
 
-    this.bindings.nucleusMassLog10 = quantum.addBinding(this.massControl, "nucleusMassLog10", {
-      label: "log10 Nucleus mass (kg)",
-      min: -30,
-      max: -24,
-      step: 0.01,
-      format: (v) => Number(v).toFixed(2),
-    }).on("change", (ev) => {
-      const value = Number(ev.value);
-      if (!Number.isFinite(value)) return;
+    this.bindings.nucleusMassLog10 = quantum
+      .addBinding(this.massControl, "nucleusMassLog10", {
+        label: "log10 Nucleus mass (kg)",
+        min: -30,
+        max: -24,
+        step: 0.01,
+        format: (v) => Number(v).toFixed(2),
+      })
+      .on("change", (ev) => {
+        const value = Number(ev.value);
+        if (!Number.isFinite(value)) return;
 
-      this.appcore.params.nucleusMassKg = Math.pow(10, value);
-      this.appcore.requestRender();
-    });
+        this.appcore.params.nucleusMassKg = Math.pow(10, value);
+        this.appcore.requestRender();
+      });
 
     quantum.addBinding(this.appcore.params, "nucleusMassKg", {
       label: "Nucleus mass (kg)",
@@ -191,12 +198,6 @@ class GUI {
     quality
       .addBinding(this.appcore.params, "renderLegend", {
         label: "Colour Legend",
-      })
-      .on("change", () => this.appcore.requestRender());
-
-    quality
-      .addBinding(this.appcore.params, "renderEquation", {
-        label: "Equation Overlay",
       })
       .on("change", () => this.appcore.requestRender());
 
@@ -277,7 +278,10 @@ class GUI {
   createStatisticsTab(page) {
     const { statistics, analyser, media } = this.appcore;
 
-    const distribution = page.addFolder({ title: "Distribution", expanded: true });
+    const distribution = page.addFolder({
+      title: "Distribution",
+      expanded: true,
+    });
 
     distribution.addBinding(statistics, "density", {
       readonly: true,
