@@ -1,6 +1,7 @@
 class AppCore {
   constructor(assets) {
     this.metadata = assets.metadata;
+    
     this.colourMaps = colourMaps || {};
     this.colourMapKeys = Object.keys(this.colourMaps);
 
@@ -14,8 +15,6 @@ class AppCore {
       };
       this.colourMapKeys = ["greyscale"];
     }
-    
-    this.font = assets.font;
 
     this.params = {
       orbitalNotation: "",
@@ -26,7 +25,9 @@ class AppCore {
       useReducedMass: true,
       nucleusMassKg: 1.67262192369e-27,
 
-      colourMap: "rocket",
+      colourMap: this.colourMapKeys.includes("rocket")
+        ? "rocket"
+        : this.colourMapKeys[0],
       exposure: 0.75,
 
       resolution: 256,
@@ -57,6 +58,8 @@ class AppCore {
       radialSpread: 0,
       nodeEstimate: 0,
     };
+
+    this.font = assets.font;
 
     this._pendingActions = [];
     this._analysisConfig = { resolution: 384 };
