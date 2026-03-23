@@ -25,8 +25,8 @@ class AppCore {
       useReducedMass: true,
       nucleusMassKg: 1.67262192369e-27,
 
-      colourMap: this.colourMapKeys.includes("rocket")
-        ? "rocket"
+      colourMap: this.colourMapKeys.includes("mako")
+        ? "mako"
         : this.colourMapKeys[0],
       exposure: 0.75,
 
