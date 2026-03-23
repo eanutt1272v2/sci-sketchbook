@@ -26,8 +26,7 @@ class AppCore {
   }
 
   windowResized() {
-    const canvasSize = min(windowWidth, windowHeight);
-    resizeCanvas(canvasSize, canvasSize);
+    resizeCanvas(windowWidth, windowHeight);
 
     if (this.ui && typeof this.ui.dispose === "function") {
       this.ui.dispose();
