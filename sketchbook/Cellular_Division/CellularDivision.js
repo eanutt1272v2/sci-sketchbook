@@ -33,8 +33,7 @@ function preload() {
 }
 
 function setup() {
-  const canvasSize = min(windowWidth, windowHeight);
-  mainCanvas = createCanvas(canvasSize, canvasSize);
+  mainCanvas = createCanvas(windowWidth, windowHeight);
   setupCanvasProperties(mainCanvas);
 
   requestAnimationFrame(() => {
