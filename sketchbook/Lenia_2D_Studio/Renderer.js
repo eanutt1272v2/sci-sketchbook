@@ -710,9 +710,9 @@ class Renderer {
     const labelX = cx + dotR + 4;
     const labelY = cy - 24;
     const labelLines = [
-      `pos=(${centerX.toFixed(1)}, ${centerY.toFixed(1)})  growth=(${(growthCenterX || 0).toFixed(1)}, ${(growthCenterY || 0).toFixed(1)})`,
-      `angle=${angle.toFixed(1)} deg  speed=${speed.toFixed(3)}  sep=${(massGrowthDist || 0).toFixed(3)}`,
-      `rot=${(rotationSpeed || 0).toFixed(2)} deg/s  sym=${symmSides || 0} @ ${((symmStrength || 0) * 100).toFixed(1)}%`,
+      `pos=(${centerX.toFixed(1)}, ${centerY.toFixed(1)}), growth=(${(growthCenterX || 0).toFixed(1)}, ${(growthCenterY || 0).toFixed(1)})`,
+      `angle=${angle.toFixed(1)} deg, speed=${speed.toFixed(3)}, sep=${(massGrowthDist || 0).toFixed(3)}`,
+      `rot=${(rotationSpeed || 0).toFixed(2)} deg/s, sym=${symmSides || 0} @ ${((symmStrength || 0) * 100).toFixed(1)}%`,
     ].join("\n");
     fill(0, 200);
     text(labelLines, labelX + 1, labelY + 4);
@@ -730,7 +730,7 @@ class Renderer {
       `FPS: ${(Number(statistics.fps) || 0).toFixed(1)}`,
       `Generation: ${String(statistics.gen)}`,
       `Sim Time: ${statistics.time.toFixed(3)} s`,
-      `dt = 1/T: ${dt.toFixed(3)}`,
+      `Time Step: dt=1/T=${dt.toFixed(3)}`,
       `Running: ${params.running ? "on" : "off"}`,
       `Grid Size: ${this.size}`,
       `Render Mode: ${params.renderMode}`,
@@ -751,7 +751,7 @@ class Renderer {
       `Angle: ${(statistics.angle || 0).toFixed(1)} deg`,
       `Mass asymmetry: ${(statistics.massAsym || 0).toFixed(3)}`,
       `Symmetry Order: ${statistics.symmSides || "?"}`,
-      `Symmetry Strength: ${((statistics.symmStrength || 0) * 100).toFixed(1)} %`,
+      `Symmetry Strength: ${((statistics.symmStrength || 0) * 100).toFixed(1)}%`,
       `Rotation Speed: ${(statistics.rotationSpeed || 0).toFixed(2)} deg/s`,
       `Lyapunov: ${(statistics.lyapunov || 0).toFixed(6)}`,
       `Period: ${(statistics.period || 0).toFixed(3)} s`,
