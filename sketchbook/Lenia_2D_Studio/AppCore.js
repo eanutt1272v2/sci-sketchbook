@@ -35,8 +35,8 @@ class AppCore {
       maskRate: 0,
       paramP: 0,
 
-      colourMap: this.colourMapKeys.includes("turbo")
-        ? "turbo"
+      colourMap: this.colourMapKeys.includes("viridis")
+        ? "viridis"
         : this.colourMapKeys[0],
       renderMode: "world",
 
