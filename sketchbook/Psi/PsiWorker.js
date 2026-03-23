@@ -156,7 +156,81 @@ function getSliceAxes(slicePlane) {
   return { c1: 0, c2: 2, cFixed: 1 };
 }
 
-function computeDensityStatistics(grid, resolution, viewRadius) {
+function computeRadialProbabilityMoments(
+  n,
+  l,
+  nuclearCharge,
+  useReducedMass,
+  nucleusMassKg,
+  viewRadius,
+) {
+  const nQ = Math.max(1, Math.round(Number(n) || 1));
+  const lQ = Math.max(0, Math.min(nQ - 1, Math.round(Number(l) || 0)));
+  const Z = Math.max(1, Math.round(Number(nuclearCharge) || 1));
+
+  const muKg = useReducedMass
+    ? reducedElectronNucleusMass(Z, nucleusMassKg)
+    : CONSTS.electronMassKg;
+  const aMu = reducedBohrRadius(muKg);
+  const toA0 = aMu / CONSTS.bohrRadiusM;
+
+  let logNormR = 1.5 * Math.log((2.0 * Z) / (nQ * aMu));
+  logNormR +=
+    0.5 * (logGamma(nQ - lQ) - (Math.log(2.0 * nQ) + logGamma(nQ + lQ + 1)));
+
+  const expectedRadiusAMu = (3 * nQ * nQ - lQ * (lQ + 1)) / (2 * Z);
+  const maxRadiusAMu = Math.max(
+    4,
+    Number(viewRadius) || 0,
+    expectedRadiusAMu * 4,
+  );
+  const samples = 2048;
+  const dr = maxRadiusAMu / samples;
+
+  let weightSum = 0;
+  let weightedR = 0;
+  let weightedR2 = 0;
+  let peakWeight = -1;
+  let radialPeakAMu = 0;
+
+  for (let i = 1; i <= samples; i++) {
+    const rAMu = i * dr;
+    const rho = (2.0 * Z * rAMu) / nQ;
+    const radialComponent =
+      Math.exp(logNormR) *
+      Math.exp(-rho / 2.0) *
+      Math.pow(rho, lQ) *
+      genLaguerre(nQ - lQ - 1, 2 * lQ + 1, rho);
+
+    if (!Number.isFinite(radialComponent)) continue;
+
+    const pR = rAMu * rAMu * radialComponent * radialComponent;
+    if (!Number.isFinite(pR) || pR <= 0) continue;
+
+    weightSum += pR;
+    weightedR += pR * rAMu;
+    weightedR2 += pR * rAMu * rAMu;
+
+    if (pR > peakWeight) {
+      peakWeight = pR;
+      radialPeakAMu = rAMu;
+    }
+  }
+
+  if (weightSum <= 0) {
+    return { radialPeak: 0, radialSpread: 0 };
+  }
+
+  const meanR = weightedR / weightSum;
+  const varianceR = Math.max(0, weightedR2 / weightSum - meanR * meanR);
+
+  return {
+    radialPeak: radialPeakAMu * toA0,
+    radialSpread: Math.sqrt(varianceR) * toA0,
+  };
+}
+
+function computeDensityStatistics(grid, resolution, viewRadius, orbitalParams) {
   if (!grid || grid.length === 0) {
     return {
       density: 0,
@@ -215,15 +289,9 @@ function computeDensityStatistics(grid, resolution, viewRadius) {
 
   const stdDev = Math.sqrt(variance / grid.length);
 
-  let radialPeakBin = 0;
-  let radialPeakMass = 0;
   let radialWeightedSum = 0;
   for (let i = 0; i < radialBins; i++) {
     const mass = radialMass[i];
-    if (mass > radialPeakMass) {
-      radialPeakMass = mass;
-      radialPeakBin = i;
-    }
     radialWeightedSum += mass * (i + 0.5);
   }
 
@@ -233,9 +301,6 @@ function computeDensityStatistics(grid, resolution, viewRadius) {
     const d = i + 0.5 - radialMeanBin;
     radialVarAcc += radialMass[i] * d * d;
   }
-  const radialSpreadNorm =
-    sum > 0 ? Math.sqrt(radialVarAcc / sum) / radialBins : 0;
-
   let nodeEstimate = 0;
   const radialProfile = new Float64Array(radialBins);
   for (let i = 0; i < radialBins; i++) {
@@ -250,8 +315,14 @@ function computeDensityStatistics(grid, resolution, viewRadius) {
     }
   }
 
-  const radialPeakNorm = (radialPeakBin + 0.5) / radialBins;
-  const maxRadiusAMu = Math.sqrt(2) * (Number(viewRadius) || 0);
+  const radialStandard = computeRadialProbabilityMoments(
+    orbitalParams?.n,
+    orbitalParams?.l,
+    orbitalParams?.nuclearCharge,
+    orbitalParams?.useReducedMass,
+    orbitalParams?.nucleusMassKg,
+    viewRadius,
+  );
 
   return {
     density: mean,
@@ -260,8 +331,8 @@ function computeDensityStatistics(grid, resolution, viewRadius) {
     stdDev,
     entropy,
     concentration,
-    radialPeak: radialPeakNorm * maxRadiusAMu,
-    radialSpread: radialSpreadNorm * maxRadiusAMu,
+    radialPeak: radialStandard.radialPeak,
+    radialSpread: radialStandard.radialSpread,
     nodeEstimate,
   };
 }
@@ -278,8 +349,13 @@ function computeGrid(
   nuclearCharge,
   useReducedMass,
   nucleusMassKg,
+  reuseGridBuffer,
 ) {
-  const grid = new Float32Array(res * res);
+  const requiredByteLength = res * res * Float32Array.BYTES_PER_ELEMENT;
+  const grid =
+    reuseGridBuffer && reuseGridBuffer.byteLength === requiredByteLength
+      ? new Float32Array(reuseGridBuffer)
+      : new Float32Array(res * res);
   const step = res === 1 ? 0 : (viewRadius * 2) / (res - 1);
 
   const { c1, c2, cFixed } = getSliceAxes(slicePlane);
@@ -375,6 +451,7 @@ self.onmessage = function (e) {
       charge,
       reducedMassEnabled,
       nucleusMass,
+      e.data.reuseGridBuffer || null,
     );
 
     let analysisStats = null;
@@ -410,6 +487,13 @@ self.onmessage = function (e) {
         canonical.grid,
         canonicalResolution,
         canonicalViewRadius,
+        {
+          n,
+          l,
+          nuclearCharge: charge,
+          useReducedMass: reducedMassEnabled,
+          nucleusMassKg: nucleusMass,
+        },
       );
     }
 

@@ -21,6 +21,106 @@ class Analyser {
     this.series = [];
   }
 
+  _logGamma(z) {
+    const coeffs = [
+      676.5203681218851,
+      -1259.1392167224028,
+      771.32342877765313,
+      -176.61502916214059,
+      12.507343278686905,
+      -0.13857109526572012,
+      9.9843695780195716e-6,
+      1.5056327351493116e-7,
+    ];
+
+    if (z < 0.5) {
+      return (
+        Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - this._logGamma(1 - z)
+      );
+    }
+
+    let x = 0.99999999999980993;
+    const tZ = z - 1;
+    for (let i = 0; i < coeffs.length; i++) {
+      x += coeffs[i] / (tZ + i + 1);
+    }
+
+    const t = tZ + coeffs.length - 0.5;
+    return 0.5 * Math.log(2 * Math.PI) + (tZ + 0.5) * Math.log(t) - t + Math.log(x);
+  }
+
+  _genLaguerre(k, alpha, x) {
+    if (k <= 0) return 1.0;
+    let L2 = 1.0;
+    let L1 = 1.0 + alpha - x;
+    let Lc = L1;
+    for (let i = 2; i <= k; i++) {
+      Lc = ((2 * i - 1 + alpha - x) * L1 - (i - 1 + alpha) * L2) / i;
+      L2 = L1;
+      L1 = Lc;
+    }
+    return Number.isFinite(Lc) ? Lc : 0.0;
+  }
+
+  _computeRadialProbabilityMoments(params) {
+    const n = Math.max(1, Math.round(Number(params?.n) || 1));
+    const l = Math.max(0, Math.min(n - 1, Math.round(Number(params?.l) || 0)));
+    const Z = Math.max(1, Math.round(Number(params?.nuclearCharge) || 1));
+    const aMuMeters =
+      Number(params?.aMuMeters) > 0 ? Number(params.aMuMeters) : 5.29177210903e-11;
+    const a0Meters = 5.29177210903e-11;
+    const toA0 = aMuMeters / a0Meters;
+
+    let logNormR = 1.5 * Math.log((2.0 * Z) / (n * aMuMeters));
+    logNormR +=
+      0.5 *
+      (this._logGamma(n - l) - (Math.log(2.0 * n) + this._logGamma(n + l + 1)));
+
+    const expectedRadiusAMu = (3 * n * n - l * (l + 1)) / (2 * Z);
+    const maxRadiusAMu = Math.max(4, Number(params?.viewRadius) || 0, expectedRadiusAMu * 4);
+    const samples = 1024;
+    const dr = maxRadiusAMu / samples;
+
+    let weightSum = 0;
+    let weightedR = 0;
+    let weightedR2 = 0;
+    let peakWeight = -1;
+    let radialPeakAMu = 0;
+
+    for (let i = 1; i <= samples; i++) {
+      const rAMu = i * dr;
+      const rho = (2.0 * Z * rAMu) / n;
+      const radialComponent =
+        Math.exp(logNormR) *
+        Math.exp(-rho / 2.0) *
+        Math.pow(rho, l) *
+        this._genLaguerre(n - l - 1, 2 * l + 1, rho);
+
+      if (!Number.isFinite(radialComponent)) continue;
+
+      const pR = rAMu * rAMu * radialComponent * radialComponent;
+      if (!Number.isFinite(pR) || pR <= 0) continue;
+
+      weightSum += pR;
+      weightedR += pR * rAMu;
+      weightedR2 += pR * rAMu * rAMu;
+
+      if (pR > peakWeight) {
+        peakWeight = pR;
+        radialPeakAMu = rAMu;
+      }
+    }
+
+    if (weightSum <= 0) return { radialPeak: 0, radialSpread: 0 };
+
+    const meanR = weightedR / weightSum;
+    const varianceR = Math.max(0, weightedR2 / weightSum - meanR * meanR);
+    return {
+      radialPeak: radialPeakAMu * toA0,
+      radialSpread: Math.sqrt(varianceR) * toA0,
+    };
+  }
+
   updateStatistics(grid, params) {
     if (!grid || grid.length === 0) {
       this.statistics.density = 0;
@@ -87,15 +187,9 @@ class Analyser {
       }
     }
 
-    let radialPeakBin = 0;
-    let radialPeakMass = 0;
     let radialWeightedSum = 0;
     for (let i = 0; i < radialBins; i++) {
       const m = radialMass[i];
-      if (m > radialPeakMass) {
-        radialPeakMass = m;
-        radialPeakBin = i;
-      }
       radialWeightedSum += m * (i + 0.5);
     }
 
@@ -105,9 +199,6 @@ class Analyser {
       const d = i + 0.5 - radialMeanBin;
       radialVarAcc += radialMass[i] * d * d;
     }
-    const radialSpread =
-      sum > 0 ? Math.sqrt(radialVarAcc / sum) / radialBins : 0;
-
     let nodeEstimate = 0;
     const radialProfile = new Float64Array(radialBins);
     for (let i = 0; i < radialBins; i++) {
@@ -123,10 +214,7 @@ class Analyser {
       }
     }
 
-    const radialPeakNorm = (radialPeakBin + 0.5) / radialBins;
-    const maxRadiusAMu = Math.sqrt(2) * (Number(params?.viewRadius) || 0);
-    const radialPeakAMu = radialPeakNorm * maxRadiusAMu;
-    const radialSpreadAMu = radialSpread * maxRadiusAMu;
+    const radialStandard = this._computeRadialProbabilityMoments(params);
 
     this.statistics.density = mean;
     this.statistics.peakDensity = peak;
@@ -134,8 +222,8 @@ class Analyser {
     this.statistics.stdDev = stdDev;
     this.statistics.entropy = entropy;
     this.statistics.concentration = concentration;
-    this.statistics.radialPeak = radialPeakAMu;
-    this.statistics.radialSpread = radialSpreadAMu;
+    this.statistics.radialPeak = radialStandard.radialPeak;
+    this.statistics.radialSpread = radialStandard.radialSpread;
     this.statistics.nodeEstimate = nodeEstimate;
 
     this.recordStatistics(params);

@@ -68,6 +68,15 @@ class Analyser {
     );
   }
 
+  _copyFromBuffer(target, buffer, TypedArrayCtor) {
+    const incoming = new TypedArrayCtor(buffer);
+    if (!target || target.length !== incoming.length) {
+      target = new TypedArrayCtor(incoming.length);
+    }
+    target.set(incoming);
+    return target;
+  }
+
   applyWorkerAnalysis(analysis) {
     if (!analysis || typeof analysis !== "object") return;
 
@@ -78,10 +87,18 @@ class Analyser {
     };
 
     if (analysis.heightHistogram) {
-      statistics.heightHistogram = new Int32Array(analysis.heightHistogram);
+      statistics.heightHistogram = this._copyFromBuffer(
+        statistics.heightHistogram,
+        analysis.heightHistogram,
+        Int32Array,
+      );
     }
     if (analysis.normHistogram) {
-      statistics.normHistogram = new Float32Array(analysis.normHistogram);
+      statistics.normHistogram = this._copyFromBuffer(
+        statistics.normHistogram,
+        analysis.normHistogram,
+        Float32Array,
+      );
     }
 
     setNumber("avgElevation");

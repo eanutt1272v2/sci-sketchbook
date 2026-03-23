@@ -27,6 +27,7 @@ class Simulation {
     this._historySampleCounter = 0;
     this._workerStepIntervalMs = 22;
     this._lastWorkerStepMs = 0;
+    this._particleBufferForWorker = null;
 
     this._initWorker();
     this.restart();
@@ -59,6 +60,22 @@ class Simulation {
     this._worker = null;
     this._workerBusy = false;
     this._workerReady = false;
+    this._particleBufferForWorker = null;
+  }
+
+  _postWorkerTick() {
+    if (!this._worker) return;
+
+    const msg = { type: "tick", particleDataBuffer: null };
+    const transfers = [];
+
+    if (this._particleBufferForWorker) {
+      msg.particleDataBuffer = this._particleBufferForWorker;
+      transfers.push(this._particleBufferForWorker);
+      this._particleBufferForWorker = null;
+    }
+
+    this._worker.postMessage(msg, transfers);
   }
 
   _sendWorkerInit() {
@@ -85,6 +102,7 @@ class Simulation {
       this.isRestarting = false;
       this._history.length = 0;
       this._historySampleCounter = 0;
+      this._particleBufferForWorker = null;
       return;
     }
     if (data.type !== "result") return;
@@ -97,6 +115,7 @@ class Simulation {
       elapsed: data.elapsed,
       paused: data.paused,
     };
+    this._particleBufferForWorker = data.particleData;
     this._historySampleCounter++;
     if ((this._historySampleCounter & 1) === 0) {
       this._history.push(data.population);
@@ -161,16 +180,17 @@ class Simulation {
         ? this._lastResult.particleCount
         : this.particleCount;
       this._workerStepIntervalMs = activeCount > 7000 ? 30 : 22;
+      const nowMs = millis();
 
       if (
         this._workerReady &&
         !this._workerBusy &&
         !this.paused &&
-        millis() - this._lastWorkerStepMs >= this._workerStepIntervalMs
+        nowMs - this._lastWorkerStepMs >= this._workerStepIntervalMs
       ) {
         this._workerBusy = true;
-        this._lastWorkerStepMs = millis();
-        this._worker.postMessage({ type: "tick" });
+        this._lastWorkerStepMs = nowMs;
+        this._postWorkerTick();
       }
       return;
     }
@@ -401,6 +421,7 @@ class Simulation {
     this._terminateWorker();
     this._lastResult = null;
     this._history.length = 0;
+    this._particleBufferForWorker = null;
     this.particles.length = 0;
     this.spatialGrid = null;
     this.cellTracker = null;

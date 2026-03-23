@@ -122,6 +122,7 @@ class AppCore {
     this._lastPlacement = { cellX: null, cellY: null, atMs: 0 };
     this._skipNextAnimalParamsLoad = false;
     this._lastAnimalParamsSelection = null;
+    this._changeRecycleBuffer = null;
     this._initWorker();
   }
 
@@ -138,6 +139,7 @@ class AppCore {
       this._workerBusy = false;
       this._stepPending = false;
       this._kernelPending = false;
+      this._changeRecycleBuffer = null;
     };
 
     this._workerSendKernel();
@@ -184,6 +186,7 @@ class AppCore {
       b.growthOld = data.growthOld ? new Float32Array(data.growthOld) : null;
 
       this.automaton.change = new Float32Array(data.change);
+      this._changeRecycleBuffer = data.change;
       this.automaton.gen++;
       this.automaton.time =
         Math.round((this.automaton.time + 1 / this.params.T) * 10000) / 10000;
@@ -254,7 +257,13 @@ class AppCore {
       potential: b.potential.buffer,
       growth: b.growth.buffer,
       growthOld: null,
+      changeBuffer: this._changeRecycleBuffer,
     };
+
+    if (this._changeRecycleBuffer) {
+      transfers.push(this._changeRecycleBuffer);
+      this._changeRecycleBuffer = null;
+    }
 
     if (this.params.multiStep && b.growthOld) {
       msg.growthOld = b.growthOld.buffer;
@@ -860,6 +869,7 @@ class AppCore {
     this._workerBusy = false;
     this._stepPending = false;
     this._kernelPending = false;
+    this._changeRecycleBuffer = null;
     this._pendingMutations.length = 0;
     this._initWorker();
   }
@@ -997,6 +1007,7 @@ class AppCore {
     this._workerBusy = false;
     this._stepPending = false;
     this._kernelPending = false;
+    this._changeRecycleBuffer = null;
     this._pendingActions = [];
     this._pendingMutations = [];
 

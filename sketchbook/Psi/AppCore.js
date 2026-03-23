@@ -63,6 +63,7 @@ class AppCore {
     this._workerBusy = false;
     this._renderPending = false;
     this._renderRequestId = 0;
+    this._gridRecycleBuffer = null;
     this._initWorker();
 
     this.requestRender();
@@ -335,7 +336,15 @@ class AppCore {
     this._worker.onerror = (e) => {
       console.error("[Psi] Worker error:", e);
       this._workerBusy = false;
+      this._gridRecycleBuffer = null;
     };
+  }
+
+  _takeGridRecycleTransfer() {
+    if (!this._gridRecycleBuffer) return [];
+    const transfer = [this._gridRecycleBuffer];
+    this._gridRecycleBuffer = null;
+    return transfer;
   }
 
   _dispatchRender() {
@@ -358,7 +367,7 @@ class AppCore {
     const requestId = ++this._renderRequestId;
     this._workerBusy = true;
     this._renderPending = false;
-    this._worker.postMessage({
+    const msg = {
       type: "render",
       requestId,
       n,
@@ -380,7 +389,9 @@ class AppCore {
       analysisSignature,
       analysisResolution: this._analysisConfig.resolution,
       analysisViewRadius,
-    });
+      reuseGridBuffer: this._gridRecycleBuffer,
+    };
+    this._worker.postMessage(msg, this._takeGridRecycleTransfer());
   }
 
   _applyWorkerAnalysis(data) {
@@ -421,9 +432,15 @@ class AppCore {
       return;
     }
 
+    if (!(data.grid instanceof ArrayBuffer)) {
+      this._workerBusy = false;
+      return;
+    }
+
     this._workerBusy = false;
     this._applyWorkerAnalysis(data);
     this.renderer.renderFromGrid(data.grid, data.peak, data.resolution);
+    this._gridRecycleBuffer = data.grid;
 
     if (this._renderPending) {
       this._renderPending = false;
@@ -457,6 +474,8 @@ class AppCore {
     }
     this._workerBusy = false;
     this._renderPending = false;
+    this._renderRequestId = 0;
+    this._gridRecycleBuffer = null;
     this._pendingActions = [];
 
     if (this.media && typeof this.media.dispose === "function") {

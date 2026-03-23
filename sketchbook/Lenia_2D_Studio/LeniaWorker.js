@@ -220,10 +220,37 @@ function growthFunc(n, m, s, gn) {
   return Math.pow(val, 4) * 2 - 1;
 }
 
-function stepFFT(cells, potential, field, fieldOld, params, kernelFFT, N) {
-  const size = params.size;
+const _fftScratch = {
+  N: 0,
+  cellBuf: null,
+  result: null,
+};
 
-  const cellBuf = new Float64Array(N * N * 2);
+function getFFTScratch(N) {
+  const required = N * N * 2;
+  if (_fftScratch.N !== N || !_fftScratch.cellBuf || !_fftScratch.result) {
+    _fftScratch.N = N;
+    _fftScratch.cellBuf = new Float64Array(required);
+    _fftScratch.result = new Float64Array(required);
+  }
+  _fftScratch.cellBuf.fill(0);
+  return _fftScratch;
+}
+
+function stepFFT(
+  cells,
+  potential,
+  field,
+  fieldOld,
+  params,
+  kernelFFT,
+  N,
+  changeOut,
+) {
+  const size = params.size;
+  const scratch = getFFTScratch(N);
+
+  const cellBuf = scratch.cellBuf;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       cellBuf[(y * N + x) * 2] = cells[y * size + x];
@@ -231,7 +258,7 @@ function stepFFT(cells, potential, field, fieldOld, params, kernelFFT, N) {
   }
   fft2D(cellBuf, N, false);
 
-  const result = new Float64Array(N * N * 2);
+  const result = scratch.result;
   for (let i = 0; i < N * N; i++) {
     const ar = cellBuf[i * 2];
     const ai = cellBuf[i * 2 + 1];
@@ -258,7 +285,10 @@ function stepFFT(cells, potential, field, fieldOld, params, kernelFFT, N) {
   const hasMask = mr > 0;
   const hasOld = multiStep && fieldOld;
 
-  const change = new Float32Array(count);
+  const change =
+    changeOut && changeOut.length === count
+      ? changeOut
+      : new Float32Array(count);
 
   for (let i = 0; i < count; i++) {
     const growth = growthFunc(potential[i], m, s, gn);
@@ -611,6 +641,9 @@ self.onmessage = function (e) {
     const potential = new Float32Array(msg.potential);
     const growth = new Float32Array(msg.growth);
     const growthOld = msg.growthOld ? new Float32Array(msg.growthOld) : null;
+    const changeOut = msg.changeBuffer
+      ? new Float32Array(msg.changeBuffer)
+      : null;
     const params = msg.params;
 
     if (!_kernelFFT || _N < nextPow2(params.size)) {
@@ -627,6 +660,7 @@ self.onmessage = function (e) {
       params,
       _kernelFFT,
       _N,
+      changeOut,
     );
 
     _analysisState.frames += 1;

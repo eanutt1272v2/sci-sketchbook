@@ -285,9 +285,14 @@ function tick() {
   cellTracker.update(particles, grid, canvasW, canvasH);
 }
 
-function buildResult() {
+function buildResult(reuseBuffer) {
   const n = state.particles.length;
-  const data = new Float32Array(n * 4);
+  const requiredByteLength = n * 4 * Float32Array.BYTES_PER_ELEMENT;
+  const outputBuffer =
+    reuseBuffer && reuseBuffer.byteLength === requiredByteLength
+      ? reuseBuffer
+      : new ArrayBuffer(requiredByteLength);
+  const data = new Float32Array(outputBuffer);
   for (let i = 0; i < n; i++) {
     const p = state.particles[i];
     const base = i * 4;
@@ -301,7 +306,7 @@ function buildResult() {
 
   return {
     type: "result",
-    particleData: data.buffer,
+    particleData: outputBuffer,
     particleCount: n,
     population: state.cellTracker.population,
     elapsed,
@@ -310,7 +315,7 @@ function buildResult() {
 }
 
 self.onmessage = function (e) {
-  const msg = e.data;
+  const msg = e.data || {};
 
   switch (msg.type) {
     case "init":
@@ -321,7 +326,7 @@ self.onmessage = function (e) {
 
     case "tick": {
       tick();
-      const result = buildResult();
+      const result = buildResult(msg.particleDataBuffer || null);
       self.postMessage(result, [result.particleData]);
       break;
     }

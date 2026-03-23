@@ -125,9 +125,25 @@ class AppCore {
     this._worker = null;
     this._workerBusy = false;
     this._workerRequestId = 0;
+    this._workerStepIntervalMs = 28;
+    this._lastWorkerStepMs = 0;
     this._pendingActions = [];
     this._lastVisualSignature = this._computeVisualSignature();
     this._initWorker();
+  }
+
+  _computeWorkerStepIntervalMs() {
+    const size = Number(this.params.terrainSize) || 256;
+    let base = 20;
+    if (size >= 512) base = 40;
+    else if (size >= 384) base = 34;
+    else if (size >= 256) base = 28;
+
+    if (this.params.renderMethod === "3D") {
+      base += 6;
+    }
+
+    return base;
   }
 
   _computeVisualSignature() {
@@ -176,10 +192,11 @@ class AppCore {
     this._worker.onerror = (e) => {
       console.error("[Fluvia] Worker error:", e);
       this._workerBusy = false;
+      this._lastWorkerStepMs = 0;
     };
   }
 
-  _dispatchWorkerStep() {
+  _dispatchWorkerStep(nowMs = performance.now()) {
     if (!this._worker || this._workerBusy) {
       return;
     }
@@ -189,6 +206,7 @@ class AppCore {
     if (!terrain.heightMap) return;
 
     this._workerBusy = true;
+    this._lastWorkerStepMs = nowMs;
 
     const requestId = ++this._workerRequestId;
 
@@ -196,7 +214,7 @@ class AppCore {
       type: "step",
       requestId,
       size: terrain.size,
-      randomSeed: (performance.now() * 1000) | 0,
+      randomSeed: (nowMs * 1000) | 0,
       params: {
         dropletsPerFrame: params.dropletsPerFrame,
         maxAge: params.maxAge,
@@ -279,8 +297,16 @@ class AppCore {
       return;
     }
 
-    if (this.params.running && this._worker && this.terrain.heightMap) {
-      this._dispatchWorkerStep();
+    this._workerStepIntervalMs = this._computeWorkerStepIntervalMs();
+    const nowMs = performance.now();
+
+    if (
+      this.params.running &&
+      this._worker &&
+      this.terrain.heightMap &&
+      nowMs - this._lastWorkerStepMs >= this._workerStepIntervalMs
+    ) {
+      this._dispatchWorkerStep(nowMs);
     }
   }
 
@@ -333,6 +359,7 @@ class AppCore {
       this._worker = null;
     }
     this._workerBusy = false;
+    this._lastWorkerStepMs = 0;
   }
 
   _queueAction(name, handler) {

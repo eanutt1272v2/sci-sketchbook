@@ -189,13 +189,17 @@ class GUI {
       })
       .on("change", () => this.appcore.requestRender());
 
-    quality
+    this.addSeparator(page);
+
+    const overlay = page.addFolder({ title: "Overlay", expanded: true });
+
+    overlay
       .addBinding(this.appcore.params, "renderOverlay", {
         label: "Statistics Overlay",
       })
       .on("change", () => this.appcore.requestRender());
 
-    quality
+    overlay
       .addBinding(this.appcore.params, "renderLegend", {
         label: "Colour Legend",
       })
@@ -209,7 +213,7 @@ class GUI {
       this.appcore.params,
       "viewRadius",
       {
-        label: "View Radius (a_μ)",
+        label: "View Radius (a₀)",
         min: 1,
         max: 256,
       },
@@ -230,7 +234,7 @@ class GUI {
       this.appcore.params,
       "sliceOffset",
       {
-        label: "Slice Offset (a_μ)",
+        label: "Slice Offset (a₀)",
         min: -250,
         max: 250,
       },
@@ -245,7 +249,7 @@ class GUI {
 
     pan
       .addBinding(this.appcore.params.viewCentre, "x", {
-        label: "Pan X (a_μ)",
+        label: "Pan X (a₀)",
         min: -256,
         max: 256,
         step: 0.1,
@@ -254,7 +258,7 @@ class GUI {
 
     pan
       .addBinding(this.appcore.params.viewCentre, "y", {
-        label: "Pan Y (a_μ)",
+        label: "Pan Y (a₀)",
         min: -256,
         max: 256,
         step: 0.1,
@@ -263,7 +267,7 @@ class GUI {
 
     pan
       .addBinding(this.appcore.params.viewCentre, "z", {
-        label: "Pan Z (a_μ)",
+        label: "Pan Z (a₀)",
         min: -256,
         max: 256,
         step: 0.1,
@@ -276,7 +280,7 @@ class GUI {
   }
 
   createStatisticsTab(page) {
-    const { statistics, analyser, media } = this.appcore;
+    const { statistics } = this.appcore;
 
     const distribution = page.addFolder({
       title: "Distribution",
@@ -291,17 +295,17 @@ class GUI {
 
     distribution.addBinding(statistics, "peakDensity", {
       readonly: true,
-      label: "Peak Density (m^-3)",
+      label: "Peak Density (m⁻³)",
     });
 
     distribution.addBinding(statistics, "mean", {
       readonly: true,
-      label: "Mean Density (m^-3)",
+      label: "Mean Density (m⁻³)",
     });
 
     distribution.addBinding(statistics, "stdDev", {
       readonly: true,
-      label: "Std Dev (m^-3)",
+      label: "Std Dev (m⁻³)",
     });
 
     distribution.addBinding(statistics, "entropy", {
@@ -320,12 +324,12 @@ class GUI {
 
     radial.addBinding(statistics, "radialPeak", {
       readonly: true,
-      label: "Radial Peak (a_mu)",
+      label: "Radial Peak (a₀)",
     });
 
     radial.addBinding(statistics, "radialSpread", {
       readonly: true,
-      label: "Radial Spread (a_mu)",
+      label: "Radial Spread (a₀)",
     });
 
     radial.addBinding(statistics, "nodeEstimate", {
