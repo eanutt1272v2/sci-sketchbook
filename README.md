@@ -14,7 +14,7 @@ Live deployment: <https://sci-sketchbook.onrender.com/>
 | Sketch | Summary | Implementation(s) |
 | :-- | :-- | :-- |
 | [Cellular Division](./sketchbook/Cellular_Division) | Primordial Particle System implementation | p5.js + worker |
-| [Psi (ψ)](./sketchbook/Psi) | Hydrogen orbital probability-density slices | p5.js + worker |
+| [Psi](./sketchbook/Psi) | Hydrogen orbital probability-density slices | p5.js + worker |
 | [Fluvia](./sketchbook/Fluvia) | Lagrangian hydraulic erosion simulation | p5.js + worker + GLSL |
 | [Lenia 2D Studio](./sketchbook/Lenia_2D_Studio) | Continuous Lenia cellular automata | p5.js + FFT worker |
 
