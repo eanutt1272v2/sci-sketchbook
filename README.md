@@ -2,9 +2,7 @@
 
 ## Overview
 
-An advanced collection of interactive mathematical and scientific sketches.
-
-Most active projects are implemented in `p5.js`, but a smaller amount of legacy sketches remain in Processing.
+An collection of advanced interactive mathematical and scientific sketches implemented in `p5.js`.
 
 Live deployment: <https://sci-sketchbook.onrender.com/>
 
