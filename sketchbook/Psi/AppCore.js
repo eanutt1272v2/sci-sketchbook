@@ -1,8 +1,20 @@
 class AppCore {
   constructor(assets) {
     this.metadata = assets.metadata;
-    this.colourMaps = assets.colourMaps;
+    this.colourMaps = colourMaps || {};
     this.colourMapKeys = Object.keys(this.colourMaps);
+
+    if (this.colourMapKeys.length === 0) {
+      this.colourMaps = {
+        greyscale: {
+          r: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+          g: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+          b: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        },
+      };
+      this.colourMapKeys = ["greyscale"];
+    }
+    
     this.font = assets.font;
 
     this.params = {
