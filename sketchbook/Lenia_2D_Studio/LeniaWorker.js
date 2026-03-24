@@ -559,7 +559,6 @@ function detectSymmetry(cells, size, stats, state, params) {
     state.lastSymmPhase = symmPhase;
     state.lastSymmOrder = maxIndex;
   } else {
-    // Weak or absent rotational symmetry means phase is unstable; reset tracker.
     state.lastSymmPhase = null;
     state.lastSymmOrder = 0;
   }
@@ -743,7 +742,7 @@ function analyseStep(cells, field, change, params, state) {
   stats.growthVolumeLog = positiveLog10(growthVolume, state.epsilon);
   stats.massDensity = massNorm / Math.max(state.epsilon, massVolume);
   stats.growthDensity = growthNorm / Math.max(state.epsilon, growthVolume);
-  // Keep this alias aligned with Mass-Growth distance to avoid duplicate, divergent UI values.
+  // Remove completely in future patch!
   stats.growthCentroidDistance = stats.massGrowthDist;
 
   let inertia = 0;
