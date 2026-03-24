@@ -107,8 +107,6 @@ class AppCore {
       compositeMeanWaterAlpha: 0,
     };
 
-    this.font = font;
-
     this.initialiseModules();
     this.terrain.generate();
   }
@@ -121,6 +119,7 @@ class AppCore {
     this.media = new Media(this);
     this.gui = new GUI(this);
     this.input = new InputHandler(this);
+    this.font = font;
 
     this._worker = null;
     this._workerBusy = false;
