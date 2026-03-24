@@ -107,6 +107,21 @@ class AppCore {
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
   }
 
+  importStatisticsJSON() {
+    this._openJSONFileDialog((data) => {
+      if (!data || typeof data !== "object" || data.format !== "simpipe.stats") {
+        throw new Error("[Cellular Division] Invalid stats JSON payload");
+      }
+
+      const history = data?.statistics?.history;
+      if (Array.isArray(history)) {
+        this.sim._history = history
+          .map((value) => Number(value) || 0)
+          .slice(-Math.max(10, width));
+      }
+    });
+  }
+
   exportStateJSON() {
     const payload = {
       format: "simpipe.state",
