@@ -35,6 +35,37 @@ class GUI {
     target.addBlade({ view: "separator" });
   }
 
+  getSpectroscopicLetter(lValue) {
+    const l = Math.max(0, Math.round(Number(lValue) || 0));
+    const base = ["s", "p", "d", "f"];
+    if (l < base.length) return base[l];
+
+    // Continue alphabetically after f, skipping j by convention.
+    const extended = [
+      "g",
+      "h",
+      "i",
+      "k",
+      "l",
+      "m",
+      "n",
+      "o",
+      "q",
+      "r",
+      "t",
+      "u",
+      "v",
+      "w",
+      "x",
+      "y",
+      "z",
+    ];
+    const offset = l - base.length;
+    if (offset < extended.length) return extended[offset];
+
+    return `l${l}`;
+  }
+
   createGeneralTab(page) {
     const perf = page.addFolder({ title: "Performance", expanded: true });
 
@@ -63,8 +94,8 @@ class GUI {
 
     this.bindings.n = quantum.addBinding(this.appcore.params, "n", {
       label: "n (principal)",
-      min: 1,
-      max: 7,
+      min: AppCore.QUANTUM_LIMITS.minN,
+      max: AppCore.QUANTUM_LIMITS.maxN,
       step: 1,
     });
 
@@ -448,6 +479,17 @@ class GUI {
   enforceConstraints() {
     const params = this.appcore.params;
 
+    params.n = Math.max(
+      AppCore.QUANTUM_LIMITS.minN,
+      Math.min(
+        AppCore.QUANTUM_LIMITS.maxN,
+        Math.round(Number(params.n) || AppCore.QUANTUM_LIMITS.minN),
+      ),
+    );
+
+    this.bindings.n.min = AppCore.QUANTUM_LIMITS.minN;
+    this.bindings.n.max = AppCore.QUANTUM_LIMITS.maxN;
+
     params.nuclearCharge = Math.max(
       1,
       Math.min(20, Math.round(Number(params.nuclearCharge) || 1)),
@@ -465,8 +507,8 @@ class GUI {
       Math.min(this.bindings.m.max, params.m),
     );
 
-    const shells = ["s", "p", "d", "f", "g", "h", "i"];
-    params.orbitalNotation = `${params.n}${shells[params.l] || "?"} (m=${params.m})`;
+    const orbitalLetter = this.getSpectroscopicLetter(params.l);
+    params.orbitalNotation = `${params.n}${orbitalLetter} (m=${params.m})`;
 
     this.syncMassControlFromParams();
 

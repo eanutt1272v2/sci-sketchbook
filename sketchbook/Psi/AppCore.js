@@ -1,4 +1,9 @@
 class AppCore {
+  static QUANTUM_LIMITS = Object.freeze({
+    minN: 1,
+    maxN: 12,
+  });
+
   constructor(assets) {
     const { metadata, colourMaps, font } = assets;
 
@@ -100,7 +105,10 @@ class AppCore {
 
   updateQuantumNumbers(type, delta) {
     if (type === "n") {
-      this.params.n = Math.max(1, this.params.n + delta);
+      this.params.n = Math.max(
+        AppCore.QUANTUM_LIMITS.minN,
+        Math.min(AppCore.QUANTUM_LIMITS.maxN, this.params.n + delta),
+      );
     } else if (type === "l") {
       this.params.l = Math.max(0, this.params.l + delta);
     } else if (type === "m") {
@@ -318,6 +326,24 @@ class AppCore {
   _sanitisePhysicalParams() {
     const params = this.params;
     const protonMassKg = 1.67262192369e-27;
+
+    params.n = Math.max(
+      AppCore.QUANTUM_LIMITS.minN,
+      Math.min(
+        AppCore.QUANTUM_LIMITS.maxN,
+        Math.round(Number(params.n) || AppCore.QUANTUM_LIMITS.minN),
+      ),
+    );
+
+    params.l = Math.max(
+      0,
+      Math.min(params.n - 1, Math.round(Number(params.l) || 0)),
+    );
+
+    params.m = Math.max(
+      -params.l,
+      Math.min(params.l, Math.round(Number(params.m) || 0)),
+    );
 
     params.nuclearCharge = Math.max(
       1,
