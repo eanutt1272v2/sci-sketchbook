@@ -100,9 +100,36 @@ class InputHandler {
       return false;
     }
 
+    const keyLower = (k || "").toLowerCase();
+    const shiftHeld = keyIsDown(SHIFT);
+
+    if (shiftHeld && keyLower === "i") {
+      this.appcore.media.importParamsJSON();
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "p") {
+      this.appcore.media.exportParamsJSON();
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "u") {
+      this.appcore.media.importStatisticsJSON();
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "s") {
+      this.appcore.media.exportStatisticsJSON();
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "c") {
+      this.appcore.media.exportStatisticsCSV();
+      return false;
+    }
+
     let logMsg = "";
     let shouldRefreshGUI = true;
-    const keyLower = (k || "").toLowerCase();
 
     if (keyLower === "w" || keyLower === "s") {
       this.appcore.updateQuantumNumbers("n", keyLower === "w" ? 1 : -1);

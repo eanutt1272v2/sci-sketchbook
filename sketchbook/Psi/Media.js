@@ -227,6 +227,16 @@ class Media {
     this._logInfo(`Stats CSV exported: rows=${series.length}`);
   }
 
+  importStatisticsJSON() {
+    this.openDataImportDialog((file) => {
+      this._readJSONFile(file, (data) => {
+        this._applyStatisticsPayload(data);
+        this.appcore.refreshGUI();
+        this._logInfo("Stats JSON imported");
+      });
+    });
+  }
+
   _applyParamsPayload(data) {
     if (!data || typeof data !== "object" || !data.params) {
       throw new Error("[Psi] Invalid params JSON payload");

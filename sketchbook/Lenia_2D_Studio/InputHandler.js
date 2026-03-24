@@ -89,6 +89,7 @@ class InputHandler {
     if (this.shouldIgnoreKeyboard()) return false;
 
     const keyLower = (k || "").toLowerCase();
+    const shiftHeld = keyIsDown(SHIFT);
 
     if (k === "#") {
       this.appcore.params.renderKeymapRef =
@@ -98,6 +99,24 @@ class InputHandler {
     }
 
     if (this.appcore.params.renderKeymapRef) return false;
+
+    if (shiftHeld && keyLower === "i") {
+      this.appcore.media.importParamsJSON();
+      console.log("[Lenia] Importing params JSON…");
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "p") {
+      this.appcore.media.exportParamsJSON();
+      console.log("[Lenia] Exporting params JSON…");
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "u") {
+      this.appcore.media.importStatisticsJSON();
+      console.log("[Lenia] Importing statistics JSON…");
+      return false;
+    }
 
     if (k === " ") {
       this.appcore.params.running = !this.appcore.params.running;
@@ -322,8 +341,13 @@ class InputHandler {
     }
 
     if (keyLower === "c") {
-      console.log("[Lenia] Exporting statistics CSV…");
-      this.appcore.media.exportStatisticsCSV();
+      if (shiftHeld) {
+        console.log("[Lenia] Exporting statistics JSON…");
+        this.appcore.media.exportStatisticsJSON();
+      } else {
+        console.log("[Lenia] Exporting statistics CSV…");
+        this.appcore.media.exportStatisticsCSV();
+      }
       return false;
     }
 
