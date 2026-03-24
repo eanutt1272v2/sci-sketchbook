@@ -40,7 +40,7 @@ class GUI {
 
     perf.addBinding(this.appcore.statistics, "fps", {
       readonly: true,
-      label: "FPS",
+      label: "FPS [Hz]",
       view: "graph",
       interval: 60,
       min: 0,
