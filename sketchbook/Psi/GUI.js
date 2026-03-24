@@ -112,7 +112,7 @@ class GUI {
 
     this.bindings.nucleusMassLog10 = quantum
       .addBinding(this.massControl, "nucleusMassLog10", {
-        label: "log10 Nucleus mass (kg)",
+        label: "log10 Nucleus mass [kg]",
         min: -30,
         max: -24,
         step: 0.01,
@@ -127,7 +127,7 @@ class GUI {
       });
 
     quantum.addBinding(this.appcore.params, "nucleusMassKg", {
-      label: "Nucleus mass (kg)",
+      label: "Nucleus mass [kg]",
       readonly: true,
       format: (v) => {
         const numeric = Number(v);
@@ -332,7 +332,7 @@ class GUI {
 
     distribution.addBinding(statistics, "stdDev", {
       readonly: true,
-      label: "Std Dev [m⁻³]",
+      label: "Density Standard Deviation [m⁻³]",
       format: formatSigned,
     });
 
@@ -399,14 +399,14 @@ class GUI {
     const capture = exp.addFolder({ title: "Capture" });
 
     capture.addBinding(params, "recordingFPS", {
-      label: "Record FPS",
+      label: "Record FPS [Hz]",
       min: 12,
       max: 120,
       step: 1,
     });
 
     capture.addBinding(params, "videoBitrateMbps", {
-      label: "Bitrate (Mbps)",
+      label: "Bitrate [Mbps]",
       min: 1,
       max: 64,
       step: 0.5,

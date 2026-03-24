@@ -71,7 +71,7 @@ class GUI {
 
     perf.addBinding(statistics, "fps", {
       readonly: true,
-      label: "FPS",
+      label: "FPS [Hz]",
       view: "graph",
       interval: 60,
       min: 0,
@@ -84,7 +84,7 @@ class GUI {
     const world = page.addFolder({ title: "World", expanded: true });
     world
       .addBinding(params, "gridSize", {
-        label: "Grid Size",
+        label: "Grid Size [cells]",
         options: {
           "64×64": 64,
           "128×128": 128,
@@ -426,14 +426,14 @@ class GUI {
     const capture = exp.addFolder({ title: "Capture" });
 
     capture.addBinding(this.params, "recordingFPS", {
-      label: "Record FPS",
+      label: "Record FPS [Hz]",
       min: 12,
       max: 120,
       step: 1,
     });
 
     capture.addBinding(this.params, "videoBitrateMbps", {
-      label: "Bitrate (Mbps)",
+      label: "Bitrate [Mbps]",
       min: 1,
       max: 64,
       step: 0.5,
