@@ -40,6 +40,30 @@ Open `http://localhost:8080`.
 
 Open the corresponding `.pde` file in Processing 4.x and run.
 
+## Version Code Management
+
+Sketch version codes are managed from one source of truth:
+
+- `scripts/sketch-versions.json`
+
+Use the sync script to update metadata versions in all sketch entry files:
+
+```bash
+node scripts/update-sketch-versions.mjs
+```
+
+Validate that tracked versions and in-file metadata are aligned:
+
+```bash
+node scripts/update-sketch-versions.mjs --check
+```
+
+Update one or more versions and sync in one command:
+
+```bash
+node scripts/update-sketch-versions.mjs --set "Psi=v2.7.2-dev" --set "Fluvia=v5.2.1-dev"
+```
+
 ## Licence
 
 See [`LICENSE`](./LICENSE).

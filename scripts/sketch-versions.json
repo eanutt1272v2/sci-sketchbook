@@ -1,0 +1,18 @@
+{
+  "Cellular Division": {
+    "file": "sketchbook/Cellular_Division/CellularDivision.js",
+    "version": "v2.9.5-dev"
+  },
+  "Fluvia": {
+    "file": "sketchbook/Fluvia/Fluvia.js",
+    "version": "v5.3.3-dev"
+  },
+  "Lenia 2D Studio": {
+    "file": "sketchbook/Lenia_2D_Studio/Lenia2DStudio.js",
+    "version": "v1.9.1-dev"
+  },
+  "Psi": {
+    "file": "sketchbook/Psi/Psi.js",
+    "version": "v2.8.4-dev"
+  }
+}
