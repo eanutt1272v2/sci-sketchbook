@@ -324,7 +324,7 @@ class GUI {
 
     elevationFolder.addBinding(statistics, "elevationStdDev", {
       readonly: true,
-      label: "Elevation Std Dev [height]",
+      label: "Elevation Standard Deviation [height]",
       format: (v) => fmt(v, 3),
     });
 
@@ -381,7 +381,7 @@ class GUI {
 
     hydroFolder.addBinding(statistics.dischargeBounds, "min", {
       readonly: true,
-      label: "Discharge Min [norm]",
+      label: "Discharge Minimum [normalised]",
       format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
@@ -389,7 +389,7 @@ class GUI {
 
     hydroFolder.addBinding(statistics.dischargeBounds, "max", {
       readonly: true,
-      label: "Discharge Max [norm]",
+      label: "Discharge Maximum [normalised]",
       format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
@@ -428,21 +428,21 @@ class GUI {
     });
 
     this.addGraphWithValue(geomorphFolder, statistics.sedimentBounds, "min", {
-      label: "Sediment Min [norm]",
+      label: "Sediment Minimum [normalised]",
       format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
     });
 
     this.addGraphWithValue(geomorphFolder, statistics.sedimentBounds, "max", {
-      label: "Sediment Max [norm]",
+      label: "Sediment Maximum [normalised]",
       format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
     });
 
     this.addGraphWithValue(geomorphFolder, statistics, "slopeComplexity", {
-      label: "Slope Complexity [index]",
+      label: "Slope Complexity Index [index]",
       format: (v) => fmt(v, 4),
       min: 0,
       max: 1,
@@ -457,7 +457,7 @@ class GUI {
       statistics,
       "compositeWaterCoveragePct",
       {
-        label: "Water Contribution (%)",
+        label: "Water Contribution [%]",
         format: (v) => fmt(v, 1),
         min: 0,
         max: 100,
@@ -469,7 +469,7 @@ class GUI {
       statistics,
       "compositeSedimentCoveragePct",
       {
-        label: "Sediment Contribution (%)",
+        label: "Sediment Contribution [%]",
         format: (v) => fmt(v, 1),
         min: 0,
         max: 100,
@@ -481,7 +481,7 @@ class GUI {
       statistics,
       "compositeFlatCoveragePct",
       {
-        label: "Flat Contribution (%)",
+        label: "Flat Contribution [%]",
         format: (v) => fmt(v, 1),
         min: 0,
         max: 100,
@@ -493,7 +493,7 @@ class GUI {
       statistics,
       "compositeSteepCoveragePct",
       {
-        label: "Steep Contribution (%)",
+        label: "Steep Contribution [%]",
         format: (v) => fmt(v, 1),
         min: 0,
         max: 100,
@@ -505,7 +505,7 @@ class GUI {
       statistics,
       "compositeMeanSlopeWeight",
       {
-        label: "Mean Slope Weight",
+        label: "Mean Slope Weight [index]",
         format: (v) => fmt(v, 3),
         min: 0,
         max: 1,
@@ -517,7 +517,7 @@ class GUI {
       statistics,
       "compositeMeanSedimentAlpha",
       {
-        label: "Mean Sediment Alpha",
+        label: "Mean Sediment Alpha [index]",
         format: (v) => fmt(v, 3),
         min: 0,
         max: 1,
@@ -529,7 +529,7 @@ class GUI {
       statistics,
       "compositeMeanWaterAlpha",
       {
-        label: "Mean Water Alpha",
+        label: "Mean Water Alpha [index]",
         format: (v) => fmt(v, 3),
         min: 0,
         max: 1,

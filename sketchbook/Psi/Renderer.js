@@ -201,7 +201,7 @@ class Renderer {
       `Radial Peak=${stats.radialPeak.toFixed(3)} [a₀]`,
       `Radial Spread=${stats.radialSpread.toFixed(3)} [a₀]`,
       `Node Estimate=${stats.nodeEstimate.toFixed(0)}`,
-      `Colour Map: ${colourMap}`,
+      `Colour Map: ${colourMap} (palette id)`,
       `Exposure=${exposure.toFixed(2)} [index]`,
       `Pixel Smoothing: ${pixelSmoothing ? "true" : "false"}`,
     ];

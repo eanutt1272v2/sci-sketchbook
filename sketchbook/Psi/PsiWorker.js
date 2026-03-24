@@ -230,6 +230,22 @@ function computeRadialProbabilityMoments(
   };
 }
 
+function estimateOrbitalNodeCount3D(orbitalParams) {
+  const nRaw = Number(orbitalParams?.n);
+  const lRaw = Number(orbitalParams?.l);
+  const n = Number.isFinite(nRaw) ? Math.max(1, Math.round(nRaw)) : 0;
+  if (n <= 0) return 0;
+
+  const maxL = Math.max(0, n - 1);
+  const l = Number.isFinite(lRaw)
+    ? Math.max(0, Math.min(maxL, Math.round(lRaw)))
+    : 0;
+
+  const radialNodes = Math.max(0, n - l - 1);
+  const angularNodes = l;
+  return radialNodes + angularNodes;
+}
+
 function computeDensityStatistics(grid, resolution, viewRadius, orbitalParams) {
   if (!grid || grid.length === 0) {
     return {
@@ -247,25 +263,10 @@ function computeDensityStatistics(grid, resolution, viewRadius, orbitalParams) {
 
   let sum = 0;
   let peak = 0;
-  const radialBins = 64;
-  const radialMass = new Float64Array(radialBins);
-  const radialCount = new Uint32Array(radialBins);
-  const center = (resolution - 1) * 0.5;
-  const maxR = Math.max(1, Math.sqrt(center * center + center * center));
-
   for (let i = 0; i < grid.length; i++) {
     const val = grid[i];
     sum += val;
     if (val > peak) peak = val;
-
-    const x = i % resolution;
-    const y = (i / resolution) | 0;
-    const dx = x - center;
-    const dy = y - center;
-    const rn = Math.min(0.999999, Math.sqrt(dx * dx + dy * dy) / maxR);
-    const bin = Math.floor(rn * radialBins);
-    radialMass[bin] += val;
-    radialCount[bin] += 1;
   }
 
   const mean = sum / grid.length;
@@ -289,31 +290,7 @@ function computeDensityStatistics(grid, resolution, viewRadius, orbitalParams) {
 
   const stdDev = Math.sqrt(variance / grid.length);
 
-  let radialWeightedSum = 0;
-  for (let i = 0; i < radialBins; i++) {
-    const mass = radialMass[i];
-    radialWeightedSum += mass * (i + 0.5);
-  }
-
-  const radialMeanBin = sum > 0 ? radialWeightedSum / sum : 0;
-  let radialVarAcc = 0;
-  for (let i = 0; i < radialBins; i++) {
-    const d = i + 0.5 - radialMeanBin;
-    radialVarAcc += radialMass[i] * d * d;
-  }
-  let nodeEstimate = 0;
-  const radialProfile = new Float64Array(radialBins);
-  for (let i = 0; i < radialBins; i++) {
-    radialProfile[i] = radialCount[i] > 0 ? radialMass[i] / radialCount[i] : 0;
-  }
-  for (let i = 1; i < radialBins - 1; i++) {
-    const prev = radialProfile[i - 1];
-    const cur = radialProfile[i];
-    const next = radialProfile[i + 1];
-    if (cur < prev && cur < next && cur < peak * 0.02) {
-      nodeEstimate++;
-    }
-  }
+  const nodeEstimate = estimateOrbitalNodeCount3D(orbitalParams);
 
   const radialStandard = computeRadialProbabilityMoments(
     orbitalParams?.n,
