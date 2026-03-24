@@ -262,6 +262,7 @@ class LeftPanel {
       ["P / Space", "Pause or play simulation"],
       ["#", "Toggle this keymap reference"],
       ["Shift+I / Shift+P", "Import / export params (JSON)"],
+      ["Shift+U", "Import statistics (JSON)"],
       ["Shift+J / Shift+K", "Export statistics JSON / CSV"],
       ["Shift+O / Shift+S", "Import / export state (JSON)"],
       ["Click value/particle field", "Start typing numeric input"],
