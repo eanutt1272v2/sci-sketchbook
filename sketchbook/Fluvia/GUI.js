@@ -575,14 +575,14 @@ class GUI {
     const capture = exp.addFolder({ title: "Capture" });
 
     capture.addBinding(params, "recordingFPS", {
-      label: "Record FPS",
+      label: "Record FPS [Hz]",
       min: 12,
       max: 120,
       step: 1,
     });
 
     capture.addBinding(params, "videoBitrateMbps", {
-      label: "Bitrate (Mbps)",
+      label: "Bitrate [Mbps]",
       min: 1,
       max: 64,
       step: 0.5,
