@@ -40,7 +40,6 @@ class GUI {
     const base = ["s", "p", "d", "f"];
     if (l < base.length) return base[l];
 
-    // Continue alphabetically after f, skipping j by convention.
     const extended = [
       "g",
       "h",
@@ -244,7 +243,7 @@ class GUI {
       this.appcore.params,
       "viewRadius",
       {
-        label: "View Radius (a₀)",
+        label: "View Radius [a₀]",
         min: 1,
         max: 256,
       },
@@ -269,7 +268,7 @@ class GUI {
       this.appcore.params,
       "sliceOffset",
       {
-        label: "Slice Offset (a₀)",
+        label: "Slice Offset [a₀]",
         min: -1024,
         max: 1024,
       },
@@ -288,7 +287,7 @@ class GUI {
 
     pan
       .addBinding(this.appcore.params.viewCentre, "x", {
-        label: "Pan X (a₀)",
+        label: "Pan X [a₀]",
         min: -256,
         max: 256,
         step: 0.1,
@@ -297,7 +296,7 @@ class GUI {
 
     pan
       .addBinding(this.appcore.params.viewCentre, "y", {
-        label: "Pan Y (a₀)",
+        label: "Pan Y [a₀]",
         min: -256,
         max: 256,
         step: 0.1,
@@ -306,7 +305,7 @@ class GUI {
 
     pan
       .addBinding(this.appcore.params.viewCentre, "z", {
-        label: "Pan Z (a₀)",
+        label: "Pan Z [a₀]",
         min: -256,
         max: 256,
         step: 0.1,
