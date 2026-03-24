@@ -88,8 +88,10 @@ class AppCore {
       lastTime: 0,
     };
 
-    this.font = font;
+    this.initialiseModules();
+  }
 
+  initialiseModules() {
     this.animalLibrary = new AnimalLibrary(this.params);
     this.animalLibrary.loadFromData(animalsData);
     this.board = new Board(this.params.gridSize);
@@ -111,6 +113,7 @@ class AppCore {
       this,
     );
     this.input = new InputHandler(this);
+    this.font = font;
 
     this._worker = null;
     this._workerBusy = false;
@@ -123,7 +126,7 @@ class AppCore {
     this._skipNextAnimalParamsLoad = false;
     this._lastAnimalParamsSelection = null;
     this._changeRecycleBuffer = null;
-    this._initWorker();
+    this._initWorker()
   }
 
   _initWorker() {
