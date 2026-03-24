@@ -10,7 +10,7 @@ The model uses continuous state values and convolution-based local interaction, 
 
 Let `A_t(x) in [0,1]` denote field intensity at position `x` and time `t`.
 
-The update loop follows the pipeline:
+The update loop is as follows:
 
 1. Compute potential through convolution: `U_t(x) = (K * A_t)(x)`
 2. Apply growth mapping: `G_t(x) = G(U_t(x); m, s)`
