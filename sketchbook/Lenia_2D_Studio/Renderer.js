@@ -579,16 +579,16 @@ class Renderer {
     }
 
     const arrowLen = Math.max(24, speed * cellPx * 8);
-    const rad = (angle * Math.PI) / 180;
-    const tx = cx + Math.cos(rad) * arrowLen;
-    const ty = cy + Math.sin(rad) * arrowLen;
+    const theta = angle;
+    const tx = cx + Math.cos(theta) * arrowLen;
+    const ty = cy + Math.sin(theta) * arrowLen;
 
     const headLen = Math.max(8, arrowLen * 0.25);
     const headAngle = 0.42;
-    const ax1 = tx - headLen * Math.cos(rad - headAngle);
-    const ay1 = ty - headLen * Math.sin(rad - headAngle);
-    const ax2 = tx - headLen * Math.cos(rad + headAngle);
-    const ay2 = ty - headLen * Math.sin(rad + headAngle);
+    const ax1 = tx - headLen * Math.cos(theta - headAngle);
+    const ay1 = ty - headLen * Math.sin(theta - headAngle);
+    const ax2 = tx - headLen * Math.cos(theta + headAngle);
+    const ay2 = ty - headLen * Math.sin(theta + headAngle);
 
     push();
 
@@ -711,10 +711,19 @@ class Renderer {
     textAlign(LEFT, TOP);
     const labelX = cx + dotR + 4;
     const labelY = cy - 24;
+    const fmt = (value, fixed = 3) => {
+      const n = Number(value) || 0;
+      const abs = Math.abs(n);
+      if (abs > 0 && abs < Math.pow(10, -fixed)) {
+        const [mant, exp] = n.toExponential(2).split("e");
+        return `${mant}e^${Number(exp)}`;
+      }
+      return n.toFixed(fixed);
+    };
     const labelLines = [
-      `pos=(${centerX.toFixed(1)}, ${centerY.toFixed(1)}), growth=(${(growthCenterX || 0).toFixed(1)}, ${(growthCenterY || 0).toFixed(1)})`,
-      `angle=${angle.toFixed(1)} deg, speed=${speed.toFixed(3)}, sep=${(massGrowthDist || 0).toFixed(3)}`,
-      `rot=${(rotationSpeed || 0).toFixed(2)} deg/s, sym=${symmSides || 0} @ ${((symmStrength || 0) * 100).toFixed(1)}%`,
+      `pos=(${fmt(centerX, 1)}, ${fmt(centerY, 1)}) [μm], growth=(${fmt(growthCenterX || 0, 1)}, ${fmt(growthCenterY || 0, 1)}) [μm]`,
+      `angle=${fmt(angle, 3)} [rad], speed=${fmt(speed, 3)} [μm/μs], sep=${fmt(massGrowthDist || 0, 3)} [μm]`,
+      `rot=${fmt(rotationSpeed || 0, 3)} [rad/μs], sym=${symmSides || 0} @ ${fmt((symmStrength || 0) * 100, 1)} [%]`,
     ].join("\n");
     fill(0, 200);
     text(labelLines, labelX + 1, labelY + 4);
@@ -727,39 +736,65 @@ class Renderer {
   renderStats(statistics, params) {
     const dt = 1 / params.T;
     const RN = Math.pow(params.R, 2);
+    const fmt = (value, fixed = 3) => {
+      const n = Number(value) || 0;
+      const abs = Math.abs(n);
+      if (abs > 0 && abs < Math.pow(10, -fixed)) {
+        const [mant, exp] = n.toExponential(2).split("e");
+        return `${mant}e^${Number(exp)}`;
+      }
+      return n.toFixed(fixed);
+    };
 
     const stats = [
-      `FPS=${(Number(statistics.fps) || 0).toFixed(1)}`,
-      `Generation=${String(statistics.gen)}`,
-      `Sim Time=${statistics.time.toFixed(3)} s`,
-      `Time Step: dt=1/T=${dt.toFixed(3)}`,
-      `Running: ${params.running ? "true" : "false"}`,
-      `Grid Size=${this.size}`,
-      `Render Mode: ${params.renderMode}`,
-      `Colour Map: ${this.currentColourMap || params.colourMap}`,
-      `Kernel Radius: R=${params.R.toFixed(2)}`,
-      `Time Scale: T=${params.T.toFixed(2)}`,
-      `Growth Mean: m=${params.m.toFixed(3)}`,
-      `Growth Std Dev: s=${params.s.toFixed(3)}`,
-      `Functions: kn=${params.kn} | gn=${params.gn}`,
-      `Mass/R²=${(statistics.mass / RN).toFixed(3)}`,
-      `Growth/R²=${(statistics.growth / RN).toFixed(4)}`,
-      `Peak Value=${statistics.maxValue.toFixed(3)}`,
-      `Gyradius=${statistics.gyradius.toFixed(2)}`,
-      `Centroid=(${statistics.centerX?.toFixed(1) || "0.0"}, ${statistics.centerY?.toFixed(1) || "0.0"})`,
-      `Growth Centre=(${statistics.growthCenterX?.toFixed(1) || "0.0"}, ${statistics.growthCenterY?.toFixed(1) || "0.0"})`,
-      `Mass-Growth Distance=${(statistics.massGrowthDist || 0).toFixed(3)}`,
-      `Speed=${(statistics.speed || 0).toFixed(3)}`,
-      `Angle=${(statistics.angle || 0).toFixed(1)} deg`,
-      `Mass asymmetry=${(statistics.massAsym || 0).toFixed(3)}`,
+      `FPS=${(Number(statistics.fps) || 0).toFixed(1)} [Hz]`,
+      `Generation=${String(statistics.gen)} [gen]`,
+      `Simulation Time=${fmt(statistics.time, 3)} [μs]`,
+      `Time Step: dt=1/T=${fmt(dt, 3)} [μs/gen]`,
+      `Running=${params.running ? "true" : "false"} (bool)`,
+      `Grid Size=${this.size}² [cells]`,
+      `Render Mode=${params.renderMode} (mode id)`,
+      `Colour Map=${this.currentColourMap || params.colourMap} (palette id)`,
+      `Kernel Radius: R=${fmt(params.R, 2)} [cells]`,
+      `Time Scale: T=${fmt(params.T, 2)} [gen/μs]`,
+      `Growth Mean: m=${fmt(params.m, 3)} [cell-state]`,
+      `Growth Standard Deviation: s=${fmt(params.s, 3)} [cell-state]`,
+      `Functions: kn=${params.kn} | gn=${params.gn} (family ids)`,
+      `Mass/R²=${fmt(statistics.mass / RN, 3)} [μg/cell²]`,
+      `Growth/R²=${fmt(statistics.growth / RN, 4)} [μg/(μs·cell²)]`,
+      `Mass (log scale)=${fmt(statistics.massLog || 0, 4)} [μg]`,
+      `Growth (log scale)=${fmt(statistics.growthLog || 0, 4)} [μg/μs]`,
+      `Mass Volume (log scale)=${fmt(statistics.massVolumeLog || 0, 4)} [μm²]`,
+      `Growth Volume (log scale)=${fmt(statistics.growthVolumeLog || 0, 4)} [μm²]`,
+      `Mass Density=${fmt(statistics.massDensity || 0, 6)} [μg/μm²]`,
+      `Growth Density=${fmt(statistics.growthDensity || 0, 6)} [μg/(μm²·μs)]`,
+      `Peak Value=${fmt(statistics.maxValue, 3)} [cell-state]`,
+      `Gyradius=${fmt(statistics.gyradius, 2)} [μm]`,
+      `Centroid=(${statistics.centerX?.toFixed(1) || "0.0"}, ${statistics.centerY?.toFixed(1) || "0.0"}) [μm]`,
+      `Growth Centre=(${statistics.growthCenterX?.toFixed(1) || "0.0"}, ${statistics.growthCenterY?.toFixed(1) || "0.0"}) [μm]`,
+      `Mass-Growth Dist=${fmt(statistics.massGrowthDist || 0, 3)} [μm]`,
+      `Speed=${fmt(statistics.speed || 0, 3)} [μm/μs]`,
+      `Centroid Speed=${fmt(statistics.centroidSpeed || 0, 4)} [μm/μs]`,
+      `Angle=${fmt(statistics.angle || 0, 3)} [rad]`,
+      `Centroid Rotation Speed=${fmt(statistics.centroidRotateSpeed || 0, 5)} [rad/μs]`,
+      `Growth Rotation Speed=${fmt(statistics.growthRotateSpeed || 0, 5)} [rad/μs]`,
+      `Major Axis Rotation Speed=${fmt(statistics.majorAxisRotateSpeed || 0, 5)} [rad/μs]`,
+      `Mass Asymmetry=${fmt(statistics.massAsym || 0, 3)} [μg]`,
       `Symmetry Order=${statistics.symmSides || "?"}`,
-      `Symmetry Strength=${((statistics.symmStrength || 0) * 100).toFixed(1)}%`,
-      `Rotation Speed=${(statistics.rotationSpeed || 0).toFixed(2)} deg/s`,
-      `Lyapunov=${(statistics.lyapunov || 0).toFixed(6)}`,
-      `Period=${(statistics.period || 0).toFixed(3)} s`,
-      `Period Confidence=${(statistics.periodConfidence || 0).toFixed(3)}`,
-      `Noise=${params.addNoise.toFixed(3)}`,
-      `Mask Rate=${params.maskRate.toFixed(3)}`,
+      `Symmetry Strength=${fmt((statistics.symmStrength || 0) * 100, 1)} [%]`,
+      `Rotation Speed=${fmt(statistics.rotationSpeed || 0, 3)} [rad/μs]`,
+      `Lyapunov exponent=${fmt(statistics.lyapunov || 0, 6)} [gen⁻¹]`,
+      `Moment of inertia - Hu's moment invariant 1 (log scale)=${fmt(statistics.hu1Log || 0, 6)}`,
+      `Skewness - Hu's moment invariant 4 (log scale)=${fmt(statistics.hu4Log || 0, 6)}`,
+      `Hu's 5 (log scale)=${fmt(statistics.hu5Log || 0, 6)}`,
+      `Hu's 6 (log scale)=${fmt(statistics.hu6Log || 0, 6)}`,
+      `Hu's 7 (log scale)=${fmt(statistics.hu7Log || 0, 6)}`,
+      `Kurtosis - Flusser's moment invariant 7=${fmt(statistics.flusser7 || 0, 6)}`,
+      `Flusser's 8 (log scale)=${fmt(statistics.flusser8Log || 0, 6)}`,
+      `Flusser's 9 (log scale)=${fmt(statistics.flusser9Log || 0, 6)}`,
+      `Flusser's 10 (log scale)=${fmt(statistics.flusser10Log || 0, 6)}`,
+      `Period=${fmt(statistics.period || 0, 3)} [μs]`,
+      `Period Confidence=${fmt((statistics.periodConfidence || 0) * 100, 2)} [%]`,
     ];
 
     push();

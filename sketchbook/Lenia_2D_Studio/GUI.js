@@ -77,7 +77,7 @@ class GUI {
       min: 0,
       max: 100,
     });
-    perf.addBinding(statistics, "time", { readonly: true, label: "Time (s)" });
+    perf.addBinding(statistics, "time", { readonly: true, label: "Time [μs]" });
 
     this.addSeparator(page);
 
@@ -308,93 +308,90 @@ class GUI {
 
   createStatisticsTab(page) {
     const { statistics } = this;
+    const formatSigned = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "0";
+      if (n === 0) return "+0.000";
+      const abs = Math.abs(n);
+      if (abs >= 1e3 || abs < 1e-3) {
+        const [mantissa, exponent] = n.toExponential(2).split("e");
+        return `${n >= 0 ? "+" : ""}${mantissa}e^${Number(exponent)}`;
+      }
+      return `${n >= 0 ? "+" : ""}${n.toPrecision(3)}`;
+    };
+    const formatPercent = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "0";
+      return formatSigned(n * 100);
+    };
+    const formatInt = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "0";
+      return String(Math.round(n));
+    };
+    const addStat = (folder, key, label, format = formatSigned) =>
+      folder.addBinding(statistics, key, {
+        readonly: true,
+        label,
+        format,
+      });
+
     const metrics = page.addFolder({ title: "Core Metrics" });
-    metrics.addBinding(statistics, "gen", {
-      readonly: true,
-      label: "Generation",
-    });
-    metrics.addBinding(statistics, "time", {
-      readonly: true,
-      label: "Time (s)",
-    });
-    metrics.addBinding(statistics, "mass", { readonly: true, label: "Mass" });
-    metrics.addBinding(statistics, "growth", {
-      readonly: true,
-      label: "Growth",
-    });
-    metrics.addBinding(statistics, "maxValue", {
-      readonly: true,
-      label: "Peak Value",
-    });
-    metrics.addBinding(statistics, "gyradius", {
-      readonly: true,
-      label: "Gyradius",
-    });
+    addStat(metrics, "gen", "Generation [gen]", formatInt);
+    addStat(metrics, "time", "Time [μs]");
+    addStat(metrics, "mass", "Mass [μg]");
+    addStat(metrics, "growth", "Growth [μg/μs]");
+    addStat(metrics, "massLog", "Mass (log scale) [μg]");
+    addStat(metrics, "growthLog", "Growth (log scale) [μg/μs]");
+    addStat(metrics, "massVolumeLog", "Mass volume (log scale) [μm²]");
+    addStat(metrics, "growthVolumeLog", "Growth volume (log scale) [μm²]");
+    addStat(metrics, "massDensity", "Mass density [μg/μm²]");
+    addStat(metrics, "growthDensity", "Growth density [μg/(μm²·μs)]");
+    addStat(metrics, "maxValue", "Peak value [cell-state]");
+    addStat(metrics, "gyradius", "Gyradius [μm]");
 
     this.addSeparator(page);
 
     const motion = page.addFolder({ title: "Position & Motion" });
-    motion.addBinding(statistics, "centerX", {
-      readonly: true,
-      label: "Centre X",
-    });
-    motion.addBinding(statistics, "centerY", {
-      readonly: true,
-      label: "Centre Y",
-    });
-    motion.addBinding(statistics, "growthCenterX", {
-      readonly: true,
-      label: "Growth Centre X",
-    });
-    motion.addBinding(statistics, "growthCenterY", {
-      readonly: true,
-      label: "Growth Centre Y",
-    });
-    motion.addBinding(statistics, "massGrowthDist", {
-      readonly: true,
-      label: "Mass-Growth Dist",
-    });
-    motion.addBinding(statistics, "speed", { readonly: true, label: "Speed" });
-    motion.addBinding(statistics, "angle", {
-      readonly: true,
-      label: "Angle (°)",
-    });
-    motion.addBinding(statistics, "rotationSpeed", {
-      readonly: true,
-      label: "Rotation Speed",
-    });
+    addStat(motion, "centerX", "Centroid X [μm]");
+    addStat(motion, "centerY", "Centroid Y [μm]");
+    addStat(motion, "growthCenterX", "Growth centroid X [μm]");
+    addStat(motion, "growthCenterY", "Growth centroid Y [μm]");
+    addStat(motion, "massGrowthDist", "Mass-growth distance [μm]");
+    addStat(motion, "speed", "Speed [μm/μs]");
+    addStat(motion, "centroidSpeed", "Centroid speed [μm/μs]");
+    addStat(motion, "angle", "Direction angle [rad]");
+    addStat(motion, "centroidRotateSpeed", "Centroid rotate speed [rad/μs]");
+    addStat(motion, "growthRotateSpeed", "Growth-centroid rotate speed [rad/μs]");
+    addStat(motion, "majorAxisRotateSpeed", "Major axis rotate speed [rad/μs]");
+    addStat(motion, "rotationSpeed", "Rotation speed [rad/μs]");
 
     this.addSeparator(page);
 
     const symmetry = page.addFolder({ title: "Symmetry" });
-    symmetry.addBinding(statistics, "symmSides", {
-      readonly: true,
-      label: "Fold Order",
-    });
-    symmetry.addBinding(statistics, "symmStrength", {
-      readonly: true,
-      label: "Strength",
-    });
-    symmetry.addBinding(statistics, "massAsym", {
-      readonly: true,
-      label: "Mass Asymmetry",
-    });
-    symmetry.addBinding(statistics, "lyapunov", {
-      readonly: true,
-      label: "Lyapunov",
-    });
-    symmetry.addBinding(statistics, "period", {
-      readonly: true,
-      label: "Period (s)",
-    });
-    symmetry.addBinding(statistics, "periodConfidence", {
-      readonly: true,
-      label: "Period Confidence",
-    });
+    addStat(symmetry, "symmSides", "Symmetry order", formatInt);
+    addStat(symmetry, "symmStrength", "Symmetry strength [%]", formatPercent);
+    addStat(symmetry, "massAsym", "Mass asymmetry [μg]");
+    addStat(symmetry, "lyapunov", "Lyapunov exponent [gen⁻¹]");
+    addStat(symmetry, "period", "Period [μs]");
+    addStat(symmetry, "periodConfidence", "Period confidence [%]", formatPercent);
 
     this.addSeparator(page);
 
-    metrics.addBinding(statistics, "fps", { readonly: true, label: "FPS" });
+    const invariants = page.addFolder({ title: "Moment Invariants" });
+    addStat(invariants, "hu1Log", "Moment of inertia - Hu's moment invariant 1 (log scale)");
+    addStat(invariants, "hu4Log", "Skewness - Hu's moment invariant 4 (log scale)");
+    addStat(invariants, "hu5Log", "Hu's 5 (log scale)");
+    addStat(invariants, "hu6Log", "Hu's 6 (log scale)");
+    addStat(invariants, "hu7Log", "Hu's 7 (log scale)");
+    addStat(invariants, "flusser7", "Kurtosis - Flusser's moment invariant 7");
+    addStat(invariants, "flusser8Log", "Flusser's 8 (log scale)");
+    addStat(invariants, "flusser9Log", "Flusser's 9 (log scale)");
+    addStat(invariants, "flusser10Log", "Flusser's 10 (log scale)");
+
+    this.addSeparator(page);
+
+    addStat(metrics, "fps", "FPS [Hz]");
   }
 
   createMediaTab(page) {

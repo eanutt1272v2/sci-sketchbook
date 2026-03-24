@@ -90,6 +90,8 @@ function createAnalysisState(epsilon = 1e-10, maxHistory = 512) {
     lastCentreY: null,
     lastSymmPhase: null,
     lastSymmOrder: 0,
+    lastMassGrowthAngle: null,
+    lastMajorAxisAngle: null,
     lyapunov: 0,
     massHistory: [],
     frames: 0,
@@ -101,9 +103,170 @@ function resetAnalysisState(state) {
   state.lastCentreY = null;
   state.lastSymmPhase = null;
   state.lastSymmOrder = 0;
+  state.lastMassGrowthAngle = null;
+  state.lastMajorAxisAngle = null;
   state.lyapunov = 0;
   state.massHistory = [];
   state.frames = 0;
+}
+
+function unwrapAngleDelta(current, previous) {
+  let d = current - previous;
+  if (d > Math.PI) d -= 2 * Math.PI;
+  if (d < -Math.PI) d += 2 * Math.PI;
+  return d;
+}
+
+function positiveLog10(value, epsilon) {
+  return Math.log10(Math.max(epsilon, value));
+}
+
+function signedLog10(value) {
+  const absValue = Math.abs(value);
+  if (absValue <= 0) return 0;
+  return Math.sign(value) * Math.log10(1 + absValue);
+}
+
+function calcMomentInvariants(cells, size, centerX, centerY, mass, epsilon) {
+  const inv = {
+    hu1Log: 0,
+    hu4Log: 0,
+    hu5Log: 0,
+    hu6Log: 0,
+    hu7Log: 0,
+    flusser7: 0,
+    flusser8Log: 0,
+    flusser9Log: 0,
+    flusser10Log: 0,
+    mu20: 0,
+    mu02: 0,
+    mu11: 0,
+  };
+
+  if (mass <= epsilon) {
+    return inv;
+  }
+
+  let c11Re = 0;
+  let c20Re = 0;
+  let c20Im = 0;
+  let c21Re = 0;
+  let c21Im = 0;
+  let c12Re = 0;
+  let c12Im = 0;
+  let c30Re = 0;
+  let c30Im = 0;
+  let c22Re = 0;
+  let c22Im = 0;
+  let c31Re = 0;
+  let c31Im = 0;
+  let c40Re = 0;
+  let c40Im = 0;
+
+  const count = size * size;
+  for (let i = 0; i < count; i++) {
+    const w = cells[i];
+    if (w <= epsilon) continue;
+
+    const x = i % size;
+    const y = Math.floor(i / size);
+    const dx = torusDelta(x, centerX, size);
+    const dy = torusDelta(y, centerY, size);
+
+    const dx2 = dx * dx;
+    const dy2 = dy * dy;
+    const dxy = dx * dy;
+
+    const z1Re = dx;
+    const z1Im = dy;
+    const z2Re = dx2 - dy2;
+    const z2Im = 2 * dxy;
+    const z3Re = z2Re * z1Re - z2Im * z1Im;
+    const z3Im = z2Re * z1Im + z2Im * z1Re;
+    const z4Re = z2Re * z2Re - z2Im * z2Im;
+    const z4Im = 2 * z2Re * z2Im;
+
+    const zb1Re = dx;
+    const zb1Im = -dy;
+    const zb2Re = z2Re;
+    const zb2Im = -z2Im;
+
+    const z2zb1Re = z2Re * zb1Re - z2Im * zb1Im;
+    const z2zb1Im = z2Re * zb1Im + z2Im * zb1Re;
+    const z1zb2Re = z1Re * zb2Re - z1Im * zb2Im;
+    const z1zb2Im = z1Re * zb2Im + z1Im * zb2Re;
+    const z2zb2Re = z2Re * zb2Re - z2Im * zb2Im;
+    const z2zb2Im = z2Re * zb2Im + z2Im * zb2Re;
+    const z3zb1Re = z3Re * zb1Re - z3Im * zb1Im;
+    const z3zb1Im = z3Re * zb1Im + z3Im * zb1Re;
+
+    c11Re += w * (dx2 + dy2);
+    c20Re += w * z2Re;
+    c20Im += w * z2Im;
+    c21Re += w * z2zb1Re;
+    c21Im += w * z2zb1Im;
+    c12Re += w * z1zb2Re;
+    c12Im += w * z1zb2Im;
+    c30Re += w * z3Re;
+    c30Im += w * z3Im;
+    c22Re += w * z2zb2Re;
+    c22Im += w * z2zb2Im;
+    c31Re += w * z3zb1Re;
+    c31Im += w * z3zb1Im;
+    c40Re += w * z4Re;
+    c40Im += w * z4Im;
+
+    inv.mu20 += w * dx2;
+    inv.mu02 += w * dy2;
+    inv.mu11 += w * dxy;
+  }
+
+  const m2 = Math.pow(mass, 2);
+  const m25 = Math.pow(mass, 2.5);
+  const m3 = Math.pow(mass, 3);
+
+  c11Re /= m2;
+  c20Re /= m2;
+  c20Im /= m2;
+  c21Re /= m25;
+  c21Im /= m25;
+  c12Re /= m25;
+  c12Im /= m25;
+  c30Re /= m25;
+  c30Im /= m25;
+  c22Re /= m3;
+  c22Im /= m3;
+  c31Re /= m3;
+  c31Im /= m3;
+  c40Re /= m3;
+  c40Im /= m3;
+
+  const c12sqRe = c12Re * c12Re - c12Im * c12Im;
+  const c12sqIm = 2 * c12Re * c12Im;
+  const c12cuRe = c12sqRe * c12Re - c12sqIm * c12Im;
+  const c12cuIm = c12sqRe * c12Im + c12sqIm * c12Re;
+  const c12q4Re = c12sqRe * c12sqRe - c12sqIm * c12sqIm;
+  const c12q4Im = 2 * c12sqRe * c12sqIm;
+
+  const hu5Re = c30Re * c12cuRe - c30Im * c12cuIm;
+  const hu5Im = c30Re * c12cuIm + c30Im * c12cuRe;
+  const hu6Re = c20Re * c12sqRe - c20Im * c12sqIm;
+  const fl8Re = c31Re * c12sqRe - c31Im * c12sqIm;
+  const fl8Im = c31Re * c12sqIm + c31Im * c12sqRe;
+  const fl10Re = c40Re * c12q4Re - c40Im * c12q4Im;
+  const hu4Raw = c21Re * c12Re - c21Im * c12Im;
+
+  inv.hu1Log = positiveLog10(Math.abs(c11Re), epsilon);
+  inv.hu4Log = signedLog10(hu4Raw);
+  inv.hu5Log = signedLog10(hu5Re);
+  inv.hu6Log = signedLog10(hu6Re);
+  inv.hu7Log = signedLog10(hu5Im);
+  inv.flusser7 = c22Re;
+  inv.flusser8Log = signedLog10(fl8Re);
+  inv.flusser9Log = signedLog10(fl8Im);
+  inv.flusser10Log = signedLog10(fl10Re);
+
+  return inv;
 }
 
 function torusDelta(a, b, size) {
@@ -365,9 +528,13 @@ function detectSymmetry(cells, size, stats, state, params) {
   }
 
   const symmStrength = maxAll > state.epsilon ? maxHarmonic / maxAll : 0;
+  const canTrackRotation =
+    maxIndex > 0 &&
+    maxHarmonic > state.epsilon * 10 &&
+    symmStrength >= 0.08;
   let rotSpeed = 0;
 
-  if (maxIndex > 0) {
+  if (canTrackRotation) {
     let domCos = 0;
     let domSin = 0;
     for (let n = 0; n < angularBins; n++) {
@@ -386,12 +553,13 @@ function detectSymmetry(cells, size, stats, state, params) {
       if (dPhase < -Math.PI) dPhase += 2 * Math.PI;
 
       const dTheta = dPhase / maxIndex;
-      rotSpeed = (dTheta * 180) / Math.PI / dt;
+      rotSpeed = dTheta / dt;
     }
 
     state.lastSymmPhase = symmPhase;
     state.lastSymmOrder = maxIndex;
   } else {
+    // Weak or absent rotational symmetry means phase is unstable; reset tracker.
     state.lastSymmPhase = null;
     state.lastSymmOrder = 0;
   }
@@ -456,6 +624,12 @@ function analyseStep(cells, field, change, params, state) {
   const stats = {
     mass: 0,
     growth: 0,
+    massLog: 0,
+    growthLog: 0,
+    massVolumeLog: 0,
+    growthVolumeLog: 0,
+    massDensity: 0,
+    growthDensity: 0,
     maxValue: 0,
     gyradius: 0,
     centerX: 0,
@@ -463,13 +637,27 @@ function analyseStep(cells, field, change, params, state) {
     growthCenterX: 0,
     growthCenterY: 0,
     massGrowthDist: 0,
+    growthCentroidDistance: 0,
     massAsym: 0,
     speed: 0,
+    centroidSpeed: 0,
     angle: 0,
+    centroidRotateSpeed: 0,
+    growthRotateSpeed: 0,
+    majorAxisRotateSpeed: 0,
     symmSides: 0,
     symmStrength: 0,
     rotationSpeed: 0,
     lyapunov: 0,
+    hu1Log: 0,
+    hu4Log: 0,
+    hu5Log: 0,
+    hu6Log: 0,
+    hu7Log: 0,
+    flusser7: 0,
+    flusser8Log: 0,
+    flusser9Log: 0,
+    flusser10Log: 0,
     period: 0,
     periodConfidence: 0,
   };
@@ -485,6 +673,8 @@ function analyseStep(cells, field, change, params, state) {
   let gSinX = 0;
   let gCosY = 0;
   let gSinY = 0;
+  let massSupport = 0;
+  let growthSupport = 0;
 
   for (let i = 0; i < count; i++) {
     const val = cells[i];
@@ -499,6 +689,11 @@ function analyseStep(cells, field, change, params, state) {
     if (growthVal > 0) {
       stats.growth += growthVal;
       gMass += growthVal;
+      growthSupport += 1;
+    }
+
+    if (val > state.epsilon) {
+      massSupport += 1;
     }
 
     if (val > stats.maxValue) stats.maxValue = val;
@@ -533,6 +728,24 @@ function analyseStep(cells, field, change, params, state) {
     stats.massGrowthDist = Math.sqrt(mgDx * mgDx + mgDy * mgDy);
   }
 
+  const safeR = Math.max(state.epsilon, Number(params?.R) || 1);
+  const r2 = safeR * safeR;
+  const safeT = Math.max(1e-6, Number(params?.T) || 1);
+  const dt = 1 / safeT;
+  const massNorm = stats.mass / r2;
+  const growthNorm = stats.growth / r2;
+  const massVolume = massSupport / r2;
+  const growthVolume = growthSupport / r2;
+
+  stats.massLog = positiveLog10(massNorm, state.epsilon);
+  stats.growthLog = positiveLog10(growthNorm, state.epsilon);
+  stats.massVolumeLog = positiveLog10(massVolume, state.epsilon);
+  stats.growthVolumeLog = positiveLog10(growthVolume, state.epsilon);
+  stats.massDensity = massNorm / Math.max(state.epsilon, massVolume);
+  stats.growthDensity = growthNorm / Math.max(state.epsilon, growthVolume);
+  // Keep this alias aligned with Mass-Growth distance to avoid duplicate, divergent UI values.
+  stats.growthCentroidDistance = stats.massGrowthDist;
+
   let inertia = 0;
   if (stats.mass > state.epsilon) {
     for (let i = 0; i < count; i++) {
@@ -547,6 +760,32 @@ function analyseStep(cells, field, change, params, state) {
   }
   stats.gyradius =
     stats.mass > state.epsilon ? Math.sqrt(inertia / stats.mass) : 0;
+
+  const invariants = calcMomentInvariants(
+    cells,
+    size,
+    stats.centerX,
+    stats.centerY,
+    stats.mass,
+    state.epsilon,
+  );
+  stats.hu1Log = invariants.hu1Log;
+  stats.hu4Log = invariants.hu4Log;
+  stats.hu5Log = invariants.hu5Log;
+  stats.hu6Log = invariants.hu6Log;
+  stats.hu7Log = invariants.hu7Log;
+  stats.flusser7 = invariants.flusser7;
+  stats.flusser8Log = invariants.flusser8Log;
+  stats.flusser9Log = invariants.flusser9Log;
+  stats.flusser10Log = invariants.flusser10Log;
+
+  const majorAxisAngle =
+    0.5 * Math.atan2(2 * invariants.mu11, invariants.mu20 - invariants.mu02);
+  if (state.lastMajorAxisAngle !== null) {
+    stats.majorAxisRotateSpeed =
+      unwrapAngleDelta(majorAxisAngle, state.lastMajorAxisAngle) / dt;
+  }
+  state.lastMajorAxisAngle = majorAxisAngle;
 
   if (state.lastCentreX !== null && stats.mass > state.epsilon) {
     const dx = torusDelta(stats.centerX, state.lastCentreX, size);
@@ -590,8 +829,27 @@ function analyseStep(cells, field, change, params, state) {
   if (state.lastCentreX !== null) {
     const dx = torusDelta(stats.centerX, state.lastCentreX, size);
     const dy = torusDelta(stats.centerY, state.lastCentreY, size);
-    stats.speed = Math.sqrt(dx * dx + dy * dy);
-    stats.angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    const displacement = Math.sqrt(dx * dx + dy * dy);
+    stats.speed = displacement;
+    stats.centroidSpeed = (displacement / safeR) / dt;
+    const motionAngle = Math.atan2(dy, dx);
+    stats.angle = motionAngle;
+    stats.centroidRotateSpeed = motionAngle / dt;
+  }
+
+  if (stats.massGrowthDist > state.epsilon) {
+    const mgDx = torusDelta(stats.growthCenterX, stats.centerX, size);
+    const mgDy = torusDelta(stats.growthCenterY, stats.centerY, size);
+    const mgAngle = Math.atan2(mgDy, mgDx);
+
+    if (state.lastMassGrowthAngle !== null) {
+      stats.growthRotateSpeed =
+        unwrapAngleDelta(mgAngle, state.lastMassGrowthAngle) / dt;
+    }
+
+    state.lastMassGrowthAngle = mgAngle;
+  } else {
+    state.lastMassGrowthAngle = null;
   }
 
   state.lastCentreX = stats.centerX;

@@ -468,36 +468,45 @@ class Renderer {
 
   renderStats() {
     const { statistics, params } = this.appcore;
+    const fmt = (value, fixed = 3) => {
+      const n = Number(value) || 0;
+      const abs = Math.abs(n);
+      if (abs > 0 && abs < Math.pow(10, -fixed)) {
+        const [mantissa, exponent] = n.toExponential(2).split("e");
+        return `${mantissa}e^${Number(exponent)}`;
+      }
+      return n.toFixed(fixed);
+    };
     const lines = [
-      `FPS=${statistics.fps.toFixed(1)}`,
-      `Sim Time=${statistics.simulationTime.toFixed(1)} s`,
-      `Frame=${statistics.frameCounter}`,
+      `FPS=${fmt(statistics.fps, 1)} [Hz]`,
+      `Sim Time=${fmt(statistics.simulationTime, 1)} [s]`,
+      `Frame=${Math.round(statistics.frameCounter)} [frame]`,
       `Running: ${params.running ? "true" : "false"}`,
-      `Grid Size=${params.terrainSize}`,
-      `Droplets Per Frame=${params.dropletsPerFrame}`,
+      `Grid Size=${Math.round(params.terrainSize)} [cells]`,
+      `Droplets Per Frame=${Math.round(params.dropletsPerFrame)} [drops/frame]`,
       `Render Mode: ${params.renderMethod}`,
       `Surface Map: ${params.surfaceMap}`,
       `Colour Map: ${params.colourMap}`,
-      `Elevation Mean=${statistics.avgElevation.toFixed(3)}`,
-      `Elevation Std Dev=${statistics.elevationStdDev.toFixed(3)}`,
-      `Elevation Min=${statistics.heightBounds.min.toFixed(3)}`,
-      `Elevation Max=${statistics.heightBounds.max.toFixed(3)}`,
-      `Rugosity=${statistics.rugosity.toFixed(3)}`,
-      `Slope Complexity=${statistics.slopeComplexity.toFixed(3)}`,
-      `Water Total=${statistics.totalWater.toFixed(2)}`,
-      `Active Water Cells=${statistics.activeWaterCover.toFixed(2)}`,
-      `Comp Water=${statistics.compositeWaterCoveragePct.toFixed(1)}%`,
-      `Comp Sediment=${statistics.compositeSedimentCoveragePct.toFixed(1)}%`,
-      `Comp Flat=${statistics.compositeFlatCoveragePct.toFixed(1)}%`,
-      `Comp Steep=${statistics.compositeSteepCoveragePct.toFixed(1)}%`,
-      `Hydraulic Residence=${statistics.hydraulicResidence.toFixed(2)}`,
-      `Drainage Density=${statistics.drainageDensity.toFixed(2)}%`,
-      `Discharge Min (norm)=${statistics.dischargeBounds.min.toFixed(3)}`,
-      `Discharge Max (norm)=${statistics.dischargeBounds.max.toFixed(3)}`,
-      `Sediment Total=${statistics.totalSediment.toFixed(2)}`,
-      `Bedrock Total=${statistics.totalBedrock.toFixed(2)}`,
-      `Sediment Flux=${statistics.sedimentFlux.toFixed(3)}`,
-      `Erosion Rate=${statistics.erosionRate.toFixed(3)}`,
+      `Elevation Mean=${fmt(statistics.avgElevation, 3)} [height]`,
+      `Elevation Std Dev=${fmt(statistics.elevationStdDev, 3)} [height]`,
+      `Elevation Min=${fmt(statistics.heightBounds.min, 3)} [height]`,
+      `Elevation Max=${fmt(statistics.heightBounds.max, 3)} [height]`,
+      `Rugosity=${fmt(statistics.rugosity, 3)} [index]`,
+      `Slope Complexity=${fmt(statistics.slopeComplexity, 3)} [index]`,
+      `Water Total=${fmt(statistics.totalWater, 2)} [volume]`,
+      `Active Water Cells=${fmt(statistics.activeWaterCover, 2)} [cells]`,
+      `Comp Water=${fmt(statistics.compositeWaterCoveragePct, 1)} [%]`,
+      `Comp Sediment=${fmt(statistics.compositeSedimentCoveragePct, 1)} [%]`,
+      `Comp Flat=${fmt(statistics.compositeFlatCoveragePct, 1)} [%]`,
+      `Comp Steep=${fmt(statistics.compositeSteepCoveragePct, 1)} [%]`,
+      `Hydraulic Residence=${fmt(statistics.hydraulicResidence, 2)} [s]`,
+      `Drainage Density=${fmt(statistics.drainageDensity, 2)} [%]`,
+      `Discharge Min (norm)=${fmt(statistics.dischargeBounds.min, 3)} [norm]`,
+      `Discharge Max (norm)=${fmt(statistics.dischargeBounds.max, 3)} [norm]`,
+      `Sediment Total=${fmt(statistics.totalSediment, 2)} [volume]`,
+      `Bedrock Total=${fmt(statistics.totalBedrock, 2)} [volume]`,
+      `Sediment Flux=${fmt(statistics.sedimentFlux, 3)} [volume/s]`,
+      `Erosion Rate=${fmt(statistics.erosionRate, 3)} [volume/s]`,
     ];
 
     push();

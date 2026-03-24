@@ -20,7 +20,8 @@ class Renderer {
   _fmtSci(v, digits = 3) {
     if (!Number.isFinite(v)) return "0";
     if (v === 0) return "0";
-    return Number(v).toExponential(digits);
+    const [mantissa, exponent] = Number(v).toExponential(digits).split("e");
+    return `${mantissa}e^${Number(exponent)}`;
   }
 
   getAxisSamples(resolution, viewRadius) {
@@ -185,23 +186,23 @@ class Renderer {
       `Orbital: ${orbitalNotation}`,
       `Quantum: n=${n}, l=${l}, m=${m}`,
       `Nuclear Charge: Z=${nuclearCharge}`,
-      `FPS: ${stats.fps.toFixed(1)}`,
-      `Resolution=${resolution}`,
+      `FPS=${stats.fps.toFixed(1)} [Hz]`,
+      `Resolution=${resolution} [px]`,
       `Plane: ${slicePlane.toUpperCase()}`,
-      `Slice ${fixedLabel}= ${sliceOffset.toFixed(2)} a₀`,
-      `View Radius=${viewRadius.toFixed(2)} a₀`,
-      `Pan ${axis1Label}=${viewCentre[axis1].toFixed(2)} a₀`,
-      `Pan ${axis2Label}=${viewCentre[axis2].toFixed(2)} a₀`,
-      `Density Mean=${this._fmtSci(stats.mean, 3)} m⁻³`,
-      `Density Std Dev=${this._fmtSci(stats.stdDev, 3)} m⁻³`,
-      `Density Peak=${this._fmtSci(stats.peakDensity, 3)} m⁻³`,
-      `Entropy=${stats.entropy.toFixed(4)}`,
-      `Concentration=${stats.concentration.toFixed(4)}`,
-      `Radial Peak=${stats.radialPeak.toFixed(3)} a₀`,
-      `Radial Spread=${stats.radialSpread.toFixed(3)} a₀`,
+      `Slice ${fixedLabel}=${sliceOffset.toFixed(2)} [a₀]`,
+      `View Radius=${viewRadius.toFixed(2)} [a₀]`,
+      `Pan ${axis1Label}=${viewCentre[axis1].toFixed(2)} [a₀]`,
+      `Pan ${axis2Label}=${viewCentre[axis2].toFixed(2)} [a₀]`,
+      `Density Mean=${this._fmtSci(stats.mean, 3)} [m⁻³]`,
+      `Density Std Dev=${this._fmtSci(stats.stdDev, 3)} [m⁻³]`,
+      `Density Peak=${this._fmtSci(stats.peakDensity, 3)} [m⁻³]`,
+      `Entropy=${this._fmtSci(stats.entropy, 3)}`,
+      `Concentration=${this._fmtSci(stats.concentration, 3)}`,
+      `Radial Peak=${stats.radialPeak.toFixed(3)} [a₀]`,
+      `Radial Spread=${stats.radialSpread.toFixed(3)} [a₀]`,
       `Node Estimate=${stats.nodeEstimate.toFixed(0)}`,
       `Colour Map: ${colourMap}`,
-      `Exposure=${exposure.toFixed(2)}`,
+      `Exposure=${exposure.toFixed(2)} [index]`,
       `Pixel Smoothing: ${pixelSmoothing ? "true" : "false"}`,
     ];
 

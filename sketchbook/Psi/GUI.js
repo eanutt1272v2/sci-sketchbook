@@ -289,6 +289,22 @@ class GUI {
 
   createStatisticsTab(page) {
     const { statistics } = this.appcore;
+    const formatSigned = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "0";
+      if (n === 0) return "+0.000";
+      const abs = Math.abs(n);
+      if (abs >= 1e3 || abs < 1e-3) {
+        const [mantissa, exponent] = n.toExponential(2).split("e");
+        return `${n >= 0 ? "+" : ""}${mantissa}e^${Number(exponent)}`;
+      }
+      return `${n >= 0 ? "+" : ""}${n.toPrecision(3)}`;
+    };
+    const formatInt = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "0";
+      return String(Math.round(n));
+    };
 
     const distribution = page.addFolder({
       title: "Distribution",
@@ -297,33 +313,39 @@ class GUI {
 
     distribution.addBinding(statistics, "density", {
       readonly: true,
-      label: "Density",
+      label: "Density [m⁻³]",
+      format: formatSigned,
       interval: 60,
     });
 
     distribution.addBinding(statistics, "peakDensity", {
       readonly: true,
-      label: "Peak Density (m⁻³)",
+      label: "Peak Density [m⁻³]",
+      format: formatSigned,
     });
 
     distribution.addBinding(statistics, "mean", {
       readonly: true,
-      label: "Mean Density (m⁻³)",
+      label: "Mean Density [m⁻³]",
+      format: formatSigned,
     });
 
     distribution.addBinding(statistics, "stdDev", {
       readonly: true,
-      label: "Std Dev (m⁻³)",
+      label: "Std Dev [m⁻³]",
+      format: formatSigned,
     });
 
     distribution.addBinding(statistics, "entropy", {
       readonly: true,
       label: "Entropy",
+      format: formatSigned,
     });
 
     distribution.addBinding(statistics, "concentration", {
       readonly: true,
       label: "Concentration",
+      format: formatSigned,
     });
 
     this.addSeparator(page);
@@ -332,17 +354,20 @@ class GUI {
 
     radial.addBinding(statistics, "radialPeak", {
       readonly: true,
-      label: "Radial Peak (a₀)",
+      label: "Radial Peak [a₀]",
+      format: formatSigned,
     });
 
     radial.addBinding(statistics, "radialSpread", {
       readonly: true,
-      label: "Radial Spread (a₀)",
+      label: "Radial Spread [a₀]",
+      format: formatSigned,
     });
 
     radial.addBinding(statistics, "nodeEstimate", {
       readonly: true,
       label: "Node Estimate",
+      format: formatInt,
     });
   }
 

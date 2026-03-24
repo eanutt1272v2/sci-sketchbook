@@ -90,14 +90,14 @@ class GUI {
     const perf = page.addFolder({ title: "Performance", expanded: true });
     perf.addBinding(statistics, "fps", {
       readonly: true,
-      label: "FPS",
+      label: "FPS [Hz]",
       view: "graph",
       interval: 60,
       min: 0,
       max: 100,
     });
     perf.addBinding(statistics, "simulationTime", {
-      label: "Simulation Time (s)",
+      label: "Simulation Time [s]",
       readonly: true,
     });
 
@@ -274,12 +274,26 @@ class GUI {
 
   createStatsTab(page) {
     const { statistics } = this.appcore;
+    const fmt = (value, digits = 3) => {
+      const n = Number(value) || 0;
+      const abs = Math.abs(n);
+      if (abs > 0 && abs < Math.pow(10, -digits)) {
+        const [mantissa, exponent] = n.toExponential(2).split("e");
+        return `${mantissa}e^${Number(exponent)}`;
+      }
+      return n.toFixed(digits);
+    };
+    const fmtInt = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "0";
+      return String(Math.round(n));
+    };
 
     const perfFolder = page.addFolder({ title: "Performance & Time" });
 
     this.addGraphWithValue(perfFolder, statistics, "fps", {
-      label: "FPS",
-      format: (v) => v.toFixed(1),
+      label: "FPS [Hz]",
+      format: (v) => fmt(v, 1),
       interval: 100,
       bufferSize: 60,
       min: 0,
@@ -287,15 +301,15 @@ class GUI {
     });
 
     perfFolder.addBinding(statistics, "simulationTime", {
-      label: "Simulation Time (s)",
+      label: "Simulation Time [s]",
       readonly: true,
-      format: (v) => v.toFixed(2),
+      format: (v) => fmt(v, 2),
     });
 
     perfFolder.addBinding(statistics, "frameCounter", {
       readonly: true,
-      label: "Frame Counter",
-      format: (v) => v.toFixed(0),
+      label: "Frame Counter [frame]",
+      format: fmtInt,
     });
 
     this.addSeparator(page);
@@ -304,31 +318,31 @@ class GUI {
 
     elevationFolder.addBinding(statistics, "avgElevation", {
       readonly: true,
-      label: "Average Elevation",
-      format: (v) => v.toFixed(3),
+      label: "Average Elevation [height]",
+      format: (v) => fmt(v, 3),
     });
 
     elevationFolder.addBinding(statistics, "elevationStdDev", {
       readonly: true,
-      label: "Elevation Std Dev (Roughness)",
-      format: (v) => v.toFixed(3),
+      label: "Elevation Std Dev [height]",
+      format: (v) => fmt(v, 3),
     });
 
     elevationFolder.addBinding(statistics.heightBounds, "min", {
       readonly: true,
-      label: "Minimum Elevation",
-      format: (v) => v.toFixed(3),
+      label: "Minimum Elevation [height]",
+      format: (v) => fmt(v, 3),
     });
 
     elevationFolder.addBinding(statistics.heightBounds, "max", {
       readonly: true,
-      label: "Maximum Elevation",
-      format: (v) => v.toFixed(3),
+      label: "Maximum Elevation [height]",
+      format: (v) => fmt(v, 3),
     });
 
     this.addGraphWithValue(elevationFolder, statistics, "rugosity", {
-      label: "Rugosity Index",
-      format: (v) => v.toFixed(4),
+      label: "Rugosity Index [index]",
+      format: (v) => fmt(v, 4),
       min: 0,
       max: 2,
     });
@@ -338,45 +352,45 @@ class GUI {
     const hydroFolder = page.addFolder({ title: "Hydrology" });
 
     this.addGraphWithValue(hydroFolder, statistics, "totalWater", {
-      label: "Volume of Water",
-      format: (v) => v.toFixed(2),
+      label: "Volume of Water [volume]",
+      format: (v) => fmt(v, 2),
       min: 0,
       max: 128000,
     });
 
     this.addGraphWithValue(hydroFolder, statistics, "activeWaterCover", {
-      label: "Active Water Cells",
-      format: (v) => v.toFixed(2),
+      label: "Active Water Cells [cells]",
+      format: (v) => fmt(v, 2),
       min: 0,
       max: 65536,
     });
 
     this.addGraphWithValue(hydroFolder, statistics, "drainageDensity", {
-      label: "Drainage Density (%)",
-      format: (v) => v.toFixed(2),
+      label: "Drainage Density [%]",
+      format: (v) => fmt(v, 2),
       min: 0,
       max: 50,
     });
 
     this.addGraphWithValue(hydroFolder, statistics, "hydraulicResidence", {
-      label: "Residence Time",
-      format: (v) => v.toFixed(2),
+      label: "Residence Time [s]",
+      format: (v) => fmt(v, 2),
       min: 0,
       max: 1500,
     });
 
     hydroFolder.addBinding(statistics.dischargeBounds, "min", {
       readonly: true,
-      label: "Discharge Min",
-      format: (v) => v.toFixed(3),
+      label: "Discharge Min [norm]",
+      format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
     });
 
     hydroFolder.addBinding(statistics.dischargeBounds, "max", {
       readonly: true,
-      label: "Discharge Max",
-      format: (v) => v.toFixed(3),
+      label: "Discharge Max [norm]",
+      format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
     });
@@ -386,50 +400,50 @@ class GUI {
     const geomorphFolder = page.addFolder({ title: "Mass Balance" });
 
     this.addGraphWithValue(geomorphFolder, statistics, "erosionRate", {
-      label: "Total Erosion Rate",
-      format: (v) => v.toFixed(3),
+      label: "Total Erosion Rate [volume/s]",
+      format: (v) => fmt(v, 3),
       min: 0,
       max: 750,
     });
 
     this.addGraphWithValue(geomorphFolder, statistics, "sedimentFlux", {
-      label: "Sediment Flux",
-      format: (v) => v.toFixed(3),
+      label: "Sediment Flux [volume/s]",
+      format: (v) => fmt(v, 3),
       min: -50,
       max: 512,
     });
 
     this.addGraphWithValue(geomorphFolder, statistics, "totalSediment", {
-      label: "Total Sediment",
-      format: (v) => v.toFixed(2),
+      label: "Total Sediment [volume]",
+      format: (v) => fmt(v, 2),
       min: 0,
       max: 2048,
     });
 
     this.addGraphWithValue(geomorphFolder, statistics, "totalBedrock", {
-      label: "Total Bedrock",
-      format: (v) => v.toFixed(2),
+      label: "Total Bedrock [volume]",
+      format: (v) => fmt(v, 2),
       min: 0,
       max: 40000,
     });
 
     this.addGraphWithValue(geomorphFolder, statistics.sedimentBounds, "min", {
-      label: "Sediment Min",
-      format: (v) => v.toFixed(3),
+      label: "Sediment Min [norm]",
+      format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
     });
 
     this.addGraphWithValue(geomorphFolder, statistics.sedimentBounds, "max", {
-      label: "Sediment Max",
-      format: (v) => v.toFixed(3),
+      label: "Sediment Max [norm]",
+      format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
     });
 
     this.addGraphWithValue(geomorphFolder, statistics, "slopeComplexity", {
-      label: "Slope Complexity",
-      format: (v) => v.toFixed(4),
+      label: "Slope Complexity [index]",
+      format: (v) => fmt(v, 4),
       min: 0,
       max: 1,
     });
@@ -444,7 +458,7 @@ class GUI {
       "compositeWaterCoveragePct",
       {
         label: "Water Contribution (%)",
-        format: (v) => v.toFixed(1),
+        format: (v) => fmt(v, 1),
         min: 0,
         max: 100,
       },
@@ -456,7 +470,7 @@ class GUI {
       "compositeSedimentCoveragePct",
       {
         label: "Sediment Contribution (%)",
-        format: (v) => v.toFixed(1),
+        format: (v) => fmt(v, 1),
         min: 0,
         max: 100,
       },
@@ -468,7 +482,7 @@ class GUI {
       "compositeFlatCoveragePct",
       {
         label: "Flat Contribution (%)",
-        format: (v) => v.toFixed(1),
+        format: (v) => fmt(v, 1),
         min: 0,
         max: 100,
       },
@@ -480,7 +494,7 @@ class GUI {
       "compositeSteepCoveragePct",
       {
         label: "Steep Contribution (%)",
-        format: (v) => v.toFixed(1),
+        format: (v) => fmt(v, 1),
         min: 0,
         max: 100,
       },
@@ -492,7 +506,7 @@ class GUI {
       "compositeMeanSlopeWeight",
       {
         label: "Mean Slope Weight",
-        format: (v) => v.toFixed(3),
+        format: (v) => fmt(v, 3),
         min: 0,
         max: 1,
       },
@@ -504,7 +518,7 @@ class GUI {
       "compositeMeanSedimentAlpha",
       {
         label: "Mean Sediment Alpha",
-        format: (v) => v.toFixed(3),
+        format: (v) => fmt(v, 3),
         min: 0,
         max: 1,
       },
@@ -516,7 +530,7 @@ class GUI {
       "compositeMeanWaterAlpha",
       {
         label: "Mean Water Alpha",
-        format: (v) => v.toFixed(3),
+        format: (v) => fmt(v, 3),
         min: 0,
         max: 1,
       },
