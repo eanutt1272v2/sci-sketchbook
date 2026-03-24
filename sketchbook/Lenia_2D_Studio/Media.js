@@ -55,7 +55,7 @@ class Media {
   startRecording() {
     if (this.isRecording) return;
 
-    const sourceCanvas = _renderer?.elt;
+    const sourceCanvas = globalThis._renderer?.elt;
     if (!sourceCanvas) {
       this._logError("No valid canvas found");
       return;
@@ -136,7 +136,7 @@ class Media {
   }
 
   exportImage() {
-    save(_renderer, this._getFilename(this.appcore.params.imageFormat));
+    save(globalThis._renderer, this._getFilename(this.appcore.params.imageFormat));
     this._logInfo("Image exported");
   }
 
@@ -279,47 +279,6 @@ class Media {
     this._logInfo(
       `Stats JSON exported: rows=${this.appcore.analyser.series.length}`,
     );
-  }
-
-  importStatisticsJSON() {
-    this.openDataImportDialog((file) => {
-      this._readJSONFile(file, (data) => {
-        if (!data || typeof data !== "object") {
-          throw new Error("[Lenia] Invalid statistics JSON payload");
-        }
-
-        if (data.format !== "simpipe.stats") {
-          throw new Error("[Lenia] Invalid statistics JSON format version");
-        }
-
-        if (!data.statistics || typeof data.statistics !== "object") {
-          throw new Error(
-            "[Lenia] Invalid statistics JSON: missing statistics",
-          );
-        }
-
-        if (!Array.isArray(data.series)) {
-          throw new Error("[Lenia] Invalid statistics JSON: missing series");
-        }
-
-        this._applyMetadataSnapshot(data.metadata);
-
-        this.appcore.analyser.resetStatistics();
-        this.appcore.analyser.reset();
-        Object.assign(
-          this.appcore.statistics,
-          this._cloneJSONCompatible(data.statistics),
-        );
-        this.appcore.analyser.series = this._capSeries(
-          this._cloneJSONCompatible(data.series),
-        );
-        this.appcore.refreshGUI();
-
-        this._logInfo(
-          `Stats JSON imported: rows=${this.appcore.analyser.series.length}`,
-        );
-      });
-    });
   }
 
   exportParamsJSON() {

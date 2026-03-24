@@ -19,8 +19,8 @@ const metadata = {
 function preload() {
   font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
   colourMaps = loadJSON("../../_shared/data/colour-maps.json");
-  loadStrings("vert.glsl", (lines) => (vertShader = lines.join("\n")));
-  loadStrings("frag.glsl", (lines) => (fragShader = lines.join("\n")));
+  loadStrings("../../_shared/shaders/vert.glsl", (lines) => (vertShader = lines.join("\n")));
+  loadStrings("../../_shared/shaders/frag.glsl", (lines) => (fragShader = lines.join("\n")));
 }
 
 function setup() {

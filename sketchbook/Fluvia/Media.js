@@ -124,7 +124,7 @@ class Media {
   startRecording() {
     if (this.isRecording) return;
 
-    const sourceCanvas = _renderer?.elt;
+    const sourceCanvas = globalThis._renderer?.elt;
     if (!sourceCanvas) {
       this._logError("No valid canvas found");
       return;
@@ -227,7 +227,7 @@ class Media {
   exportImage() {
     const { imageFormat } = this.appcore.params;
     try {
-      save(_renderer, this._getFilename(imageFormat));
+      save(globalThis._renderer, this._getFilename(imageFormat));
       this._logInfo("Image exported");
     } catch (err) {
       this._logError("Image export failed:", err);
@@ -282,6 +282,27 @@ class Media {
     };
     this._downloadJSON(payload, this._getFilename("stats.json"));
     this._logInfo("Stats JSON exported");
+  }
+
+  importStatisticsJSON() {
+    this.openDataImportDialog((file) => {
+      this._readJSONFile(file, (data) => {
+        if (
+          !data ||
+          typeof data !== "object" ||
+          data.format !== "simpipe.stats" ||
+          !data.statistics ||
+          typeof data.statistics !== "object"
+        ) {
+          throw new Error("[Fluvia] Invalid stats JSON payload");
+        }
+
+        this._applyMetadataSnapshot(data.metadata);
+        this._applyStatisticsSnapshot(data.statistics);
+        this.appcore.refreshGUI();
+        this._logInfo("Stats JSON imported");
+      });
+    });
   }
 
   exportStatisticsCSV() {

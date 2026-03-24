@@ -7,8 +7,9 @@ class AppCore {
       vert: vertShader,
       frag: fragShader,
     };
-    this.colourMaps = colourMaps;
-    this.colourMapKeys = Object.keys(colourMaps);
+    this.colourMaps = colourMaps || {};
+    this.colourMapKeys = Object.keys(this.colourMaps);
+    this.font = font;
 
     if (this.colourMapKeys.length === 0) {
       this.colourMaps = {
@@ -119,7 +120,6 @@ class AppCore {
     this.media = new Media(this);
     this.gui = new GUI(this);
     this.input = new InputHandler(this);
-    this.font = font;
 
     this._worker = null;
     this._workerBusy = false;

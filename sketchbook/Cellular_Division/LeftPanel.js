@@ -261,6 +261,8 @@ class LeftPanel {
       ["R", "Restart simulation"],
       ["P / Space", "Pause or play simulation"],
       ["#", "Toggle this keymap reference"],
+      ["Click value/particle field", "Start typing numeric input"],
+      ["Enter / Esc", "Apply / cancel typed input"],
       ["1 / 2", "Alpha - / +"],
       ["3 / 4", "Beta - / +"],
       ["5 / 6", "Gamma - / +"],

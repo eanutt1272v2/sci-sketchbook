@@ -409,9 +409,6 @@ class GUI {
     imp
       .addButton({ title: "Import World (JSON)" })
       .on("click", () => media?.importWorldJSON());
-    imp
-      .addButton({ title: "Import Stats (JSON)" })
-      .on("click", () => media?.importStatisticsJSON());
 
     this.addSeparator(page);
 

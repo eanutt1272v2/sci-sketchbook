@@ -134,6 +134,10 @@ class InputHandler {
       return;
     }
 
+    if (this.ui.renderKeymapRef) {
+      return;
+    }
+
     if (key === "h" || key === "H") {
       this.ui.toggleVisibility();
       return;

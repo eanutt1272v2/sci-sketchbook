@@ -3,6 +3,8 @@ class AppCore {
     const { metadata, animalsData, colourMaps, font } = assets;
 
     this.metadata = metadata;
+    this.animalsData = animalsData;
+    this.font = font;
     this.colourMaps = colourMaps || {};
     this.colourMapKeys = Object.keys(this.colourMaps);
 
@@ -93,7 +95,7 @@ class AppCore {
 
   initialiseModules() {
     this.animalLibrary = new AnimalLibrary(this.params);
-    this.animalLibrary.loadFromData(animalsData);
+    this.animalLibrary.loadFromData(this.animalsData);
     this.board = new Board(this.params.gridSize);
     this.automaton = new Automaton(this.params);
     this.analyser = new Analyser(this.statistics, this.renderData);
@@ -113,7 +115,6 @@ class AppCore {
       this,
     );
     this.input = new InputHandler(this);
-    this.font = font;
 
     this._worker = null;
     this._workerBusy = false;
@@ -126,7 +127,7 @@ class AppCore {
     this._skipNextAnimalParamsLoad = false;
     this._lastAnimalParamsSelection = null;
     this._changeRecycleBuffer = null;
-    this._initWorker()
+    this._initWorker();
   }
 
   _initWorker() {

@@ -13,13 +13,13 @@ class Media {
     this.dataImportInput.style.display = "none";
     this.dataImportInput.addEventListener("change", (event) => {
       const file = event.target.files[0];
-      if (!file || !this.pendingImportHandler) return;
-      this.pendingImportHandler(file);
-      this.pendingImportHandler = null;
+      if (!file || !this.pendingDataImportHandler) return;
+      this.pendingDataImportHandler(file);
+      this.pendingDataImportHandler = null;
       this.dataImportInput.value = "";
     });
 
-    this.pendingImportHandler = null;
+    this.pendingDataImportHandler = null;
     document.body.appendChild(this.dataImportInput);
   }
 
@@ -36,7 +36,7 @@ class Media {
   }
 
   openDataImportDialog(handler) {
-    this.pendingImportHandler = handler;
+    this.pendingDataImportHandler = handler;
     this.dataImportInput.value = "";
     this.dataImportInput.click();
   }
@@ -44,7 +44,7 @@ class Media {
   startRecording() {
     if (this.isRecording) return;
 
-    const sourceCanvas = _renderer?.elt;
+    const sourceCanvas = globalThis._renderer?.elt;
     if (!sourceCanvas) {
       this._logError("No valid canvas found");
       return;
@@ -130,7 +130,7 @@ class Media {
     }
     this._releaseRecordingResources();
     this.recordedChunks = [];
-    this.pendingImportHandler = null;
+    this.pendingDataImportHandler = null;
 
     if (
       this.dataImportInput &&
@@ -143,7 +143,7 @@ class Media {
 
   exportImage() {
     try {
-      save(_renderer, this._getFilename(this.appcore.params.imageFormat));
+      save(globalThis._renderer, this._getFilename(this.appcore.params.imageFormat));
       this._logInfo("Image exported");
     } catch (err) {
       this._logError("Image export failed:", err);

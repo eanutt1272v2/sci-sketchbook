@@ -90,6 +90,16 @@ class InputHandler {
       return false;
     }
 
+    if (k === "#") {
+      this.appcore.toggleKeymapRef();
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (this.appcore.params.renderKeymapRef) {
+      return false;
+    }
+
     let logMsg = "";
     let shouldRefreshGUI = true;
     const keyLower = (k || "").toLowerCase();
@@ -138,13 +148,12 @@ class InputHandler {
         break;
       case "x":
         this.appcore.resetViewCentre();
-        logMsg = "View center reset";
+        logMsg = "View centre reset";
         break;
-    }
-
-    if (k === "#") {
-      this.appcore.toggleKeymapRef();
-      logMsg = `Keymap Reference: ${this.appcore.params.renderKeymapRef}`;
+      case "z":
+        this.appcore.resetViewRadius();
+        logMsg = "View radius reset";
+        break;
     }
 
     if (k === " ") {
@@ -214,12 +223,11 @@ class InputHandler {
   }
 
   handlePointerEnd(event) {
-    if (this.appcore.canvasInteraction(event)) {
-      this.resetGesture();
+    const isCanvasInteraction = this.appcore.canvasInteraction(event);
+    this.resetGesture();
+    if (isCanvasInteraction) {
       return false;
     }
-
-    this.resetGesture();
   }
 
   handlePan(pointer) {

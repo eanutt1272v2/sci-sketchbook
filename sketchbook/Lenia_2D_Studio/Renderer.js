@@ -745,7 +745,7 @@ class Renderer {
       `Peak Value=${statistics.maxValue.toFixed(3)}`,
       `Gyradius=${statistics.gyradius.toFixed(2)}`,
       `Centroid=(${statistics.centerX?.toFixed(1) || "0.0"}, ${statistics.centerY?.toFixed(1) || "0.0"})`,
-      `Growth Center=(${statistics.growthCenterX?.toFixed(1) || "0.0"}, ${statistics.growthCenterY?.toFixed(1) || "0.0"})`,
+      `Growth Centre=(${statistics.growthCenterX?.toFixed(1) || "0.0"}, ${statistics.growthCenterY?.toFixed(1) || "0.0"})`,
       `Mass-Growth Distance=${(statistics.massGrowthDist || 0).toFixed(3)}`,
       `Speed=${(statistics.speed || 0).toFixed(3)}`,
       `Angle=${(statistics.angle || 0).toFixed(1)} deg`,

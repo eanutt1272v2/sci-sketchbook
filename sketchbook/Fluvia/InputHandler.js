@@ -31,6 +31,7 @@ class InputHandler {
     }
 
     const keyLower = (k || "").toLowerCase();
+    const shiftHeld = keyIsDown(SHIFT);
 
     if (k === "#") {
       this.appcore.params.renderKeymapRef =
@@ -40,6 +41,31 @@ class InputHandler {
     }
 
     if (this.appcore.params.renderKeymapRef) {
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "i") {
+      this.appcore.media.importParamsJSON();
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "p") {
+      this.appcore.media.exportParamsJSON();
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "j") {
+      this.appcore.media.exportStatisticsJSON();
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "k") {
+      this.appcore.media.exportStatisticsCSV();
+      return false;
+    }
+
+    if (shiftHeld && keyLower === "u") {
+      this.appcore.media.importStatisticsJSON();
       return false;
     }
 
@@ -111,6 +137,16 @@ class InputHandler {
       return false;
     }
 
+    if (k === "W") {
+      this.appcore.media.exportWorldJSON();
+      return false;
+    }
+
+    if (k === "Q") {
+      this.appcore.media.importWorldJSON();
+      return false;
+    }
+
     if (keyLower === "u") {
       this.appcore.media.openImportDialog();
       return false;
@@ -167,16 +203,6 @@ class InputHandler {
         512,
       );
       this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "w") {
-      this.appcore.media.exportWorldJSON();
-      return false;
-    }
-
-    if (keyLower === "q") {
-      this.appcore.media.importWorldJSON();
       return false;
     }
 

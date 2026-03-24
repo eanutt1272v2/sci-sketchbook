@@ -1,7 +1,8 @@
 class AppCore {
   constructor(assets) {
-    this.metadata = assets.metadata;
-    
+    const { metadata, colourMaps, font } = assets;
+
+    this.metadata = metadata;
     this.colourMaps = colourMaps || {};
     this.colourMapKeys = Object.keys(this.colourMaps);
 
@@ -59,7 +60,7 @@ class AppCore {
       nodeEstimate: 0,
     };
 
-    this.font = assets.font;
+    this.font = font;
 
     this._pendingActions = [];
     this._analysisConfig = { resolution: 384 };
@@ -141,6 +142,11 @@ class AppCore {
 
   toggleKeymapRef() {
     this.params.renderKeymapRef = !this.params.renderKeymapRef;
+  }
+
+  resetViewRadius() {
+    this.params.viewRadius = 45;
+    this.requestRender();
   }
 
   resetSliceOffset() {

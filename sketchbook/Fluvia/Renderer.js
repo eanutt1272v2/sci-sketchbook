@@ -47,7 +47,7 @@ class Renderer {
         title: "Camera",
         entries: [
           ["WASD / Arrow", "Orbit camera (3D mode)"],
-          ["Q / E", "Zoom camera out / in (3D mode)"],
+          ["Q / E / - / +", "Zoom camera out / in (3D mode)"],
           ["Mouse Drag / Wheel", "Orbit / zoom camera"],
         ],
       },
@@ -57,8 +57,11 @@ class Renderer {
           ["V", "Start/stop recording"],
           ["F", "Export image"],
           ["U", "Import heightmap"],
-          ["W / Q", "Export/import world state"],
-          ["GUI: Media tab", "Params/stats/world import/export"],
+          ["Shift+I / Shift+P", "Import / export params (JSON)"],
+          ["Shift+U", "Import stats (JSON)"],
+          ["Shift+J / Shift+K", "Export stats JSON / CSV"],
+          ["Shift+W / Shift+Q", "Export/import world state"],
+          ["GUI: Media tab", "All data import/export options"],
         ],
       },
       {

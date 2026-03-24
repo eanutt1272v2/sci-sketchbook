@@ -220,6 +220,10 @@ class GUI {
     );
 
     slice
+      .addButton({ title: "Reset View Radius" })
+      .on("click", () => this.appcore.resetViewRadius());
+
+    slice
       .addBinding(this.appcore.params, "slicePlane", {
         label: "Slice Plane",
         options: {
@@ -239,6 +243,10 @@ class GUI {
         max: 1024,
       },
     );
+
+    slice
+      .addButton({ title: "Reset Slice Offset" })
+      .on("click", () => this.appcore.resetSliceOffset());
 
     this.bindings.viewRadius.on("change", () => this.updateViewConstraints());
     this.bindings.sliceOffset.on("change", () => this.appcore.requestRender());

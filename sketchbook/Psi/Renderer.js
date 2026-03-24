@@ -361,6 +361,7 @@ class Renderer {
         title: "View",
         entries: [
           ["1 / 2 / 3", "Switch plane: XY / XZ / YZ"],
+          ["Z", "Reset view radius"],
           ["Space", "Reset slice offset"],
           ["X", "Reset view centre"],
           ["Arrow Keys", "Slice or zoom radius"],
@@ -376,6 +377,8 @@ class Renderer {
           ["M", "Toggle pixel smoothing"],
           ["O", "Toggle overlay"],
           ["L", "Toggle legend"],
+          ["[ / ]", "Decrease / increase exposure"],
+          ["- / +", "Decrease / increase resolution"],
           ["H", "Toggle GUI"],
         ],
       },
