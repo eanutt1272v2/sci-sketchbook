@@ -88,10 +88,11 @@ class InputHandler {
   handleKeyPressed(k, kCode) {
     if (this.shouldIgnoreKeyboard()) return false;
 
-    const keyLower = (k || "").toLowerCase();
-    const shiftHeld = keyIsDown(SHIFT);
+    const keyValue = KeyboardUtils.normalizeKey(k);
+    const keyLower = KeyboardUtils.toLower(keyValue);
+    const shiftHeld = KeyboardUtils.isShiftHeld();
 
-    if (k === "#") {
+    if (keyValue === "#") {
       this.appcore.params.renderKeymapRef =
         !this.appcore.params.renderKeymapRef;
       this.appcore.refreshGUI();
@@ -118,7 +119,7 @@ class InputHandler {
       return false;
     }
 
-    if (k === " ") {
+    if (keyValue === " ") {
       this.appcore.params.running = !this.appcore.params.running;
       this.appcore.refreshGUI();
       console.log(
@@ -215,7 +216,7 @@ class InputHandler {
       return false;
     }
 
-    if (k === "M") {
+    if (keyValue === "M") {
       this.appcore.params.renderMotionTrail =
         !this.appcore.params.renderMotionTrail;
       this.appcore.refreshGUI();
@@ -235,7 +236,7 @@ class InputHandler {
       return false;
     }
 
-    if (k === "4") {
+    if (keyValue === "4") {
       this.appcore.params.renderCalcPanels =
         !this.appcore.params.renderCalcPanels;
       this.appcore.refreshGUI();
@@ -296,7 +297,7 @@ class InputHandler {
       return false;
     }
 
-    if (k === "[") {
+    if (keyValue === "[") {
       this.appcore.params.R = Math.max(2, this.appcore.params.R - 1);
       this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
@@ -304,7 +305,7 @@ class InputHandler {
       return false;
     }
 
-    if (k === "]") {
+    if (keyValue === "]") {
       this.appcore.params.R = Math.min(50, this.appcore.params.R + 1);
       this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
@@ -312,7 +313,7 @@ class InputHandler {
       return false;
     }
 
-    if (k === ";") {
+    if (keyValue === ";") {
       this.appcore.params.T = Math.max(1, this.appcore.params.T - 1);
       this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
@@ -320,7 +321,7 @@ class InputHandler {
       return false;
     }
 
-    if (k === "'") {
+    if (keyValue === "'") {
       this.appcore.params.T = Math.min(50, this.appcore.params.T + 1);
       this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
@@ -358,11 +359,11 @@ class InputHandler {
     }
 
     if (keyLower === "q") {
-      this._cyclePlaceScale(k === "Q" ? -1 : 1);
+      this._cyclePlaceScale(keyValue === "Q" ? -1 : 1);
       return false;
     }
 
-    if (k === "`") {
+    if (keyValue === "`") {
       this._autoScaleParams();
       return false;
     }
@@ -444,14 +445,6 @@ class InputHandler {
   }
 
   shouldIgnoreKeyboard() {
-    const el = document.activeElement;
-    if (!el) return false;
-    const tag = (el.tagName || "").toUpperCase();
-    return (
-      tag === "INPUT" ||
-      tag === "TEXTAREA" ||
-      tag === "SELECT" ||
-      !!el.isContentEditable
-    );
+    return KeyboardUtils.isTypingTarget(document.activeElement);
   }
 }

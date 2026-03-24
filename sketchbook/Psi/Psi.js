@@ -61,11 +61,13 @@ function windowResized() {
   if (!appcore) return;
   appcore.resize();
 }
-function keyPressed() {
-  return appcore ? appcore.handleKeyPressed(key, keyCode) : false;
+function keyPressed(event) {
+  const keyValue = KeyboardUtils.normalizeKey(key || event?.key);
+  return appcore ? appcore.handleKeyPressed(keyValue, keyCode) : false;
 }
-function keyReleased() {
-  return appcore ? appcore.handleKeyReleased(key, keyCode) : false;
+function keyReleased(event) {
+  const keyValue = KeyboardUtils.normalizeKey(key || event?.key);
+  return appcore ? appcore.handleKeyReleased(keyValue, keyCode) : false;
 }
 function mouseWheel(event) {
   return appcore ? appcore.handleWheel(event) : false;

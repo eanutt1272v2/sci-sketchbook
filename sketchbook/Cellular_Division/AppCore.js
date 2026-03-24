@@ -22,7 +22,15 @@ class AppCore {
   }
 
   onKeyPressed() {
-    this.ui.onKeyPressed();
+    this._safeHandleKeyboard(() => this.ui.onKeyPressed());
+  }
+
+  _safeHandleKeyboard(handler) {
+    try {
+      handler();
+    } catch (error) {
+      console.error("[Cellular Division] Keyboard handling failed:", error);
+    }
   }
 
   windowResized() {

@@ -30,10 +30,11 @@ class InputHandler {
       return false;
     }
 
-    const keyLower = (k || "").toLowerCase();
-    const shiftHeld = keyIsDown(SHIFT);
+    const keyValue = KeyboardUtils.normalizeKey(k);
+    const keyLower = KeyboardUtils.toLower(k);
+    const shiftHeld = KeyboardUtils.isShiftHeld();
 
-    if (k === "#") {
+    if (keyValue === "#") {
       this.appcore.params.renderKeymapRef =
         !this.appcore.params.renderKeymapRef;
       this.appcore.refreshGUI();
@@ -70,7 +71,9 @@ class InputHandler {
     }
 
     if (keyLower === "h") {
-      this.appcore.gui.pane.hidden = !this.appcore.gui.pane.hidden;
+      if (this.appcore.gui && this.appcore.gui.pane) {
+        this.appcore.gui.pane.hidden = !this.appcore.gui.pane.hidden;
+      }
       return false;
     }
 
@@ -123,43 +126,45 @@ class InputHandler {
     }
 
     if (keyLower === "v") {
-      if (this.appcore.media.isRecording) {
-        this.appcore.media.stopRecording();
-      } else {
-        this.appcore.media.startRecording();
+      try {
+        if (this.appcore.media.isRecording) {
+          this.appcore.media.stopRecording();
+        } else {
+          this.appcore.media.startRecording();
+        }
+      } catch (error) {
+        console.error("[Fluvia] Recording toggle failed:", error);
       }
       this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "f") {
-      this.appcore.media.exportImage();
-      return false;
-    }
-
-    if (k === "W") {
-      this.appcore.media.exportWorldJSON();
-      return false;
-    }
-
-    if (k === "Q") {
-      this.appcore.media.importWorldJSON();
+      try {
+        this.appcore.media.exportImage();
+      } catch (error) {
+        console.error("[Fluvia] Export image failed:", error);
+      }
       return false;
     }
 
     if (keyLower === "u") {
-      this.appcore.media.openImportDialog();
+      try {
+        this.appcore.media.openImportDialog();
+      } catch (error) {
+        console.error("[Fluvia] Import heightmap failed:", error);
+      }
       return false;
     }
 
     if (keyLower === "c") {
-      this.appcore.cycleColourMap(keyIsDown(SHIFT) ? -1 : 1);
+      this.appcore.cycleColourMap(KeyboardUtils.isShiftHeld() ? -1 : 1);
       this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "m") {
-      this.appcore.cycleSurfaceMap(keyIsDown(SHIFT) ? -1 : 1);
+      this.appcore.cycleSurfaceMap(KeyboardUtils.isShiftHeld() ? -1 : 1);
       this.appcore.refreshGUI();
       return false;
     }
@@ -206,6 +211,23 @@ class InputHandler {
       return false;
     }
 
+    if (keyValue === "W") {
+      try {
+        this.appcore.media.exportWorldJSON();
+      } catch (error) {
+        console.error("[Fluvia] Export world failed:", error);
+      }
+      return false;
+    }
+
+    if (keyValue === "Q") {
+      try {
+        this.appcore.media.importWorldJSON();
+      } catch (error) {
+        console.error("[Fluvia] Import world failed:", error);
+      }
+      return false;
+    }
     if (keyLower === "e" || kCode === 187 || kCode === 107) {
       this.keys.zoomIn = true;
       return false;
@@ -225,7 +247,7 @@ class InputHandler {
   }
 
   handleKeyReleased(k, kCode) {
-    const keyLower = (k || "").toLowerCase();
+    const keyLower = KeyboardUtils.toLower(k);
 
     if (
       keyLower === "e" ||
@@ -263,9 +285,10 @@ class InputHandler {
       return;
     }
 
-    const yawStep = keyIsDown(SHIFT) ? 0.03 : 0.015;
-    const pitchStep = keyIsDown(SHIFT) ? 0.03 : 0.015;
-    const zoomStep = keyIsDown(SHIFT) ? 8 : 4;
+    const shiftHeld = KeyboardUtils.isShiftHeld();
+    const yawStep = shiftHeld ? 0.03 : 0.015;
+    const pitchStep = shiftHeld ? 0.03 : 0.015;
+    const zoomStep = shiftHeld ? 8 : 4;
 
     if (this.keys.left) this.appcore.camera.target.yaw -= yawStep;
     if (this.keys.right) this.appcore.camera.target.yaw += yawStep;
@@ -308,14 +331,6 @@ class InputHandler {
   }
 
   shouldIgnoreKeyboard() {
-    const el = document.activeElement;
-    if (!el) return false;
-    const tag = (el.tagName || "").toUpperCase();
-    return (
-      tag === "INPUT" ||
-      tag === "TEXTAREA" ||
-      tag === "SELECT" ||
-      !!el.isContentEditable
-    );
+    return KeyboardUtils.isTypingTarget(document.activeElement);
   }
 }

@@ -65,8 +65,9 @@ function draw() {
 }
 
 function keyPressed() {
-  if (!appcore) return;
+  if (!appcore) return false;
   appcore.onKeyPressed();
+  return false;
 }
 
 function windowResized() {

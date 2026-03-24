@@ -112,9 +112,11 @@ class InputHandler {
   }
 
   handleTypingKey() {
-    if (key >= "0" && key <= "9") {
-      this.typingBuffer += str(key);
-    } else if (key === "." && !this.typingBuffer.includes(".")) {
+    const keyValue = KeyboardUtils.normalizeKey(key);
+
+    if (keyValue >= "0" && keyValue <= "9") {
+      this.typingBuffer += keyValue;
+    } else if (keyValue === "." && !this.typingBuffer.includes(".")) {
       this.typingBuffer += ".";
     } else if (this.isBackspace() && this.typingBuffer.length > 0) {
       this.typingBuffer = this.typingBuffer.substring(
@@ -129,17 +131,18 @@ class InputHandler {
   }
 
   handleShortcutKey() {
-    if (key === "#") {
+    const keyValue = KeyboardUtils.normalizeKey(key);
+    const keyLower = KeyboardUtils.toLower(keyValue);
+    const shiftHeld = KeyboardUtils.isShiftHeld();
+
+    if (this.ui.renderKeymapRef && keyValue !== "#") {
+      return;
+    }
+
+    if (keyValue === "#") {
       this.ui.toggleKeymapReference();
       return;
     }
-
-    if (this.ui.renderKeymapRef) {
-      return;
-    }
-
-    const keyLower = (key || "").toLowerCase();
-    const shiftHeld = keyIsDown(SHIFT);
 
     if (shiftHeld && keyLower === "i") {
       this.ui.appcore.importParamsJSON();
@@ -176,22 +179,22 @@ class InputHandler {
       return;
     }
 
-    if (key === "h" || key === "H") {
+    if (keyLower === "h") {
       this.ui.toggleVisibility();
       return;
     }
 
-    if (key === "r" || key === "R") {
+    if (keyLower === "r") {
       this.ui.requestRestart();
       return;
     }
 
-    if (key === "p" || key === "P" || key === " ") {
+    if (keyLower === "p" || keyValue === " ") {
       this.ui.toggleSimulationPause();
       return;
     }
-    const stepBoost = keyIsDown(SHIFT) ? 10 : 1;
-    switch (key) {
+    const stepBoost = shiftHeld ? 10 : 1;
+    switch (keyValue) {
       case "1":
         this.adjustParam(0, -this.getStepSize(0) * stepBoost);
         break;

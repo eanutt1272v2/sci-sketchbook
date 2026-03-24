@@ -32,6 +32,7 @@ where `R_{n,l}` is the normalised radial basis term and `Y_l^m` is the normalise
 
 - Worker-based computation keeps the interface responsive at higher resolutions.
 - LUT and overlay caches aid in mitigating unnecessary rerendering.
+- The keymap overlay (`#`) provides the full, up-to-date keyboard binding reference.
 
 ## Run
 

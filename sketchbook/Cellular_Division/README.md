@@ -44,6 +44,7 @@ Schmickl, T., Stefanec, M. & Crailsheim, K. How a life-like system emerges from 
 - Particle populations often show rapid multiplication followed by plateauing as local density gradients flatten.
 - Neighbourhood radius and turning parameters (`alpha`, `beta`) strongly influence whether behaviour remains diffuse or forms, dividing bodies.
 - Worker stepping keeps the main thread responsive during heavy updates.
+- The keymap overlay (`#`) lists full keyboard controls and adjustment shortcuts.
 
 ## Run
 

@@ -71,9 +71,11 @@ function touchStarted(e) {
 function windowResized() {
   return appcore ? appcore.windowResized() : false;
 }
-function keyPressed() {
-  return appcore ? appcore.handleKeyPressed(key || event.key, keyCode) : false;
+function keyPressed(event) {
+  const keyValue = KeyboardUtils.normalizeKey(key || event?.key);
+  return appcore ? appcore.handleKeyPressed(keyValue, keyCode) : false;
 }
-function keyReleased() {
-  return appcore ? appcore.handleKeyReleased(key || event.key, keyCode) : false;
+function keyReleased(event) {
+  const keyValue = KeyboardUtils.normalizeKey(key || event?.key);
+  return appcore ? appcore.handleKeyReleased(keyValue, keyCode) : false;
 }

@@ -54,6 +54,7 @@ This behaviour is strengthened by introducing stream-level momentum coupling (ap
 ## Notes
 
 - Parameter changes can change landscape morphology drastically (e.g. broad basins or incised river networks).
+- The keymap overlay (`#`) shows full keyboard bindings and their current meanings.
 
 ## References
 

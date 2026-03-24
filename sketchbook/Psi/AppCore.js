@@ -209,11 +209,24 @@ class AppCore {
   }
 
   handleKeyPressed(k, kCode) {
-    return this.input.handleKeyPressed(k, kCode);
+    return this._safeHandleKeyboard("press", () =>
+      this.input.handleKeyPressed(k, kCode),
+    );
   }
 
   handleKeyReleased(k, kCode) {
-    return this.input.handleKeyReleased(k, kCode);
+    return this._safeHandleKeyboard("release", () =>
+      this.input.handleKeyReleased(k, kCode),
+    );
+  }
+
+  _safeHandleKeyboard(action, handler) {
+    try {
+      return handler();
+    } catch (error) {
+      console.error(`[Psi] Keyboard ${action} handling failed:`, error);
+      return false;
+    }
   }
 
   canvasInteraction(e) {

@@ -13,7 +13,7 @@ class InputHandler {
     }
 
     const { params } = this.appcore;
-    const shiftHeld = keyIsDown(SHIFT);
+    const shiftHeld = KeyboardUtils.isShiftHeld();
     let needsRender = false;
     let syncViewConstraints = false;
 
@@ -86,13 +86,16 @@ class InputHandler {
   }
 
   handleKeyPressed(k) {
-    if (this.shouldIgnoreKeyboard()) {
+    const keyValue = KeyboardUtils.normalizeKey(k);
+
+    if (keyValue === "#") {
+      this.appcore.toggleKeymapRef();
+      this.appcore.refreshGUI();
+      console.log(`[Psi] Keymap Reference: ${this.appcore.params.renderKeymapRef}`);
       return false;
     }
 
-    if (k === "#") {
-      this.appcore.toggleKeymapRef();
-      this.appcore.refreshGUI();
+    if (this.shouldIgnoreKeyboard()) {
       return false;
     }
 
@@ -100,8 +103,8 @@ class InputHandler {
       return false;
     }
 
-    const keyLower = (k || "").toLowerCase();
-    const shiftHeld = keyIsDown(SHIFT);
+    const keyLower = KeyboardUtils.toLower(keyValue);
+    const shiftHeld = KeyboardUtils.isShiftHeld();
 
     if (shiftHeld && keyLower === "i") {
       this.appcore.media.importParamsJSON();
@@ -143,8 +146,8 @@ class InputHandler {
     }
 
     const planes = { 1: "xy", 2: "xz", 3: "yz" };
-    if (planes[k]) {
-      this.appcore.changePlane(planes[k]);
+    if (planes[keyValue]) {
+      this.appcore.changePlane(planes[keyValue]);
       logMsg = `Plane switched to ${this.appcore.params.slicePlane.toUpperCase()}`;
     }
 
@@ -183,13 +186,13 @@ class InputHandler {
         break;
     }
 
-    if (k === " ") {
+    if (keyValue === " ") {
       this.appcore.resetSliceOffset();
       logMsg = "Offset reset to 0";
     }
 
     if (logMsg) {
-      console.log(`[Action] ${logMsg}`);
+      console.log(`[Psi] ${logMsg}`);
     }
 
     if (shouldRefreshGUI) {
@@ -334,14 +337,6 @@ class InputHandler {
   }
 
   shouldIgnoreKeyboard() {
-    const el = document.activeElement;
-    if (!el) return false;
-    const tag = (el.tagName || "").toUpperCase();
-    return (
-      tag === "INPUT" ||
-      tag === "TEXTAREA" ||
-      tag === "SELECT" ||
-      !!el.isContentEditable
-    );
+    return KeyboardUtils.isTypingTarget(document.activeElement);
   }
 }
