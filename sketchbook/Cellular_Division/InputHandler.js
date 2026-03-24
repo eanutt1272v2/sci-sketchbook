@@ -138,6 +138,39 @@ class InputHandler {
       return;
     }
 
+    const keyLower = (key || "").toLowerCase();
+    const shiftHeld = keyIsDown(SHIFT);
+
+    if (shiftHeld && keyLower === "i") {
+      this.ui.appcore.importParamsJSON();
+      return;
+    }
+
+    if (shiftHeld && keyLower === "p") {
+      this.ui.appcore.exportParamsJSON();
+      return;
+    }
+
+    if (shiftHeld && keyLower === "j") {
+      this.ui.appcore.exportStatisticsJSON();
+      return;
+    }
+
+    if (shiftHeld && keyLower === "k") {
+      this.ui.appcore.exportStatisticsCSV();
+      return;
+    }
+
+    if (shiftHeld && keyLower === "s") {
+      this.ui.appcore.exportStateJSON();
+      return;
+    }
+
+    if (shiftHeld && keyLower === "o") {
+      this.ui.appcore.importStateJSON();
+      return;
+    }
+
     if (key === "h" || key === "H") {
       this.ui.toggleVisibility();
       return;
