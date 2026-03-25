@@ -1,10 +1,10 @@
 class KeyboardUtils {
-  static normalizeKey(value) {
+  static normaliseKey(value) {
     return typeof value === "string" ? value : "";
   }
 
   static toLower(value) {
-    return KeyboardUtils.normalizeKey(value).toLowerCase();
+    return KeyboardUtils.normaliseKey(value).toLowerCase();
   }
 
   static isTypingTarget(element) {

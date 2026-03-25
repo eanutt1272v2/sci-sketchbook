@@ -86,7 +86,7 @@ class InputHandler {
   }
 
   handleKeyPressed(k) {
-    const keyValue = KeyboardUtils.normalizeKey(k);
+    const keyValue = KeyboardUtils.normaliseKey(k);
 
     if (keyValue === "#") {
       this.appcore.toggleKeymapRef();

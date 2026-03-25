@@ -112,7 +112,7 @@ class InputHandler {
   }
 
   handleTypingKey() {
-    const keyValue = KeyboardUtils.normalizeKey(key);
+    const keyValue = KeyboardUtils.normaliseKey(key);
 
     if (keyValue >= "0" && keyValue <= "9") {
       this.typingBuffer += keyValue;
@@ -131,7 +131,7 @@ class InputHandler {
   }
 
   handleShortcutKey() {
-    const keyValue = KeyboardUtils.normalizeKey(key);
+    const keyValue = KeyboardUtils.normaliseKey(key);
     const keyLower = KeyboardUtils.toLower(keyValue);
     const shiftHeld = KeyboardUtils.isShiftHeld();
 

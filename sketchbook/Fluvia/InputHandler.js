@@ -30,7 +30,7 @@ class InputHandler {
       return false;
     }
 
-    const keyValue = KeyboardUtils.normalizeKey(k);
+    const keyValue = KeyboardUtils.normaliseKey(k);
     const keyLower = KeyboardUtils.toLower(k);
     const shiftHeld = KeyboardUtils.isShiftHeld();
 

@@ -88,7 +88,7 @@ class InputHandler {
   handleKeyPressed(k, kCode) {
     if (this.shouldIgnoreKeyboard()) return false;
 
-    const keyValue = KeyboardUtils.normalizeKey(k);
+    const keyValue = KeyboardUtils.normaliseKey(k);
     const keyLower = KeyboardUtils.toLower(keyValue);
     const shiftHeld = KeyboardUtils.isShiftHeld();
 
