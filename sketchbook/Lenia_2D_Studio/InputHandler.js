@@ -392,15 +392,23 @@ class InputHandler {
     if (!lib || !lib.animals || lib.animals.length === 0) return;
 
     const total = lib.animals.length;
-    const current = parseInt(this.appcore.params.selectedAnimal, 10);
-    const base = Number.isNaN(current) ? 0 : current;
+    const current = this.appcore.getSelectedAnimalIndex();
+    const base = current === null ? (delta > 0 ? -1 : 0) : current;
     const next = (base + delta + total) % total;
+    const nextSelection = String(next);
 
-    this.appcore.params.selectedAnimal = String(next);
-    this.appcore.loadSelectedAnimal();
-    this.appcore.refreshGUI();
+    // Avoid a second, conflicting params-only load triggered by the GUI binding.
+    this.appcore._skipNextAnimalParamsLoad = true;
+    this.appcore._lastAnimalParamsSelection = nextSelection;
+    this.appcore.params.selectedAnimal = nextSelection;
 
     const animal = lib.getAnimal(next);
+    if (animal) {
+      this.appcore.loadAnimal(animal);
+    }
+
+    this.appcore.refreshGUI();
+
     if (animal && animal.name) {
       console.log(`[Lenia] Animal: ${animal.name}`);
     }

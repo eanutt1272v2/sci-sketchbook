@@ -28,6 +28,7 @@ class Simulation {
     this._workerStepIntervalMs = 22;
     this._lastWorkerStepMs = 0;
     this._particleBufferForWorker = null;
+    this._renderParticleData = null;
 
     this.theme = theme;
 
@@ -110,8 +111,19 @@ class Simulation {
     if (data.type !== "result") return;
 
     this._workerBusy = false;
+    // Keep a stable render-side copy because the original buffer is transferred
+    // back to the worker on the next tick and becomes detached in the main thread.
+    const sourceParticleData = new Float32Array(data.particleData);
+    if (
+      !this._renderParticleData ||
+      this._renderParticleData.length !== sourceParticleData.length
+    ) {
+      this._renderParticleData = new Float32Array(sourceParticleData.length);
+    }
+    this._renderParticleData.set(sourceParticleData);
+
     this._lastResult = {
-      particleData: new Float32Array(data.particleData),
+      particleData: this._renderParticleData,
       particleCount: data.particleCount,
       population: data.population,
       elapsed: data.elapsed,
@@ -231,44 +243,43 @@ class Simulation {
       const { particleData, particleCount } = this._lastResult;
       const ctx = drawingContext;
 
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
+      ctx.save();
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
 
-      const renderCategory = (strokeStyle, predicate) => {
-        ctx.strokeStyle = strokeStyle;
-        ctx.beginPath();
-        for (let i = 0; i < particleCount; i++) {
-          const base = i * 4;
-          const closeCount = particleData[base + 2];
-          const neighbourCount = particleData[base + 3];
-          if (!predicate(closeCount, neighbourCount)) continue;
-          const x = particleData[base];
-          const y = particleData[base + 1];
-          ctx.moveTo(x, y);
-          ctx.lineTo(x + 0.01, y);
+      const colourHighDensity = "rgb(255,80,255)";
+      const colourVeryDense = "rgb(255,255,100)";
+      const colourDense = "rgb(0,0,255)";
+      const colourModerate = "rgb(180,100,50)";
+      const colourSparse = "rgb(80,255,80)";
+
+      let currentFill = "";
+
+      for (let i = 0; i < particleCount; i++) {
+        const base = i * 4;
+        const closeCount = particleData[base + 2];
+        const neighbourCount = particleData[base + 3];
+
+        let nextFill = colourSparse;
+        if (closeCount > 15) {
+          nextFill = colourHighDensity;
+        } else if (neighbourCount > 35) {
+          nextFill = colourVeryDense;
+        } else if (neighbourCount > 15) {
+          nextFill = colourDense;
+        } else if (neighbourCount >= 13) {
+          nextFill = colourModerate;
         }
-        ctx.stroke();
-      };
 
-      renderCategory("rgb(255,80,255)", (closeCount) => closeCount > 15);
-      renderCategory(
-        "rgb(255,255,100)",
-        (closeCount, neighbourCount) => closeCount <= 15 && neighbourCount > 35,
-      );
-      renderCategory(
-        "rgb(0,0,255)",
-        (closeCount, neighbourCount) =>
-          closeCount <= 15 && neighbourCount > 15 && neighbourCount <= 35,
-      );
-      renderCategory(
-        "rgb(180,100,50)",
-        (closeCount, neighbourCount) =>
-          closeCount <= 15 && neighbourCount >= 13 && neighbourCount <= 15,
-      );
-      renderCategory(
-        "rgb(80,255,80)",
-        (closeCount, neighbourCount) => closeCount <= 15 && neighbourCount < 13,
-      );
+        if (nextFill !== currentFill) {
+          currentFill = nextFill;
+          ctx.fillStyle = currentFill;
+        }
+
+        ctx.fillRect(particleData[base], particleData[base + 1], 2, 2);
+      }
+
+      ctx.restore();
       return;
     }
 
@@ -434,6 +445,7 @@ class Simulation {
     this._lastResult = null;
     this._history.length = 0;
     this._particleBufferForWorker = null;
+    this._renderParticleData = null;
     this.particles.length = 0;
     this.spatialGrid = null;
     this.cellTracker = null;
