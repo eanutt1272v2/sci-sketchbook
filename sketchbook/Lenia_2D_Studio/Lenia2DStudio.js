@@ -1,7 +1,7 @@
 p5.disableFriendlyErrors = true;
 
 let appcore;
-let font, animalsData, colourMaps;
+let font, animalsData, animalsData3D, animalsData4D, colourMaps;
 let mainCanvas;
 
 function disposeAppCore() {
@@ -19,6 +19,28 @@ const metadata = {
 function preload() {
   font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
   animalsData = loadJSON("../../_shared/data/animals.json");
+
+  animalsData3D = [];
+  animalsData4D = [];
+  loadJSON(
+    "../../_shared/data/animals3D.json",
+    (data) => {
+      animalsData3D = data;
+    },
+    () => {
+      animalsData3D = [];
+    },
+  );
+  loadJSON(
+    "../../_shared/data/animals4D.json",
+    (data) => {
+      animalsData4D = data;
+    },
+    () => {
+      animalsData4D = [];
+    },
+  );
+
   colourMaps = loadJSON("../../_shared/data/colour-maps.json");
 }
 
@@ -33,6 +55,11 @@ function setup() {
     appcore = new AppCore({
       metadata,
       animalsData,
+      animalsByDimension: {
+        2: animalsData,
+        3: animalsData3D,
+        4: animalsData4D,
+      },
       colourMaps,
       font,
     });

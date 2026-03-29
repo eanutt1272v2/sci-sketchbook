@@ -1,9 +1,12 @@
 class AppCore {
   constructor(assets) {
-    const { metadata, animalsData, colourMaps, font } = assets;
+    const { metadata, animalsData, animalsByDimension = null, colourMaps, font } = assets;
 
     this.metadata = metadata;
-    this.animalsData = animalsData;
+    this.animalsByDimension =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.buildAnimalsByDimension(animalsData, animalsByDimension)
+        : { 2: Array.isArray(animalsData) ? animalsData : [] };
     this.font = font;
     this.colourMaps = colourMaps || {};
     this.colourMapKeys = Object.keys(this.colourMaps);
@@ -22,6 +25,9 @@ class AppCore {
     this.params = {
       running: true,
       gridSize: 128,
+
+      dimension: 2,
+      viewMode: "slice",
 
       R: 13,
       T: 10,
@@ -115,7 +121,12 @@ class AppCore {
 
   initialiseModules() {
     this.animalLibrary = new AnimalLibrary(this.params);
-    this.animalLibrary.loadFromData(this.animalsData);
+    if (this.animalLibrary.loadFromDimensionMap) {
+      this.animalLibrary.loadFromDimensionMap(this.animalsByDimension);
+      this.animalLibrary.setActiveDimension(this.params.dimension);
+    } else {
+      this.animalLibrary.loadFromData(this.animalsByDimension[2] || []);
+    }
     this.board = new Board(this.params.gridSize);
     this.automaton = new Automaton(this.params);
     this.analyser = new Analyser(this.statistics, this.renderData);
@@ -513,6 +524,24 @@ class AppCore {
 
     if ("running" in rawParams)
       p.running = toBoolean(rawParams.running, p.running);
+
+    if ("dimension" in rawParams) {
+      const incomingDimension =
+        typeof NDCompatibility !== "undefined"
+          ? NDCompatibility.coerceDimension(rawParams.dimension)
+          : 2;
+      p.dimension = incomingDimension;
+      if (this.animalLibrary && this.animalLibrary.setActiveDimension) {
+        this.animalLibrary.setActiveDimension(incomingDimension);
+      }
+    }
+
+    if ("viewMode" in rawParams) {
+      p.viewMode =
+        typeof NDCompatibility !== "undefined"
+          ? NDCompatibility.coerceViewMode(p.dimension, rawParams.viewMode)
+          : "slice";
+    }
 
     if (allowGridSize && "gridSize" in rawParams) {
       p.gridSize = this._normaliseGridSize(rawParams.gridSize);
@@ -937,6 +966,70 @@ class AppCore {
     const idx = this.getSelectedAnimalIndex();
     if (idx === null) return null;
     return this.animalLibrary.getAnimal(idx);
+  }
+
+  getViewModeOptions() {
+    const modes =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.getViewModesForDimension(this.params.dimension)
+        : ["slice"];
+
+    return modes.reduce((options, mode) => {
+      if (mode === "slice") options["Slice"] = mode;
+      if (mode === "projection") options["Projection"] = mode;
+      return options;
+    }, {});
+  }
+
+  setDimension(dimension) {
+    const nextDimension =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceDimension(dimension)
+        : 2;
+
+    if (nextDimension === this.params.dimension) return;
+
+    this.params.dimension = nextDimension;
+    this.params.viewMode =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceViewMode(nextDimension, this.params.viewMode)
+        : "slice";
+
+    if (this.animalLibrary && this.animalLibrary.setActiveDimension) {
+      this.animalLibrary.setActiveDimension(nextDimension);
+    }
+
+    const hasAnimals =
+      this.animalLibrary &&
+      Array.isArray(this.animalLibrary.animals) &&
+      this.animalLibrary.animals.length > 0;
+
+    this._skipNextAnimalParamsLoad = true;
+    this.params.selectedAnimal = hasAnimals ? "0" : "";
+    this._lastAnimalParamsSelection = this.params.selectedAnimal;
+
+    if (nextDimension !== 2) {
+      this.params.running = false;
+      this.clearWorld();
+      console.log(
+        `[Lenia] ${nextDimension}D mode enabled (phase 1 scaffold). Simulation core remains 2D in this phase.`,
+      );
+    } else {
+      const animal = this.animalLibrary.getAnimal(0);
+      if (animal) {
+        this.loadAnimal(animal);
+      }
+    }
+
+    this.refreshGUI();
+  }
+
+  setViewMode(viewMode) {
+    this.params.viewMode =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceViewMode(this.params.dimension, viewMode)
+        : "slice";
+    this.refreshGUI();
   }
 
   canvasInteraction(e) {

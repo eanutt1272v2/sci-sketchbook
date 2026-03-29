@@ -93,6 +93,23 @@ class GUI {
         },
       })
       .on("change", () => this.appcore?.changeResolution());
+
+    this.addSeparator(page);
+
+    const nd = page.addFolder({ title: "ND Mode", expanded: false });
+    nd
+      .addBinding(params, "dimension", {
+        label: "Dimension",
+        options: { "2D": 2, "3D": 3, "4D": 4 },
+      })
+      .on("change", (event) => this.appcore?.setDimension(event.value));
+
+    nd
+      .addBinding(params, "viewMode", {
+        label: "4D View",
+        options: { Slice: "slice", Projection: "projection" },
+      })
+      .on("change", (event) => this.appcore?.setViewMode(event.value));
   }
 
   createParametersTab(page) {
