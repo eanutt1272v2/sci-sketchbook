@@ -65,11 +65,6 @@ class InputHandler {
       return false;
     }
 
-    if (shiftHeld && keyLower === "u") {
-      this.appcore.media.importStatisticsJSON();
-      return false;
-    }
-
     if (keyLower === "h") {
       if (this.appcore.gui && this.appcore.gui.pane) {
         this.appcore.gui.pane.hidden = !this.appcore.gui.pane.hidden;

@@ -6,22 +6,91 @@
   font-display: swap;
 }
 
+:root {
+  color-scheme: dark;
+
+  --sk-bg: #111111;
+  --sk-fg: #ececec;
+  --sk-canvas-border: #525252;
+
+  --tp-base-background-color: hsla(230, 7%, 17%, 1);
+  --tp-base-shadow-color: hsla(0, 0%, 0%, 0.2);
+  --tp-button-background-color: hsla(230, 7%, 70%, 1);
+  --tp-button-background-color-active: hsla(230, 7%, 85%, 1);
+  --tp-button-background-color-focus: hsla(230, 7%, 80%, 1);
+  --tp-button-background-color-hover: hsla(230, 7%, 75%, 1);
+  --tp-button-foreground-color: hsla(230, 7%, 17%, 1);
+  --tp-container-background-color: hsla(230, 7%, 75%, 0.1);
+  --tp-container-background-color-active: hsla(230, 7%, 75%, 0.25);
+  --tp-container-background-color-focus: hsla(230, 7%, 75%, 0.2);
+  --tp-container-background-color-hover: hsla(230, 7%, 75%, 0.15);
+  --tp-container-foreground-color: hsla(230, 7%, 75%, 1);
+  --tp-groove-foreground-color: hsla(230, 7%, 75%, 0.1);
+  --tp-input-background-color: hsla(230, 7%, 75%, 0.1);
+  --tp-input-background-color-active: hsla(230, 7%, 75%, 0.25);
+  --tp-input-background-color-focus: hsla(230, 7%, 75%, 0.2);
+  --tp-input-background-color-hover: hsla(230, 7%, 75%, 0.15);
+  --tp-input-foreground-color: hsla(230, 7%, 75%, 1);
+  --tp-label-foreground-color: hsla(230, 7%, 75%, 0.7);
+  --tp-monitor-background-color: hsla(230, 7%, 0%, 0.2);
+  --tp-monitor-foreground-color: hsla(230, 7%, 75%, 0.7);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+
+    --sk-bg: #efefef;
+    --sk-fg: #1c1c1c;
+    --sk-canvas-border: #a7a7a7;
+
+    --tp-base-background-color: hsla(230, 5%, 90%, 1.00);
+    --tp-base-shadow-color: hsla(0, 0%, 0%, 0.10);
+    --tp-button-background-color: hsla(230, 7%, 75%, 1.00);
+    --tp-button-background-color-active: hsla(230, 7%, 60%, 1.00);
+    --tp-button-background-color-focus: hsla(230, 7%, 65%, 1.00);
+    --tp-button-background-color-hover: hsla(230, 7%, 70%, 1.00);
+    --tp-button-foreground-color: hsla(230, 10%, 30%, 1.00);
+    --tp-container-background-color: hsla(230, 15%, 30%, 0.20);
+    --tp-container-background-color-active: hsla(230, 15%, 30%, 0.32);
+    --tp-container-background-color-focus: hsla(230, 15%, 30%, 0.28);
+    --tp-container-background-color-hover: hsla(230, 15%, 30%, 0.24);
+    --tp-container-foreground-color: hsla(230, 10%, 30%, 1.00);
+    --tp-groove-foreground-color: hsla(230, 15%, 30%, 0.10);
+    --tp-input-background-color: hsla(230, 15%, 30%, 0.10);
+    --tp-input-background-color-active: hsla(230, 15%, 30%, 0.22);
+    --tp-input-background-color-focus: hsla(230, 15%, 30%, 0.18);
+    --tp-input-background-color-hover: hsla(230, 15%, 30%, 0.14);
+    --tp-input-foreground-color: hsla(230, 10%, 30%, 1.00);
+    --tp-label-foreground-color: hsla(230, 10%, 30%, 0.70);
+    --tp-monitor-background-color: hsla(230, 15%, 30%, 0.10);
+    --tp-monitor-foreground-color: hsla(230, 10%, 30%, 0.50);
+  }
+}
+
 html, body {
   margin: 0;
   padding: 0;
   font-family: "Iosevka", monospace;
-  background-color: #323232;
-  color: #ffffff;
+  background-color: var(--sk-bg);
+  color: var(--sk-fg);
   overflow: hidden;
   align-items: center;
 }
 
 canvas {
   display: block;
-  border: 1px solid #666666;
+  border: 1px solid var(--sk-canvas-border);
   outline: none;
 }
 
 .tp-dfwv {
   width: 400px !important;
+  border-radius: 10px;
+  backdrop-filter: blur(3px);
+}
+
+.tp-dfwv,
+.tp-dfwv * {
+  font-family: "Iosevka", "Iosevka Fixed", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
 }

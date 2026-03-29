@@ -4,9 +4,30 @@ class AppCore {
 
     this.metadata = metadata;
     this.theme = new Theme();
-    this.sim = new Simulation();
+    this.sim = new Simulation(this.theme);
     this.ui = new UIManager(this);
-    background(0);
+
+    this._themeMediaQuery = null;
+    this._onThemeChange = null;
+    this._setupSystemThemeListener();
+    background(this.theme.canvasClear);
+  }
+
+  _setupSystemThemeListener() {
+    if (!window.matchMedia) return;
+
+    this._themeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    this._onThemeChange = () => {
+      this.theme.applySystemTheme();
+      this.sim.setTheme(this.theme);
+      background(this.theme.canvasClear);
+    };
+
+    if (typeof this._themeMediaQuery.addEventListener === "function") {
+      this._themeMediaQuery.addEventListener("change", this._onThemeChange);
+    } else if (typeof this._themeMediaQuery.addListener === "function") {
+      this._themeMediaQuery.addListener(this._onThemeChange);
+    }
   }
 
   update() {
@@ -46,6 +67,23 @@ class AppCore {
   }
 
   dispose() {
+    if (
+      this._themeMediaQuery &&
+      this._onThemeChange &&
+      typeof this._themeMediaQuery.removeEventListener === "function"
+    ) {
+      this._themeMediaQuery.removeEventListener("change", this._onThemeChange);
+    } else if (
+      this._themeMediaQuery &&
+      this._onThemeChange &&
+      typeof this._themeMediaQuery.removeListener === "function"
+    ) {
+      this._themeMediaQuery.removeListener(this._onThemeChange);
+    }
+
+    this._themeMediaQuery = null;
+    this._onThemeChange = null;
+
     if (this.ui && typeof this.ui.dispose === "function") {
       this.ui.dispose();
     }
@@ -113,21 +151,6 @@ class AppCore {
     const csv =
       "key,value\n" + rows.map((r) => `${r[0]},${Number(r[1]) || 0}`).join("\n");
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
-  }
-
-  importStatisticsJSON() {
-    this._openJSONFileDialog((data) => {
-      if (!data || typeof data !== "object" || data.format !== "simpipe.stats") {
-        throw new Error("[Cellular Division] Invalid stats JSON payload");
-      }
-
-      const history = data?.statistics?.history;
-      if (Array.isArray(history)) {
-        this.sim._history = history
-          .map((value) => Number(value) || 0)
-          .slice(-Math.max(10, width));
-      }
-    });
   }
 
   exportStateJSON() {

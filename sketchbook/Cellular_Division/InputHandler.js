@@ -159,11 +159,6 @@ class InputHandler {
       return;
     }
 
-    if (shiftHeld && keyLower === "u") {
-      this.ui.appcore.importStatisticsJSON();
-      return;
-    }
-
     if (shiftHeld && keyLower === "k") {
       this.ui.appcore.exportStatisticsCSV();
       return;

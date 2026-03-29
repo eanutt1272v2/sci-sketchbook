@@ -1,5 +1,5 @@
 class Simulation {
-  constructor() {
+  constructor(theme = null) {
     this.alpha = 180;
     this.beta = 17;
     this.gamma = 13.4;
@@ -28,6 +28,8 @@ class Simulation {
     this._workerStepIntervalMs = 22;
     this._lastWorkerStepMs = 0;
     this._particleBufferForWorker = null;
+
+    this.theme = theme;
 
     this._initWorker();
     this.restart();
@@ -277,7 +279,13 @@ class Simulation {
 
   renderTrail() {
     noStroke();
-    fill(0, 255 - this.trailAlpha);
+    if (this.theme && this.theme.trailFade) {
+      const fade = color(this.theme.trailFade);
+      fade.setAlpha(255 - this.trailAlpha);
+      fill(fade);
+    } else {
+      fill(0, 255 - this.trailAlpha);
+    }
     rect(0, 0, width, height);
   }
 
@@ -415,6 +423,10 @@ class Simulation {
 
   updateSpecies() {
     this.species = new Species(this.alpha, this.beta, this.gamma, this.radius);
+  }
+
+  setTheme(theme) {
+    this.theme = theme;
   }
 
   dispose() {

@@ -116,11 +116,6 @@ class InputHandler {
       return false;
     }
 
-    if (shiftHeld && keyLower === "u") {
-      this.appcore.media.importStatisticsJSON();
-      return false;
-    }
-
     if (shiftHeld && keyLower === "s") {
       this.appcore.media.exportStatisticsJSON();
       return false;

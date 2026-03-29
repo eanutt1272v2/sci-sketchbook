@@ -113,12 +113,6 @@ class InputHandler {
       return false;
     }
 
-    if (shiftHeld && keyLower === "u") {
-      this.appcore.media.importStatisticsJSON();
-      console.log("[Lenia] Importing statistics JSON…");
-      return false;
-    }
-
     if (keyValue === " ") {
       this.appcore.params.running = !this.appcore.params.running;
       this.appcore.refreshGUI();

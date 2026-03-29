@@ -284,27 +284,6 @@ class Media {
     this._logInfo("Stats JSON exported");
   }
 
-  importStatisticsJSON() {
-    this.openDataImportDialog((file) => {
-      this._readJSONFile(file, (data) => {
-        if (
-          !data ||
-          typeof data !== "object" ||
-          data.format !== "simpipe.stats" ||
-          !data.statistics ||
-          typeof data.statistics !== "object"
-        ) {
-          throw new Error("[Fluvia] Invalid stats JSON payload");
-        }
-
-        this._applyMetadataSnapshot(data.metadata);
-        this._applyStatisticsSnapshot(data.statistics);
-        this.appcore.refreshGUI();
-        this._logInfo("Stats JSON imported");
-      });
-    });
-  }
-
   exportStatisticsCSV() {
     const metadataJson = JSON.stringify(this.appcore.metadata || {});
     const exportedAt = new Date().toISOString();

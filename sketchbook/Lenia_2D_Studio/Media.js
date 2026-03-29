@@ -281,45 +281,6 @@ class Media {
     );
   }
 
-  importStatisticsJSON() {
-    this.openDataImportDialog((file) => {
-      this._readJSONFile(file, (data) => {
-        if (!data || typeof data !== "object") {
-          throw new Error("[Lenia] Invalid stats JSON payload");
-        }
-
-        if (data.format !== "simpipe.stats") {
-          throw new Error("[Lenia] Invalid stats JSON format version");
-        }
-
-        if (!data.statistics || typeof data.statistics !== "object") {
-          throw new Error("[Lenia] Invalid stats JSON: missing statistics");
-        }
-
-        if (!Array.isArray(data.series)) {
-          throw new Error("[Lenia] Invalid stats JSON: missing series");
-        }
-
-        this._applyMetadataSnapshot(data.metadata);
-
-        for (const [key, value] of Object.entries(this.appcore.statistics)) {
-          if (!(key in data.statistics)) continue;
-          const incoming = Number(data.statistics[key]);
-          if (Number.isFinite(incoming)) {
-            this.appcore.statistics[key] = incoming;
-          }
-        }
-
-        this.appcore.analyser.series = this._capSeries(
-          this._cloneJSONCompatible(data.series),
-        );
-
-        this.appcore.refreshGUI();
-        this._logInfo("Stats JSON imported");
-      });
-    });
-  }
-
   exportParamsJSON() {
     const payload = {
       format: "simpipe.params",

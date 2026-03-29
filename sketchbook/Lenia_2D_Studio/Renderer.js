@@ -477,7 +477,6 @@ class Renderer {
           ["E", "Export world state (JSON)"],
           ["W", "Import world state (JSON)"],
           ["Shift+P / Shift+I", "Export / import params (JSON)"],
-          ["Shift+U", "Import statistics (JSON)"],
           ["C / Shift+C", "Export statistics CSV / JSON"],
         ],
       },

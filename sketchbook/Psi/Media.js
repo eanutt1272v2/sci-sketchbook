@@ -227,16 +227,6 @@ class Media {
     this._logInfo(`Stats CSV exported: rows=${series.length}`);
   }
 
-  importStatisticsJSON() {
-    this.openDataImportDialog((file) => {
-      this._readJSONFile(file, (data) => {
-        this._applyStatisticsPayload(data);
-        this.appcore.refreshGUI();
-        this._logInfo("Stats JSON imported");
-      });
-    });
-  }
-
   _applyParamsPayload(data) {
     if (!data || typeof data !== "object" || !data.params) {
       throw new Error("[Psi] Invalid params JSON payload");
@@ -249,27 +239,6 @@ class Media {
 
     this.appcore.gui.enforceConstraints();
     this.appcore.syncViewConstraints();
-  }
-
-  _applyStatisticsPayload(data) {
-    if (!data || typeof data !== "object") {
-      throw new Error("[Psi] Invalid stats JSON payload");
-    }
-    if (data.format !== "simpipe.stats") {
-      throw new Error("[Psi] Invalid stats JSON format version");
-    }
-    if (!data.statistics || typeof data.statistics !== "object") {
-      throw new Error("[Psi] Invalid stats JSON: missing statistics");
-    }
-    if (!Array.isArray(data.series)) {
-      throw new Error("[Psi] Invalid stats JSON: missing series");
-    }
-
-    this._applyMetadataPayload(data.metadata);
-    this._mergeByTargetSchema(this.appcore.statistics, data.statistics);
-    if (this.appcore.analyser) {
-      this.appcore.analyser.series = JSON.parse(JSON.stringify(data.series));
-    }
   }
 
   _applyMetadataPayload(metadata) {

@@ -58,7 +58,6 @@ class Renderer {
           ["F", "Export image"],
           ["U", "Import heightmap"],
           ["Shift+I / Shift+P", "Import / export params (JSON)"],
-          ["Shift+U", "Import stats (JSON)"],
           ["Shift+J / Shift+K", "Export stats JSON / CSV"],
           ["Shift+W / Shift+Q", "Export/import world state"],
           ["GUI: Media tab", "All data import/export options"],

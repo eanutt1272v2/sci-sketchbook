@@ -388,7 +388,6 @@ class Renderer {
         entries: [
           ["P", "Export image"],
           ["Shift+I / Shift+P", "Import / export params (JSON)"],
-          ["Shift+U", "Import stats (JSON)"],
           ["Shift+S / Shift+C", "Export stats JSON / CSV"],
           ["GUI: Media tab", "All data import/export options"],
         ],
