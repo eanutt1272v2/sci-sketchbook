@@ -73,6 +73,30 @@ class Renderer {
     ];
   }
 
+  _enableOverlayShadow(ctx = null) {
+    const target = ctx || this;
+    const dc =
+      target?.drawingContext ||
+      (typeof drawingContext !== "undefined" ? drawingContext : null);
+    if (!dc) return;
+    dc.shadowColor = "rgba(0, 0, 0, 0.9)";
+    dc.shadowBlur = 4;
+    dc.shadowOffsetX = 2;
+    dc.shadowOffsetY = 2;
+  }
+
+  _disableOverlayShadow(ctx = null) {
+    const target = ctx || this;
+    const dc =
+      target?.drawingContext ||
+      (typeof drawingContext !== "undefined" ? drawingContext : null);
+    if (!dc) return;
+    dc.shadowColor = "rgba(0, 0, 0, 0)";
+    dc.shadowBlur = 0;
+    dc.shadowOffsetX = 0;
+    dc.shadowOffsetY = 0;
+  }
+
   reinitialise() {
     const { size } = this.appcore.terrain;
     this.canvas2D = createImage(size, size);
@@ -481,7 +505,7 @@ class Renderer {
       `Simulation Time=${fmt(statistics.simulationTime, 1)} [s]`,
       `Frame=${Math.round(statistics.frameCounter)} [frame]`,
       `Running: ${params.running ? "true" : "false"}`,
-      `Grid Size=${Math.round(params.terrainSize)} [cells]`,
+      `Grid Size=${Math.round(params.terrainSize)}² [cells]`,
       `Droplets/Frame=${Math.round(params.dropletsPerFrame)} [drops/frame]`,
       `Render Mode: ${params.renderMethod} (mode id)`,
       `Surface Map: ${params.surfaceMap} (surface id)`,
@@ -509,6 +533,7 @@ class Renderer {
     ];
 
     push();
+    this._enableOverlayShadow();
     textAlign(LEFT, TOP);
     textSize(12);
     noStroke();
@@ -516,11 +541,13 @@ class Renderer {
     const panelY = 20;
     fill(255);
     text(lines.join("\n"), panelX, panelY);
+    this._disableOverlayShadow();
     pop();
   }
 
   renderLegend() {
     push();
+    this._enableOverlayShadow();
     const { surfaceMap, colourMap } = this.appcore.params;
     const legendTitleByMap = {
       composite: "Composite surface blend",
@@ -585,10 +612,12 @@ class Renderer {
       drawingContext.fillStyle = grad;
       drawingContext.fillRect(x - w, y1, w, h);
 
+      this._disableOverlayShadow();
       noFill();
       stroke(255, 255, 255, 200);
       strokeWeight(1.5);
       rect(x - w, y1, w, h);
+      this._enableOverlayShadow();
 
       fill(255);
       noStroke();
@@ -613,6 +642,7 @@ class Renderer {
       text(legendTitle, 0, 0);
       pop();
 
+      this._disableOverlayShadow();
       pop();
       return;
     }
@@ -639,10 +669,12 @@ class Renderer {
     drawingContext.fillStyle = grad;
     drawingContext.fillRect(x - w, y1, w, h);
 
+    this._disableOverlayShadow();
     noFill();
     stroke(255, 255, 255, 200);
     strokeWeight(1.5);
     rect(x - w, y1, w, h);
+    this._enableOverlayShadow();
 
     fill(255);
     noStroke();
@@ -686,6 +718,7 @@ class Renderer {
     text(legendTitle, 0, 0);
     pop();
 
+    this._disableOverlayShadow();
     pop();
   }
 
@@ -693,6 +726,7 @@ class Renderer {
     const { name, version } = this.appcore.metadata;
 
     push();
+    this._enableOverlayShadow();
     fill(0, 220);
     noStroke();
     rect(0, 0, width, height);
@@ -747,6 +781,7 @@ class Renderer {
     textAlign(CENTER, BOTTOM);
     text("Press # to close", width / 2, height - 16);
 
+    this._disableOverlayShadow();
     pop();
   }
 

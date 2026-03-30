@@ -306,4 +306,38 @@ class RLECodec {
   static _formatRun(count, token) {
     return `${count > 1 ? count : ""}${token}`;
   }
+
+  static parseND(rleString) {
+    const input = this._normaliseInput(rleString);
+    const has3D = input.includes("%");
+    const has4D = input.includes("#");
+
+    if (!has3D && !has4D) {
+      return [{ z: 0, w: 0, grid: this._parseGridRows(input) }];
+    }
+
+    const slices = [];
+
+    const wParts = has4D ? input.split("#") : [input];
+
+    for (let wi = 0; wi < wParts.length; wi++) {
+      const wStr = wParts[wi];
+      if (!wStr || wStr === "!") continue;
+
+      const zParts = wStr.split("%");
+      for (let zi = 0; zi < zParts.length; zi++) {
+        let zStr = zParts[zi];
+        if (!zStr) continue;
+        if (zStr.endsWith("!")) zStr = zStr.slice(0, -1);
+        if (!zStr) continue;
+
+        const grid = this._parseGridRows(zStr);
+        if (grid.length > 0 && grid[0].length > 0) {
+          slices.push({ z: zi, w: wi, grid });
+        }
+      }
+    }
+
+    return slices;
+  }
 }

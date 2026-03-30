@@ -63,7 +63,6 @@ class Analyser {
       growthCenterX: 0,
       growthCenterY: 0,
       massGrowthDist: 0,
-      growthCentroidDistance: 0,
       massAsym: 0,
       speed: 0,
       centroidSpeed: 0,
@@ -124,9 +123,6 @@ class Analyser {
     statistics.growthCenterX = toFinite(workerStats.growthCenterX);
     statistics.growthCenterY = toFinite(workerStats.growthCenterY);
     statistics.massGrowthDist = toFinite(workerStats.massGrowthDist);
-    statistics.growthCentroidDistance = toFinite(
-      workerStats.growthCentroidDistance,
-    );
     statistics.massAsym = toFinite(workerStats.massAsym);
     statistics.speed = toFinite(workerStats.speed);
     statistics.centroidSpeed = toFinite(workerStats.centroidSpeed);
@@ -170,7 +166,6 @@ class Analyser {
     statistics.growthCenterX = 0;
     statistics.growthCenterY = 0;
     statistics.massGrowthDist = 0;
-    statistics.growthCentroidDistance = 0;
     statistics.massAsym = 0;
     statistics.speed = 0;
     statistics.centroidSpeed = 0;
@@ -199,7 +194,6 @@ class Analyser {
   updateFps() {
     const renderData = this.renderData;
     const statistics = this.statistics;
-    renderData.frameCount++;
     const now = millis();
 
     if (now - renderData.lastTime > 1000) {
@@ -209,6 +203,10 @@ class Analyser {
       renderData.frameCount = 0;
       renderData.lastTime = now;
     }
+  }
+
+  countStep() {
+    this.renderData.frameCount++;
   }
 
   getStatRow() {
@@ -232,7 +230,6 @@ class Analyser {
       statistics.growthCenterX || 0,
       statistics.growthCenterY || 0,
       statistics.massGrowthDist || 0,
-      statistics.growthCentroidDistance || 0,
       statistics.massAsym || 0,
       statistics.speed || 0,
       statistics.centroidSpeed || 0,

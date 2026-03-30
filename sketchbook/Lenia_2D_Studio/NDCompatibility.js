@@ -1,31 +1,19 @@
 class NDCompatibility {
   static SUPPORTED_DIMENSIONS = [2, 3, 4];
-  static SUPPORTED_CHANNEL_COUNTS = [1, 2, 3, 4];
-
-  static KERNEL_PRESETS = {
-    single: {
-      label: "Single Channel",
-      selfWeight: 1,
-      crossWeight: 0,
-      crossMode: "none",
-    },
-    coupled: {
-      label: "Coupled Channels",
-      selfWeight: 1,
-      crossWeight: 0.35,
-      crossMode: "all-to-all",
-    },
-    cyclic: {
-      label: "Cyclic Coupling",
-      selfWeight: 1,
-      crossWeight: 0.42,
-      crossMode: "ring",
-    },
+  static GRID_SIZE_OPTIONS_BY_DIMENSION = {
+    2: [64, 128, 256, 512],
+    3: [32, 64, 128],
+    4: [16, 32, 64],
+  };
+  static DEFAULT_GRID_SIZE_BY_DIMENSION = {
+    2: 128,
+    3: 64,
+    4: 32,
   };
 
   static VIEW_MODES_BY_DIMENSION = {
     2: ["slice"],
-    3: ["slice"],
+    3: ["slice", "projection"],
     4: ["slice", "projection"],
   };
 
@@ -45,70 +33,55 @@ class NDCompatibility {
     return modes.includes(mode) ? mode : modes[0];
   }
 
-  static coerceChannelCount(value) {
-    const count = Number(value);
-    return this.SUPPORTED_CHANNEL_COUNTS.includes(count) ? count : 1;
+  static coerceDepth(value, dimension = 2) {
+    const dim = this.coerceDimension(dimension);
+    if (dim <= 2) return 1;
+    const n = Math.floor(Number(value) || 6);
+    return Math.max(2, Math.min(512, n));
   }
 
-  static coerceKernelPreset(value) {
-    const preset = String(value || "single");
-    return this.KERNEL_PRESETS[preset] ? preset : "single";
+  static getGridSizeOptions(dimension = 2) {
+    const dim = this.coerceDimension(dimension);
+    return (
+      this.GRID_SIZE_OPTIONS_BY_DIMENSION[dim] ||
+      this.GRID_SIZE_OPTIONS_BY_DIMENSION[2]
+    );
   }
 
-  static getKernelPresetOptions() {
-    return Object.entries(this.KERNEL_PRESETS).reduce((options, [id, preset]) => {
-      options[preset.label] = id;
-      return options;
-    }, {});
+  static getDefaultGridSize(dimension = 2) {
+    const dim = this.coerceDimension(dimension);
+    return this.DEFAULT_GRID_SIZE_BY_DIMENSION[dim] || 128;
   }
 
-  static buildKernelRouting(channelCount, kernelPreset) {
-    const count = this.coerceChannelCount(channelCount);
-    const presetId = this.coerceKernelPreset(kernelPreset);
-    const preset = this.KERNEL_PRESETS[presetId];
-    const routing = [];
-
-    for (let target = 0; target < count; target++) {
-      routing.push({
-        source: target,
-        target,
-        weight: preset.selfWeight,
-        kind: "self",
-      });
+  static coerceGridSize(value, dimension = 2) {
+    const options = this.getGridSizeOptions(dimension);
+    const raw = Number(value);
+    if (!Number.isFinite(raw) || raw <= 0) {
+      return this.getDefaultGridSize(dimension);
     }
 
-    if (count <= 1 || preset.crossMode === "none" || preset.crossWeight <= 0) {
-      return routing;
-    }
-
-    if (preset.crossMode === "all-to-all") {
-      for (let source = 0; source < count; source++) {
-        for (let target = 0; target < count; target++) {
-          if (source === target) continue;
-          routing.push({
-            source,
-            target,
-            weight: preset.crossWeight,
-            kind: "cross",
-          });
-        }
+    let closest = options[0];
+    let bestDist = Math.abs(raw - closest);
+    for (let i = 1; i < options.length; i++) {
+      const d = Math.abs(raw - options[i]);
+      if (d < bestDist) {
+        closest = options[i];
+        bestDist = d;
       }
-      return routing;
     }
+    return closest;
+  }
 
-    if (preset.crossMode === "ring") {
-      for (let source = 0; source < count; source++) {
-        routing.push({
-          source,
-          target: (source + 1) % count,
-          weight: preset.crossWeight,
-          kind: "cross",
-        });
-      }
-      return routing;
-    }
+  static getWorldDepthForDimension(gridSize, dimension = 2) {
+    const dim = this.coerceDimension(dimension);
+    if (dim <= 2) return 1;
+    return this.coerceGridSize(gridSize, dim);
+  }
 
-    return routing;
+  static coerceSliceIndex(value, depth) {
+    const d = Math.max(1, Math.floor(Number(depth) || 1));
+    const n = Math.floor(Number(value) || 0);
+    return Math.max(0, Math.min(d - 1, n));
   }
 
   static normaliseAnimalDataset(data) {

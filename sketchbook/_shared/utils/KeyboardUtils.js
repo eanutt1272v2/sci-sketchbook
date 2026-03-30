@@ -22,6 +22,10 @@ class KeyboardUtils {
   static isShiftHeld() {
     return typeof keyIsDown === "function" && keyIsDown(SHIFT);
   }
+
+  static isCtrlHeld() {
+    return typeof keyIsDown === "function" && keyIsDown(CONTROL);
+  }
 }
 
 window.KeyboardUtils = KeyboardUtils;

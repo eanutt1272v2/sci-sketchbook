@@ -27,7 +27,11 @@ class AppCore {
       gridSize: 128,
 
       dimension: 2,
-      viewMode: "slice",
+      animalSource: "auto",
+      viewMode: "projection",
+      ndDepth: 6,
+      ndSliceZ: 0,
+      ndSliceW: 0,
 
       R: 13,
       T: 10,
@@ -39,12 +43,14 @@ class AppCore {
 
       softClip: false,
       multiStep: false,
+      aritaMode: false,
       addNoise: 0,
       maskRate: 0,
       paramP: 0,
+      h: 1,
 
-      colourMap: this.colourMapKeys.includes("viridis")
-        ? "viridis"
+      colourMap: this.colourMapKeys.includes("turbo")
+        ? "turbo"
         : this.colourMapKeys[0],
       renderMode: "world",
 
@@ -53,14 +59,15 @@ class AppCore {
       renderLegend: true,
       renderStats: true,
       renderMotionOverlay: true,
-      renderMotionTrail: true,
       renderCalcPanels: true,
+      renderAnimalName: true,
       renderKeymapRef: false,
 
       selectedAnimal: "",
       placeMode: true,
-      placeScale: 2,
-      autoScaleSimParams: true,
+      placeScale: 1,
+      autoScaleSimParams: false,
+      autoCenter: false,
 
       imageFormat: "png",
       recordingFPS: 60,
@@ -85,7 +92,6 @@ class AppCore {
       growthCenterX: 0,
       growthCenterY: 0,
       massGrowthDist: 0,
-      growthCentroidDistance: 0,
       massAsym: 0,
       speed: 0,
       centroidSpeed: 0,
@@ -151,6 +157,7 @@ class AppCore {
     this._workerBusy = false;
     this._stepPending = false;
     this._kernelPending = false;
+    this._viewPending = false;
     this._pendingActions = [];
     this._pendingPlacement = null;
     this._pendingMutations = [];
@@ -174,6 +181,7 @@ class AppCore {
       this._workerBusy = false;
       this._stepPending = false;
       this._kernelPending = false;
+      this._viewPending = false;
       this._changeRecycleBuffer = null;
     };
 
@@ -188,9 +196,11 @@ class AppCore {
     }
     this._workerBusy = true;
     this._kernelPending = false;
+    const ndConfig = this.buildNDConfig();
     this._worker.postMessage({
       type: "kernel",
       params: { ...this.params, size: this.params.gridSize },
+      ndConfig,
     });
   }
 
@@ -205,9 +215,38 @@ class AppCore {
         this._workerSendKernel();
         return;
       }
+      if (this._viewPending) {
+        this._viewPending = false;
+        this._workerRequestView();
+        return;
+      }
+
+      if ((Number(this.params.dimension) || 2) > 2 && this.board.world && !this._stepPending) {
+        this._workerRequestView();
+        return;
+      }
       if (this._stepPending) {
         this._stepPending = false;
         this._dispatchWorkerStep();
+      }
+      return;
+    }
+
+    if (data.type === "view") {
+      const b = this.board;
+      b.world = new Float32Array(data.world);
+      b.potential = new Float32Array(data.potential);
+      b.growth = new Float32Array(data.growth);
+      b.growthOld = data.growthOld ? new Float32Array(data.growthOld) : null;
+
+      if (data.analysis) {
+        this.analyser.applyWorkerStatistics(data.analysis, this.automaton);
+      }
+
+      this._workerBusy = false;
+      this._flushPendingMutations();
+      if (this._kernelPending) {
+        this._workerSendKernel();
       }
       return;
     }
@@ -227,10 +266,16 @@ class AppCore {
         Math.round((this.automaton.time + 1 / this.params.T) * 10000) / 10000;
 
       this._workerBusy = false;
+      this.analyser.countStep();
 
       if (this._pendingPlacement) {
-        this._applyPlacement(this._pendingPlacement);
+        const pp = this._pendingPlacement;
         this._pendingPlacement = null;
+        if ((this.params.dimension || 2) > 2) {
+          this._placeAnimalND(pp.animal, pp.cellX, pp.cellY, pp.scale);
+        } else {
+          this._applyPlacement(pp);
+        }
       }
 
       this._flushPendingMutations();
@@ -279,7 +324,16 @@ class AppCore {
     }
 
     const b = this.board;
-    const transfers = [b.world.buffer, b.potential.buffer, b.growth.buffer];
+    const ndConfig = this.buildNDConfig();
+
+    // Copy buffers to worker instead of transferring - keeps board data
+    // available for rendering while worker computes next step.
+    // At 128x128+, copy cost (~0.1ms) is negligible vs. the pipeline gain.
+    const worldCopy = new Float32Array(b.world);
+    const potentialCopy = new Float32Array(b.potential);
+    const growthCopy = new Float32Array(b.growth);
+
+    const transfers = [worldCopy.buffer, potentialCopy.buffer, growthCopy.buffer];
     const msg = {
       type: "step",
       params: {
@@ -288,9 +342,10 @@ class AppCore {
         gn: this.params.gn,
         kn: this.params.kn,
       },
-      world: b.world.buffer,
-      potential: b.potential.buffer,
-      growth: b.growth.buffer,
+      ndConfig,
+      world: worldCopy.buffer,
+      potential: potentialCopy.buffer,
+      growth: growthCopy.buffer,
       growthOld: null,
       changeBuffer: this._changeRecycleBuffer,
     };
@@ -301,7 +356,48 @@ class AppCore {
     }
 
     if (this.params.multiStep && b.growthOld) {
-      msg.growthOld = b.growthOld.buffer;
+      const growthOldCopy = new Float32Array(b.growthOld);
+      msg.growthOld = growthOldCopy.buffer;
+      transfers.push(growthOldCopy.buffer);
+    }
+
+    // Board retains its buffers for rendering
+
+    if (this._ndSeedWorld) {
+      msg.ndSeedWorld = this._ndSeedWorld.buffer;
+      transfers.push(this._ndSeedWorld.buffer);
+      this._ndSeedWorld = null;
+    }
+
+    this._workerBusy = true;
+    this._worker.postMessage(msg, transfers);
+    return true;
+  }
+
+  _workerRequestView() {
+    if (!this._worker) return false;
+    if (this._workerBusy) {
+      this._viewPending = true;
+      return false;
+    }
+
+    const b = this.board;
+    const ndConfig = this.buildNDConfig();
+    const transfers = [b.world.buffer, b.potential.buffer, b.growth.buffer];
+    const msg = {
+      type: "view",
+      params: {
+        ...this.params,
+        size: this.params.gridSize,
+      },
+      ndConfig,
+      world: b.world.buffer,
+      potential: b.potential.buffer,
+      growth: b.growth.buffer,
+      growthOld: b.growthOld ? b.growthOld.buffer : null,
+    };
+
+    if (b.growthOld) {
       transfers.push(b.growthOld.buffer);
     }
 
@@ -310,7 +406,14 @@ class AppCore {
     b.growth = null;
     b.growthOld = null;
 
+    if (this._ndSeedWorld) {
+      msg.ndSeedWorld = this._ndSeedWorld.buffer;
+      transfers.push(this._ndSeedWorld.buffer);
+      this._ndSeedWorld = null;
+    }
+
     this._workerBusy = true;
+    this._viewPending = false;
     this._worker.postMessage(msg, transfers);
     return true;
   }
@@ -329,8 +432,6 @@ class AppCore {
   _postStepUpdate(workerAnalysis = null) {
     if (workerAnalysis) {
       this.analyser.applyWorkerStatistics(workerAnalysis, this.automaton);
-    } else {
-      this.analyser.updateStatistics(this.board, this.automaton, this.params);
     }
     if (this.automaton.gen % 10 === 0) {
       this.analyser.series.push(this.analyser.getStatRow());
@@ -363,10 +464,11 @@ class AppCore {
         this.automaton,
         this.params.renderMode,
         this.params.colourMap,
+        this.params,
       );
 
-      if (this.params.renderGrid && this.params.renderMode !== "kernel") {
-        this.renderer.renderGrid(this.params.R);
+      if (this.params.renderGrid || this.params.renderMode === "kernel") {
+        this.renderer.renderGrid(this.params.R, this.params);
       }
 
       if (
@@ -377,7 +479,7 @@ class AppCore {
       }
 
       if (this.params.renderScale) {
-        this.renderer.renderScale(this.params.R);
+        this.renderer.renderScale(this.params.R, this.params);
       }
 
       if (this.params.renderLegend) {
@@ -386,6 +488,11 @@ class AppCore {
 
       if (this.params.renderStats) {
         this.renderer.renderStats(this.statistics, this.params);
+      }
+
+      if (this.params.renderAnimalName) {
+        const animal = this.getSelectedAnimal();
+        if (animal?.name) this.renderer.renderAnimalName(animal);
       }
 
       if (this.params.renderCalcPanels) {
@@ -394,8 +501,8 @@ class AppCore {
     } else {
       this.renderer.renderCachedFrame();
 
-      if (this.params.renderGrid && this.params.renderMode !== "kernel") {
-        this.renderer.renderGrid(this.params.R);
+      if (this.params.renderGrid || this.params.renderMode === "kernel") {
+        this.renderer.renderGrid(this.params.R, this.params);
       }
 
       if (
@@ -406,7 +513,7 @@ class AppCore {
       }
 
       if (this.params.renderScale) {
-        this.renderer.renderScale(this.params.R);
+        this.renderer.renderScale(this.params.R, this.params);
       }
 
       if (this.params.renderLegend) {
@@ -415,6 +522,11 @@ class AppCore {
 
       if (this.params.renderStats) {
         this.renderer.renderStats(this.statistics, this.params);
+      }
+
+      if (this.params.renderAnimalName) {
+        const animal = this.getSelectedAnimal();
+        if (animal?.name) this.renderer.renderAnimalName(animal);
       }
 
       if (this.params.renderCalcPanels) {
@@ -451,6 +563,9 @@ class AppCore {
       this._queueOrRunMutation(() => {
         this._ensureBuffers();
         this.board.clear();
+        if ((this.params.dimension || 2) > 2) {
+          this._workerNDMutation({ type: "clear" });
+        }
         this.analyser.resetStatistics();
         this.analyser.reset();
       }),
@@ -461,10 +576,169 @@ class AppCore {
     this._queueAction("randomiseWorld", () =>
       this._queueOrRunMutation(() => {
         this._ensureBuffers();
-        this.board.randomise(this.automaton.R);
+        if ((this.params.dimension || 2) > 2) {
+          this.board.clear();
+          this._workerNDMutation({ type: "randomise" });
+        } else {
+          this.board.randomise(this.automaton.R);
+        }
         this.analyser.resetStatistics();
       }),
     );
+  }
+
+  randomWorldWithSeed(seed = null, isFill = false) {
+    this._queueAction("randomWorldSeed", () =>
+      this._queueOrRunMutation(() => {
+        this._ensureBuffers();
+        if ((this.params.dimension || 2) > 2) {
+          this.board.clear();
+          this._workerNDMutation({ type: "randomise" });
+        } else {
+          const usedSeed = this.board.randomiseSeeded(
+            this.params.R, seed, isFill,
+          );
+          this._lastRandomSeed = usedSeed;
+        }
+        this.analyser.resetStatistics();
+        this.analyser.reset();
+        this.automaton.reset();
+      }),
+    );
+  }
+
+  shiftWorld(dx, dy) {
+    this._queueAction("shiftWorld", () =>
+      this._queueOrRunMutation(() => {
+        if (!this.board.world) return;
+        this._ensureBuffers();
+        if ((this.params.dimension || 2) > 2) {
+          this._workerTransform({ shift: [dx, dy] });
+        } else {
+          this.board.shift(dx, dy);
+        }
+      }),
+    );
+  }
+
+  rotateWorld(angle) {
+    this._queueAction("rotateWorld", () =>
+      this._queueOrRunMutation(() => {
+        if (!this.board.world) return;
+        this._ensureBuffers();
+        if ((this.params.dimension || 2) > 2) {
+          this._workerTransform({ rotate: angle });
+        } else {
+          this.board.rotate(angle);
+        }
+      }),
+    );
+  }
+
+  flipWorld(mode) {
+    this._queueAction("flipWorld", () =>
+      this._queueOrRunMutation(() => {
+        if (!this.board.world) return;
+        this._ensureBuffers();
+        if ((this.params.dimension || 2) > 2) {
+          this._workerTransform({ flip: mode });
+        } else {
+          this.board.flip(mode);
+        }
+      }),
+    );
+  }
+
+  zoomWorld(newR) {
+    const targetR = Math.round(constrain(Number(newR) || this.params.R, 2, 50));
+    const oldR = Number(this._prevR);
+    const safeOldR = Number.isFinite(oldR) && oldR > 0 ? oldR : targetR;
+
+    this.params.R = targetR;
+    this._prevR = targetR;
+
+    this._queueAction("zoomWorld", () =>
+      this._queueOrRunMutation(() => {
+        const factor = targetR / safeOldR;
+        const hasBoard = !!this.board.world;
+        if (hasBoard && Math.abs(factor - 1) > 1e-6) {
+          this._ensureBuffers();
+          if ((this.params.dimension || 2) > 2) {
+            this._workerTransform({ zoom: factor });
+          } else {
+            this.board.zoom(factor);
+          }
+        }
+        this.updateAutomatonParams();
+      }),
+    );
+  }
+
+  _workerTransform(transform) {
+    if (!this._worker) return;
+    if (this._workerBusy) {
+      this._pendingMutations.push(() => this._workerTransform(transform));
+      return;
+    }
+    const b = this.board;
+    const ndConfig = this.buildNDConfig();
+    const transfers = [b.world.buffer, b.potential.buffer, b.growth.buffer];
+    const msg = {
+      type: "transform",
+      params: { ...this.params, size: this.params.gridSize },
+      ndConfig,
+      world: b.world.buffer,
+      potential: b.potential.buffer,
+      growth: b.growth.buffer,
+      transform,
+    };
+    b.world = null;
+    b.potential = null;
+    b.growth = null;
+    this._workerBusy = true;
+    this._worker.postMessage(msg, transfers);
+  }
+
+  _workerNDMutation(mutation) {
+    if (!this._worker) return;
+    if (this._workerBusy) {
+      this._pendingMutations.push(() => this._workerNDMutation(mutation));
+      return;
+    }
+    const b = this.board;
+    this._ensureBuffers();
+    const ndConfig = this.buildNDConfig();
+    const transfers = [b.world.buffer, b.potential.buffer, b.growth.buffer];
+    const msg = {
+      type: "ndMutation",
+      params: { ...this.params, size: this.params.gridSize },
+      ndConfig,
+      world: b.world.buffer,
+      potential: b.potential.buffer,
+      growth: b.growth.buffer,
+      mutation,
+    };
+    if (mutation.patternData) {
+      msg.mutation = { ...mutation, patternData: mutation.patternData.buffer };
+      transfers.push(mutation.patternData.buffer);
+    }
+    if (mutation.planeEntries) {
+      msg.mutation = {
+        ...mutation,
+        planeEntries: mutation.planeEntries.map((e) => ({
+          ...e,
+          patternData: e.patternData.buffer,
+        })),
+      };
+      for (const e of mutation.planeEntries) {
+        transfers.push(e.patternData.buffer);
+      }
+    }
+    b.world = null;
+    b.potential = null;
+    b.growth = null;
+    this._workerBusy = true;
+    this._worker.postMessage(msg, transfers);
   }
 
   changeResolution() {
@@ -487,30 +761,82 @@ class AppCore {
   }
 
   _normaliseGridSize(size) {
-    const allowed = [64, 128, 256, 512];
+    if (typeof NDCompatibility !== "undefined") {
+      return NDCompatibility.coerceGridSize(size, this.params.dimension);
+    }
+
+    const fallback = [64, 128, 256, 512];
     const raw = Number(size);
     if (!Number.isFinite(raw) || raw <= 0) return this.params.gridSize;
-
-    let closest = allowed[0];
+    let closest = fallback[0];
     let bestDist = Math.abs(raw - closest);
-    for (let i = 1; i < allowed.length; i++) {
-      const d = Math.abs(raw - allowed[i]);
+    for (let i = 1; i < fallback.length; i++) {
+      const d = Math.abs(raw - fallback[i]);
       if (d < bestDist) {
-        closest = allowed[i];
+        closest = fallback[i];
         bestDist = d;
       }
     }
-
     return closest;
+  }
+
+  _syncSelectedAnimalForActiveDimension(preferredSelection = null) {
+    this._applyAnimalSource();
+
+    const animals = Array.isArray(this.animalLibrary?.animals)
+      ? this.animalLibrary.animals
+      : [];
+    const total = animals.length;
+
+    if (total <= 0) {
+      this.params.selectedAnimal = "";
+      this._skipNextAnimalParamsLoad = true;
+      this._lastAnimalParamsSelection = "";
+      return null;
+    }
+
+    const raw =
+      preferredSelection !== null && typeof preferredSelection !== "undefined"
+        ? preferredSelection
+        : this.params.selectedAnimal;
+    let idx = parseInt(String(raw), 10);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= total) {
+      idx = 0;
+    }
+
+    this.params.selectedAnimal = String(idx);
+    this._skipNextAnimalParamsLoad = true;
+    this._lastAnimalParamsSelection = this.params.selectedAnimal;
+    return this.animalLibrary.getAnimal(idx);
+  }
+
+  _resolveAnimalSourceDimension() {
+    return this.params.dimension;
+  }
+
+  _applyAnimalSource() {
+    if (!this.animalLibrary || !this.animalLibrary.setActiveDimension) return;
+    this.animalLibrary.setActiveDimension(this._resolveAnimalSourceDimension());
+  }
+
+  _findAnimalIndexByCode(code) {
+    if (!code) return null;
+    const animals = Array.isArray(this.animalLibrary?.animals)
+      ? this.animalLibrary.animals
+      : [];
+    if (!animals.length) return null;
+    const idx = animals.findIndex((animal) => String(animal?.code || "") === code);
+    return idx >= 0 ? idx : null;
   }
 
   _applyImportedParamsSnapshot(rawParams, { allowGridSize = true } = {}) {
     if (!rawParams || typeof rawParams !== "object") {
-      return { gridSizeChanged: false };
+      return { gridSizeChanged: false, dimensionChanged: false };
     }
 
     const p = this.params;
     const beforeGridSize = p.gridSize;
+    const beforeDimension = p.dimension;
     const toNumber = (value, fallback) => {
       const n = Number(value);
       return Number.isFinite(n) ? n : fallback;
@@ -543,8 +869,36 @@ class AppCore {
           : "slice";
     }
 
+    if ("ndDepth" in rawParams) {
+      p.ndDepth =
+        typeof NDCompatibility !== "undefined"
+          ? NDCompatibility.coerceDepth(rawParams.ndDepth, p.dimension)
+          : Math.max(2, Math.min(512, Math.floor(Number(rawParams.ndDepth) || 6)));
+    }
+
+    if ("ndSliceZ" in rawParams) {
+      p.ndSliceZ =
+        typeof NDCompatibility !== "undefined"
+          ? NDCompatibility.coerceSliceIndex(rawParams.ndSliceZ, p.ndDepth)
+          : Math.max(0, Math.min(p.ndDepth - 1, Math.floor(Number(rawParams.ndSliceZ) || 0)));
+    }
+
+    if ("ndSliceW" in rawParams) {
+      p.ndSliceW =
+        typeof NDCompatibility !== "undefined"
+          ? NDCompatibility.coerceSliceIndex(rawParams.ndSliceW, p.ndDepth)
+          : Math.max(0, Math.min(p.ndDepth - 1, Math.floor(Number(rawParams.ndSliceW) || 0)));
+    }
+
     if (allowGridSize && "gridSize" in rawParams) {
       p.gridSize = this._normaliseGridSize(rawParams.gridSize);
+    }
+
+    if (
+      typeof NDCompatibility !== "undefined" &&
+      !(allowGridSize && "gridSize" in rawParams)
+    ) {
+      p.gridSize = NDCompatibility.coerceGridSize(p.gridSize, p.dimension);
     }
 
     if ("R" in rawParams)
@@ -615,12 +969,6 @@ class AppCore {
         p.renderMotionOverlay,
       );
     }
-    if ("renderMotionTrail" in rawParams) {
-      p.renderMotionTrail = toBoolean(
-        rawParams.renderMotionTrail,
-        p.renderMotionTrail,
-      );
-    }
     if ("renderCalcPanels" in rawParams) {
       p.renderCalcPanels = toBoolean(
         rawParams.renderCalcPanels,
@@ -653,6 +1001,8 @@ class AppCore {
         }
       }
     }
+
+    p.animalSource = "auto";
 
     if ("placeMode" in rawParams)
       p.placeMode = toBoolean(rawParams.placeMode, p.placeMode);
@@ -692,7 +1042,12 @@ class AppCore {
     this._skipNextAnimalParamsLoad = true;
     this._lastAnimalParamsSelection = p.selectedAnimal || "";
 
-    return { gridSizeChanged: p.gridSize !== beforeGridSize };
+    this._syncSelectedAnimalForActiveDimension(p.selectedAnimal);
+
+    return {
+      gridSizeChanged: p.gridSize !== beforeGridSize,
+      dimensionChanged: p.dimension !== beforeDimension,
+    };
   }
 
   importWorldPayload(payload) {
@@ -700,6 +1055,10 @@ class AppCore {
 
     this._queueAction("importWorld", () =>
       this._queueOrRunMutation(() => {
+        const applied = this._applyImportedParamsSnapshot(payload.params, {
+          allowGridSize: false,
+        });
+
         const nextSize = this._normaliseGridSize(
           payload.size || this.params.gridSize,
         );
@@ -756,9 +1115,6 @@ class AppCore {
           }
         }
 
-        this._applyImportedParamsSnapshot(payload.params, {
-          allowGridSize: false,
-        });
         this.automaton.reset();
         this.automaton.updateParameters(this.params);
 
@@ -772,13 +1128,101 @@ class AppCore {
         }
 
         this._workerSendKernel();
-        this.refreshGUI();
+        if (
+          applied?.dimensionChanged &&
+          this.gui &&
+          typeof this.gui.rebuildPane === "function"
+        ) {
+          this.gui.rebuildPane();
+        } else {
+          this.refreshGUI();
+        }
 
         console.log(
           `[Lenia] Imported world: size=${this.params.gridSize}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}, potential=${payload.potential ? "restored" : "zeroed"}, growth=${payload.growth ? "restored" : "zeroed"}, growthOld=${payload.growthOld ? "restored" : "zeroed"}, selectedAnimal=${this.params.selectedAnimal || "none"}, placeScale=${this.params.placeScale || 1}`,
         );
       }),
     );
+  }
+
+  _packNDSeed(animal) {
+    if (!animal || !animal.cells) return null;
+    const cellsStr = Array.isArray(animal.cells) ? animal.cells[0] : animal.cells;
+    if (typeof cellsStr !== "string") return null;
+    if (!cellsStr.includes("%") && !cellsStr.includes("#")) return null;
+
+    const slices = RLECodec.parseND(cellsStr);
+    if (!slices || slices.length <= 1) return null;
+
+    const dimension = Number(this.params.dimension) || 2;
+    if (dimension <= 2) return null;
+
+    const size = this.params.gridSize;
+    const depth =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.getWorldDepthForDimension(size, dimension)
+        : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
+    const extraDims = Math.max(0, dimension - 2);
+    const planeCount = Math.pow(depth, extraDims);
+    const cellCount = size * size;
+    const planeCellCount = cellCount;
+    const total = planeCellCount * planeCount;
+    const packed = new Float32Array(total);
+
+    let maxZ = 0, maxW = 0;
+    for (const s of slices) {
+      if (s.z > maxZ) maxZ = s.z;
+      if (s.w > maxW) maxW = s.w;
+    }
+    const animalDepthZ = maxZ + 1;
+    const animalDepthW = maxW + 1;
+
+    const offsetZ = Math.floor((depth - animalDepthZ) / 2);
+    const offsetW = extraDims >= 2 ? Math.floor((depth - animalDepthW) / 2) : 0;
+
+    let maxH = 0, maxW_ = 0;
+    for (const s of slices) {
+      const h = s.grid.length;
+      const w = s.grid[0]?.length || 0;
+      if (h > maxH) maxH = h;
+      if (w > maxW_) maxW_ = w;
+    }
+
+    for (const slice of slices) {
+      const centeredZ = slice.z + offsetZ;
+      const centeredW = slice.w + offsetW;
+      if (centeredZ < 0 || centeredZ >= depth) continue;
+      if (centeredW < 0 || centeredW >= depth) continue;
+
+      let plane;
+      if (extraDims >= 2) {
+        plane = centeredZ + centeredW * depth;
+      } else {
+        plane = centeredZ;
+      }
+      if (plane >= planeCount) continue;
+
+      const grid = slice.grid;
+      const h = grid.length;
+      const w = grid[0]?.length || 0;
+      const sy = Math.floor((size - maxH) / 2);
+      const sx = Math.floor((size - maxW_) / 2);
+      const gy = Math.floor((maxH - h) / 2);
+      const gx = Math.floor((maxW_ - w) / 2);
+      const planeBase = plane * planeCellCount;
+
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const ty = sy + gy + y;
+          const tx = sx + gx + x;
+          if (ty >= 0 && ty < size && tx >= 0 && tx < size) {
+            packed[planeBase + ty * size + tx] = grid[y][x];
+          }
+        }
+      }
+    }
+
+    return packed;
   }
 
   loadAnimal(animal) {
@@ -789,11 +1233,23 @@ class AppCore {
         this._ensureBuffers();
         this.analyser.resetStatistics();
 
-        const scale = this.params.placeScale || 1;
-        if (Math.abs(scale - 1) < 1e-6) {
-          this.board.loadPattern(animal);
+        const dim = Number(this.params.dimension) || 2;
+        if (dim <= 2) {
+          const scale = this.params.placeScale || 1;
+          if (Math.abs(scale - 1) < 1e-6) {
+            this.board.loadPattern(animal);
+          } else {
+            this.board.loadPatternScaled(animal, scale);
+          }
         } else {
-          this.board.loadPatternScaled(animal, scale);
+          this.board.clear();
+        }
+
+        if (dim > 2) {
+          const ndSeed = this._packNDSeed(animal);
+          if (ndSeed) {
+            this._ndSeedWorld = ndSeed;
+          }
         }
 
         this.animalLibrary.applyAnimalParameters(animal);
@@ -843,8 +1299,14 @@ class AppCore {
   applyScaledAnimalParams(animal, scale = 1) {
     if (!animal || !animal.params) return;
 
-    const baseR = Number(animal.params.R);
-    const baseT = Number(animal.params.T);
+    const sourceParams = Array.isArray(animal.params)
+      ? animal.params.find((entry) => entry && typeof entry === "object") ||
+        animal.params[0] ||
+        {}
+      : animal.params;
+
+    const baseR = Number(sourceParams.R);
+    const baseT = Number(sourceParams.T);
     const s = Number(scale) || 1;
 
     if (Number.isFinite(baseR)) {
@@ -903,7 +1365,12 @@ class AppCore {
     }
 
     this._ensureBuffers();
-    this._applyPlacement({ animal, cellX, cellY, scale });
+
+    if ((this.params.dimension || 2) > 2) {
+      this._placeAnimalND(animal, cellX, cellY, scale);
+    } else {
+      this._applyPlacement({ animal, cellX, cellY, scale });
+    }
   }
 
   _applyPlacement({ animal, cellX, cellY, scale }) {
@@ -913,6 +1380,135 @@ class AppCore {
     } else {
       this.board.placePatternScaled(animal, cellX, cellY, scale);
     }
+  }
+
+  _placeAnimalND(animal, cellX, cellY, scale) {
+    if (!animal || !animal.cells) return;
+    const cellsStr = Array.isArray(animal.cells) ? animal.cells[0] : animal.cells;
+    const isND = typeof cellsStr === "string" && (cellsStr.includes("%") || cellsStr.includes("#"));
+
+    const dimension = Number(this.params.dimension) || 2;
+    const size = this.params.gridSize;
+    const depth =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.getWorldDepthForDimension(size, dimension)
+        : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
+    const extraDims = Math.max(0, dimension - 2);
+
+    if (isND) {
+      const slices = RLECodec.parseND(cellsStr);
+      if (!slices || slices.length === 0) return;
+
+      let maxZ = 0, maxW = 0;
+      for (const s of slices) {
+        if (s.z > maxZ) maxZ = s.z;
+        if (s.w > maxW) maxW = s.w;
+      }
+      const offsetZ = Math.floor((depth - (maxZ + 1)) / 2);
+      const offsetW = extraDims >= 2 ? Math.floor((depth - (maxW + 1)) / 2) : 0;
+
+      const planeEntries = [];
+      for (const slice of slices) {
+        const cz = slice.z + offsetZ;
+        const cw = slice.w + offsetW;
+        if (cz < 0 || cz >= depth || cw < 0 || cw >= depth) continue;
+        const plane = extraDims >= 2 ? cz + cw * depth : cz;
+
+        const grid = slice.grid;
+        const h = grid.length;
+        const w = grid[0]?.length || 0;
+        if (w === 0 || h === 0) continue;
+
+        const patternData = this._scaleGrid(grid, w, h, scale);
+        planeEntries.push({
+          plane,
+          patternData,
+          patternWidth: Math.abs((scale || 1) - 1) < 1e-6 ? w : Math.max(1, Math.round(w * scale)),
+          patternHeight: Math.abs((scale || 1) - 1) < 1e-6 ? h : Math.max(1, Math.round(h * scale)),
+        });
+      }
+      if (planeEntries.length === 0) return;
+
+      this._workerNDMutation({
+        type: "placeND",
+        planeEntries,
+        cellX,
+        cellY,
+      });
+    } else {
+      const grids = this.board._getPatternGrids(animal);
+      if (!grids || grids.length === 0) return;
+      const grid = grids[0];
+      const h = grid.length;
+      const w = grid[0]?.length || 0;
+      if (w === 0 || h === 0) return;
+
+      const patternData = this._scaleGrid(grid, w, h, scale);
+      const pw = Math.abs((scale || 1) - 1) < 1e-6 ? w : Math.max(1, Math.round(w * scale));
+      const ph = Math.abs((scale || 1) - 1) < 1e-6 ? h : Math.max(1, Math.round(h * scale));
+
+      this._workerNDMutation({
+        type: "place",
+        patternData,
+        patternWidth: pw,
+        patternHeight: ph,
+        cellX,
+        cellY,
+      });
+    }
+  }
+
+  _scaleGrid(grid, w, h, scale) {
+    if (Math.abs((scale || 1) - 1) < 1e-6) {
+      const data = new Float32Array(h * w);
+      for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++)
+          data[y * w + x] = grid[y][x] || 0;
+      return data;
+    }
+    const pw = Math.max(1, Math.round(w * scale));
+    const ph = Math.max(1, Math.round(h * scale));
+    const data = new Float32Array(ph * pw);
+    for (let dy = 0; dy < ph; dy++) {
+      for (let dx = 0; dx < pw; dx++) {
+        const srcXf = dx / scale;
+        const srcYf = dy / scale;
+        const x0 = Math.floor(srcXf);
+        const y0 = Math.floor(srcYf);
+        const x1 = Math.min(x0 + 1, w - 1);
+        const y1 = Math.min(y0 + 1, h - 1);
+        const fx = srcXf - x0;
+        const fy = srcYf - y0;
+        data[dy * pw + dx] = x0 < w && y0 < h
+          ? (grid[y0][x0] || 0) * (1 - fx) * (1 - fy) +
+            (grid[y0][x1] || 0) * fx * (1 - fy) +
+            (grid[y1][x0] || 0) * (1 - fx) * fy +
+            (grid[y1][x1] || 0) * fx * fy
+          : 0;
+      }
+    }
+    return data;
+  }
+
+  placeAnimalRandom() {
+    const animal = this.getSelectedAnimal();
+    if (!animal) return;
+
+    const size = this.params.gridSize;
+    const cellX = Math.floor(Math.random() * size);
+    const cellY = Math.floor(Math.random() * size);
+    const scale = this.params.placeScale || 1;
+
+    this._queueAction("placeAnimalRandom", () =>
+      this._queueOrRunMutation(() => {
+        this._ensureBuffers();
+        if ((this.params.dimension || 2) > 2) {
+          this._placeAnimalND(animal, cellX, cellY, scale);
+        } else {
+          this._applyPlacement({ animal, cellX, cellY, scale });
+        }
+      }),
+    );
   }
 
   _restartWorker() {
@@ -968,6 +1564,57 @@ class AppCore {
     return this.animalLibrary.getAnimal(idx);
   }
 
+  getAnimalSourceOptions() {
+    const count2D = (this.animalsByDimension[2] || []).length;
+    const count3D = (this.animalsByDimension[3] || []).length;
+    const count4D = (this.animalsByDimension[4] || []).length;
+    return {
+      [`Auto (D${this.params.dimension})`]: "auto",
+      [`2D Library (${count2D})`]: "2d",
+      [`3D Library (${count3D})`]: "3d",
+      [`4D Library (${count4D})`]: "4d",
+    };
+  }
+
+  setAnimalSource(source) {
+    if (this._changingAnimalSource) return;
+    const nextSource = String(source || "auto").toLowerCase();
+    if (!["auto", "2d", "3d", "4d"].includes(nextSource)) return;
+
+    this._changingAnimalSource = true;
+    try {
+      const prevAnimal = this.getSelectedAnimal();
+      const prevCode = prevAnimal?.code || "";
+
+      this.params.animalSource = nextSource;
+      this._applyAnimalSource();
+
+      const matchedIdx = this._findAnimalIndexByCode(prevCode);
+      if (matchedIdx !== null) {
+        this.params.selectedAnimal = String(matchedIdx);
+      } else {
+        this.params.selectedAnimal =
+          this.animalLibrary.animals.length > 0 ? "0" : "";
+      }
+
+      this._skipNextAnimalParamsLoad = true;
+      this._lastAnimalParamsSelection = this.params.selectedAnimal || "";
+
+      if (this.gui && typeof this.gui.rebuildPane === "function") {
+        this.gui.rebuildPane();
+      } else {
+        this.refreshGUI();
+      }
+
+      const animal = this.getSelectedAnimal();
+      if (animal) {
+        this.loadAnimal(animal);
+      }
+    } finally {
+      this._changingAnimalSource = false;
+    }
+  }
+
   getViewModeOptions() {
     const modes =
       typeof NDCompatibility !== "undefined"
@@ -981,54 +1628,154 @@ class AppCore {
     }, {});
   }
 
+  getGridSizeOptions(dimension = this.params.dimension) {
+    const dim =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceDimension(dimension)
+        : 2;
+    const sizes =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.getGridSizeOptions(dim)
+        : [64, 128, 256, 512];
+    const options = {};
+    for (const size of sizes) {
+      options[`${size}^${dim}`] = size;
+    }
+    return options;
+  }
+
+  getWorldShapeLabel() {
+    const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
+    const size = Math.max(1, Math.floor(Number(this.params.gridSize) || 1));
+    const shape = dim === 2 ? "square" : dim === 3 ? "cube" : "hypercube";
+    return `${shape} ${size}^${dim}`;
+  }
+
+  buildNDConfig() {
+    const dimension =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceDimension(this.params.dimension)
+        : 2;
+    const viewMode =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceViewMode(dimension, this.params.viewMode)
+        : "slice";
+    const ndDepth =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.getWorldDepthForDimension(this.params.gridSize, dimension)
+        : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
+    const ndSliceZ =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceSliceIndex(this.params.ndSliceZ, ndDepth)
+        : Math.max(0, Math.min(ndDepth - 1, Math.floor(Number(this.params.ndSliceZ) || 0)));
+    const ndSliceW =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceSliceIndex(this.params.ndSliceW, ndDepth)
+        : Math.max(0, Math.min(ndDepth - 1, Math.floor(Number(this.params.ndSliceW) || 0)));
+    this.params.dimension = dimension;
+    this.params.viewMode = viewMode;
+    this.params.ndDepth = ndDepth;
+    this.params.ndSliceZ = ndSliceZ;
+    this.params.ndSliceW = ndSliceW;
+
+    return {
+      dimension,
+      viewMode,
+      depth: ndDepth,
+      sliceZ: ndSliceZ,
+      sliceW: ndSliceW,
+    };
+  }
+
   setDimension(dimension) {
+    if (this._changingDimension) return;
     const nextDimension =
       typeof NDCompatibility !== "undefined"
         ? NDCompatibility.coerceDimension(dimension)
         : 2;
 
-    if (nextDimension === this.params.dimension) return;
+    this._changingDimension = true;
+    try {
 
     this.params.dimension = nextDimension;
-    this.params.viewMode =
-      typeof NDCompatibility !== "undefined"
-        ? NDCompatibility.coerceViewMode(nextDimension, this.params.viewMode)
-        : "slice";
+    const coercedSize = this._normaliseGridSize(this.params.gridSize);
+    const sizeChanged = coercedSize !== this.params.gridSize;
+    this.params.gridSize = coercedSize;
 
-    if (this.animalLibrary && this.animalLibrary.setActiveDimension) {
-      this.animalLibrary.setActiveDimension(nextDimension);
-    }
-
-    const hasAnimals =
-      this.animalLibrary &&
-      Array.isArray(this.animalLibrary.animals) &&
-      this.animalLibrary.animals.length > 0;
-
-    this._skipNextAnimalParamsLoad = true;
-    this.params.selectedAnimal = hasAnimals ? "0" : "";
-    this._lastAnimalParamsSelection = this.params.selectedAnimal;
-
-    if (nextDimension !== 2) {
-      this.params.running = false;
-      this.clearWorld();
-      console.log(
-        `[Lenia] ${nextDimension}D mode enabled (phase 1 scaffold). Simulation core remains 2D in this phase.`,
-      );
+    if ((Number(this.params.dimension) || 2) > 2) {
+      this.params.viewMode = "projection";
+      const ndDepthForSlice =
+        typeof NDCompatibility !== "undefined"
+          ? NDCompatibility.getWorldDepthForDimension(this.params.gridSize, nextDimension)
+          : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
+      this.params.ndSliceZ = Math.floor(ndDepthForSlice / 2);
+      this.params.ndSliceW = Math.floor(ndDepthForSlice / 2);
     } else {
-      const animal = this.animalLibrary.getAnimal(0);
-      if (animal) {
-        this.loadAnimal(animal);
-      }
+      this.params.viewMode = "slice";
     }
 
-    this.refreshGUI();
+    this._applyAnimalSource();
+
+    const animal = this._syncSelectedAnimalForActiveDimension(0);
+
+    this.params.running = false;
+
+    if (sizeChanged) {
+      this.changeResolution();
+    }
+
+    if (animal) {
+      this.loadAnimal(animal);
+    } else {
+      this.clearWorld();
+    }
+
+    console.log(
+      `[Lenia] ${nextDimension}D mode enabled with ${this.params.gridSize}^${nextDimension} world shape and ND tensor stepping.`,
+    );
+
+    if (this.gui && typeof this.gui.rebuildPane === "function") {
+      this.gui.rebuildPane();
+    } else {
+      this.refreshGUI();
+    }
+
+    } finally {
+      this._changingDimension = false;
+    }
   }
 
   setViewMode(viewMode) {
-    this.params.viewMode =
+    this.params.viewMode = viewMode === "slice" ? "slice" : "projection";
+
+    this._workerRequestView();
+
+    if (this.gui && typeof this.gui.rebuildPane === "function") {
+      this.gui.rebuildPane();
+    } else {
+      this.refreshGUI();
+    }
+  }
+
+  adjustNDSlice(axis, delta) {
+    if ((this.params.dimension || 2) <= 2) return;
+    const depth =
       typeof NDCompatibility !== "undefined"
-        ? NDCompatibility.coerceViewMode(this.params.dimension, viewMode)
-        : "slice";
+        ? NDCompatibility.coerceDepth(this.params.ndDepth, this.params.dimension)
+        : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
+    if (axis === "z") {
+      this.params.ndSliceZ =
+        ((Math.floor(Number(this.params.ndSliceZ) || 0) + delta) % depth + depth) % depth;
+    } else if (axis === "w") {
+      this.params.ndSliceW =
+        ((Math.floor(Number(this.params.ndSliceW) || 0) + delta) % depth + depth) % depth;
+    }
+    this._workerRequestView();
+    this.refreshGUI();
+  }
+
+  refreshNDView() {
+    this._workerRequestView();
     this.refreshGUI();
   }
 
@@ -1063,6 +1810,35 @@ class AppCore {
     }
   }
 
+  handleMousePressed(e) {
+    if (this.canvasInteraction(e)) {
+      return this.input.handlePointerPressed(e);
+    }
+    return;
+  }
+
+  handleMouseDragged(e) {
+    if (this.canvasInteraction(e)) {
+      return this.input.handlePointerDragged(e);
+    }
+    return;
+  }
+
+  handleMouseReleased(e) {
+    this.input.handlePointerReleased(e);
+    if (this.canvasInteraction(e)) {
+      return false;
+    }
+    return;
+  }
+
+  handleMouseWheel(e) {
+    if (this.canvasInteraction(e)) {
+      return this.input.handleWheel(e);
+    }
+    return;
+  }
+
   handleKeyPressed(k, kCode) {
     return this._safeHandleKeyboard("press", () =>
       this.input.handleKeyPressed(k, kCode),
@@ -1086,6 +1862,7 @@ class AppCore {
 
   updateAutomatonParams() {
     this.automaton.updateParameters(this.params);
+    this._prevR = this.params.R;
     this._workerSendKernel();
   }
 
@@ -1112,11 +1889,17 @@ class AppCore {
   }
 
   refreshGUI() {
-    if (this.gui && typeof this.gui.syncMediaControls === "function") {
-      this.gui.syncMediaControls();
-    }
+    if (this._isRefreshingGUI) return;
+    this._isRefreshingGUI = true;
+    try {
+      if (this.gui && typeof this.gui.syncMediaControls === "function") {
+        this.gui.syncMediaControls();
+      }
 
-    if (this.gui && this.gui.pane) this.gui.pane.refresh();
+      if (this.gui && this.gui.pane) this.gui.pane.refresh();
+    } finally {
+      this._isRefreshingGUI = false;
+    }
   }
 
   windowResized() {

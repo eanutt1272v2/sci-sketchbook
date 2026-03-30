@@ -11,12 +11,21 @@ class Renderer {
     this.colourMaps = colourMaps;
     this.currentColourMap = "";
     this.lut = new Uint8ClampedArray(256 * 3);
+    this.lutPacked = new Uint32Array(256);
+    this._isLittleEndian = (() => {
+      const u32 = new Uint32Array([0x11223344]);
+      const u8 = new Uint8Array(u32.buffer);
+      return u8[0] === 0x44;
+    })();
     this.calcPanelImages = [];
     this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
+    this._calcPanelFrameCounter = 0;
+    this._calcPanelUpdateIntervalRunning = 3;
     this.lastLegendRange = { mode: "world", min: 0, max: 1 };
-    this.motionTrail = [];
-    this.maxMotionTrailPoints = 180;
+    this._kernelDisplayCache = null;
+    this._kernelDisplayCacheSize = 0;
+    this._kernelDisplayCacheSource = null;
     this.uiFont = uiFont;
     this.setColourMap(initialColourMap);
   }
@@ -26,6 +35,30 @@ class Renderer {
     if (!this.uiFont) return;
     if (typeof target.textFont !== "function") return;
     target.textFont(this.uiFont);
+  }
+
+  _enableOverlayShadow(ctx = null) {
+    const target = ctx || this;
+    const dc =
+      target?.drawingContext ||
+      (typeof drawingContext !== "undefined" ? drawingContext : null);
+    if (!dc) return;
+    dc.shadowColor = "rgba(0, 0, 0, 0.9)";
+    dc.shadowBlur = 4;
+    dc.shadowOffsetX = 2;
+    dc.shadowOffsetY = 2;
+  }
+
+  _disableOverlayShadow(ctx = null) {
+    const target = ctx || this;
+    const dc =
+      target?.drawingContext ||
+      (typeof drawingContext !== "undefined" ? drawingContext : null);
+    if (!dc) return;
+    dc.shadowColor = "rgba(0, 0, 0, 0)";
+    dc.shadowBlur = 0;
+    dc.shadowOffsetX = 0;
+    dc.shadowOffsetY = 0;
   }
 
   _computeDataRange(data) {
@@ -53,14 +86,12 @@ class Renderer {
   resize(size) {
     this.size = size;
     this.img = createImage(this.size, this.size);
-    this.motionTrail = [];
     this.calcPanelImages = [];
     this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
-  }
-
-  _resetMotionTrail() {
-    this.motionTrail = [];
+    this._kernelDisplayCache = null;
+    this._kernelDisplayCacheSize = 0;
+    this._kernelDisplayCacheSource = null;
   }
 
   _wrapCoord(value) {
@@ -92,63 +123,66 @@ class Renderer {
     return Math.round((anchor - value) / this.size) * this.size;
   }
 
-  _updateMotionTrail(centerX, centerY) {
-    if (!Number.isFinite(centerX) || !Number.isFinite(centerY)) return;
-    const wrappedX = this._wrapCoord(centerX);
-    const wrappedY = this._wrapCoord(centerY);
-    const last = this.motionTrail[this.motionTrail.length - 1];
-    let point = {
-      x: wrappedX,
-      y: wrappedY,
-      ux: wrappedX,
-      uy: wrappedY,
-    };
+  _expandKernelForDisplay(kernel, kernelSize, viewSize) {
+    if (!kernel || !kernelSize || kernelSize <= 0) return kernel;
+    if (kernelSize === viewSize) return kernel;
 
-    if (last) {
-      const lastWrappedX = this._wrapCoord(last.ux);
-      const lastWrappedY = this._wrapCoord(last.uy);
-      const dx = this._torusDelta(wrappedX, lastWrappedX);
-      const dy = this._torusDelta(wrappedY, lastWrappedY);
-      if (Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05) return;
-      point = {
-        x: wrappedX,
-        y: wrappedY,
-        ux: last.ux + dx,
-        uy: last.uy + dy,
-      };
+    const out = new Float32Array(viewSize * viewSize);
+    const viewMid = Math.floor(viewSize / 2);
+    const kernelRadius = Math.floor(kernelSize / 2);
+    const start = viewMid - kernelRadius;
+
+    for (let ky = 0; ky < kernelSize; ky++) {
+      const vy = start + ky;
+      if (vy < 0 || vy >= viewSize) continue;
+      const kRow = ky * kernelSize;
+      const vRow = vy * viewSize;
+      for (let kx = 0; kx < kernelSize; kx++) {
+        const vx = start + kx;
+        if (vx < 0 || vx >= viewSize) continue;
+        out[vRow + vx] = kernel[kRow + kx];
+      }
     }
 
-    this.motionTrail.push(point);
-    if (this.motionTrail.length > this.maxMotionTrailPoints) {
-      this.motionTrail.splice(
-        0,
-        this.motionTrail.length - this.maxMotionTrailPoints,
-      );
-    }
+    return out;
   }
 
-  _getViewSpec(board, automaton, rawMode) {
+  _getViewSpec(board, automaton, rawMode, params) {
     const mode = rawMode;
     const size = board?.size || this.size;
+    const isSoftClip = !!(params?.softClip);
+    const isAritaMode = !!(params?.aritaMode);
 
     if (mode === "world") {
+      const data = board.world;
+      let vmin = 0;
+      if (isSoftClip && data) {
+        const range = this._computeDataRange(data);
+        if (range.min < 0) vmin = range.min;
+      }
       return {
         mode,
         label: "World",
-        data: board.world,
+        data,
         srcSize: size,
-        vmin: 0,
+        vmin,
         vmax: 1,
       };
     }
 
     if (mode === "potential") {
+      const data = board.potential;
+      let vmin = 0;
+      if (isSoftClip && data) {
+        const range = this._computeDataRange(data);
+        if (range.min < 0) vmin = range.min;
+      }
       return {
         mode,
         label: "Potential",
-        data: board.potential,
+        data,
         srcSize: size,
-        vmin: 0,
+        vmin,
         vmax: 2 * (automaton?.m || 0.15),
       };
     }
@@ -159,60 +193,108 @@ class Renderer {
         label: "Growth",
         data: board.growth,
         srcSize: size,
-        vmin: -1,
+        vmin: isAritaMode ? 0 : -1,
         vmax: 1,
       };
     }
 
     if (mode === "kernel") {
+      const kernel = automaton?.kernel;
+      if (
+        !this._kernelDisplayCache ||
+        this._kernelDisplayCacheSize !== size ||
+        this._kernelDisplayCacheSource !== kernel
+      ) {
+        this._kernelDisplayCache = this._expandKernelForDisplay(
+          kernel,
+          automaton.kernelSize,
+          size,
+        );
+        this._kernelDisplayCacheSize = size;
+        this._kernelDisplayCacheSource = kernel;
+      }
       return {
         mode,
         label: "Kernel",
-        data: automaton.kernel,
-        srcSize: automaton.kernelSize,
+        data: this._kernelDisplayCache,
+        srcSize: size,
         vmin: 0,
-        vmax: Math.max(automaton.kernelMax || 0, 1e-9),
+        vmax: 1,
       };
     }
 
-    return this._getViewSpec(board, automaton, "world");
+    return this._getViewSpec(board, automaton, "world", params);
   }
 
-  render(board, automaton, renderMode, colourMapName) {
+  render(board, automaton, renderMode, colourMapName, params = null) {
     this.setColourMap(colourMapName);
-    const view = this._getViewSpec(board, automaton, renderMode);
+    const view = this._getViewSpec(board, automaton, renderMode, params);
     const data = view.data;
-    const vmin = view.vmin;
-    const vmax = view.vmax;
+    let vmin = view.vmin;
+    let vmax = view.vmax;
     const currentSize = view.srcSize;
-    const liveRange = this._computeDataRange(data);
-    this.lastLegendRange = {
-      mode: view.mode,
-      min: liveRange.min,
-      max: liveRange.max,
-    };
+    let liveMin = Number.POSITIVE_INFINITY;
+    let liveMax = Number.NEGATIVE_INFINITY;
+
+
+
+    this._lastViewVmin = vmin;
+    this._lastViewVmax = vmax;
 
     if (this.img.width !== currentSize || this.img.height !== currentSize) {
       this.img = createImage(currentSize, currentSize);
     }
 
-    const denom = Math.max(vmax - vmin, 1e-9);
+    const scale = 255 / Math.max(vmax - vmin, 1e-9);
     this.img.loadPixels();
-    for (let y = 0; y < currentSize; y++) {
-      const row = y * currentSize;
-      for (let x = 0; x < currentSize; x++) {
-        const val = data[row + x];
-        const normVal = (val - vmin) / denom;
-        const clamped = Math.max(0, Math.min(1, normVal));
-        const lutIndex =
-          Math.min(255, Math.max(0, Math.round(clamped * 255))) * 3;
-        const idx = (row + x) * 4;
-        this.img.pixels[idx] = this.lut[lutIndex];
-        this.img.pixels[idx + 1] = this.lut[lutIndex + 1];
-        this.img.pixels[idx + 2] = this.lut[lutIndex + 2];
-        this.img.pixels[idx + 3] = 255;
+    const pixels = this.img.pixels;
+    const lut = this.lut;
+    if (this._isLittleEndian) {
+      const packed = this.lutPacked;
+      const pixels32 = new Uint32Array(pixels.buffer);
+      const total = currentSize * currentSize;
+      for (let i = 0; i < total; i++) {
+        const val = data[i];
+        if (Number.isFinite(val)) {
+          if (val < liveMin) liveMin = val;
+          if (val > liveMax) liveMax = val;
+        }
+        let scaled = (val - vmin) * scale;
+        if (scaled < 0) scaled = 0;
+        else if (scaled > 255) scaled = 255;
+        pixels32[i] = packed[(scaled + 0.5) | 0];
+      }
+    } else {
+      for (let y = 0; y < currentSize; y++) {
+        const row = y * currentSize;
+        for (let x = 0; x < currentSize; x++) {
+          const val = data[row + x];
+          if (Number.isFinite(val)) {
+            if (val < liveMin) liveMin = val;
+            if (val > liveMax) liveMax = val;
+          }
+          let scaled = (val - vmin) * scale;
+          if (scaled < 0) scaled = 0;
+          else if (scaled > 255) scaled = 255;
+          const lutIndex = ((scaled + 0.5) | 0) * 3;
+          const idx = (row + x) * 4;
+          pixels[idx] = lut[lutIndex];
+          pixels[idx + 1] = lut[lutIndex + 1];
+          pixels[idx + 2] = lut[lutIndex + 2];
+          pixels[idx + 3] = 255;
+        }
       }
     }
+
+    if (!Number.isFinite(liveMin) || !Number.isFinite(liveMax)) {
+      liveMin = 0;
+      liveMax = 1;
+    }
+    this.lastLegendRange = {
+      mode: view.mode,
+      min: liveMin,
+      max: liveMax,
+    };
 
     this.img.updatePixels();
     noSmooth();
@@ -241,7 +323,7 @@ class Renderer {
   }
 
   _fallbackColourMapName() {
-    if (this.colourMaps.rocket) return "viridis";
+    if (this.colourMaps.turbo) return "turbo";
     const keys = Object.keys(this.colourMaps);
     return keys.length ? keys[0] : "";
   }
@@ -260,21 +342,27 @@ class Renderer {
     for (let i = 0; i < 256; i++) {
       const t = i / 255;
       const idx = i * 3;
-      this.lut[idx] = constrain(
+      const r = constrain(
         Math.round(poly(colourMapData.r, t) * 255),
         0,
         255,
       );
-      this.lut[idx + 1] = constrain(
+      const g = constrain(
         Math.round(poly(colourMapData.g, t) * 255),
         0,
         255,
       );
-      this.lut[idx + 2] = constrain(
+      const b = constrain(
         Math.round(poly(colourMapData.b, t) * 255),
         0,
         255,
       );
+      this.lut[idx] = r;
+      this.lut[idx + 1] = g;
+      this.lut[idx + 2] = b;
+      if (this._isLittleEndian) {
+        this.lutPacked[i] = r | (g << 8) | (b << 16) | (255 << 24);
+      }
     }
   }
 
@@ -284,120 +372,131 @@ class Renderer {
     return [this.lut[lutIndex], this.lut[lutIndex + 1], this.lut[lutIndex + 2]];
   }
 
-  renderGrid(R) {
+  renderGrid(R, params = null) {
+    const n = Math.max(0, Math.floor(R / 40));
+
+    const cellPx = width / this.size;
+    const mid = Math.floor(this.size / 2);
+    const dotSize = Math.max(1, Math.round(cellPx * 0.4));
+
     push();
+    noStroke();
+    fill(95);
 
-    const pixelSpacing = width / this.size;
+    const baseRow = ((mid % R) + R) % R;
+    const baseCol = ((mid % R) + R) % R;
 
-    if (pixelSpacing > 4) {
-      stroke(255, 30);
-      strokeWeight(0.5);
-      for (let i = 0; i <= this.size; i++) {
-        const pos = i * pixelSpacing;
-        line(pos, 0, pos, height);
-        line(0, pos, width, pos);
+    for (let i = -n; i <= n; i++) {
+      const rowStart = (((mid + i) % R) + R) % R;
+      const colStart = (((mid + i) % R) + R) % R;
+
+      for (let y = rowStart; y < this.size; y += R) {
+        for (let x = baseCol; x < this.size; x += R) {
+          rect(x * cellPx, y * cellPx, dotSize, dotSize);
+        }
+      }
+      if (i !== 0) {
+        for (let y = baseRow; y < this.size; y += R) {
+          for (let x = colStart; x < this.size; x += R) {
+            rect(x * cellPx, y * cellPx, dotSize, dotSize);
+          }
+        }
       }
     }
 
-    const rSpacing = (R / this.size) * width;
-    stroke(200, 100);
-    strokeWeight(1.5);
-    for (let x = 0; x <= width + 1; x += rSpacing) {
-      line(x, 0, x, height);
-    }
-    for (let y = 0; y <= height + 1; y += rSpacing) {
-      line(0, y, width, y);
-    }
-
     pop();
   }
 
-  renderScale(R) {
-    const scaleWidth = (R / this.size) * width;
-    const x = width - scaleWidth - 20;
-    const y = height - 20;
+  renderScale(R, params = null) {
+    const cellPx = width / this.size;
+    const scaleWidth = R * cellPx;
+
     push();
-    fill(255);
+    this._enableOverlayShadow();
     noStroke();
-    rect(x, y, scaleWidth, 4);
+
+    const sx = width - 50;
+    const sy = height - 20;
+    fill(255);
+    rect(sx - scaleWidth, sy + 3, scaleWidth, 4);
+    this._applyTextFont();
     textSize(10);
-    textAlign(CENTER);
-    text("R=" + R.toFixed(1), x + scaleWidth / 2, y + 15);
+    textAlign(LEFT, TOP);
+    text("1mm", sx + 10, sy);
+
+    const lx = width - 50;
+    const ly = height - 35;
+    stroke(200);
+    strokeWeight(1);
+    line(lx - 90, ly, lx, ly);
+    noStroke();
+    fill(200);
+    const dotR = 2;
+    for (const m of [0, -10, -50, -90]) {
+      ellipse(lx + m, ly, dotR * 2, dotR * 2);
+    }
+    fill(255);
+    textSize(10);
+    textAlign(LEFT, TOP);
+    text("2s", lx - 95, ly - 15);
+    text("1s", lx - 55, ly - 15);
+
+    this._disableOverlayShadow();
     pop();
   }
 
-  renderLegend() {
-    const x = width - 20;
+  renderLegend(vmin, vmax) {
+    const barW = 5;
+    const x0 = width - 20;
+    const y0 = height - 70;
     const y1 = 20;
-    const y2 = height - 70;
-    const w = 15;
-    const h = y2 - y1;
+    const barH = y0 - y1;
+
+    const effectiveVmin =
+      vmin !== undefined
+        ? vmin
+        : this._lastViewVmin !== undefined
+          ? this._lastViewVmin
+          : 0;
+    const effectiveVmax =
+      vmax !== undefined
+        ? vmax
+        : this._lastViewVmax !== undefined
+          ? this._lastViewVmax
+          : 1;
 
     push();
+    this._enableOverlayShadow();
 
-    let grad = drawingContext.createLinearGradient(0, y1, 0, y2);
-
-    const stops = 32;
-    for (let i = 0; i <= stops; i++) {
-      let t = i / stops;
-      let c = this._valueToColour(1 - t);
-      grad.addColorStop(t, `rgb(${c[0]}, ${c[1]}, ${c[2]})`);
+    noStroke();
+    for (let py = 0; py < barH; py++) {
+      const t = 1 - py / barH;
+      const lutIndex = Math.min(252, Math.max(0, Math.round(t * 252))) * 3;
+      fill(this.lut[lutIndex], this.lut[lutIndex + 1], this.lut[lutIndex + 2]);
+      rect(x0, y1 + py, barW, 1);
     }
 
-    noStroke();
-    drawingContext.fillStyle = grad;
-    drawingContext.fillRect(x - w, y1, w, h);
-
+    this._disableOverlayShadow();
     noFill();
-    stroke(255, 255, 255, 200);
-    strokeWeight(1.5);
-    rect(x - w, y1, w, h);
+    stroke(200);
+    strokeWeight(1);
+    rect(x0 - 1, y1 - 1, barW + 2, barH + 2);
+    this._enableOverlayShadow();
 
-    fill(255);
     noStroke();
-    textSize(11);
+    fill(255);
+    this._applyTextFont();
+    textSize(10);
     textAlign(RIGHT, CENTER);
+    text(effectiveVmin.toFixed(1), x0 - 5, y0);
+    text(
+      ((effectiveVmin + effectiveVmax) / 2).toFixed(1),
+      x0 - 5,
+      (y1 + y0) / 2,
+    );
+    text(effectiveVmax.toFixed(1), x0 - 5, y1);
 
-    const range = this.lastLegendRange || { min: 0, max: 1 };
-    const minV = Number.isFinite(range.min) ? range.min : 0;
-    const maxV = Number.isFinite(range.max) ? range.max : 1;
-    const span = maxV - minV;
-
-    const labels = [
-      { val: maxV, y: y1 },
-      { val: minV + span * 0.75, y: y1 + h * 0.25 },
-      { val: minV + span * 0.5, y: y1 + h * 0.5 },
-      { val: minV + span * 0.25, y: y1 + h * 0.75 },
-      { val: minV, y: y2 },
-    ];
-
-    labels.forEach((label) => {
-      noStroke();
-      text(label.val.toFixed(3), x - w - 6, label.y);
-
-      stroke(255, 255, 255, 150);
-      strokeWeight(1);
-      line(x - w - 3, label.y, x - w, label.y);
-    });
-
-    const mode = (this.lastLegendRange && this.lastLegendRange.mode) || "world";
-    const legendTitleByMode = {
-      world: "Cell state A(x)",
-      potential: "Potential U(x)",
-      growth: "Growth G(x)",
-      kernel: "Kernel K(x)",
-    };
-
-    noStroke();
-    fill(255);
-    push();
-    translate(x + w * 0.5, y1 + h * 0.5);
-    rotate(-HALF_PI);
-    textAlign(CENTER, CENTER);
-    textSize(12);
-    text(legendTitleByMode[mode] || "Field value", 0, 0);
-    pop();
-
+    this._disableOverlayShadow();
     pop();
   }
 
@@ -405,6 +504,7 @@ class Renderer {
     const { name, version } = metadata;
 
     push();
+    this._enableOverlayShadow();
     fill(0, 220);
     noStroke();
     rect(0, 0, width, height);
@@ -425,64 +525,83 @@ class Renderer {
 
     const sections = [
       {
-        title: "Simulation",
+        title: "Run Control",
         entries: [
-          ["Space", "Pause / Resume"],
-          ["N", "Step once"],
-          ["A / D", "Previous / next animal"],
-          ["F", "Load selected animal"],
-          ["P", "Toggle place mode"],
-          ["Z", "Randomise world"],
-          ["X", "Clear world"],
-          ["R", "Reset simulation state"],
+          ["Enter", "Pause / Resume"],
+          ["Space", "Step once"],
+          ["Del / Bksp", "Clear world"],
         ],
       },
       {
-        title: "Rendering",
+        title: "Animals & World",
         entries: [
-          ["Tab", "Cycle render mode"],
-          ["4", "Toggle calculation diagnostics panels"],
-          ["T", "Cycle colour map"],
-          ["G", "Toggle grid"],
-          ["L", "Toggle colour legend"],
-          ["O", "Toggle stats overlay"],
-          ["M", "Toggle motion overlay"],
-          ["Shift+M", "Toggle motion trail"],
-          ["B", "Toggle scale bar"],
-          ["V", "Cycle grid size"],
-          ["H", "Hide / show GUI panel"],
+          ["Z", "Reload current animal"],
+          ["C / V", "Previous / next animal (Shift ±10)"],
+          ["X", "Place at random (Shift ×5)"],
+          ["N", "Random world (Shift=seeded)"],
+          ["M", "Random world"],
+          ["'", "Toggle auto-center"],
         ],
       },
       {
         title: "Parameters",
         entries: [
-          ["[ / ]", "Decrease / increase kernel radius (R)"],
-          ["; / '", "Decrease / increase time steps (T)"],
-          [", / .", "Decrease / increase growth centre (m)"],
-          ["- / +", "Decrease / increase growth width (s)"],
-          ["← / →", "Decrease / increase noise"],
-          ["↑ / ↓", "Decrease / increase mask rate"],
-          ["K", "Cycle kernel function"],
-          ["Y", "Cycle growth function"],
-          ["U", "Toggle soft clipping"],
-          ["I", "Toggle multi-step integration"],
-          ["Q / Shift+Q", "Cycle placement scale ↑ / ↓"],
-          ["` (backtick)", "Auto-scale R & T to placement scale"],
+          ["Q / A", "Growth centre m  +/- 0.001 (Shift ±0.01)"],
+          ["W / S", "Growth width s  +/- 0.0001 (Shift ±0.001)"],
+          ["R / F", "Kernel radius R  +/- 10 (Shift ±1)"],
+          ["T / G", "Time steps T  ×2 / ÷2 (Shift ±1)"],
+          ["E / D", "Quantise paramP  +/- 10 (Shift ±1)"],
+          ["Ctrl+T / Ctrl+G", "Weight h  +/- 0.1"],
+          ["Y/U/I/O/P", "Kernel peaks b[0-4]  +/- 1/12 (Shift -)"],
+          [";", "Add peak (Shift=remove)"],
+        ],
+      },
+      {
+        title: "Options",
+        entries: [
+          ["Ctrl+Y", "Cycle kernel core kn (Shift=reverse)"],
+          ["Ctrl+U", "Cycle growth func gn (Shift=reverse)"],
+          ["Ctrl+I", "Toggle soft clip (Shift=mask rate)"],
+          ["Ctrl+O", "Cycle noise"],
+          ["Ctrl+P", "Toggle Arita mode (Shift=reset mask+noise)"],
+        ],
+      },
+      {
+        title: "Transforms",
+        entries: [
+          ["Arrows", "Shift world ±10 (Shift ±1)"],
+          ["Ctrl+←/→", "Rotate ±90° (Shift ±15°)"],
+          ["= / Shift+=", "Flip horiz / vert"],
+          ["- (minus)", "Transpose"],
+          ["PgUp/PgDn", "Shift Z-slice (3D+)"],
+          ["Home/End", "Scroll slice Z (3D+)"],
+          ["Ctrl+End", "Toggle slice/projection (3D+)"],
+        ],
+      },
+      {
+        title: "Display",
+        entries: [
+          ["Tab", "Cycle render mode (Shift=reverse)"],
+          [". / ,", "Next / prev colour map"],
+          ["H", "Hide / show GUI panel"],
+          ["Ctrl+H", "Toggle stats overlay"],
+          ["J", "Toggle motion overlay"],
+          ["K", "Toggle calc panels"],
+          ["L", "Toggle legend"],
+          ["B", "Toggle scale bar"],
+          ["Shift+G", "Toggle grid (slice view)"],
+          ["` (backtick)", "Cycle grid size"],
         ],
       },
       {
         title: "Data",
         entries: [
-          ["S", "Save canvas as PNG"],
-          ["E", "Export world state (JSON)"],
-          ["W", "Import world state (JSON)"],
-          ["Shift+P / Shift+I", "Export / import params (JSON)"],
-          ["C / Shift+C", "Export statistics CSV / JSON"],
+          ["Ctrl+S", "Save canvas as PNG"],
+          ["Ctrl+Shift+E", "Export world (JSON)"],
+          ["Ctrl+Shift+W", "Import world (JSON)"],
+          ["Ctrl+Shift+P/I", "Export / import params (JSON)"],
+          ["#", "Toggle keymap reference"],
         ],
-      },
-      {
-        title: "Reference",
-        entries: [["#", "Toggle keymap reference"]],
       },
     ];
 
@@ -524,217 +643,149 @@ class Renderer {
     textAlign(CENTER, BOTTOM);
     text("Press # to close", width / 2, height - 16);
 
+    this._disableOverlayShadow();
     pop();
   }
 
   renderMotionOverlay(statistics, params = {}) {
-    const {
-      mass,
-      centerX,
-      centerY,
-      growthCenterX,
-      growthCenterY,
-      massGrowthDist,
-      speed,
-      angle,
-      gyradius,
-      rotationSpeed,
-      symmSides,
-      symmStrength,
-    } = statistics;
+    const { mass, centerX, centerY, speed, angle } = statistics;
 
     const hasValidCenter = Number.isFinite(centerX) && Number.isFinite(centerY);
     const hasVisibleMass = Number.isFinite(mass) && mass > 1e-10;
 
     if (!hasValidCenter || !hasVisibleMass) {
-      this._resetMotionTrail();
+      this._lastCenterX = undefined;
+      this._lastCenterY = undefined;
       return;
     }
 
-    const wrappedCenterX = this._wrapCoord(centerX);
-    const wrappedCenterY = this._wrapCoord(centerY);
-    const centerScreen = this._worldToScreen(wrappedCenterX, wrappedCenterY);
-    const cx = centerScreen.x;
-    const cy = centerScreen.y;
-    const growthPoint =
-      Number.isFinite(growthCenterX) && Number.isFinite(growthCenterY)
-        ? this._nearestWrappedPoint(
-            wrappedCenterX,
-            wrappedCenterY,
-            this._wrapCoord(growthCenterX),
-            this._wrapCoord(growthCenterY),
-          )
-        : null;
-    const growthScreen = growthPoint
-      ? this._worldToScreen(growthPoint.x, growthPoint.y)
-      : null;
-    const gx = growthScreen?.x;
-    const gy = growthScreen?.y;
+    const T = Number(params.T) || 10;
     const cellPx = width / this.size;
-    const gyradiusPx = Math.max(0, (Number(gyradius) || 0) * cellPx);
+    const m1x = centerX;
+    const m1y = centerY;
 
-    if (params.renderMotionTrail) {
-      this._updateMotionTrail(centerX, centerY);
+    let m0x, m0y;
+    if (
+      Number.isFinite(this._lastCenterX) &&
+      Number.isFinite(this._lastCenterY)
+    ) {
+      m0x = this._lastCenterX;
+      m0y = this._lastCenterY;
+    } else {
+      m0x = m1x;
+      m0y = m1y;
+    }
+    this._lastCenterX = m1x;
+    this._lastCenterY = m1y;
+
+    let dx = m1x - m0x;
+    let dy = m1y - m0y;
+    if (dx > this.size / 2) dx -= this.size;
+    if (dx < -this.size / 2) dx += this.size;
+    if (dy > this.size / 2) dy -= this.size;
+    if (dy < -this.size / 2) dy += this.size;
+
+    const running = !!params.running;
+    const hasNewMotion = Math.abs(dx) + Math.abs(dy) > 1e-6;
+    if (running && hasNewMotion) {
+      this._lastMotionDx = dx;
+      this._lastMotionDy = dy;
+    } else if (
+      Number.isFinite(this._lastMotionDx) &&
+      Number.isFinite(this._lastMotionDy)
+    ) {
+      dx = this._lastMotionDx;
+      dy = this._lastMotionDy;
     }
 
-    const arrowLen = Math.max(24, speed * cellPx * 8);
-    const theta = angle;
-    const tx = cx + Math.cos(theta) * arrowLen;
-    const ty = cy + Math.sin(theta) * arrowLen;
+    const m2x = m0x + dx * T;
+    const m2y = m0y + dy * T;
+    const m3x = m0x + dx * 2 * T;
+    const m3y = m0y + dy * 2 * T;
 
-    const headLen = Math.max(8, arrowLen * 0.25);
-    const headAngle = 0.42;
-    const ax1 = tx - headLen * Math.cos(theta - headAngle);
-    const ay1 = ty - headLen * Math.sin(theta - headAngle);
-    const ax2 = tx - headLen * Math.cos(theta + headAngle);
-    const ay2 = ty - headLen * Math.sin(theta + headAngle);
+    const ms_x = (((m1x % this.size) + this.size) % this.size) - m1x;
+    const ms_y = (((m1y % this.size) + this.size) % this.size) - m1y;
+
+    const dotR = 2;
+
+    const c254 = [127, 127, 127];
+    const c255 = [255, 255, 255];
 
     push();
+    this._enableOverlayShadow();
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const adjx = i * this.size + ms_x;
+        const adjy = j * this.size + ms_y;
 
-    if (params.renderMotionTrail && this.motionTrail.length > 1) {
-      noFill();
-      const latestTrailPoint = this.motionTrail[this.motionTrail.length - 1];
-      const trailShiftX = latestTrailPoint
-        ? this._nearestWrappedShift(latestTrailPoint.ux, wrappedCenterX)
-        : 0;
-      const trailShiftY = latestTrailPoint
-        ? this._nearestWrappedShift(latestTrailPoint.uy, wrappedCenterY)
-        : 0;
+        const p0x = (m0x + adjx) * cellPx;
+        const p0y = (m0y + adjy) * cellPx;
+        const p3x = (m3x + adjx) * cellPx;
+        const p3y = (m3y + adjy) * cellPx;
 
-      for (let i = 1; i < this.motionTrail.length; i++) {
-        const previous = this.motionTrail[i - 1];
-        const point = this.motionTrail[i];
-        const baseStartX = previous.ux + trailShiftX;
-        const baseStartY = previous.uy + trailShiftY;
-        const baseEndX = point.ux + trailShiftX;
-        const baseEndY = point.uy + trailShiftY;
-        const alpha = map(
-          i,
-          1,
-          Math.max(1, this.motionTrail.length - 1),
-          40,
-          180,
-        );
-        stroke(120, 220, 255, alpha);
-        strokeWeight(1.5);
-        for (let ox = -1; ox <= 1; ox++) {
-          for (let oy = -1; oy <= 1; oy++) {
-            const start = this._worldToScreen(
-              baseStartX + ox * this.size,
-              baseStartY + oy * this.size,
-            );
-            const end = this._worldToScreen(
-              baseEndX + ox * this.size,
-              baseEndY + oy * this.size,
-            );
-            if (
-              Math.max(start.x, end.x) < -6 ||
-              Math.min(start.x, end.x) > width + 6 ||
-              Math.max(start.y, end.y) < -6 ||
-              Math.min(start.y, end.y) > height + 6
-            ) {
-              continue;
-            }
-            line(start.x, start.y, end.x, end.y);
-          }
+        if (
+          Math.max(p0x, p3x) < -20 ||
+          Math.min(p0x, p3x) > width + 20 ||
+          Math.max(p0y, p3y) < -20 ||
+          Math.min(p0y, p3y) > height + 20
+        ) {
+          continue;
+        }
+
+        stroke(c254[0], c254[1], c254[2]);
+        strokeWeight(1);
+        line(p0x, p0y, p3x, p3y);
+
+        noStroke();
+        const points = [
+          { x: m0x, y: m0y, col: c254 },
+          { x: m1x, y: m1y, col: c255 },
+          { x: m2x, y: m2y, col: c255 },
+          { x: m3x, y: m3y, col: c255 },
+        ];
+        for (const pt of points) {
+          const px = (pt.x + adjx) * cellPx;
+          const py = (pt.y + adjy) * cellPx;
+          fill(pt.col[0], pt.col[1], pt.col[2]);
+          ellipse(px, py, dotR * 2, dotR * 2);
         }
       }
     }
+    this._disableOverlayShadow();
+    pop();
+  }
 
-    if (gyradiusPx > 1) {
-      noFill();
-      stroke(255, 255, 255, 65);
-      strokeWeight(1);
-      ellipse(cx, cy, gyradiusPx * 2, gyradiusPx * 2);
-    }
-
-    if (growthScreen) {
-      stroke(255, 210, 120, 140);
-      strokeWeight(1.2);
-      line(cx, cy, gx, gy);
-    }
-
-    stroke(0, 0, 0, 160);
-    strokeWeight(3);
-    noFill();
-    line(cx, cy, tx, ty);
-    line(tx, ty, ax1, ay1);
-    line(tx, ty, ax2, ay2);
-
-    stroke(220, 220, 220, 230);
-    strokeWeight(1.5);
-    line(cx, cy, tx, ty);
-    line(tx, ty, ax1, ay1);
-    line(tx, ty, ax2, ay2);
-
+  renderAnimalName(animal) {
+    push();
+    textFont("monospace");
+    if (!animal) return;
+    const parts = [
+      animal.code || "",
+      animal.name || "",
+      animal.cname ? `${animal.cname}` : "",
+    ].filter(Boolean);
+    const label = parts.join(" ");
+    if (!label) return;
+    push();
+    this._applyTextFont();
+    this._enableOverlayShadow();
     noStroke();
-    fill(0, 0, 0, 160);
-    const dotR = Math.max(5, cellPx * 0.6);
-    ellipse(cx, cy, (dotR + 2) * 2, (dotR + 2) * 2);
-    fill(220, 220, 220, 230);
-    ellipse(cx, cy, dotR * 2, dotR * 2);
-
-    if (growthPoint) {
-      for (let ox = -1; ox <= 1; ox++) {
-        for (let oy = -1; oy <= 1; oy++) {
-          const marker = this._worldToScreen(
-            growthPoint.x + ox * this.size,
-            growthPoint.y + oy * this.size,
-          );
-          if (
-            marker.x < -8 ||
-            marker.x > width + 8 ||
-            marker.y < -8 ||
-            marker.y > height + 8
-          ) {
-            continue;
-          }
-          stroke(0, 0, 0, 180);
-          strokeWeight(3);
-          line(marker.x - 5, marker.y, marker.x + 5, marker.y);
-          line(marker.x, marker.y - 5, marker.x, marker.y + 5);
-          stroke(255, 210, 120, 230);
-          strokeWeight(1.4);
-          line(marker.x - 5, marker.y, marker.x + 5, marker.y);
-          line(marker.x, marker.y - 5, marker.x, marker.y + 5);
-          noStroke();
-          fill(255, 210, 120, 190);
-          ellipse(marker.x, marker.y, 4, 4);
-        }
-      }
-    }
-
-    fill(220, 220, 220, 210);
-    noStroke();
-    textSize(10);
-    textAlign(LEFT, TOP);
-    const labelX = cx + dotR + 4;
-    const labelY = cy - 24;
-    const fmt = (value, fixed = 3) => {
-      const n = Number(value) || 0;
-      const abs = Math.abs(n);
-      if (abs > 0 && abs < Math.pow(10, -fixed)) {
-        const [mant, exp] = n.toExponential(2).split("e");
-        return `${mant}e^${Number(exp)}`;
-      }
-      return n.toFixed(fixed);
-    };
-    const labelLines = [
-      `pos=(${fmt(centerX, 1)}, ${fmt(centerY, 1)}) [μm], growth=(${fmt(growthCenterX || 0, 1)}, ${fmt(growthCenterY || 0, 1)}) [μm]`,
-      `angle=${fmt(angle, 3)} [rad], speed=${fmt(speed, 3)} [μm/μs], sep=${fmt(massGrowthDist || 0, 3)} [μm]`,
-      `rot=${fmt(rotationSpeed || 0, 3)} [rad/μs], sym=${symmSides || 0} @ ${fmt((symmStrength || 0) * 100, 1)} [%]`,
-    ].join("\n");
-    fill(0, 200);
-    text(labelLines, labelX + 1, labelY + 4);
-    fill(255, 230);
-    text(labelLines, labelX, labelY + 3);
-
+    textSize(15);
+    textAlign(CENTER, BOTTOM);
+    fill(255);
+    text(label, width / 2, height - 20);
+    this._disableOverlayShadow();
+    pop();
     pop();
   }
 
   renderStats(statistics, params) {
     const dt = 1 / params.T;
     const RN = Math.pow(params.R, 2);
+    const dim = Math.max(2, Math.floor(Number(params.dimension) || 2));
+    const worldSize = this.size;
+    const worldShape =
+      dim === 2 ? `${worldSize}x${worldSize}` : `${worldSize}^${dim}`;
     const fmt = (value, fixed = 3) => {
       const n = Number(value) || 0;
       const abs = Math.abs(n);
@@ -751,65 +802,75 @@ class Renderer {
       `Simulation Time=${fmt(statistics.time, 3)} [μs]`,
       `Time Step: dt=1/T=${fmt(dt, 3)} [μs/gen]`,
       `Running=${params.running ? "true" : "false"} (bool)`,
-      `Grid Size=${this.size}² [cells]`,
+      `Grid Size=${worldShape} [cells]`,
       `Render Mode=${params.renderMode} (mode id)`,
       `Colour Map=${this.currentColourMap || params.colourMap} (palette id)`,
       `Kernel Radius: R=${fmt(params.R, 2)} [cells]`,
       `Time Scale: T=${fmt(params.T, 2)} [gen/μs]`,
       `Growth Mean: m=${fmt(params.m, 3)} [cell-state]`,
-      `Growth Standard Deviation: s=${fmt(params.s, 3)} [cell-state]`,
+      `Growth Std Dev: s=${fmt(params.s, 3)} [cell-state]`,
       `Functions: kn=${params.kn} | gn=${params.gn} (family ids)`,
       `Mass/R²=${fmt(statistics.mass / RN, 3)} [μg/cell²]`,
       `Growth/R²=${fmt(statistics.growth / RN, 4)} [μg/(μs·cell²)]`,
-      `Mass (log scale)=${fmt(statistics.massLog || 0, 4)} [μg]`,
-      `Growth (log scale)=${fmt(statistics.growthLog || 0, 4)} [μg/μs]`,
-      `Mass Volume (log scale)=${fmt(statistics.massVolumeLog || 0, 4)} [μm²]`,
-      `Growth Volume (log scale)=${fmt(statistics.growthVolumeLog || 0, 4)} [μm²]`,
+      `Mass (log)=${fmt(statistics.massLog || 0, 4)} [μg]`,
+      `Growth (log)=${fmt(statistics.growthLog || 0, 4)} [μg/μs]`,
+      `Mass Volume (log)=${fmt(statistics.massVolumeLog || 0, 4)} [μm²]`,
+      `Growth Volume (log)=${fmt(statistics.growthVolumeLog || 0, 4)} [μm²]`,
       `Mass Density=${fmt(statistics.massDensity || 0, 6)} [μg/μm²]`,
       `Growth Density=${fmt(statistics.growthDensity || 0, 6)} [μg/(μm²·μs)]`,
       `Peak Value=${fmt(statistics.maxValue, 3)} [cell-state]`,
       `Gyradius=${fmt(statistics.gyradius, 2)} [μm]`,
-      `Centroid=(${statistics.centerX?.toFixed(1) || "0.0"}, ${statistics.centerY?.toFixed(1) || "0.0"}) [μm]`,
-      `Growth Centre=(${statistics.growthCenterX?.toFixed(1) || "0.0"}, ${statistics.growthCenterY?.toFixed(1) || "0.0"}) [μm]`,
+      `Centroid=(${fmt(statistics.centerX, 1)}, ${fmt(statistics.centerY, 1)}) [μm]`,
+      `Growth Centre=(${fmt(statistics.growthCenterX, 1)}, ${fmt(statistics.growthCenterY, 1)}) [μm]`,
       `Mass-Growth Dist=${fmt(statistics.massGrowthDist || 0, 3)} [μm]`,
       `Speed=${fmt(statistics.speed || 0, 3)} [μm/μs]`,
       `Centroid Speed=${fmt(statistics.centroidSpeed || 0, 4)} [μm/μs]`,
       `Angle=${fmt(statistics.angle || 0, 3)} [rad]`,
-      `Centroid Rotation Speed=${fmt(statistics.centroidRotateSpeed || 0, 5)} [rad/μs]`,
-      `Growth Rotation Speed=${fmt(statistics.growthRotateSpeed || 0, 5)} [rad/μs]`,
-      `Major Axis Rotation Speed=${fmt(statistics.majorAxisRotateSpeed || 0, 5)} [rad/μs]`,
+      `Centroid Rot Speed=${fmt(statistics.centroidRotateSpeed || 0, 5)} [rad/μs]`,
+      `Growth Rot Speed=${fmt(statistics.growthRotateSpeed || 0, 5)} [rad/μs]`,
+      `Major Axis Rot Speed=${fmt(statistics.majorAxisRotateSpeed || 0, 5)} [rad/μs]`,
       `Mass Asymmetry=${fmt(statistics.massAsym || 0, 3)} [μg]`,
       `Symmetry Order=${statistics.symmSides || "?"}`,
       `Symmetry Strength=${fmt((statistics.symmStrength || 0) * 100, 1)} [%]`,
       `Rotation Speed=${fmt(statistics.rotationSpeed || 0, 3)} [rad/μs]`,
-      `Lyapunov exponent=${fmt(statistics.lyapunov || 0, 6)} [gen⁻¹]`,
-      `Moment of inertia - Hu's moment invariant 1 (log scale)=${fmt(statistics.hu1Log || 0, 6)}`,
-      `Skewness - Hu's moment invariant 4 (log scale)=${fmt(statistics.hu4Log || 0, 6)}`,
-      `Hu's 5 (log scale)=${fmt(statistics.hu5Log || 0, 6)}`,
-      `Hu's 6 (log scale)=${fmt(statistics.hu6Log || 0, 6)}`,
-      `Hu's 7 (log scale)=${fmt(statistics.hu7Log || 0, 6)}`,
-      `Kurtosis - Flusser's moment invariant 7=${fmt(statistics.flusser7 || 0, 6)}`,
-      `Flusser's 8 (log scale)=${fmt(statistics.flusser8Log || 0, 6)}`,
-      `Flusser's 9 (log scale)=${fmt(statistics.flusser9Log || 0, 6)}`,
-      `Flusser's 10 (log scale)=${fmt(statistics.flusser10Log || 0, 6)}`,
+      `Lyapunov=${fmt(statistics.lyapunov || 0, 6)} [gen⁻¹]`,
+      `Hu1 (log)=${fmt(statistics.hu1Log || 0, 6)}`,
+      `Hu4 (log)=${fmt(statistics.hu4Log || 0, 6)}`,
+      `Hu5 (log)=${fmt(statistics.hu5Log || 0, 6)}`,
+      `Hu6 (log)=${fmt(statistics.hu6Log || 0, 6)}`,
+      `Hu7 (log)=${fmt(statistics.hu7Log || 0, 6)}`,
+      `Flusser7=${fmt(statistics.flusser7 || 0, 6)}`,
+      `Flusser8 (log)=${fmt(statistics.flusser8Log || 0, 6)}`,
+      `Flusser9 (log)=${fmt(statistics.flusser9Log || 0, 6)}`,
+      `Flusser10 (log)=${fmt(statistics.flusser10Log || 0, 6)}`,
       `Period=${fmt(statistics.period || 0, 3)} [μs]`,
       `Period Confidence=${fmt((statistics.periodConfidence || 0) * 100, 2)} [%]`,
     ];
 
     push();
+    this._applyTextFont();
+    this._enableOverlayShadow();
     textAlign(LEFT, TOP);
-    textSize(12);
+    textSize(12.5);
     noStroke();
-    const panelX = 20;
-    const panelY = 20;
     fill(255);
-    text(stats.join("\n"), panelX, panelY);
-
+    text(stats.join("\n"), 20, 20);
+    this._disableOverlayShadow();
     pop();
   }
 
   renderCalcPanels(board, automaton, params) {
     if (!board || !automaton) return;
+
+    this._calcPanelFrameCounter += 1;
+    if (
+      params?.running &&
+      this.lastCalcPanelsFrame &&
+      this._calcPanelFrameCounter % this._calcPanelUpdateIntervalRunning !== 0
+    ) {
+      this.renderCachedCalcPanels();
+      return;
+    }
 
     this.setColourMap(params.colourMap);
 
@@ -820,10 +881,10 @@ class Renderer {
     panelCanvas.clear();
 
     const views = [
-      this._getViewSpec(board, automaton, "world"),
-      this._getViewSpec(board, automaton, "potential"),
-      this._getViewSpec(board, automaton, "growth"),
-      this._getViewSpec(board, automaton, "kernel"),
+      this._getViewSpec(board, automaton, "world", params),
+      this._getViewSpec(board, automaton, "potential", params),
+      this._getViewSpec(board, automaton, "growth", params),
+      this._getViewSpec(board, automaton, "kernel", params),
     ];
 
     for (let i = 0; i < views.length; i++) {
@@ -900,6 +961,7 @@ class Renderer {
   ) {
     const ctx = target || this;
     ctx.push();
+    this._enableOverlayShadow(ctx);
     ctx.noFill();
     ctx.stroke(255, 210);
     ctx.strokeWeight(1);
@@ -910,6 +972,7 @@ class Renderer {
         ctx.rect(x, y, panelSize, panelSize);
       }
     }
+    this._disableOverlayShadow(ctx);
     ctx.pop();
   }
 
@@ -944,6 +1007,7 @@ class Renderer {
 
     if (!hasData) {
       ctx.push();
+      this._enableOverlayShadow(ctx);
       ctx.noStroke();
       ctx.fill(0, 170);
       ctx.rect(x + 1, y + 1, panelSize - 2, panelSize - 2);
@@ -952,6 +1016,7 @@ class Renderer {
       ctx.textAlign(LEFT, TOP);
       ctx.fill(255, 220);
       ctx.text(`${label} (pending)`, x + 6, y + 4);
+      this._disableOverlayShadow(ctx);
       ctx.pop();
       return;
     }
@@ -959,7 +1024,9 @@ class Renderer {
     const img = this._getCalcPanelImage(panelIndex, panelSize);
     const srcSize = view.srcSize;
     const src = view.data;
-    const denom = Math.max((view.vmax || 0) - (view.vmin || 0), 1e-9);
+    const panelVmin = view.vmin || 0;
+    const panelVmax = view.vmax || 0;
+    const denom = Math.max(panelVmax - panelVmin, 1e-9);
 
     img.loadPixels();
     for (let py = 0; py < panelSize; py++) {
@@ -971,7 +1038,7 @@ class Renderer {
         );
         const srcIndex = sy * srcSize + sx;
         const v = Number(src[srcIndex]) || 0;
-        const t = constrain((v - (view.vmin || 0)) / denom, 0, 1);
+        const t = constrain((v - panelVmin) / denom, 0, 1);
         const lutIndex = Math.min(255, Math.max(0, Math.round(t * 255))) * 3;
         const p = (py * panelSize + px) * 4;
         img.pixels[p] = this.lut[lutIndex];
@@ -989,19 +1056,23 @@ class Renderer {
     ctx.noStroke();
     ctx.fill(0, 200);
     this._applyTextFont(ctx);
+    this._enableOverlayShadow(ctx);
     ctx.textSize(10);
     ctx.textAlign(LEFT, TOP);
-    ctx.text(label, x + 7, y + 5);
     ctx.fill(255);
     ctx.text(label, x + 6, y + 4);
+    this._disableOverlayShadow(ctx);
     ctx.pop();
   }
 
   dispose() {
-    this.motionTrail = [];
     this.img = null;
     this.calcPanelImages = [];
     this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
+    this.lutPacked = null;
+    this._kernelDisplayCache = null;
+    this._kernelDisplayCacheSize = 0;
+    this._kernelDisplayCacheSource = null;
   }
 }

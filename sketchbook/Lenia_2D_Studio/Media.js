@@ -136,7 +136,10 @@ class Media {
   }
 
   exportImage() {
-    save(globalThis._renderer, this._getFilename(this.appcore.params.imageFormat));
+    save(
+      globalThis._renderer,
+      this._getFilename(this.appcore.params.imageFormat),
+    );
     this._logInfo("Image exported");
   }
 
@@ -165,8 +168,8 @@ class Media {
 
     this._worldExportDeferred = false;
 
-    const data = board.toJSON();
-    if (!data) return;
+    if (!board || !Number.isFinite(board.size) || board.size <= 0) return;
+    const expectedLength = board.size * board.size;
 
     const stats = this._getFullStatsSnapshot();
     const payload = {
@@ -176,12 +179,12 @@ class Media {
       statistics: stats.statistics,
       series: stats.series,
       world: {
-        size: data.size,
-        world: data.world,
-        potential: this._encodeFloatField(board.potential, data.size),
-        growth: this._encodeFloatField(board.growth, data.size),
+        size: board.size,
+        world: this._encodeFloatField(board.world, expectedLength),
+        potential: this._encodeFloatField(board.potential, expectedLength),
+        growth: this._encodeFloatField(board.growth, expectedLength),
         growthOld: board.growthOld
-          ? this._encodeFloatField(board.growthOld, data.size)
+          ? this._encodeFloatField(board.growthOld, expectedLength)
           : null,
       },
       exportedAt: new Date().toISOString(),
@@ -225,11 +228,17 @@ class Media {
     }
     const size = this.appcore._normaliseGridSize(rawSize);
 
-    if (typeof data.world.world !== "string") {
-      throw new Error("[Lenia] Invalid world JSON: world must be RLE string");
-    }
-    const world = RLECodec.decode(data.world.world, size, size);
     const expectedLength = size * size;
+
+    let world = null;
+    if (typeof data.world.world === "string") {
+      const legacy = RLECodec.decode(data.world.world, size, size);
+      world = new Float32Array(expectedLength);
+      world.set(legacy.subarray(0, Math.min(legacy.length, expectedLength)));
+    } else {
+      world = this._decodeFloatField(data.world.world, expectedLength);
+    }
+
     const potential = this._decodeFloatField(
       data.world.potential,
       expectedLength,
@@ -408,7 +417,7 @@ class Media {
         "[Lenia] Invalid world JSON export: missing Float32 field",
       );
     }
-    const expectedLength = Number(size) * Number(size);
+    const expectedLength = Number(size);
     if (source.length !== expectedLength) {
       throw new Error(
         "[Lenia] Invalid world JSON export: field length mismatch",

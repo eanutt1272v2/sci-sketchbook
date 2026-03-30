@@ -18,6 +18,21 @@ class GUI {
     this.recordButton = null;
   }
 
+  rebuildPane() {
+    if (this._rebuildScheduled) return;
+    this._rebuildScheduled = true;
+    Promise.resolve().then(() => {
+      this._rebuildScheduled = false;
+      if (this.pane) {
+        this.pane.dispose();
+      }
+      this.pane = null;
+      this.animalBinding = null;
+      this.recordButton = null;
+      this.setupTabs();
+    });
+  }
+
   setupTabs() {
     this.pane = new Tweakpane.Pane({
       title: `${this.metadata.name} ${this.metadata.version} by ${this.metadata.author}`,
@@ -47,8 +62,17 @@ class GUI {
     target.addBlade({ view: "separator" });
   }
 
+  _runIfGUIIdle(fn) {
+    if (!this.appcore) return;
+    if (this.appcore._isRefreshingGUI) return;
+    fn();
+  }
+
   createSimulationTab(page) {
     const { params, statistics } = this;
+    const sizeOptions = this.appcore
+      ? this.appcore.getGridSizeOptions(params.dimension)
+      : { "64^2": 64, "128^2": 128, "256^2": 256, "512^2": 512 };
 
     const run = page.addFolder({
       title: "Simulation Controls",
@@ -64,6 +88,7 @@ class GUI {
     run
       .addButton({ title: "Randomise" })
       .on("click", () => this.appcore?.randomiseWorld());
+    run.addBinding(params, "autoCenter", { label: "Auto-Center" });
 
     this.addSeparator(page);
 
@@ -85,31 +110,106 @@ class GUI {
     world
       .addBinding(params, "gridSize", {
         label: "Grid Size [cells]",
-        options: {
-          "64×64": 64,
-          "128×128": 128,
-          "256×256": 256,
-          "512×512": 512,
-        },
+        options: sizeOptions,
       })
-      .on("change", () => this.appcore?.changeResolution());
+      .on("change", () =>
+        this._runIfGUIIdle(() => this.appcore?.changeResolution()),
+      );
 
-    this.addSeparator(page);
-
-    const nd = page.addFolder({ title: "ND Mode", expanded: false });
-    nd
+    world
       .addBinding(params, "dimension", {
         label: "Dimension",
         options: { "2D": 2, "3D": 3, "4D": 4 },
       })
-      .on("change", (event) => this.appcore?.setDimension(event.value));
+      .on("change", (event) =>
+        this._runIfGUIIdle(() => this.appcore?.setDimension(event.value)),
+      );
 
-    nd
-      .addBinding(params, "viewMode", {
-        label: "4D View",
-        options: { Slice: "slice", Projection: "projection" },
-      })
-      .on("change", (event) => this.appcore?.setViewMode(event.value));
+    this.addSeparator(world);
+
+    const xform = world.addFolder({ title: "Transform", expanded: false });
+
+    xform
+      .addButton({ title: "Shift Left (←)" })
+      .on("click", () => this.appcore?.shiftWorld(-10, 0));
+    xform
+      .addButton({ title: "Shift Right (→)" })
+      .on("click", () => this.appcore?.shiftWorld(10, 0));
+    xform
+      .addButton({ title: "Shift Up (↑)" })
+      .on("click", () => this.appcore?.shiftWorld(0, -10));
+    xform
+      .addButton({ title: "Shift Down (↓)" })
+      .on("click", () => this.appcore?.shiftWorld(0, 10));
+
+    this.addSeparator(xform);
+
+    xform
+      .addButton({ title: "Rotate -90° (Ctrl+←)" })
+      .on("click", () => this.appcore?.rotateWorld(-90));
+    xform
+      .addButton({ title: "Rotate +90° (Ctrl+→)" })
+      .on("click", () => this.appcore?.rotateWorld(90));
+
+    this.addSeparator(xform);
+
+    xform
+      .addButton({ title: "Flip Horizontal (=)" })
+      .on("click", () => this.appcore?.flipWorld(0));
+    xform
+      .addButton({ title: "Flip Vertical (Shift+=)" })
+      .on("click", () => this.appcore?.flipWorld(1));
+    xform
+      .addButton({ title: "Transpose (-)" })
+      .on("click", () => this.appcore?.flipWorld(2));
+
+    const dim = Number(params.dimension) || 2;
+
+    if (dim >= 3) {
+      world
+        .addBinding(params, "viewMode", {
+          label: "ND View",
+          options: this.appcore
+            ? this.appcore.getViewModeOptions()
+            : { Slice: "slice", Projection: "projection" },
+        })
+        .on("change", (event) =>
+          this._runIfGUIIdle(() => this.appcore?.setViewMode(event.value)),
+        );
+
+      world.addBinding(params, "ndDepth", {
+        label: "Tensor Depth (auto)",
+        readonly: true,
+      });
+
+      const depthMax = Math.max(1, (Number(params.ndDepth) || 2) - 1);
+
+      if (String(params.viewMode) === "slice") {
+        world
+          .addBinding(params, "ndSliceZ", {
+            label: "Slice Z",
+            min: 0,
+            max: depthMax,
+            step: 1,
+          })
+          .on("change", () =>
+            this._runIfGUIIdle(() => this.appcore?.refreshNDView()),
+          );
+      }
+
+      if (dim >= 4) {
+        world
+          .addBinding(params, "ndSliceW", {
+            label: "Slice W",
+            min: 0,
+            max: depthMax,
+            step: 1,
+          })
+          .on("change", () =>
+            this._runIfGUIIdle(() => this.appcore?.refreshNDView()),
+          );
+      }
+    }
   }
 
   createParametersTab(page) {
@@ -149,12 +249,16 @@ class GUI {
 
     const kernel = page.addFolder({ title: "Kernel Function", expanded: true });
 
-    bindAutomaton(kernel, "R", {
-      min: 2,
-      max: 50,
-      step: 1,
-      label: "Radius (R)",
-    });
+    kernel
+      .addBinding(params, "R", {
+        min: 2,
+        max: 50,
+        step: 1,
+        label: "Radius (R)",
+      })
+      .on("change", (ev) => {
+        if (this.appcore) this.appcore.zoomWorld(ev.value);
+      });
 
     bindAutomaton(kernel, "kn", {
       label: "Type",
@@ -180,6 +284,15 @@ class GUI {
     bindAutomaton(time, "softClip", { label: "Soft Clipping" });
 
     bindAutomaton(time, "multiStep", { label: "Multi-Step" });
+
+    bindAutomaton(time, "aritaMode", { label: "Arita Mode (target)" });
+
+    bindAutomaton(time, "h", {
+      min: 0.1,
+      max: 1.0,
+      step: 0.1,
+      label: "Weight (h)",
+    });
 
     bindAutomaton(time, "addNoise", {
       min: 0,
@@ -240,20 +353,29 @@ class GUI {
     overlay.addBinding(params, "renderMotionOverlay", {
       label: "Motion Overlay",
     });
-    overlay.addBinding(params, "renderMotionTrail", {
-      label: "Motion Trail",
-    });
     overlay.addBinding(params, "renderCalcPanels", {
       label: "Calculation Panels",
+    });
+    overlay.addBinding(params, "renderAnimalName", {
+      label: "Animal Name",
     });
   }
 
   createAnimalsTab(page) {
     const { params } = this;
+    this.addSeparator(page);
+
+    const sourceDimension =
+      this.animalLibrary && Number.isFinite(this.animalLibrary.activeDimension)
+        ? this.animalLibrary.activeDimension
+        : params.dimension;
+    const animalCount = Array.isArray(this.animalLibrary?.animals)
+      ? this.animalLibrary.animals.length
+      : 0;
 
     this.animalBinding = page
       .addBinding(params, "selectedAnimal", {
-        label: "Selected Animal",
+        label: `Selected Animal (D${sourceDimension}, ${animalCount})`,
         options: this.animalLibrary ? this.animalLibrary.getAnimalList() : {},
       })
       .on("change", () => this.appcore?.loadSelectedAnimalParams());
@@ -360,10 +482,10 @@ class GUI {
     addStat(metrics, "growth", "Growth [μg/μs]");
     addStat(metrics, "massLog", "Mass (log scale) [μg]");
     addStat(metrics, "growthLog", "Growth (log scale) [μg/μs]");
-    addStat(metrics, "massVolumeLog", "Mass volume (log scale) [μm²]");
-    addStat(metrics, "growthVolumeLog", "Growth volume (log scale) [μm²]");
-    addStat(metrics, "massDensity", "Mass density [μg/μm²]");
-    addStat(metrics, "growthDensity", "Growth density [μg/(μm²·μs)]");
+    addStat(metrics, "massVolumeLog", "Mass volume (log scale) [μm^D]");
+    addStat(metrics, "growthVolumeLog", "Growth volume (log scale) [μm^D]");
+    addStat(metrics, "massDensity", "Mass density [μg/μm^D]");
+    addStat(metrics, "growthDensity", "Growth density [μg/(μm^D·μs)]");
     addStat(metrics, "maxValue", "Peak value [cell-state]");
     addStat(metrics, "gyradius", "Gyradius [μm]");
 

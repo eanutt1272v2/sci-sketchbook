@@ -111,8 +111,6 @@ class Simulation {
     if (data.type !== "result") return;
 
     this._workerBusy = false;
-    // Keep a stable render-side copy because the original buffer is transferred
-    // back to the worker on the next tick and becomes detached in the main thread.
     const sourceParticleData = new Float32Array(data.particleData);
     if (
       !this._renderParticleData ||

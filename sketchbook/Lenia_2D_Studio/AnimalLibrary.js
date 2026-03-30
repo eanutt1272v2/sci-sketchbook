@@ -49,9 +49,11 @@ class AnimalLibrary {
 
   getAnimalList() {
     return this.animals.reduce((options, animal, idx) => {
-      const name =
-        `${animal.code || ""} ${animal.name || ""} ${animal.cname || ""}`.trim();
-      options[name.substring(0, 35)] = String(idx);
+      const name = `${animal.code || ""} ${animal.name || ""} ${animal.cname || ""}`
+        .replace(/\s+/g, " ")
+        .trim();
+      const prefix = `${String(idx + 1).padStart(3, "0")}.`;
+      options[`${prefix} ${name}`.substring(0, 56)] = String(idx);
       return options;
     }, {});
   }
@@ -61,7 +63,13 @@ class AnimalLibrary {
 
     const params = this.params;
 
-    const { b, ...standardParams } = animal.params;
+    const sourceParams = Array.isArray(animal.params)
+      ? animal.params.find((entry) => entry && typeof entry === "object") ||
+        animal.params[0] ||
+        {}
+      : animal.params;
+
+    const { b, ...standardParams } = sourceParams;
 
     Object.assign(params, standardParams);
 

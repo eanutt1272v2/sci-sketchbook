@@ -12,34 +12,15 @@ function disposeAppCore() {
 
 const metadata = {
   name: "Lenia 2D Studio",
-  version: "v1.9.1-dev",
+  version: "v2.0.0-dev",
   author: "@eanutt1272.v2",
 };
 
 function preload() {
   font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
   animalsData = loadJSON("../../_shared/data/animals.json");
-
-  animalsData3D = [];
-  animalsData4D = [];
-  loadJSON(
-    "../../_shared/data/animals3D.json",
-    (data) => {
-      animalsData3D = data;
-    },
-    () => {
-      animalsData3D = [];
-    },
-  );
-  loadJSON(
-    "../../_shared/data/animals4D.json",
-    (data) => {
-      animalsData4D = data;
-    },
-    () => {
-      animalsData4D = [];
-    },
-  );
+  animalsData3D = loadJSON("../../_shared/data/animals3D.json");
+  animalsData4D = loadJSON("../../_shared/data/animals4D.json");
 
   colourMaps = loadJSON("../../_shared/data/colour-maps.json");
 }
@@ -86,14 +67,41 @@ function setupCanvasProperties(canvas) {
   noSmooth();
   textFont(font || "monospace");
   pixelDensity(1);
-  frameRate(120);
+  frameRate(60);
 }
 
 function mouseClicked(e) {
   return appcore ? appcore.handleMouseClicked(e) : false;
 }
+
+function mousePressed(e) {
+  return appcore ? appcore.handleMousePressed(e) : false;
+}
+
+function mouseDragged(e) {
+  return appcore ? appcore.handleMouseDragged(e) : false;
+}
+
+function mouseReleased(e) {
+  return appcore ? appcore.handleMouseReleased(e) : false;
+}
+
+function mouseWheel(e) {
+  return appcore ? appcore.handleMouseWheel(e) : false;
+}
+
 function touchStarted(e) {
-  return appcore ? appcore.handleMouseClicked(e) : false;
+  if (!appcore) return false;
+  appcore.handleMousePressed(e);
+  return appcore.handleMouseClicked(e);
+}
+
+function touchMoved(e) {
+  return appcore ? appcore.handleMouseDragged(e) : false;
+}
+
+function touchEnded(e) {
+  return appcore ? appcore.handleMouseReleased(e) : false;
 }
 function windowResized() {
   return appcore ? appcore.windowResized() : false;
