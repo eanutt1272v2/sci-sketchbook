@@ -204,8 +204,8 @@ class AppCore {
     this.requestRender();
   }
 
-  handleWheel(e) {
-    return this.input.handleWheel(e);
+  handleWheel(event) {
+    return this.input.handleWheel(event);
   }
 
   handlePointer(event) {
@@ -237,11 +237,11 @@ class AppCore {
     }
   }
 
-  canvasInteraction(e) {
-    if (!e || !e.target) return false;
-    if (typeof e.target.closest !== "function") return false;
-    if (e.target.closest(".tp-dfwv")) return false;
-    if (e.target.tagName !== "CANVAS") return false;
+  canvasInteraction(event) {
+    if (!event || !event.target) return false;
+    if (typeof event.target.closest !== "function") return false;
+    if (event.target.closest(".tp-dfwv")) return false;
+    if (event.target.tagName !== "CANVAS") return false;
     return true;
   }
 

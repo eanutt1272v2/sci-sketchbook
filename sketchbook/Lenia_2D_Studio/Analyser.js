@@ -129,9 +129,13 @@ class Analyser {
     statistics.angle = toFinite(workerStats.angle);
     statistics.centroidRotateSpeed = toFinite(workerStats.centroidRotateSpeed);
     statistics.growthRotateSpeed = toFinite(workerStats.growthRotateSpeed);
-    statistics.majorAxisRotateSpeed = toFinite(workerStats.majorAxisRotateSpeed);
+    statistics.majorAxisRotateSpeed = toFinite(
+      workerStats.majorAxisRotateSpeed,
+    );
     statistics.symmSides = toFinite(workerStats.symmSides);
     statistics.symmStrength = toFinite(workerStats.symmStrength);
+    statistics.symmAngle = toFinite(workerStats.symmAngle);
+    statistics.symmRotate = toFinite(workerStats.symmRotate);
     statistics.rotationSpeed = toFinite(workerStats.rotationSpeed);
     statistics.lyapunov = toFinite(workerStats.lyapunov);
     statistics.hu1Log = toFinite(workerStats.hu1Log);
@@ -145,6 +149,11 @@ class Analyser {
     statistics.flusser10Log = toFinite(workerStats.flusser10Log);
     statistics.period = toFinite(workerStats.period);
     statistics.periodConfidence = toFinite(workerStats.periodConfidence);
+
+    statistics.sidesVec = workerStats.sidesVec || null;
+    statistics.angleVec = workerStats.angleVec || null;
+    statistics.rotateVec = workerStats.rotateVec || null;
+    statistics.symmMaxRadius = workerStats.symmMaxRadius || 0;
   }
 
   resetStatistics() {

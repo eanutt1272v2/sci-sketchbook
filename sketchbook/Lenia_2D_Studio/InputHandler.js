@@ -26,7 +26,7 @@ class InputHandler {
     return false;
   }
 
-  handlePointerDragged(event) {
+  handlePointerDragged() {
     return false;
   }
 
@@ -35,7 +35,7 @@ class InputHandler {
     return false;
   }
 
-  // Placeholder stub for any continuous input handling (e.g. holding keys) if needed in future
+  // placeholder stub for any continuous input handling (e.g. holding keys) if needed in future
   handleContinuousInput() {}
 
   handleKeyPressed(k, kCode) {
@@ -82,26 +82,38 @@ class InputHandler {
     }
 
     if (keyLower === "q" && !ctrlHeld) {
-      params.m = Math.max(0, Math.min(0.5, params.m + (shiftHeld ? 0.01 : 0.001)));
+      params.m = Math.max(
+        0,
+        Math.min(0.5, params.m + (shiftHeld ? 0.01 : 0.001)),
+      );
       this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       return false;
     }
     if (keyLower === "a" && !ctrlHeld) {
-      params.m = Math.max(0, Math.min(0.5, params.m - (shiftHeld ? 0.01 : 0.001)));
+      params.m = Math.max(
+        0,
+        Math.min(0.5, params.m - (shiftHeld ? 0.01 : 0.001)),
+      );
       this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "w" && !ctrlHeld) {
-      params.s = Math.max(0.001, Math.min(0.1, params.s + (shiftHeld ? 0.001 : 0.0001)));
+      params.s = Math.max(
+        0.001,
+        Math.min(0.1, params.s + (shiftHeld ? 0.001 : 0.0001)),
+      );
       this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       return false;
     }
     if (keyLower === "s" && !ctrlHeld) {
-      params.s = Math.max(0.001, Math.min(0.1, params.s - (shiftHeld ? 0.001 : 0.0001)));
+      params.s = Math.max(
+        0.001,
+        Math.min(0.1, params.s - (shiftHeld ? 0.001 : 0.0001)),
+      );
       this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       return false;
@@ -438,13 +450,15 @@ class InputHandler {
     const modes = ["world", "potential", "growth", "kernel"];
     const idx = modes.indexOf(this.appcore.params.renderMode);
     const safeIdx = idx >= 0 ? idx : 0;
-    const next = ((safeIdx + direction) + modes.length) % modes.length;
+    const next = (safeIdx + direction + modes.length) % modes.length;
     this.appcore.params.renderMode = modes[next];
   }
 
   _cycleGridSize() {
     const sizes = this.appcore?.getGridSizeOptions
-      ? Object.values(this.appcore.getGridSizeOptions(this.appcore.params.dimension))
+      ? Object.values(
+          this.appcore.getGridSizeOptions(this.appcore.params.dimension),
+        )
       : [64, 128, 256];
     const current = this.appcore.params.gridSize;
     const idx = sizes.indexOf(current);
@@ -455,22 +469,7 @@ class InputHandler {
   }
 
   _cycleAnimal(delta) {
-    const lib = this.appcore.animalLibrary;
-    if (!lib || !lib.animals || lib.animals.length === 0) return;
-
-    const total = lib.animals.length;
-    const current = this.appcore.getSelectedAnimalIndex();
-    const base = current === null ? (delta > 0 ? -1 : 0) : current;
-    const next = ((base + delta) % total + total) % total;
-    const nextSelection = String(next);
-
-    this.appcore._skipNextAnimalParamsLoad = true;
-    this.appcore._lastAnimalParamsSelection = nextSelection;
-    this.appcore.params.selectedAnimal = nextSelection;
-
-    const animal = lib.getAnimal(next);
-    if (animal) this.appcore.loadAnimal(animal);
-    this.appcore.refreshGUI();
+    this.appcore.cycleAnimal(delta);
   }
 
   _adjustPeak(index, delta) {

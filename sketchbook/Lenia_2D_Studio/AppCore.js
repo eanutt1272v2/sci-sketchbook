@@ -1,11 +1,20 @@
 class AppCore {
   constructor(assets) {
-    const { metadata, animalsData, animalsByDimension = null, colourMaps, font } = assets;
+    const {
+      metadata,
+      animalsData,
+      animalsByDimension = null,
+      colourMaps,
+      font,
+    } = assets;
 
     this.metadata = metadata;
     this.animalsByDimension =
       typeof NDCompatibility !== "undefined"
-        ? NDCompatibility.buildAnimalsByDimension(animalsData, animalsByDimension)
+        ? NDCompatibility.buildAnimalsByDimension(
+            animalsData,
+            animalsByDimension,
+          )
         : { 2: Array.isArray(animalsData) ? animalsData : [] };
     this.font = font;
     this.colourMaps = colourMaps || {};
@@ -59,6 +68,7 @@ class AppCore {
       renderLegend: true,
       renderStats: true,
       renderMotionOverlay: true,
+      renderSymmetryOverlay: false,
       renderCalcPanels: true,
       renderAnimalName: true,
       renderKeymapRef: false,
@@ -221,7 +231,11 @@ class AppCore {
         return;
       }
 
-      if ((Number(this.params.dimension) || 2) > 2 && this.board.world && !this._stepPending) {
+      if (
+        (Number(this.params.dimension) || 2) > 2 &&
+        this.board.world &&
+        !this._stepPending
+      ) {
         this._workerRequestView();
         return;
       }
@@ -287,7 +301,7 @@ class AppCore {
         return;
       }
 
-      // dont add params.running here! Will make it run too fast at ~200 fps!!!!
+      // don't add params.running here; it will make it run too fast (~200 fps)!!!!
       if (this._stepPending) {
         this._stepPending = false;
         this._dispatchWorkerStep();
@@ -327,14 +341,15 @@ class AppCore {
     const b = this.board;
     const ndConfig = this.buildNDConfig();
 
-    // Copy buffers to worker instead of transferring - keeps board data
-    // available for rendering while worker computes next step.
-    // At 128x128+, copy cost (~0.1ms) is negligible vs. the pipeline gain.
     const worldCopy = new Float32Array(b.world);
     const potentialCopy = new Float32Array(b.potential);
     const growthCopy = new Float32Array(b.growth);
 
-    const transfers = [worldCopy.buffer, potentialCopy.buffer, growthCopy.buffer];
+    const transfers = [
+      worldCopy.buffer,
+      potentialCopy.buffer,
+      growthCopy.buffer,
+    ];
     const msg = {
       type: "step",
       params: {
@@ -361,8 +376,6 @@ class AppCore {
       msg.growthOld = growthOldCopy.buffer;
       transfers.push(growthOldCopy.buffer);
     }
-
-    // Board retains its buffers for rendering
 
     if (this._ndSeedWorld) {
       msg.ndSeedWorld = this._ndSeedWorld.buffer;
@@ -459,6 +472,12 @@ class AppCore {
   render() {
     this.input.handleContinuousInput();
 
+    this.renderer.setViewOffset(
+      this.params.autoCenter,
+      this.statistics.centerX,
+      this.statistics.centerY,
+    );
+
     if (this.board.world) {
       this.renderer.render(
         this.board,
@@ -477,6 +496,13 @@ class AppCore {
         this.params.renderMode !== "kernel"
       ) {
         this.renderer.renderMotionOverlay(this.statistics, this.params);
+      }
+
+      if (
+        this.params.renderSymmetryOverlay &&
+        this.params.renderMode !== "kernel"
+      ) {
+        this.renderer.renderSymmetryOverlay(this.statistics, this.params);
       }
 
       if (this.params.renderScale) {
@@ -511,6 +537,13 @@ class AppCore {
         this.params.renderMode !== "kernel"
       ) {
         this.renderer.renderMotionOverlay(this.statistics, this.params);
+      }
+
+      if (
+        this.params.renderSymmetryOverlay &&
+        this.params.renderMode !== "kernel"
+      ) {
+        this.renderer.renderSymmetryOverlay(this.statistics, this.params);
       }
 
       if (this.params.renderScale) {
@@ -597,7 +630,9 @@ class AppCore {
           this._workerNDMutation({ type: "randomise" });
         } else {
           const usedSeed = this.board.randomiseSeeded(
-            this.params.R, seed, isFill,
+            this.params.R,
+            seed,
+            isFill,
           );
           this._lastRandomSeed = usedSeed;
         }
@@ -826,7 +861,9 @@ class AppCore {
       ? this.animalLibrary.animals
       : [];
     if (!animals.length) return null;
-    const idx = animals.findIndex((animal) => String(animal?.code || "") === code);
+    const idx = animals.findIndex(
+      (animal) => String(animal?.code || "") === code,
+    );
     return idx >= 0 ? idx : null;
   }
 
@@ -874,21 +911,36 @@ class AppCore {
       p.ndDepth =
         typeof NDCompatibility !== "undefined"
           ? NDCompatibility.coerceDepth(rawParams.ndDepth, p.dimension)
-          : Math.max(2, Math.min(512, Math.floor(Number(rawParams.ndDepth) || 6)));
+          : Math.max(
+              2,
+              Math.min(512, Math.floor(Number(rawParams.ndDepth) || 6)),
+            );
     }
 
     if ("ndSliceZ" in rawParams) {
       p.ndSliceZ =
         typeof NDCompatibility !== "undefined"
           ? NDCompatibility.coerceSliceIndex(rawParams.ndSliceZ, p.ndDepth)
-          : Math.max(0, Math.min(p.ndDepth - 1, Math.floor(Number(rawParams.ndSliceZ) || 0)));
+          : Math.max(
+              0,
+              Math.min(
+                p.ndDepth - 1,
+                Math.floor(Number(rawParams.ndSliceZ) || 0),
+              ),
+            );
     }
 
     if ("ndSliceW" in rawParams) {
       p.ndSliceW =
         typeof NDCompatibility !== "undefined"
           ? NDCompatibility.coerceSliceIndex(rawParams.ndSliceW, p.ndDepth)
-          : Math.max(0, Math.min(p.ndDepth - 1, Math.floor(Number(rawParams.ndSliceW) || 0)));
+          : Math.max(
+              0,
+              Math.min(
+                p.ndDepth - 1,
+                Math.floor(Number(rawParams.ndSliceW) || 0),
+              ),
+            );
     }
 
     if (allowGridSize && "gridSize" in rawParams) {
@@ -1148,7 +1200,9 @@ class AppCore {
 
   _packNDSeed(animal) {
     if (!animal || !animal.cells) return null;
-    const cellsStr = Array.isArray(animal.cells) ? animal.cells[0] : animal.cells;
+    const cellsStr = Array.isArray(animal.cells)
+      ? animal.cells[0]
+      : animal.cells;
     if (typeof cellsStr !== "string") return null;
     if (!cellsStr.includes("%") && !cellsStr.includes("#")) return null;
 
@@ -1162,7 +1216,10 @@ class AppCore {
     const depth =
       typeof NDCompatibility !== "undefined"
         ? NDCompatibility.getWorldDepthForDimension(size, dimension)
-        : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
+        : Math.max(
+            2,
+            Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)),
+          );
     const extraDims = Math.max(0, dimension - 2);
     const planeCount = Math.pow(depth, extraDims);
     const cellCount = size * size;
@@ -1170,7 +1227,8 @@ class AppCore {
     const total = planeCellCount * planeCount;
     const packed = new Float32Array(total);
 
-    let maxZ = 0, maxW = 0;
+    let maxZ = 0,
+      maxW = 0;
     for (const s of slices) {
       if (s.z > maxZ) maxZ = s.z;
       if (s.w > maxW) maxW = s.w;
@@ -1181,7 +1239,8 @@ class AppCore {
     const offsetZ = Math.floor((depth - animalDepthZ) / 2);
     const offsetW = extraDims >= 2 ? Math.floor((depth - animalDepthW) / 2) : 0;
 
-    let maxH = 0, maxW_ = 0;
+    let maxH = 0,
+      maxW_ = 0;
     for (const s of slices) {
       const h = s.grid.length;
       const w = s.grid[0]?.length || 0;
@@ -1272,6 +1331,25 @@ class AppCore {
     if (animal) {
       this.loadAnimal(animal);
     }
+  }
+
+  cycleAnimal(delta) {
+    const lib = this.animalLibrary;
+    if (!lib || !lib.animals || lib.animals.length === 0) return;
+
+    const total = lib.animals.length;
+    const current = this.getSelectedAnimalIndex();
+    const base = current === null ? (delta > 0 ? -1 : 0) : current;
+    const next = (((base + delta) % total) + total) % total;
+    const nextSelection = String(next);
+
+    this._skipNextAnimalParamsLoad = true;
+    this._lastAnimalParamsSelection = nextSelection;
+    this.params.selectedAnimal = nextSelection;
+
+    const animal = lib.getAnimal(next);
+    if (animal) this.loadAnimal(animal);
+    this.refreshGUI();
   }
 
   loadAnimalParams(animal) {
@@ -1385,22 +1463,30 @@ class AppCore {
 
   _placeAnimalND(animal, cellX, cellY, scale) {
     if (!animal || !animal.cells) return;
-    const cellsStr = Array.isArray(animal.cells) ? animal.cells[0] : animal.cells;
-    const isND = typeof cellsStr === "string" && (cellsStr.includes("%") || cellsStr.includes("#"));
+    const cellsStr = Array.isArray(animal.cells)
+      ? animal.cells[0]
+      : animal.cells;
+    const isND =
+      typeof cellsStr === "string" &&
+      (cellsStr.includes("%") || cellsStr.includes("#"));
 
     const dimension = Number(this.params.dimension) || 2;
     const size = this.params.gridSize;
     const depth =
       typeof NDCompatibility !== "undefined"
         ? NDCompatibility.getWorldDepthForDimension(size, dimension)
-        : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
+        : Math.max(
+            2,
+            Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)),
+          );
     const extraDims = Math.max(0, dimension - 2);
 
     if (isND) {
       const slices = RLECodec.parseND(cellsStr);
       if (!slices || slices.length === 0) return;
 
-      let maxZ = 0, maxW = 0;
+      let maxZ = 0,
+        maxW = 0;
       for (const s of slices) {
         if (s.z > maxZ) maxZ = s.z;
         if (s.w > maxW) maxW = s.w;
@@ -1424,8 +1510,14 @@ class AppCore {
         planeEntries.push({
           plane,
           patternData,
-          patternWidth: Math.abs((scale || 1) - 1) < 1e-6 ? w : Math.max(1, Math.round(w * scale)),
-          patternHeight: Math.abs((scale || 1) - 1) < 1e-6 ? h : Math.max(1, Math.round(h * scale)),
+          patternWidth:
+            Math.abs((scale || 1) - 1) < 1e-6
+              ? w
+              : Math.max(1, Math.round(w * scale)),
+          patternHeight:
+            Math.abs((scale || 1) - 1) < 1e-6
+              ? h
+              : Math.max(1, Math.round(h * scale)),
         });
       }
       if (planeEntries.length === 0) return;
@@ -1445,8 +1537,14 @@ class AppCore {
       if (w === 0 || h === 0) return;
 
       const patternData = this._scaleGrid(grid, w, h, scale);
-      const pw = Math.abs((scale || 1) - 1) < 1e-6 ? w : Math.max(1, Math.round(w * scale));
-      const ph = Math.abs((scale || 1) - 1) < 1e-6 ? h : Math.max(1, Math.round(h * scale));
+      const pw =
+        Math.abs((scale || 1) - 1) < 1e-6
+          ? w
+          : Math.max(1, Math.round(w * scale));
+      const ph =
+        Math.abs((scale || 1) - 1) < 1e-6
+          ? h
+          : Math.max(1, Math.round(h * scale));
 
       this._workerNDMutation({
         type: "place",
@@ -1463,8 +1561,7 @@ class AppCore {
     if (Math.abs((scale || 1) - 1) < 1e-6) {
       const data = new Float32Array(h * w);
       for (let y = 0; y < h; y++)
-        for (let x = 0; x < w; x++)
-          data[y * w + x] = grid[y][x] || 0;
+        for (let x = 0; x < w; x++) data[y * w + x] = grid[y][x] || 0;
       return data;
     }
     const pw = Math.max(1, Math.round(w * scale));
@@ -1480,12 +1577,13 @@ class AppCore {
         const y1 = Math.min(y0 + 1, h - 1);
         const fx = srcXf - x0;
         const fy = srcYf - y0;
-        data[dy * pw + dx] = x0 < w && y0 < h
-          ? (grid[y0][x0] || 0) * (1 - fx) * (1 - fy) +
-            (grid[y0][x1] || 0) * fx * (1 - fy) +
-            (grid[y1][x0] || 0) * (1 - fx) * fy +
-            (grid[y1][x1] || 0) * fx * fy
-          : 0;
+        data[dy * pw + dx] =
+          x0 < w && y0 < h
+            ? (grid[y0][x0] || 0) * (1 - fx) * (1 - fy) +
+              (grid[y0][x1] || 0) * fx * (1 - fy) +
+              (grid[y1][x0] || 0) * (1 - fx) * fy +
+              (grid[y1][x1] || 0) * fx * fy
+            : 0;
       }
     }
     return data;
@@ -1663,16 +1761,34 @@ class AppCore {
         : "slice";
     const ndDepth =
       typeof NDCompatibility !== "undefined"
-        ? NDCompatibility.getWorldDepthForDimension(this.params.gridSize, dimension)
-        : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
+        ? NDCompatibility.getWorldDepthForDimension(
+            this.params.gridSize,
+            dimension,
+          )
+        : Math.max(
+            2,
+            Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)),
+          );
     const ndSliceZ =
       typeof NDCompatibility !== "undefined"
         ? NDCompatibility.coerceSliceIndex(this.params.ndSliceZ, ndDepth)
-        : Math.max(0, Math.min(ndDepth - 1, Math.floor(Number(this.params.ndSliceZ) || 0)));
+        : Math.max(
+            0,
+            Math.min(
+              ndDepth - 1,
+              Math.floor(Number(this.params.ndSliceZ) || 0),
+            ),
+          );
     const ndSliceW =
       typeof NDCompatibility !== "undefined"
         ? NDCompatibility.coerceSliceIndex(this.params.ndSliceW, ndDepth)
-        : Math.max(0, Math.min(ndDepth - 1, Math.floor(Number(this.params.ndSliceW) || 0)));
+        : Math.max(
+            0,
+            Math.min(
+              ndDepth - 1,
+              Math.floor(Number(this.params.ndSliceW) || 0),
+            ),
+          );
     this.params.dimension = dimension;
     this.params.viewMode = viewMode;
     this.params.ndDepth = ndDepth;
@@ -1697,50 +1813,54 @@ class AppCore {
 
     this._changingDimension = true;
     try {
+      this.params.dimension = nextDimension;
+      const coercedSize = this._normaliseGridSize(this.params.gridSize);
+      const sizeChanged = coercedSize !== this.params.gridSize;
+      this.params.gridSize = coercedSize;
 
-    this.params.dimension = nextDimension;
-    const coercedSize = this._normaliseGridSize(this.params.gridSize);
-    const sizeChanged = coercedSize !== this.params.gridSize;
-    this.params.gridSize = coercedSize;
+      if ((Number(this.params.dimension) || 2) > 2) {
+        this.params.viewMode = "projection";
+        const ndDepthForSlice =
+          typeof NDCompatibility !== "undefined"
+            ? NDCompatibility.getWorldDepthForDimension(
+                this.params.gridSize,
+                nextDimension,
+              )
+            : Math.max(
+                2,
+                Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)),
+              );
+        this.params.ndSliceZ = Math.floor(ndDepthForSlice / 2);
+        this.params.ndSliceW = Math.floor(ndDepthForSlice / 2);
+      } else {
+        this.params.viewMode = "slice";
+      }
 
-    if ((Number(this.params.dimension) || 2) > 2) {
-      this.params.viewMode = "projection";
-      const ndDepthForSlice =
-        typeof NDCompatibility !== "undefined"
-          ? NDCompatibility.getWorldDepthForDimension(this.params.gridSize, nextDimension)
-          : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
-      this.params.ndSliceZ = Math.floor(ndDepthForSlice / 2);
-      this.params.ndSliceW = Math.floor(ndDepthForSlice / 2);
-    } else {
-      this.params.viewMode = "slice";
-    }
+      this.params.placeScale = 1;
 
-    this.params.placeScale = 1;
+      this._applyAnimalSource();
 
-    this._applyAnimalSource();
+      const animal = this._syncSelectedAnimalForActiveDimension(0);
 
-    const animal = this._syncSelectedAnimalForActiveDimension(0);
+      if (sizeChanged) {
+        this.changeResolution();
+      }
 
-    if (sizeChanged) {
-      this.changeResolution();
-    }
+      if (animal) {
+        this.loadAnimal(animal);
+      } else {
+        this.clearWorld();
+      }
 
-    if (animal) {
-      this.loadAnimal(animal);
-    } else {
-      this.clearWorld();
-    }
+      console.log(
+        `[Lenia] ${nextDimension}D mode enabled with ${this.params.gridSize}^${nextDimension} world shape and ND tensor stepping.`,
+      );
 
-    console.log(
-      `[Lenia] ${nextDimension}D mode enabled with ${this.params.gridSize}^${nextDimension} world shape and ND tensor stepping.`,
-    );
-
-    if (this.gui && typeof this.gui.rebuildPane === "function") {
-      this.gui.rebuildPane();
-    } else {
-      this.refreshGUI();
-    }
-
+      if (this.gui && typeof this.gui.rebuildPane === "function") {
+        this.gui.rebuildPane();
+      } else {
+        this.refreshGUI();
+      }
     } finally {
       this._changingDimension = false;
     }
@@ -1762,14 +1882,24 @@ class AppCore {
     if ((this.params.dimension || 2) <= 2) return;
     const depth =
       typeof NDCompatibility !== "undefined"
-        ? NDCompatibility.coerceDepth(this.params.ndDepth, this.params.dimension)
-        : Math.max(2, Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)));
+        ? NDCompatibility.coerceDepth(
+            this.params.ndDepth,
+            this.params.dimension,
+          )
+        : Math.max(
+            2,
+            Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)),
+          );
     if (axis === "z") {
       this.params.ndSliceZ =
-        ((Math.floor(Number(this.params.ndSliceZ) || 0) + delta) % depth + depth) % depth;
+        (((Math.floor(Number(this.params.ndSliceZ) || 0) + delta) % depth) +
+          depth) %
+        depth;
     } else if (axis === "w") {
       this.params.ndSliceW =
-        ((Math.floor(Number(this.params.ndSliceW) || 0) + delta) % depth + depth) % depth;
+        (((Math.floor(Number(this.params.ndSliceW) || 0) + delta) % depth) +
+          depth) %
+        depth;
     }
     this._workerRequestView();
     this.refreshGUI();
@@ -1780,15 +1910,15 @@ class AppCore {
     this.refreshGUI();
   }
 
-  canvasInteraction(e) {
-    if (!e || !e.target) return false;
-    if (e.target.closest(".tp-dfwv")) return false;
-    if (e.target.tagName !== "CANVAS") return false;
+  canvasInteraction(event) {
+    if (!event || !event.target) return false;
+    if (event.target.closest(".tp-dfwv")) return false;
+    if (event.target.tagName !== "CANVAS") return false;
     return true;
   }
 
-  handleMouseClicked(e) {
-    if (this.canvasInteraction(e)) {
+  handleMouseClicked(event) {
+    if (this.canvasInteraction(event)) {
       const cellX = Math.floor((mouseX / width) * this.params.gridSize);
       const cellY = Math.floor((mouseY / height) * this.params.gridSize);
 
@@ -1811,31 +1941,31 @@ class AppCore {
     }
   }
 
-  handleMousePressed(e) {
-    if (this.canvasInteraction(e)) {
-      return this.input.handlePointerPressed(e);
+  handleMousePressed(event) {
+    if (this.canvasInteraction(event)) {
+      return this.input.handlePointerPressed(event);
     }
     return;
   }
 
-  handleMouseDragged(e) {
-    if (this.canvasInteraction(e)) {
-      return this.input.handlePointerDragged(e);
+  handleMouseDragged(event) {
+    if (this.canvasInteraction(event)) {
+      return this.input.handlePointerDragged(event);
     }
     return;
   }
 
-  handleMouseReleased(e) {
-    this.input.handlePointerReleased(e);
-    if (this.canvasInteraction(e)) {
+  handleMouseReleased(event) {
+    this.input.handlePointerReleased(event);
+    if (this.canvasInteraction(event)) {
       return false;
     }
     return;
   }
 
-  handleMouseWheel(e) {
-    if (this.canvasInteraction(e)) {
-      return this.input.handleWheel(e);
+  handleMouseWheel(event) {
+    if (this.canvasInteraction(event)) {
+      return this.input.handleWheel(event);
     }
     return;
   }

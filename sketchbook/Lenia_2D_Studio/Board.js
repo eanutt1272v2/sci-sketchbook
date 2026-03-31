@@ -57,7 +57,9 @@ class Board {
   _getPatternGrids(pattern) {
     if (!pattern || !pattern.cells) return null;
     if (!pattern._parsedGrids) {
-      const raw = Array.isArray(pattern.cells) ? pattern.cells : [pattern.cells];
+      const raw = Array.isArray(pattern.cells)
+        ? pattern.cells
+        : [pattern.cells];
       pattern._parsedGrids = raw
         .map((entry) => {
           if (typeof entry === "string") {
@@ -395,8 +397,8 @@ class Board {
       for (let x = 0; x < minDim; x++) {
         const v = zoomed[(offSrc + y) * newDim + (offSrc + x)];
         if (v > 1e-10) {
-          const dy = ((offDst + y) % size + size) % size;
-          const dx = ((offDst + x) % size + size) % size;
+          const dy = (((offDst + y) % size) + size) % size;
+          const dx = (((offDst + x) % size) + size) % size;
           result[dy * size + dx] = v;
         }
       }

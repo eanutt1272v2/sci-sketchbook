@@ -120,7 +120,11 @@ class AppCore {
 
   importParamsJSON() {
     this._openJSONFileDialog((data) => {
-      if (!data || typeof data !== "object" || data.format !== "simpipe.params") {
+      if (
+        !data ||
+        typeof data !== "object" ||
+        data.format !== "simpipe.params"
+      ) {
         throw new Error("[Cellular Division] Invalid params JSON payload");
       }
 
@@ -149,7 +153,8 @@ class AppCore {
     ];
 
     const csv =
-      "key,value\n" + rows.map((r) => `${r[0]},${Number(r[1]) || 0}`).join("\n");
+      "key,value\n" +
+      rows.map((r) => `${r[0]},${Number(r[1]) || 0}`).join("\n");
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
   }
 
@@ -166,7 +171,11 @@ class AppCore {
 
   importStateJSON() {
     this._openJSONFileDialog((data) => {
-      if (!data || typeof data !== "object" || data.format !== "simpipe.state") {
+      if (
+        !data ||
+        typeof data !== "object" ||
+        data.format !== "simpipe.state"
+      ) {
         throw new Error("[Cellular Division] Invalid state JSON payload");
       }
 
@@ -201,7 +210,8 @@ class AppCore {
     if ("beta" in params) this.sim.setBeta(Number(params.beta));
     if ("gamma" in params) this.sim.setGamma(Number(params.gamma));
     if ("radius" in params) this.sim.setRadius(Number(params.radius));
-    if ("trailAlpha" in params) this.sim.setTrailAlpha(Number(params.trailAlpha));
+    if ("trailAlpha" in params)
+      this.sim.setTrailAlpha(Number(params.trailAlpha));
     if ("densityThreshold" in params)
       this.sim.setDensityThreshold(Number(params.densityThreshold));
 

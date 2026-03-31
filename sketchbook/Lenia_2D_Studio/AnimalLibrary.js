@@ -17,7 +17,9 @@ class AnimalLibrary {
         ? NDCompatibility.coerceDimension(dimension)
         : 2;
     const dataArray = Array.isArray(data) ? data : Object.values(data || {});
-    const animals = dataArray.filter((a) => a?.name && !a.code?.startsWith(">"));
+    const animals = dataArray.filter(
+      (a) => a?.name && !a.code?.startsWith(">"),
+    );
 
     this.animalsByDimension[dim] = animals;
     if (dim === this.activeDimension) {
@@ -49,11 +51,17 @@ class AnimalLibrary {
 
   getAnimalList() {
     return this.animals.reduce((options, animal, idx) => {
-      const name = `${animal.code || ""} ${animal.name || ""} ${animal.cname || ""}`
-        .replace(/\s+/g, " ")
-        .trim();
-      const prefix = `${String(idx + 1).padStart(3, "0")}.`;
-      options[`${prefix} ${name}`.substring(0, 56)] = String(idx);
+      let name =
+        `${animal.code || ""} ${animal.name || ""} ${animal.cname || ""}`
+          .replace(/\s+/g, " ")
+          .trim()
+          .substring(0, 56);
+      if (name in options) {
+        let n = 2;
+        while (`${name} (${n})` in options) n++;
+        name = `${name} (${n})`;
+      }
+      options[name] = String(idx);
       return options;
     }, {});
   }

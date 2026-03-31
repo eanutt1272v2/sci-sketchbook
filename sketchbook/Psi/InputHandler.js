@@ -91,7 +91,9 @@ class InputHandler {
     if (keyValue === "#") {
       this.appcore.toggleKeymapRef();
       this.appcore.refreshGUI();
-      console.log(`[Psi] Keymap Reference: ${this.appcore.params.renderKeymapRef}`);
+      console.log(
+        `[Psi] Keymap Reference: ${this.appcore.params.renderKeymapRef}`,
+      );
       return false;
     }
 

@@ -23,19 +23,16 @@ class Analyser {
 
   _logGamma(z) {
     const coeffs = [
-      676.5203681218851,
-      -1259.1392167224028,
-      771.32342877765313,
-      -176.61502916214059,
-      12.507343278686905,
-      -0.13857109526572012,
-      9.9843695780195716e-6,
-      1.5056327351493116e-7,
+      676.5203681218851, -1259.1392167224028, 771.32342877765313,
+      -176.61502916214059, 12.507343278686905, -0.13857109526572012,
+      9.9843695780195716e-6, 1.5056327351493116e-7,
     ];
 
     if (z < 0.5) {
       return (
-        Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - this._logGamma(1 - z)
+        Math.log(Math.PI) -
+        Math.log(Math.sin(Math.PI * z)) -
+        this._logGamma(1 - z)
       );
     }
 
@@ -46,7 +43,9 @@ class Analyser {
     }
 
     const t = tZ + coeffs.length - 0.5;
-    return 0.5 * Math.log(2 * Math.PI) + (tZ + 0.5) * Math.log(t) - t + Math.log(x);
+    return (
+      0.5 * Math.log(2 * Math.PI) + (tZ + 0.5) * Math.log(t) - t + Math.log(x)
+    );
   }
 
   _genLaguerre(k, alpha, x) {
@@ -67,7 +66,9 @@ class Analyser {
     const l = Math.max(0, Math.min(n - 1, Math.round(Number(params?.l) || 0)));
     const Z = Math.max(1, Math.round(Number(params?.nuclearCharge) || 1));
     const aMuMeters =
-      Number(params?.aMuMeters) > 0 ? Number(params.aMuMeters) : 5.29177210903e-11;
+      Number(params?.aMuMeters) > 0
+        ? Number(params.aMuMeters)
+        : 5.29177210903e-11;
     const a0Meters = 5.29177210903e-11;
     const toA0 = aMuMeters / a0Meters;
 
@@ -77,7 +78,11 @@ class Analyser {
       (this._logGamma(n - l) - (Math.log(2.0 * n) + this._logGamma(n + l + 1)));
 
     const expectedRadiusAMu = (3 * n * n - l * (l + 1)) / (2 * Z);
-    const maxRadiusAMu = Math.max(4, Number(params?.viewRadius) || 0, expectedRadiusAMu * 4);
+    const maxRadiusAMu = Math.max(
+      4,
+      Number(params?.viewRadius) || 0,
+      expectedRadiusAMu * 4,
+    );
     const samples = 1024;
     const dr = maxRadiusAMu / samples;
 

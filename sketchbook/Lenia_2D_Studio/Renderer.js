@@ -35,6 +35,10 @@ class Renderer {
     this._scaleCacheKey = "";
     this._statsGfx = null;
     this._statsFrameCount = 0;
+    this._viewOffsetActive = false;
+    this._viewShiftX = 0;
+    this._viewShiftY = 0;
+    this._rollBuffer = null;
     this.setColourMap(initialColourMap);
   }
 
@@ -102,11 +106,20 @@ class Renderer {
     this._kernelDisplayCacheSource = null;
     this._legendBarImg = null;
     this._legendBarCachedMap = "";
-    if (this._legendGfx) { this._legendGfx.remove(); this._legendGfx = null; }
+    if (this._legendGfx) {
+      this._legendGfx.remove();
+      this._legendGfx = null;
+    }
     this._legendCacheKey = "";
-    if (this._scaleGfx) { this._scaleGfx.remove(); this._scaleGfx = null; }
+    if (this._scaleGfx) {
+      this._scaleGfx.remove();
+      this._scaleGfx = null;
+    }
     this._scaleCacheKey = "";
-    if (this._statsGfx) { this._statsGfx.remove(); this._statsGfx = null; }
+    if (this._statsGfx) {
+      this._statsGfx.remove();
+      this._statsGfx = null;
+    }
   }
 
   _wrapCoord(value) {
@@ -138,6 +151,44 @@ class Renderer {
     return Math.round((anchor - value) / this.size) * this.size;
   }
 
+  setViewOffset(active, centerX, centerY) {
+    this._viewOffsetActive = active;
+    if (
+      active &&
+      Number.isFinite(centerX) &&
+      Number.isFinite(centerY)
+    ) {
+      const mid = this.size / 2;
+      this._viewShiftX = Math.round(mid - centerX);
+      this._viewShiftY = Math.round(mid - centerY);
+    } else {
+      this._viewShiftX = 0;
+      this._viewShiftY = 0;
+    }
+  }
+
+  _rollViewData(src, size, shiftX, shiftY) {
+    if (shiftX === 0 && shiftY === 0) return src;
+    if (!this._rollBuffer || this._rollBuffer.length !== src.length) {
+      this._rollBuffer = new Float32Array(src.length);
+    }
+    const out = this._rollBuffer;
+    const nsx = ((-shiftX % size) + size) % size;
+    for (let py = 0; py < size; py++) {
+      const srcY = (((py - shiftY) % size) + size) % size;
+      const srcRow = srcY * size;
+      const dstRow = py * size;
+      if (nsx === 0) {
+        out.set(src.subarray(srcRow, srcRow + size), dstRow);
+      } else {
+        const firstLen = size - nsx;
+        out.set(src.subarray(srcRow + nsx, srcRow + size), dstRow);
+        out.set(src.subarray(srcRow, srcRow + nsx), dstRow + firstLen);
+      }
+    }
+    return out;
+  }
+
   _expandKernelForDisplay(kernel, kernelSize, viewSize) {
     if (!kernel || !kernelSize || kernelSize <= 0) return kernel;
     if (kernelSize === viewSize) return kernel;
@@ -165,8 +216,8 @@ class Renderer {
   _getViewSpec(board, automaton, rawMode, params) {
     const mode = rawMode;
     const size = board?.size || this.size;
-    const isSoftClip = !!(params?.softClip);
-    const isAritaMode = !!(params?.aritaMode);
+    const isSoftClip = !!params?.softClip;
+    const isAritaMode = !!params?.aritaMode;
 
     if (mode === "world") {
       const data = board.world;
@@ -241,23 +292,48 @@ class Renderer {
     return this._getViewSpec(board, automaton, "world", params);
   }
 
+  _getKernelCalcPanelSpec(automaton) {
+    const kernel = automaton?.kernel;
+    const kernelSize = automaton?.kernelSize || 0;
+    return {
+      mode: "kernel",
+      label: "Kernel",
+      data: kernel,
+      srcSize: kernelSize,
+      vmin: 0,
+      vmax: 1,
+    };
+  }
+
   render(board, automaton, renderMode, colourMapName, params = null) {
     this.setColourMap(colourMapName);
     const view = this._getViewSpec(board, automaton, renderMode, params);
-    const data = view.data;
+    let data = view.data;
     let vmin = view.vmin;
     let vmax = view.vmax;
     const currentSize = view.srcSize;
     let liveMin = Number.POSITIVE_INFINITY;
     let liveMax = Number.NEGATIVE_INFINITY;
 
-
-
     this._lastViewVmin = vmin;
     this._lastViewVmax = vmax;
 
     if (this.img.width !== currentSize || this.img.height !== currentSize) {
       this.img = createImage(currentSize, currentSize);
+    }
+
+    if (
+      this._viewOffsetActive &&
+      renderMode !== "kernel" &&
+      data &&
+      (this._viewShiftX !== 0 || this._viewShiftY !== 0)
+    ) {
+      data = this._rollViewData(
+        data,
+        currentSize,
+        this._viewShiftX,
+        this._viewShiftY,
+      );
     }
 
     const scale = 255 / Math.max(vmax - vmin, 1e-9);
@@ -351,21 +427,9 @@ class Renderer {
     for (let i = 0; i < 256; i++) {
       const t = i / 255;
       const idx = i * 3;
-      const r = constrain(
-        Math.round(poly(colourMapData.r, t) * 255),
-        0,
-        255,
-      );
-      const g = constrain(
-        Math.round(poly(colourMapData.g, t) * 255),
-        0,
-        255,
-      );
-      const b = constrain(
-        Math.round(poly(colourMapData.b, t) * 255),
-        0,
-        255,
-      );
+      const r = constrain(Math.round(poly(colourMapData.r, t) * 255), 0, 255);
+      const g = constrain(Math.round(poly(colourMapData.g, t) * 255), 0, 255);
+      const b = constrain(Math.round(poly(colourMapData.b, t) * 255), 0, 255);
       this.lut[idx] = r;
       this.lut[idx + 1] = g;
       this.lut[idx + 2] = b;
@@ -388,16 +452,23 @@ class Renderer {
     const mid = Math.floor(this.size / 2);
     const dotSize = Math.max(1, Math.round(cellPx * 0.4));
 
+    const sx = this._viewOffsetActive ? this._viewShiftX : 0;
+    const sy = this._viewOffsetActive ? this._viewShiftY : 0;
+    const adjMidX =
+      ((((mid + sx) % this.size) + this.size) % this.size);
+    const adjMidY =
+      ((((mid + sy) % this.size) + this.size) % this.size);
+
     push();
     noStroke();
     fill(95);
 
-    const baseRow = ((mid % R) + R) % R;
-    const baseCol = ((mid % R) + R) % R;
+    const baseRow = ((adjMidY % R) + R) % R;
+    const baseCol = ((adjMidX % R) + R) % R;
 
     for (let i = -n; i <= n; i++) {
-      const rowStart = (((mid + i) % R) + R) % R;
-      const colStart = (((mid + i) % R) + R) % R;
+      const rowStart = (((adjMidY + i) % R) + R) % R;
+      const colStart = (((adjMidX + i) % R) + R) % R;
 
       for (let y = rowStart; y < this.size; y += R) {
         for (let x = baseCol; x < this.size; x += R) {
@@ -423,7 +494,11 @@ class Renderer {
       return;
     }
 
-    if (!this._scaleGfx || this._scaleGfx.width !== width || this._scaleGfx.height !== height) {
+    if (
+      !this._scaleGfx ||
+      this._scaleGfx.width !== width ||
+      this._scaleGfx.height !== height
+    ) {
       if (this._scaleGfx) this._scaleGfx.remove();
       this._scaleGfx = createGraphics(width, height);
     }
@@ -487,7 +562,10 @@ class Renderer {
       return;
     }
 
-    if (this.currentColourMap !== this._legendBarCachedMap || !this._legendBarImg) {
+    if (
+      this.currentColourMap !== this._legendBarCachedMap ||
+      !this._legendBarImg
+    ) {
       this._legendBarImg = createImage(1, 253);
       this._legendBarImg.loadPixels();
       for (let i = 0; i < 253; i++) {
@@ -502,7 +580,11 @@ class Renderer {
       this._legendBarCachedMap = this.currentColourMap;
     }
 
-    if (!this._legendGfx || this._legendGfx.width !== width || this._legendGfx.height !== height) {
+    if (
+      !this._legendGfx ||
+      this._legendGfx.width !== width ||
+      this._legendGfx.height !== height
+    ) {
       if (this._legendGfx) this._legendGfx.remove();
       this._legendGfx = createGraphics(width, height);
     }
@@ -734,9 +816,19 @@ class Renderer {
     const running = !!params.running;
     const hasNewMotion = Math.abs(dx) + Math.abs(dy) > 1e-6;
     if (running && hasNewMotion) {
-      this._lastMotionDx = dx;
-      this._lastMotionDy = dy;
-    } else if (
+      const alpha = 0.15;
+      if (
+        Number.isFinite(this._lastMotionDx) &&
+        Number.isFinite(this._lastMotionDy)
+      ) {
+        this._lastMotionDx += alpha * (dx - this._lastMotionDx);
+        this._lastMotionDy += alpha * (dy - this._lastMotionDy);
+      } else {
+        this._lastMotionDx = dx;
+        this._lastMotionDy = dy;
+      }
+    }
+    if (
       Number.isFinite(this._lastMotionDx) &&
       Number.isFinite(this._lastMotionDy)
     ) {
@@ -749,8 +841,13 @@ class Renderer {
     const m3x = m0x + dx * 2 * T;
     const m3y = m0y + dy * 2 * T;
 
-    const ms_x = (((m1x % this.size) + this.size) % this.size) - m1x;
-    const ms_y = (((m1y % this.size) + this.size) % this.size) - m1y;
+    const vsx = this._viewOffsetActive ? this._viewShiftX : 0;
+    const vsy = this._viewOffsetActive ? this._viewShiftY : 0;
+    const am1x = m1x + vsx;
+    const am1y = m1y + vsy;
+
+    const ms_x = (((am1x % this.size) + this.size) % this.size) - am1x;
+    const ms_y = (((am1y % this.size) + this.size) % this.size) - am1y;
 
     const dotR = 2;
 
@@ -761,8 +858,8 @@ class Renderer {
     this._enableOverlayShadow();
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
-        const adjx = i * this.size + ms_x;
-        const adjy = j * this.size + ms_y;
+        const adjx = i * this.size + ms_x + vsx;
+        const adjy = j * this.size + ms_y + vsy;
 
         const p0x = (m0x + adjx) * cellPx;
         const p0y = (m0y + adjy) * cellPx;
@@ -801,6 +898,115 @@ class Renderer {
     pop();
   }
 
+  renderSymmetryOverlay(statistics, params = {}) {
+    const POLYGON_NAME = {
+      1: "irregular",
+      2: "bilateral",
+      3: "trimeric",
+      4: "tetrameric",
+      5: "pentameric",
+      6: "hexameric",
+      7: "heptameric",
+      8: "octameric",
+      9: "nonameric",
+      10: "decameric",
+      0: "polymeric",
+    };
+
+    const { mass, centerX, centerY, symmSides, symmStrength, symmAngle } =
+      statistics;
+    const sidesVec = statistics.sidesVec;
+    const angleVec = statistics.angleVec;
+    const rotateVec = statistics.rotateVec;
+    const symmMaxRadius = statistics.symmMaxRadius || 0;
+
+    const hasValidCenter =
+      Number.isFinite(centerX) && Number.isFinite(centerY);
+    const hasVisibleMass = Number.isFinite(mass) && mass > 1e-10;
+    const k = symmSides || 0;
+
+    if (!hasValidCenter || !hasVisibleMass || k < 2) return;
+
+    const T = Number(params.T) || 10;
+    const cellPx = width / this.size;
+    const a = symmAngle || 0;
+
+    const vsx = this._viewOffsetActive ? this._viewShiftX : 0;
+    const vsy = this._viewOffsetActive ? this._viewShiftY : 0;
+    const m1x =
+      (((centerX + vsx) % this.size) + this.size) % this.size;
+    const m1y =
+      (((centerY + vsy) % this.size) + this.size) % this.size;
+    const m1px = m1x * cellPx;
+    const m1py = m1y * cellPx;
+
+    const c254 = [127, 127, 127];
+    const c255 = [255, 255, 255];
+    const dotR = 2;
+
+    push();
+    this._enableOverlayShadow();
+
+    const maxDist = Math.max(this.size, this.size);
+    stroke(c254[0], c254[1], c254[2]);
+    strokeWeight(1);
+    for (let i = 0; i < k; i++) {
+      const angle = (2 * Math.PI * i) / k + a;
+      const dx = Math.sin(angle) * maxDist;
+      const dy = Math.cos(angle) * maxDist;
+      line(m1px, m1py, (m1x - dx) * cellPx, (m1y - dy) * cellPx);
+    }
+
+    if (sidesVec && angleVec) {
+      const numRadii = Math.min(symmMaxRadius, sidesVec.length);
+      for (let rIdx = 0; rIdx < numRadii; rIdx++) {
+        const kk = sidesVec[rIdx];
+        if (kk < 2) continue;
+        const aa = angleVec[rIdx];
+        const ww = rotateVec ? rotateVec[rIdx] * T : 0;
+        const dist = rIdx + 1;
+        const col = kk === k ? c255 : c254;
+
+        for (let i = 0; i < kk; i++) {
+          const angle = (2 * Math.PI * i) / kk + aa;
+          const dx = Math.sin(angle) * dist;
+          const dy = Math.cos(angle) * dist;
+          const dotX = (m1x - dx) * cellPx;
+          const dotY = (m1y - dy) * cellPx;
+
+          noStroke();
+          fill(col[0], col[1], col[2]);
+          ellipse(dotX, dotY, dotR * 2, dotR * 2);
+
+          if (Math.abs(ww) > 0.01) {
+            noFill();
+            stroke(col[0], col[1], col[2]);
+            strokeWeight(1);
+            const arcR = dist * cellPx;
+            const p5a1 = (3 * Math.PI) / 2 - angle;
+            const p5a2 = p5a1 - ww;
+            const arcStart = Math.min(p5a1, p5a2);
+            const arcStop = Math.max(p5a1, p5a2);
+            arc(m1px, m1py, arcR * 2, arcR * 2, arcStart, arcStop);
+          }
+        }
+      }
+    }
+    this._disableOverlayShadow();
+
+    noStroke();
+    this._enableOverlayShadow();
+    this._applyTextFont();
+    textSize(13);
+    textAlign(LEFT, TOP);
+    fill(255);
+    const name = POLYGON_NAME[k <= 10 ? k : 0];
+    const pct = ((symmStrength || 0) * 100).toFixed(0);
+    text(`symmetry: ${k} (${name}) ${pct}%`, 10, 10);
+    this._disableOverlayShadow();
+    pop();
+  }
+
   renderAnimalName(animal) {
     if (!animal) return;
     const parts = [
@@ -811,8 +1017,7 @@ class Renderer {
     const label = parts.join(" ");
     if (!label) return;
     push();
-    // Need to use monospace in order to display cname Chinese characters correctly without them being replaced by tofu boxes :( Doesn't look as nice as Iosevka...
-    textFont('monospace');
+    textFont("monospace");
     this._enableOverlayShadow();
     noStroke();
     textSize(15);
@@ -830,7 +1035,11 @@ class Renderer {
       return;
     }
 
-    if (!this._statsGfx || this._statsGfx.width !== width || this._statsGfx.height !== height) {
+    if (
+      !this._statsGfx ||
+      this._statsGfx.width !== width ||
+      this._statsGfx.height !== height
+    ) {
       if (this._statsGfx) this._statsGfx.remove();
       this._statsGfx = createGraphics(width, height);
     }
@@ -942,7 +1151,7 @@ class Renderer {
       this._getViewSpec(board, automaton, "world", params),
       this._getViewSpec(board, automaton, "potential", params),
       this._getViewSpec(board, automaton, "growth", params),
-      this._getViewSpec(board, automaton, "kernel", params),
+      this._getKernelCalcPanelSpec(automaton),
     ];
 
     for (let i = 0; i < views.length; i++) {
@@ -1090,11 +1299,11 @@ class Renderer {
       const packed = this.lutPacked;
       const pixels32 = new Uint32Array(img.pixels.buffer);
       for (let py = 0; py < panelSize; py++) {
-        const sy = Math.min(srcSize - 1, (py * srcSize / panelSize) | 0);
+        const sy = Math.min(srcSize - 1, ((py * srcSize) / panelSize) | 0);
         const srcRow = sy * srcSize;
         const dstRow = py * panelSize;
         for (let px = 0; px < panelSize; px++) {
-          const sx = Math.min(srcSize - 1, (px * srcSize / panelSize) | 0);
+          const sx = Math.min(srcSize - 1, ((px * srcSize) / panelSize) | 0);
           let scaled = ((src[srcRow + sx] || 0) - panelVmin) * scale255;
           if (scaled < 0) scaled = 0;
           else if (scaled > 255) scaled = 255;
@@ -1104,10 +1313,10 @@ class Renderer {
     } else {
       const lut = this.lut;
       for (let py = 0; py < panelSize; py++) {
-        const sy = Math.min(srcSize - 1, (py * srcSize / panelSize) | 0);
+        const sy = Math.min(srcSize - 1, ((py * srcSize) / panelSize) | 0);
         const srcRow = sy * srcSize;
         for (let px = 0; px < panelSize; px++) {
-          const sx = Math.min(srcSize - 1, (px * srcSize / panelSize) | 0);
+          const sx = Math.min(srcSize - 1, ((px * srcSize) / panelSize) | 0);
           let scaled = ((src[srcRow + sx] || 0) - panelVmin) * scale255;
           if (scaled < 0) scaled = 0;
           else if (scaled > 255) scaled = 255;
@@ -1149,10 +1358,20 @@ class Renderer {
     this._kernelDisplayCacheSource = null;
     this._legendBarImg = null;
     this._legendBarCachedMap = "";
-    if (this._legendGfx) { this._legendGfx.remove(); this._legendGfx = null; }
+    if (this._legendGfx) {
+      this._legendGfx.remove();
+      this._legendGfx = null;
+    }
     this._legendCacheKey = "";
-    if (this._scaleGfx) { this._scaleGfx.remove(); this._scaleGfx = null; }
+    if (this._scaleGfx) {
+      this._scaleGfx.remove();
+      this._scaleGfx = null;
+    }
     this._scaleCacheKey = "";
-    if (this._statsGfx) { this._statsGfx.remove(); this._statsGfx = null; }
+    if (this._statsGfx) {
+      this._statsGfx.remove();
+      this._statsGfx = null;
+    }
+    this._rollBuffer = null;
   }
 }

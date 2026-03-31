@@ -143,7 +143,10 @@ class Media {
 
   exportImage() {
     try {
-      save(globalThis._renderer, this._getFilename(this.appcore.params.imageFormat));
+      save(
+        globalThis._renderer,
+        this._getFilename(this.appcore.params.imageFormat),
+      );
       this._logInfo("Image exported");
     } catch (err) {
       this._logError("Image export failed:", err);

@@ -86,7 +86,9 @@ class NDCompatibility {
 
   static normaliseAnimalDataset(data) {
     const dataArray = Array.isArray(data) ? data : Object.values(data || {});
-    return dataArray.filter((animal) => animal && animal.name && !animal.code?.startsWith(">"));
+    return dataArray.filter(
+      (animal) => animal && animal.name && !animal.code?.startsWith(">"),
+    );
   }
 
   static buildAnimalsByDimension(animals2D, animalsByDimension = null) {

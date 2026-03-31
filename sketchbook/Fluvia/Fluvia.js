@@ -19,8 +19,14 @@ const metadata = {
 function preload() {
   font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
   colourMaps = loadJSON("../../_shared/data/colour-maps.json");
-  loadStrings("../../_shared/shaders/vert.glsl", (lines) => (vertShader = lines.join("\n")));
-  loadStrings("../../_shared/shaders/frag.glsl", (lines) => (fragShader = lines.join("\n")));
+  loadStrings(
+    "../../_shared/shaders/vert.glsl",
+    (lines) => (vertShader = lines.join("\n")),
+  );
+  loadStrings(
+    "../../_shared/shaders/frag.glsl",
+    (lines) => (fragShader = lines.join("\n")),
+  );
 }
 
 function setup() {
@@ -67,26 +73,33 @@ function windowResized() {
   if (!appcore) return;
   appcore.resize();
 }
+
 function keyPressed(event) {
   const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
   return appcore ? appcore.handleKeyPressed(keyValue, keyCode) : false;
 }
+
 function keyReleased(event) {
   const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
   return appcore ? appcore.handleKeyReleased(keyValue, keyCode) : false;
 }
+
 function mouseWheel(event) {
   return appcore ? appcore.handleWheel(event) : false;
 }
+
 function mouseDragged(event) {
   return appcore ? appcore.handlePointer(event) : false;
 }
+
 function touchStarted(event) {
   return appcore ? appcore.handlePointer(event) : false;
 }
+
 function touchMoved(event) {
   return appcore ? appcore.handlePointer(event) : false;
 }
+
 function touchEnded(event) {
   return appcore ? appcore.handlePointer(event) : false;
 }

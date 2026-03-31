@@ -61,29 +61,37 @@ function windowResized() {
   if (!appcore) return;
   appcore.resize();
 }
+
 function keyPressed(event) {
   const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
   return appcore ? appcore.handleKeyPressed(keyValue, keyCode) : false;
 }
+
 function keyReleased(event) {
   const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
   return appcore ? appcore.handleKeyReleased(keyValue, keyCode) : false;
 }
+
 function mouseWheel(event) {
   return appcore ? appcore.handleWheel(event) : false;
 }
+
 function mouseDragged(event) {
   return appcore ? appcore.handlePointer(event) : false;
 }
+
 function mouseReleased(event) {
   return appcore ? appcore.handlePointerEnd(event) : false;
 }
+
 function touchStarted(event) {
   return appcore ? appcore.handlePointer(event) : false;
 }
+
 function touchMoved(event) {
   return appcore ? appcore.handlePointer(event) : false;
 }
+
 function touchEnded(event) {
   return appcore ? appcore.handlePointerEnd(event) : false;
 }

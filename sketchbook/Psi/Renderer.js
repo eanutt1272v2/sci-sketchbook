@@ -345,7 +345,7 @@ class Renderer {
     fill(255);
     textAlign(CENTER, BOTTOM);
     textSize(14);
-    let kSuper = this.getSuperscript(k); 
+    let kSuper = this.getSuperscript(k);
     text(`×10${kSuper}`, x - w * 0.6, y1 - 6);
 
     push();

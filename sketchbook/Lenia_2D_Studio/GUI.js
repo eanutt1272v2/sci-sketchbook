@@ -353,6 +353,9 @@ class GUI {
     overlay.addBinding(params, "renderMotionOverlay", {
       label: "Motion Overlay",
     });
+    overlay.addBinding(params, "renderSymmetryOverlay", {
+      label: "Symmetry Overlay",
+    });
     overlay.addBinding(params, "renderCalcPanels", {
       label: "Calculation Panels",
     });
@@ -363,7 +366,6 @@ class GUI {
 
   createAnimalsTab(page) {
     const { params } = this;
-
     const sourceDimension =
       this.animalLibrary && Number.isFinite(this.animalLibrary.activeDimension)
         ? this.animalLibrary.activeDimension
@@ -373,12 +375,18 @@ class GUI {
       : 0;
 
     this.animalBinding = page.addBinding(params, "selectedAnimal", {
-      label: `Animal (D${sourceDimension}, ${animalCount})`,
+      label: `Animal (${animalCount} × ${sourceDimension}D)`,
       options: this.animalLibrary ? this.animalLibrary.getAnimalList() : {},
     });
 
     page
-      .addButton({ title: "Load Animal (Z)" })
+      .addButton({ title: "◀ Prev (C)" })
+      .on("click", () => this.appcore?.cycleAnimal(-1));
+    page
+      .addButton({ title: "▶ Next (V)" })
+      .on("click", () => this.appcore?.cycleAnimal(1));
+    page
+      .addButton({ title: "Load Selected (Z)" })
       .on("click", () => this.appcore?.loadSelectedAnimal());
 
     this.addSeparator(page);
@@ -499,7 +507,11 @@ class GUI {
     addStat(motion, "centroidSpeed", "Centroid speed [μm/μs]");
     addStat(motion, "angle", "Direction angle [rad]");
     addStat(motion, "centroidRotateSpeed", "Centroid rotate speed [rad/μs]");
-    addStat(motion, "growthRotateSpeed", "Growth-centroid rotate speed [rad/μs]");
+    addStat(
+      motion,
+      "growthRotateSpeed",
+      "Growth-centroid rotate speed [rad/μs]",
+    );
     addStat(motion, "majorAxisRotateSpeed", "Major axis rotate speed [rad/μs]");
     addStat(motion, "rotationSpeed", "Rotation speed [rad/μs]");
 
@@ -511,13 +523,26 @@ class GUI {
     addStat(symmetry, "massAsym", "Mass asymmetry [μg]");
     addStat(symmetry, "lyapunov", "Lyapunov exponent [gen⁻¹]");
     addStat(symmetry, "period", "Period [μs]");
-    addStat(symmetry, "periodConfidence", "Period confidence [%]", formatPercent);
+    addStat(
+      symmetry,
+      "periodConfidence",
+      "Period confidence [%]",
+      formatPercent,
+    );
 
     this.addSeparator(page);
 
     const invariants = page.addFolder({ title: "Moment Invariants" });
-    addStat(invariants, "hu1Log", "Moment of inertia - Hu's moment invariant 1 (log scale)");
-    addStat(invariants, "hu4Log", "Skewness - Hu's moment invariant 4 (log scale)");
+    addStat(
+      invariants,
+      "hu1Log",
+      "Moment of inertia - Hu's moment invariant 1 (log scale)",
+    );
+    addStat(
+      invariants,
+      "hu4Log",
+      "Skewness - Hu's moment invariant 4 (log scale)",
+    );
     addStat(invariants, "hu5Log", "Hu's 5 (log scale)");
     addStat(invariants, "hu6Log", "Hu's 6 (log scale)");
     addStat(invariants, "hu7Log", "Hu's 7 (log scale)");

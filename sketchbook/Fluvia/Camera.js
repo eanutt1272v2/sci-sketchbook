@@ -52,8 +52,8 @@ class Camera {
     return this.quaternion.applyToVector({ x: 0, y: 1, z: 0 });
   }
 
-  handleWheel(e) {
-    this.target.zoom = max(20, this.target.zoom + e.delta * 0.5);
+  handleWheel(event) {
+    this.target.zoom = max(20, this.target.zoom + event.delta * 0.5);
   }
 
   handlePointer() {

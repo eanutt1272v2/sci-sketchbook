@@ -15,11 +15,50 @@ const _fft2DScratch = {
 
 const _stepCenterCache = {
   valid: false,
-  cosX: 0, sinX: 0, cosY: 0, sinY: 0, mass: 0,
+  cosX: 0,
+  sinX: 0,
+  cosY: 0,
+  sinY: 0,
+  mass: 0,
 };
 
 let _autoCenterTmp = null;
 let _autoCenterTmpLen = 0;
+
+const _GROWTH_LUT_SIZE = 32768;
+const _GROWTH_LUT_UMAX = 20;
+const _growthLutExp = new Float32Array(_GROWTH_LUT_SIZE);
+const _growthLutPoly = new Float32Array(_GROWTH_LUT_SIZE);
+const _GROWTH_LUT_POLY_MAX = 1.5;
+const _GLI_EXP = (_GROWTH_LUT_SIZE - 1) / _GROWTH_LUT_UMAX;
+const _GLI_POLY = (_GROWTH_LUT_SIZE - 1) / _GROWTH_LUT_POLY_MAX;
+(function _initGrowthLUTs() {
+  for (let i = 0; i < _GROWTH_LUT_SIZE; i++) {
+    const u = (i / (_GROWTH_LUT_SIZE - 1)) * _GROWTH_LUT_UMAX;
+    _growthLutExp[i] = Math.exp(-u) * 2 - 1;
+  }
+  for (let i = 0; i < _GROWTH_LUT_SIZE; i++) {
+    const v = (i / (_GROWTH_LUT_SIZE - 1)) * _GROWTH_LUT_POLY_MAX;
+    if (v >= 1) {
+      _growthLutPoly[i] = -1;
+    } else {
+      const b = 1 - v;
+      const b2 = b * b;
+      _growthLutPoly[i] = b2 * b2 * 2 - 1;
+    }
+  }
+})();
+
+const _ndStepCache = {
+  valid: false,
+  cosX: 0,
+  sinX: 0,
+  cosY: 0,
+  sinY: 0,
+  totalMass: 0,
+  planeMass: null,
+  planeCount: 0,
+};
 
 function _getFFT2DScratch(N) {
   if (_fft2DScratch.N !== N || !_fft2DScratch.row || !_fft2DScratch.col) {
@@ -130,7 +169,10 @@ let _ndPencilBuf = null;
 let _ndPencilSize = 0;
 
 function fftND(buf, N, ndim, inverse) {
-  if (ndim <= 1) { fftRadix2(buf, inverse); return; }
+  if (ndim <= 1) {
+    fftRadix2(buf, inverse);
+    return;
+  }
   const total = Math.pow(N, ndim);
   const pencilCount = total / N;
 
@@ -142,6 +184,8 @@ function fftND(buf, N, ndim, inverse) {
 
   _getTwiddles(N);
 
+  const log2N = Math.log2(N) | 0;
+
   for (let axis = 0; axis < ndim; axis++) {
     if (axis === ndim - 1) {
       const N2 = N * 2;
@@ -151,12 +195,14 @@ function fftND(buf, N, ndim, inverse) {
       continue;
     }
 
-    const stride = Math.pow(N, ndim - 1 - axis);
-    const outerStride = stride * N;
+    const strideShift = log2N * (ndim - 1 - axis);
+    const stride = 1 << strideShift;
+    const strideMask = stride - 1;
+    const outerStride = stride << log2N;
 
     for (let p = 0; p < pencilCount; p++) {
-      const outer = Math.floor(p / stride);
-      const inner = p % stride;
+      const outer = p >>> strideShift;
+      const inner = p & strideMask;
       const base = outer * outerStride + inner;
 
       for (let k = 0; k < N; k++) {
@@ -202,6 +248,7 @@ function getTrigTables(size) {
 
 function createAnalysisState(epsilon = 1e-10, maxHistory = 512) {
   const symmetryBins = 64;
+  const maxRadii = 64;
   return {
     epsilon,
     maxHistory,
@@ -219,6 +266,12 @@ function createAnalysisState(epsilon = 1e-10, maxHistory = 512) {
     symmetryBins,
     symmetryAngles: new Float32Array(symmetryBins),
     symmetryHarmonics: new Float32Array(symmetryBins >> 1),
+    perRadiusAngles: new Float32Array(maxRadii * symmetryBins),
+    densitySum: new Float32Array(symmetryBins >> 1),
+    densityEma: null,
+    densityEmaAlpha: 0.05,
+    lastSidesVec: null,
+    lastAngleVec: null,
     frames: 0,
     analysisStride: 1,
   };
@@ -234,6 +287,9 @@ function resetAnalysisState(state) {
   state.lyapunov = 0;
   state.massHistoryCount = 0;
   state.massHistoryHead = 0;
+  state.densityEma = null;
+  state.lastSidesVec = null;
+  state.lastAngleVec = null;
   state.frames = 0;
 }
 
@@ -284,7 +340,16 @@ function signedLog10(value) {
   return Math.sign(value) * Math.log10(1 + absValue);
 }
 
-function calcMomentInvariants(cells, size, centerX, centerY, mass, epsilon, asymNX, asymNY) {
+function calcMomentInvariants(
+  cells,
+  size,
+  centerX,
+  centerY,
+  mass,
+  epsilon,
+  asymNX,
+  asymNY,
+) {
   const inv = {
     hu1Log: 0,
     hu4Log: 0,
@@ -469,7 +534,7 @@ function kernelCore(r, kn) {
 function kernelShell(d, b, kn, rr) {
   if (d >= rr) return 0;
   const B = b.length;
-  const Br = B * d / rr;
+  const Br = (B * d) / rr;
   const idx = Math.min(Math.floor(Br), B - 1);
   const bVal = b[idx];
   const frac = Br % 1;
@@ -487,7 +552,9 @@ function buildKernel(params) {
     b = params.b.split(",").map(function (s) {
       s = s.trim();
       const slash = s.indexOf("/");
-      return slash >= 0 ? parseFloat(s.substring(0, slash)) / parseFloat(s.substring(slash + 1)) : parseFloat(s);
+      return slash >= 0
+        ? parseFloat(s.substring(0, slash)) / parseFloat(s.substring(slash + 1))
+        : parseFloat(s);
     });
   } else {
     b = [Number(params.b) || 1];
@@ -578,7 +645,9 @@ function buildKernelND(params, N, ndim) {
     b = params.b.split(",").map(function (s) {
       s = s.trim();
       const slash = s.indexOf("/");
-      return slash >= 0 ? parseFloat(s.substring(0, slash)) / parseFloat(s.substring(slash + 1)) : parseFloat(s);
+      return slash >= 0
+        ? parseFloat(s.substring(0, slash)) / parseFloat(s.substring(slash + 1))
+        : parseFloat(s);
     });
   } else {
     b = [Number(params.b) || 1];
@@ -625,7 +694,7 @@ function buildKernelFFTND(kernel, N, ndim) {
     for (let a = ndim - 1; a >= 0; a--) {
       const c = tmp % N;
       tmp = Math.floor(tmp / N);
-      destFlat += (((c - mid) + N) % N) * mul;
+      destFlat += ((c - mid + N) % N) * mul;
       mul *= N;
     }
 
@@ -735,8 +804,19 @@ function stepFFT(
     }
   }
 
-  const { T, m, s, gn, softClip, multiStep, addNoise, maskRate, paramP, aritaMode, h: hParam } =
-    params;
+  const {
+    T,
+    m,
+    s,
+    gn,
+    softClip,
+    multiStep,
+    addNoise,
+    maskRate,
+    paramP,
+    aritaMode,
+    h: hParam,
+  } = params;
   const dt = 1 / T;
   const h = Number(hParam) || 1;
   const dtH = dt * h;
@@ -760,7 +840,11 @@ function stepFFT(
   const trig = getTrigTables(size);
   const cosT = trig.cos;
   const sinT = trig.sin;
-  let acCosX = 0, acSinX = 0, acCosY = 0, acSinY = 0, acMass = 0;
+  let acCosX = 0,
+    acSinX = 0,
+    acCosY = 0,
+    acSinY = 0,
+    acMass = 0;
 
   for (let y = 0; y < size; y++) {
     const row = y * size;
@@ -776,7 +860,7 @@ function stepFFT(
       } else if (gn === 3) {
         growth = Math.abs(diff) <= s ? 1 : -1;
       } else {
-        const base = Math.max(0, 1 - (diff * diff) * inv9s2);
+        const base = Math.max(0, 1 - diff * diff * inv9s2);
         const base2 = base * base;
         growth = base2 * base2 * 2 - 1;
       }
@@ -807,8 +891,10 @@ function stepFFT(
       if (!hasMask || Math.random() > mr) cells[i] = newVal;
 
       const v = cells[i];
-      acCosX += v * cosT[x]; acSinX += v * sinT[x];
-      acCosY += v * cy; acSinY += v * sy;
+      acCosX += v * cosT[x];
+      acSinX += v * sinT[x];
+      acCosY += v * cy;
+      acSinY += v * sy;
       acMass += v;
     }
   }
@@ -858,7 +944,16 @@ function stepFFTSingle(
   N,
   changeOut,
 ) {
-  return stepFFT(cells, potential, field, fieldOld, params, kernelFFT, N, changeOut);
+  return stepFFT(
+    cells,
+    potential,
+    field,
+    fieldOld,
+    params,
+    kernelFFT,
+    N,
+    changeOut,
+  );
 }
 
 function stepFFTMulti(
@@ -888,7 +983,12 @@ const _ndFFTScratch = { N: 0, ndim: 0, buf: null };
 function getNDFFTScratch(N, ndim) {
   const total = Math.pow(N, ndim);
   const required = total * 2;
-  if (_ndFFTScratch.N !== N || _ndFFTScratch.ndim !== ndim || !_ndFFTScratch.buf || _ndFFTScratch.buf.length < required) {
+  if (
+    _ndFFTScratch.N !== N ||
+    _ndFFTScratch.ndim !== ndim ||
+    !_ndFFTScratch.buf ||
+    _ndFFTScratch.buf.length < required
+  ) {
     _ndFFTScratch.N = N;
     _ndFFTScratch.ndim = ndim;
     _ndFFTScratch.buf = new Float64Array(required);
@@ -910,7 +1010,15 @@ function prepareFFTInputND(buf, worldFlat, total) {
   }
 }
 
-function stepFFTND(worldFlat, potentialFlat, fieldFlat, params, kernelFFTND, N, ndim) {
+function stepFFTND(
+  worldFlat,
+  potentialFlat,
+  fieldFlat,
+  params,
+  kernelFFTND,
+  N,
+  ndim,
+) {
   const total = Math.pow(N, ndim);
 
   const buf = getNDFFTScratch(N, ndim);
@@ -930,7 +1038,18 @@ function stepFFTND(worldFlat, potentialFlat, fieldFlat, params, kernelFFTND, N, 
 
   fftND(buf, N, ndim, true);
 
-  const { T, m, s, gn, softClip, addNoise, maskRate, paramP, aritaMode, h: hParam } = params;
+  const {
+    T,
+    m,
+    s,
+    gn,
+    softClip,
+    addNoise,
+    maskRate,
+    paramP,
+    aritaMode,
+    h: hParam,
+  } = params;
   const dt = 1 / T;
   const h = Number(hParam) || 1;
   const dtH = dt * h;
@@ -945,49 +1064,114 @@ function stepFFTND(worldFlat, potentialFlat, fieldFlat, params, kernelFFTND, N, 
   const softK = softClip ? 1 / dt : 0;
   const softC = softClip ? Math.exp(-softK) : 0;
 
-  for (let i = 0; i < total; i++) {
-    const pot = buf[i * 2];
-    potentialFlat[i] = pot;
+  const size = N;
+  const planeCellCount = size * size;
+  const planeCount = total / planeCellCount;
+  const trig = getTrigTables(size);
+  const cosT = trig.cos;
+  const sinT = trig.sin;
 
-    const diff = pot - m;
-    let growth;
-    if (gn === 2) {
-      growth = Math.exp(-(diff * diff) * inv2s2) * 2 - 1;
-    } else if (gn === 3) {
-      growth = Math.abs(diff) <= s ? 1 : -1;
-    } else {
-      const base = Math.max(0, 1 - (diff * diff) * inv9s2);
-      const base2 = base * base;
-      growth = base2 * base2 * 2 - 1;
-    }
-    fieldFlat[i] = growth;
-
-    let D;
-    if (isArita) {
-      D = dtH * ((growth + 1) / 2 - worldFlat[i]);
-    } else {
-      D = dtH * growth;
-    }
-    let newVal = worldFlat[i] + D;
-
-    if (hasNoise) newVal *= 1 + (Math.random() - 0.5) * noiseAmp;
-
-    if (softClip) {
-      const a2 = Math.exp(softK * newVal);
-      newVal = Math.log(1 / (a2 + 1) + softC) / -softK;
-    } else {
-      newVal = Math.max(0, Math.min(1, newVal));
-    }
-
-    if (hasQuant) newVal = Math.round(newVal * paramP) / paramP;
-    if (!hasMask || Math.random() > mr) worldFlat[i] = newVal;
+  if (!_ndStepCache.planeMass || _ndStepCache.planeMass.length < planeCount) {
+    _ndStepCache.planeMass = new Float32Array(planeCount);
   }
+
+  let acCosX = 0,
+    acSinX = 0,
+    acCosY = 0,
+    acSinY = 0,
+    acMass = 0;
+  const lutE = _growthLutExp;
+  const lutP = _growthLutPoly;
+  const lutEScale = _GLI_EXP;
+  const lutPScale = _GLI_POLY;
+  const lutLast = _GROWTH_LUT_SIZE - 1;
+
+  for (let plane = 0; plane < planeCount; plane++) {
+    const planeBase = plane * planeCellCount;
+    let planeMassAcc = 0;
+
+    for (let y = 0; y < size; y++) {
+      const rowBase = planeBase + y * size;
+      const cy = cosT[y];
+      const sy = sinT[y];
+
+      for (let x = 0; x < size; x++) {
+        const i = rowBase + x;
+        const pot = buf[i * 2];
+        potentialFlat[i] = pot;
+
+        const diff = pot - m;
+        let growth;
+        if (gn === 2) {
+          const u = diff * diff * inv2s2;
+          const fi = u * lutEScale;
+          const idx = fi | 0;
+          if (idx >= lutLast) {
+            growth = -1;
+          } else {
+            growth = lutE[idx] + (lutE[idx + 1] - lutE[idx]) * (fi - idx);
+          }
+        } else if (gn === 3) {
+          growth = Math.abs(diff) <= s ? 1 : -1;
+        } else {
+          const v = diff * diff * inv9s2;
+          const fi = v * lutPScale;
+          const idx = fi | 0;
+          if (idx >= lutLast) {
+            growth = -1;
+          } else {
+            growth = lutP[idx] + (lutP[idx + 1] - lutP[idx]) * (fi - idx);
+          }
+        }
+        fieldFlat[i] = growth;
+
+        let D;
+        if (isArita) {
+          D = dtH * ((growth + 1) / 2 - worldFlat[i]);
+        } else {
+          D = dtH * growth;
+        }
+        let newVal = worldFlat[i] + D;
+
+        if (hasNoise) newVal *= 1 + (Math.random() - 0.5) * noiseAmp;
+
+        if (softClip) {
+          const a2 = Math.exp(softK * newVal);
+          newVal = Math.log(1 / (a2 + 1) + softC) / -softK;
+        } else {
+          if (newVal < 0) newVal = 0;
+          else if (newVal > 1) newVal = 1;
+        }
+
+        if (hasQuant) newVal = Math.round(newVal * paramP) / paramP;
+        if (!hasMask || Math.random() > mr) worldFlat[i] = newVal;
+
+        const v = worldFlat[i];
+        acCosX += v * cosT[x];
+        acSinX += v * sinT[x];
+        acCosY += v * cy;
+        acSinY += v * sy;
+        planeMassAcc += v;
+      }
+    }
+
+    acMass += planeMassAcc;
+    _ndStepCache.planeMass[plane] = planeMassAcc;
+  }
+
+  _ndStepCache.cosX = acCosX;
+  _ndStepCache.sinX = acSinX;
+  _ndStepCache.cosY = acCosY;
+  _ndStepCache.sinY = acSinY;
+  _ndStepCache.totalMass = acMass;
+  _ndStepCache.planeCount = planeCount;
+  _ndStepCache.valid = true;
 }
 
 function detectSymmetry(cells, size, stats, state, params) {
   const cx = stats.mass > state.epsilon ? stats.centerX : size / 2;
   const cy = stats.mass > state.epsilon ? stats.centerY : size / 2;
-  const maxRadius = Math.min(size * 0.4, 64);
+  const maxRadius = Math.min(size >> 1, 64);
   const angularBins = state.symmetryBins || 64;
   const angles = state.symmetryAngles;
   const harmonics = state.symmetryHarmonics;
@@ -997,18 +1181,98 @@ function detectSymmetry(cells, size, stats, state, params) {
   const harmonicCos = tables.harmonicCos;
   const harmonicSin = tables.harmonicSin;
   const rMax = Math.max(2, Math.floor(maxRadius));
-  const sampleDiv = 1 / (rMax - 1);
+  const numRadii = rMax - 1;
+  const sampleDiv = 1 / numRadii;
+  const maxHarmonicSearch = Math.min(16, tables.halfBins);
 
-  for (let theta = 0; theta < angularBins; theta++) {
-    let sum = 0;
-    const ux = thetaCos[theta];
-    const uy = thetaSin[theta];
-    for (let r = 1; r < rMax; r++) {
+  const prAngles = state.perRadiusAngles;
+  for (let r = 1; r < rMax; r++) {
+    const rOffset = (r - 1) * angularBins;
+    for (let theta = 0; theta < angularBins; theta++) {
+      const ux = thetaCos[theta];
+      const uy = thetaSin[theta];
       const x = ((Math.round(cx + r * ux) % size) + size) % size;
       const y = ((Math.round(cy + r * uy) % size) + size) % size;
-      sum += cells[y * size + x];
+      prAngles[rOffset + theta] = cells[y * size + x];
     }
-    angles[theta] = sum * sampleDiv;
+  }
+
+  const densitySum = state.densitySum;
+  for (let k = 0; k < maxHarmonicSearch; k++) densitySum[k] = 0;
+
+  const sidesVec = new Uint8Array(numRadii);
+  const angleVec = new Float32Array(numRadii);
+  const rotateVec = new Float32Array(numRadii);
+  const avgPerRadius = new Float32Array(numRadii);
+
+  for (let rIdx = 0; rIdx < numRadii; rIdx++) {
+    const rOffset = rIdx * angularBins;
+    let avg = 0;
+    for (let t = 0; t < angularBins; t++) avg += prAngles[rOffset + t];
+    avg /= angularBins;
+    avgPerRadius[rIdx] = avg;
+
+    let bestMag = 0,
+      bestK = 0,
+      bestCos = 0,
+      bestSin = 0;
+    for (let k = 2; k < maxHarmonicSearch; k++) {
+      const hRow = k * angularBins;
+      let cs = 0,
+        ss = 0;
+      for (let n = 0; n < angularBins; n++) {
+        const a = prAngles[rOffset + n];
+        cs += a * harmonicCos[hRow + n];
+        ss += a * harmonicSin[hRow + n];
+      }
+      const mag = Math.sqrt(cs * cs + ss * ss) / angularBins;
+      densitySum[k] += mag;
+      if (mag > bestMag) {
+        bestMag = mag;
+        bestK = k;
+        bestCos = cs;
+        bestSin = ss;
+      }
+    }
+
+    if (avg < 0.05 || avg > 0.95) continue;
+
+    sidesVec[rIdx] = bestK;
+    if (bestK > 0) {
+      angleVec[rIdx] = Math.PI / 2 - Math.atan2(bestSin, bestCos) / bestK;
+    }
+  }
+
+  const alpha = state.densityEmaAlpha;
+  if (state.densityEma) {
+    for (let k = 2; k < maxHarmonicSearch; k++) {
+      state.densityEma[k] += alpha * (densitySum[k] - state.densityEma[k]);
+    }
+  } else {
+    state.densityEma = new Float32Array(densitySum.length);
+    state.densityEma.set(densitySum);
+  }
+
+  let maxDensity = 0;
+  let maxIndex = 0;
+  for (let k = 2; k < maxHarmonicSearch; k++) {
+    if (state.densityEma[k] > maxDensity) {
+      maxDensity = state.densityEma[k];
+      maxIndex = k;
+    }
+  }
+
+  for (let theta = 0; theta < angularBins; theta++) {
+    angles[theta] = 0;
+  }
+  for (let r = 1; r < rMax; r++) {
+    const rOffset = (r - 1) * angularBins;
+    for (let theta = 0; theta < angularBins; theta++) {
+      angles[theta] += prAngles[rOffset + theta];
+    }
+  }
+  for (let theta = 0; theta < angularBins; theta++) {
+    angles[theta] *= sampleDiv;
   }
 
   for (let k = 0; k < tables.halfBins; k++) {
@@ -1023,25 +1287,15 @@ function detectSymmetry(cells, size, stats, state, params) {
     harmonics[k] = Math.sqrt(cosSum * cosSum + sinSum * sinSum) / angularBins;
   }
 
-  let maxHarmonic = 0;
-  let maxIndex = 0;
-  for (let k = 2; k < Math.min(16, angularBins / 2); k++) {
-    if (harmonics[k] > maxHarmonic) {
-      maxHarmonic = harmonics[k];
-      maxIndex = k;
-    }
-  }
-
   let maxAll = 0;
   for (let i = 0; i < harmonics.length; i++) {
     if (harmonics[i] > maxAll) maxAll = harmonics[i];
   }
-
+  const maxHarmonic = maxIndex > 0 ? harmonics[maxIndex] : 0;
   const symmStrength = maxAll > state.epsilon ? maxHarmonic / maxAll : 0;
+
   const canTrackRotation =
-    maxIndex > 0 &&
-    maxHarmonic > state.epsilon * 10 &&
-    symmStrength >= 0.08;
+    maxIndex > 0 && maxHarmonic > state.epsilon * 10 && symmStrength >= 0.08;
   let rotSpeed = 0;
 
   if (canTrackRotation) {
@@ -1077,6 +1331,40 @@ function detectSymmetry(cells, size, stats, state, params) {
   stats.symmSides = maxIndex > 0 ? maxIndex : 0;
   stats.symmStrength = symmStrength;
   stats.rotationSpeed = Number.isFinite(rotSpeed) ? rotSpeed : 0;
+
+  if (
+    state.lastAngleVec &&
+    state.lastSidesVec &&
+    state.lastAngleVec.length === numRadii
+  ) {
+    for (let rIdx = 0; rIdx < numRadii; rIdx++) {
+      if (sidesVec[rIdx] > 1 && state.lastSidesVec[rIdx] === sidesVec[rIdx]) {
+        let dPhase = angleVec[rIdx] - state.lastAngleVec[rIdx];
+        const maxAngle = Math.PI / sidesVec[rIdx];
+        dPhase = ((dPhase + 3 * maxAngle) % (2 * maxAngle)) - maxAngle;
+        rotateVec[rIdx] = dPhase;
+      }
+    }
+  }
+  state.lastSidesVec = sidesVec;
+  state.lastAngleVec = new Float32Array(angleVec);
+
+  stats.sidesVec = sidesVec;
+  stats.angleVec = angleVec;
+  stats.rotateVec = rotateVec;
+  stats.symmMaxRadius = numRadii;
+
+  stats.symmAngle = 0;
+  stats.symmRotate = 0;
+  if (maxIndex > 1) {
+    for (let rIdx = numRadii - 1; rIdx >= 0; rIdx--) {
+      if (sidesVec[rIdx] === maxIndex) {
+        stats.symmAngle = angleVec[rIdx];
+        stats.symmRotate = rotateVec[rIdx];
+        break;
+      }
+    }
+  }
 }
 
 function detectPeriodicity(stats, params, state) {
@@ -1141,9 +1429,17 @@ function detectPeriodicity(stats, params, state) {
 }
 
 function computeQuickStats(cells, field, size, params, state) {
-  let mass = 0, growth = 0, maxValue = 0;
-  let cosX = 0, sinX = 0, cosY = 0, sinY = 0;
-  let gCosX = 0, gSinX = 0, gCosY = 0, gSinY = 0;
+  let mass = 0,
+    growth = 0,
+    maxValue = 0;
+  let cosX = 0,
+    sinX = 0,
+    cosY = 0,
+    sinY = 0;
+  let gCosX = 0,
+    gSinX = 0,
+    gCosY = 0,
+    gSinY = 0;
   let gMass = 0;
   const trig = getTrigTables(size);
   const cosT = trig.cos;
@@ -1151,7 +1447,8 @@ function computeQuickStats(cells, field, size, params, state) {
 
   for (let y = 0; y < size; y++) {
     const row = y * size;
-    const cy = cosT[y], sy = sinT[y];
+    const cy = cosT[y],
+      sy = sinT[y];
     for (let x = 0; x < size; x++) {
       const i = row + x;
       const val = cells[i];
@@ -1161,24 +1458,33 @@ function computeQuickStats(cells, field, size, params, state) {
       if (gv > 0) {
         growth += gv;
         gMass += gv;
-        gCosX += gv * cosT[x]; gSinX += gv * sinT[x];
-        gCosY += gv * cy; gSinY += gv * sy;
+        gCosX += gv * cosT[x];
+        gSinX += gv * sinT[x];
+        gCosY += gv * cy;
+        gSinY += gv * sy;
       }
-      cosX += val * cosT[x]; sinX += val * sinT[x];
-      cosY += val * cy; sinY += val * sy;
+      cosX += val * cosT[x];
+      sinX += val * sinT[x];
+      cosY += val * cy;
+      sinY += val * sy;
     }
   }
 
-  let centerX = 0, centerY = 0;
+  let centerX = 0,
+    centerY = 0;
   if (mass > state.epsilon) {
     centerX = ((Math.atan2(sinX, cosX) / (2 * Math.PI)) * size + size) % size;
     centerY = ((Math.atan2(sinY, cosY) / (2 * Math.PI)) * size + size) % size;
   }
 
-  let growthCenterX = 0, growthCenterY = 0, massGrowthDist = 0;
+  let growthCenterX = 0,
+    growthCenterY = 0,
+    massGrowthDist = 0;
   if (gMass > state.epsilon) {
-    growthCenterX = ((Math.atan2(gSinX, gCosX) / (2 * Math.PI)) * size + size) % size;
-    growthCenterY = ((Math.atan2(gSinY, gCosY) / (2 * Math.PI)) * size + size) % size;
+    growthCenterX =
+      ((Math.atan2(gSinX, gCosX) / (2 * Math.PI)) * size + size) % size;
+    growthCenterY =
+      ((Math.atan2(gSinY, gCosY) / (2 * Math.PI)) * size + size) % size;
     const mgDx = torusDelta(centerX, growthCenterX, size);
     const mgDy = torusDelta(centerY, growthCenterY, size);
     massGrowthDist = Math.sqrt(mgDx * mgDx + mgDy * mgDy);
@@ -1188,13 +1494,16 @@ function computeQuickStats(cells, field, size, params, state) {
   const safeT = Math.max(1e-6, Number(params?.T) || 1);
   const dt = 1 / safeT;
 
-  let speed = 0, angle = 0, centroidSpeed = 0, centroidRotateSpeed = 0;
+  let speed = 0,
+    angle = 0,
+    centroidSpeed = 0,
+    centroidRotateSpeed = 0;
   if (state.lastCentreX !== null) {
     const dx = torusDelta(centerX, state.lastCentreX, size);
     const dy = torusDelta(centerY, state.lastCentreY, size);
     const displacement = Math.sqrt(dx * dx + dy * dy);
     speed = displacement;
-    centroidSpeed = (displacement / safeR) / dt;
+    centroidSpeed = displacement / safeR / dt;
     const motionAngle = Math.atan2(dy, dx);
     angle = motionAngle;
     centroidRotateSpeed = motionAngle / dt;
@@ -1204,9 +1513,18 @@ function computeQuickStats(cells, field, size, params, state) {
   state.lastCentreY = centerY;
 
   return {
-    mass, growth, maxValue, centerX, centerY,
-    growthCenterX, growthCenterY, massGrowthDist,
-    speed, angle, centroidSpeed, centroidRotateSpeed,
+    mass,
+    growth,
+    maxValue,
+    centerX,
+    centerY,
+    growthCenterX,
+    growthCenterY,
+    massGrowthDist,
+    speed,
+    angle,
+    centroidSpeed,
+    centroidRotateSpeed,
   };
 }
 
@@ -1236,6 +1554,8 @@ function analyseStep(cells, field, change, params, state) {
     majorAxisRotateSpeed: 0,
     symmSides: 0,
     symmStrength: 0,
+    symmAngle: 0,
+    symmRotate: 0,
     rotationSpeed: 0,
     lyapunov: 0,
     hu1Log: 0,
@@ -1407,7 +1727,7 @@ function analyseStep(cells, field, change, params, state) {
     const dy = torusDelta(stats.centerY, state.lastCentreY, size);
     const displacement = Math.sqrt(dx * dx + dy * dy);
     stats.speed = displacement;
-    stats.centroidSpeed = (displacement / safeR) / dt;
+    stats.centroidSpeed = displacement / safeR / dt;
     const motionAngle = Math.atan2(dy, dx);
     stats.angle = motionAngle;
     stats.centroidRotateSpeed = motionAngle / dt;
@@ -1443,6 +1763,7 @@ let _ndKernelSize = 0;
 const _analysisState = createAnalysisState();
 let _lastAnalysisResult = null;
 const _analysisInterval = 6;
+const _analysisIntervalND = 12;
 let _ndConfig = {
   dimension: 2,
   viewMode: "slice",
@@ -1532,9 +1853,16 @@ function ndFlipState(state, mode) {
         for (let y = 0; y < size; y++) {
           for (let x = 0; x < size; x++) {
             let sx, sy;
-            if (mode === 0) { sx = size - 1 - x; sy = y; }
-            else if (mode === 1) { sx = x; sy = size - 1 - y; }
-            else { sx = y; sy = x; }
+            if (mode === 0) {
+              sx = size - 1 - x;
+              sy = y;
+            } else if (mode === 1) {
+              sx = x;
+              sy = size - 1 - y;
+            } else {
+              sx = y;
+              sy = x;
+            }
             tmp[off + y * size + x] = arr[off + sy * size + sx];
           }
         }
@@ -1550,9 +1878,15 @@ function ndFlipState(state, mode) {
 
 function ndEnsureState(params, ndConfig, worldSeed, ndSeedWorld) {
   const dimension = Math.max(2, Math.floor(Number(ndConfig?.dimension) || 2));
-  const channelCount = Math.max(1, Math.floor(Number(ndConfig?.channelCount) || 1));
+  const channelCount = Math.max(
+    1,
+    Math.floor(Number(ndConfig?.channelCount) || 1),
+  );
   const size = Math.max(1, Math.floor(Number(params?.size) || 128));
-  const depth = dimension > 2 ? size : Math.max(2, Math.min(512, Math.floor(Number(ndConfig?.depth) || 6)));
+  const depth =
+    dimension > 2
+      ? size
+      : Math.max(2, Math.min(512, Math.floor(Number(ndConfig?.depth) || 6)));
   const planeCount = ndPlaneCount(dimension, depth);
   const cellCount = size * size;
   const total = cellCount * channelCount * planeCount;
@@ -1619,8 +1953,10 @@ function ndInjectSliceFrom2D(state, source2D, ndConfig) {
 
   const { size, channelCount, depth, dimension } = state;
   const cellCount = size * size;
-  const sliceZ = ((Math.floor(Number(ndConfig?.sliceZ) || 0) % depth) + depth) % depth;
-  const sliceW = ((Math.floor(Number(ndConfig?.sliceW) || 0) % depth) + depth) % depth;
+  const sliceZ =
+    ((Math.floor(Number(ndConfig?.sliceZ) || 0) % depth) + depth) % depth;
+  const sliceW =
+    ((Math.floor(Number(ndConfig?.sliceW) || 0) % depth) + depth) % depth;
   const plane = ndPlaneIndex(dimension, depth, sliceZ, sliceW);
   const planeBase = plane * cellCount * channelCount;
 
@@ -1638,15 +1974,23 @@ function ndExtractDisplay(state, ndConfig, outWorld, outPotential, outGrowth) {
   const isSlice = String(ndConfig?.viewMode || "projection") === "slice";
   const cache = state._cache || null;
 
-  const world2D = outWorld && outWorld.length === total2D ? outWorld : new Float32Array(total2D);
+  const world2D =
+    outWorld && outWorld.length === total2D
+      ? outWorld
+      : new Float32Array(total2D);
   const potential2D =
     outPotential && outPotential.length === total2D
       ? outPotential
       : new Float32Array(total2D);
-  const growth2D = outGrowth && outGrowth.length === total2D ? outGrowth : new Float32Array(total2D);
+  const growth2D =
+    outGrowth && outGrowth.length === total2D
+      ? outGrowth
+      : new Float32Array(total2D);
 
-  const sliceZ = ((Math.floor(Number(ndConfig?.sliceZ) || 0) % depth) + depth) % depth;
-  const sliceW = ((Math.floor(Number(ndConfig?.sliceW) || 0) % depth) + depth) % depth;
+  const sliceZ =
+    ((Math.floor(Number(ndConfig?.sliceZ) || 0) % depth) + depth) % depth;
+  const sliceW =
+    ((Math.floor(Number(ndConfig?.sliceW) || 0) % depth) + depth) % depth;
 
   if (isSlice || dimension <= 2) {
     const plane = ndPlaneIndex(dimension, depth, sliceZ, sliceW);
@@ -1655,7 +1999,10 @@ function ndExtractDisplay(state, ndConfig, outWorld, outPotential, outGrowth) {
       const off2d = c * cellCount;
       const offNd = planeBase + c * cellCount;
       world2D.set(state.world.subarray(offNd, offNd + cellCount), off2d);
-      potential2D.set(state.potential.subarray(offNd, offNd + cellCount), off2d);
+      potential2D.set(
+        state.potential.subarray(offNd, offNd + cellCount),
+        off2d,
+      );
       growth2D.set(state.growth.subarray(offNd, offNd + cellCount), off2d);
     }
     return { world2D, potential2D, growth2D };
@@ -1672,7 +2019,8 @@ function ndExtractDisplay(state, ndConfig, outWorld, outPotential, outGrowth) {
       if (cache.projectionSliceW !== sliceW) {
         cache.projectionSliceW = sliceW;
         for (let z = 0; z < depth; z++) {
-          projectionOffsets[z] = (z + sliceW * depth) * cellCount * channelCount;
+          projectionOffsets[z] =
+            (z + sliceW * depth) * cellCount * channelCount;
         }
       }
     } else {
@@ -1682,7 +2030,9 @@ function ndExtractDisplay(state, ndConfig, outWorld, outPotential, outGrowth) {
     }
   }
 
-  for (let z = 0; z < depth; z++) {
+  const zStart = depthWeights && depthWeights[0] === 0 ? 1 : 0;
+
+  for (let z = zStart; z < depth; z++) {
     const planeBase = projectionOffsets
       ? projectionOffsets[z]
       : ndPlaneIndex(dimension, depth, z, sliceW) * cellCount * channelCount;
@@ -1739,13 +2089,23 @@ function autoCenterShift(arr, size, shiftX, shiftY, channelCount) {
   }
   const tmp = _autoCenterTmp;
   const cellCount = size * size;
+  const sx = ((shiftX % size) + size) % size;
+  const sy = ((shiftY % size) + size) % size;
+  const tyLut = new Int32Array(size);
+  for (let y = 0; y < size; y++) {
+    tyLut[y] = ((y + sy) % size) * size;
+  }
+  const firstLen = size - sx;
   for (let c = 0; c < channelCount; c++) {
     const off = c * cellCount;
     for (let y = 0; y < size; y++) {
-      const ty = ((y + shiftY) % size + size) % size;
-      for (let x = 0; x < size; x++) {
-        const tx = ((x + shiftX) % size + size) % size;
-        tmp[off + ty * size + tx] = arr[off + y * size + x];
+      const srcRow = off + y * size;
+      const dstRow = off + tyLut[y];
+      if (sx === 0) {
+        tmp.set(arr.subarray(srcRow, srcRow + size), dstRow);
+      } else {
+        tmp.set(arr.subarray(srcRow, srcRow + firstLen), dstRow + sx);
+        tmp.set(arr.subarray(srcRow + firstLen, srcRow + size), dstRow);
       }
     }
   }
@@ -1773,8 +2133,8 @@ function zoomPlanes(arr, size, planeCount, factor) {
       for (let x = 0; x < minDim; x++) {
         const v = zoomed[(offSrc + y) * newDim + (offSrc + x)];
         if (v > 1e-10) {
-          const dy = ((offDst + y) % size + size) % size;
-          const dx = ((offDst + x) % size + size) % size;
+          const dy = (((offDst + y) % size) + size) % size;
+          const dx = (((offDst + x) % size) + size) % size;
           arr[off + dy * size + dx] = v;
         }
       }
@@ -1866,7 +2226,9 @@ self.onmessage = function (e) {
             const sz = d < 2 ? size : depth;
             const lo = Math.min(border, Math.floor(sz / 2));
             const hi = Math.max(lo + 1, sz - lo);
-            shifts.push(Math.floor(Math.random() * (hi - lo)) + lo - Math.floor(sz / 2));
+            shifts.push(
+              Math.floor(Math.random() * (hi - lo)) + lo - Math.floor(sz / 2),
+            );
           }
 
           for (let iz = 0; iz < planeCount; iz++) {
@@ -1892,8 +2254,8 @@ self.onmessage = function (e) {
             const planeBase = iz * cellCount * channelCount;
             for (let dy = 0; dy < blobDim; dy++) {
               for (let dx = 0; dx < blobDim; dx++) {
-                const x = ((shifts[0] + dx + mid) % size + size) % size;
-                const y = ((shifts[1] + dy + mid) % size + size) % size;
+                const x = (((shifts[0] + dx + mid) % size) + size) % size;
+                const y = (((shifts[1] + dy + mid) % size) + size) % size;
                 _ndState.world[planeBase + y * size + x] = Math.random() * 0.9;
               }
             }
@@ -1908,7 +2270,8 @@ self.onmessage = function (e) {
       }
 
       if (mutation.type === "place") {
-        const { patternData, patternWidth, patternHeight, cellX, cellY } = mutation;
+        const { patternData, patternWidth, patternHeight, cellX, cellY } =
+          mutation;
         const pattern = new Float32Array(patternData);
         const { size, planeCount } = _ndState;
         for (let iz = 0; iz < planeCount; iz++) {
@@ -1917,8 +2280,12 @@ self.onmessage = function (e) {
             for (let px = 0; px < patternWidth; px++) {
               const val = pattern[py * patternWidth + px];
               if (val === 0) continue;
-              const wx = ((cellX - Math.floor(patternWidth / 2) + px) % size + size) % size;
-              const wy = ((cellY - Math.floor(patternHeight / 2) + py) % size + size) % size;
+              const wx =
+                (((cellX - Math.floor(patternWidth / 2) + px) % size) + size) %
+                size;
+              const wy =
+                (((cellY - Math.floor(patternHeight / 2) + py) % size) + size) %
+                size;
               _ndState.world[planeBase + wy * size + wx] = val;
             }
           }
@@ -1939,8 +2306,10 @@ self.onmessage = function (e) {
             for (let px = 0; px < pw; px++) {
               const val = pattern[py * pw + px];
               if (val === 0) continue;
-              const wx = ((cellX - Math.floor(pw / 2) + px) % size + size) % size;
-              const wy = ((cellY - Math.floor(ph / 2) + py) % size + size) % size;
+              const wx =
+                (((cellX - Math.floor(pw / 2) + px) % size) + size) % size;
+              const wy =
+                (((cellY - Math.floor(ph / 2) + py) % size) + size) % size;
               _ndState.world[planeBase + wy * size + wx] = val;
             }
           }
@@ -1949,14 +2318,30 @@ self.onmessage = function (e) {
         _ndState.growth.fill(0);
       }
 
-      const display = ndExtractDisplay(_ndState, _ndConfig, world, potential, growth);
+      const display = ndExtractDisplay(
+        _ndState,
+        _ndConfig,
+        world,
+        potential,
+        growth,
+      );
       world = display.world2D;
       potential = display.potential2D;
       growth = display.growth2D;
     }
 
     const transfers = [world.buffer, potential.buffer, growth.buffer];
-    self.postMessage({ type: "view", world: world.buffer, potential: potential.buffer, growth: growth.buffer, growthOld: null, ndConfig: _ndConfig }, transfers);
+    self.postMessage(
+      {
+        type: "view",
+        world: world.buffer,
+        potential: potential.buffer,
+        growth: growth.buffer,
+        growthOld: null,
+        ndConfig: _ndConfig,
+      },
+      transfers,
+    );
     return;
   }
 
@@ -1993,13 +2378,22 @@ self.onmessage = function (e) {
         ndFlipState(_ndState, transform.flip);
       }
 
-      if (typeof transform.zoom === "number" && Math.abs(transform.zoom - 1) > 1e-6) {
+      if (
+        typeof transform.zoom === "number" &&
+        Math.abs(transform.zoom - 1) > 1e-6
+      ) {
         zoomPlanes(_ndState.world, size, total / cellCount, transform.zoom);
         zoomPlanes(_ndState.potential, size, total / cellCount, transform.zoom);
         zoomPlanes(_ndState.growth, size, total / cellCount, transform.zoom);
       }
 
-      const display = ndExtractDisplay(_ndState, _ndConfig, world, potential, growth);
+      const display = ndExtractDisplay(
+        _ndState,
+        _ndConfig,
+        world,
+        potential,
+        growth,
+      );
       world = display.world2D;
       potential = display.potential2D;
       growth = display.growth2D;
@@ -2007,7 +2401,17 @@ self.onmessage = function (e) {
     }
 
     const transfers = [world.buffer, potential.buffer, growth.buffer];
-    self.postMessage({ type: "view", world: world.buffer, potential: potential.buffer, growth: growth.buffer, growthOld: null, ndConfig: _ndConfig }, transfers);
+    self.postMessage(
+      {
+        type: "view",
+        world: world.buffer,
+        potential: potential.buffer,
+        growth: growth.buffer,
+        growthOld: null,
+        ndConfig: _ndConfig,
+      },
+      transfers,
+    );
     return;
   }
 
@@ -2023,7 +2427,8 @@ self.onmessage = function (e) {
     const ensureLength = (arr) => {
       if (!arr || arr.length !== expectedLength) {
         const fixed = new Float32Array(expectedLength);
-        if (arr) fixed.set(arr.subarray(0, Math.min(arr.length, expectedLength)));
+        if (arr)
+          fixed.set(arr.subarray(0, Math.min(arr.length, expectedLength)));
         return fixed;
       }
       return arr;
@@ -2032,12 +2437,20 @@ self.onmessage = function (e) {
     let world = ensureLength(new Float32Array(msg.world));
     let potential = ensureLength(new Float32Array(msg.potential));
     let growth = ensureLength(new Float32Array(msg.growth));
-    let growthOld = msg.growthOld ? ensureLength(new Float32Array(msg.growthOld)) : null;
+    let growthOld = msg.growthOld
+      ? ensureLength(new Float32Array(msg.growthOld))
+      : null;
 
     if ((Number(_ndConfig?.dimension) || 2) > 2) {
       const ndSeed = msg.ndSeedWorld ? new Float32Array(msg.ndSeedWorld) : null;
       const state = ndEnsureState(params, _ndConfig, world, ndSeed);
-      const display = ndExtractDisplay(state, _ndConfig, world, potential, growth);
+      const display = ndExtractDisplay(
+        state,
+        _ndConfig,
+        world,
+        potential,
+        growth,
+      );
       world = display.world2D;
       potential = display.potential2D;
       growth = display.growth2D;
@@ -2052,7 +2465,8 @@ self.onmessage = function (e) {
         size: params.size,
         T: params.T,
         R: params.R,
-        dimension: Number(_ndConfig?.dimension) || Number(params?.dimension) || 2,
+        dimension:
+          Number(_ndConfig?.dimension) || Number(params?.dimension) || 2,
       },
       _analysisState,
     );
@@ -2082,7 +2496,9 @@ self.onmessage = function (e) {
     const potentialIn = new Float32Array(msg.potential);
     const growthIn = new Float32Array(msg.growth);
     const growthOldIn = msg.growthOld ? new Float32Array(msg.growthOld) : null;
-    const changeOutIn = msg.changeBuffer ? new Float32Array(msg.changeBuffer) : null;
+    const changeOutIn = msg.changeBuffer
+      ? new Float32Array(msg.changeBuffer)
+      : null;
     const params = msg.params;
     const channelCount = 1;
     const cellCount = params.size * params.size;
@@ -2091,7 +2507,8 @@ self.onmessage = function (e) {
     const ensureLength = (arr) => {
       if (!arr || arr.length !== expectedLength) {
         const fixed = new Float32Array(expectedLength);
-        if (arr) fixed.set(arr.subarray(0, Math.min(arr.length, expectedLength)));
+        if (arr)
+          fixed.set(arr.subarray(0, Math.min(arr.length, expectedLength)));
         return fixed;
       }
       return arr;
@@ -2124,13 +2541,29 @@ self.onmessage = function (e) {
       );
     } else {
       const ndSeed = msg.ndSeedWorld ? new Float32Array(msg.ndSeedWorld) : null;
-      const state = ndStepState(params, _ndConfig, _kernelFFT, _N, world, ndSeed);
-      const display = ndExtractDisplay(state, _ndConfig, world, potential, growth);
+      const state = ndStepState(
+        params,
+        _ndConfig,
+        _kernelFFT,
+        _N,
+        world,
+        ndSeed,
+      );
+      const display = ndExtractDisplay(
+        state,
+        _ndConfig,
+        world,
+        potential,
+        growth,
+      );
       world.set(display.world2D);
       potential.set(display.potential2D);
       growth.set(display.growth2D);
 
-      change = changeOut && changeOut.length === expectedLength ? changeOut : new Float32Array(expectedLength);
+      change =
+        changeOut && changeOut.length === expectedLength
+          ? changeOut
+          : new Float32Array(expectedLength);
       for (let i = 0; i < expectedLength; i++) {
         change[i] = world[i] - worldIn[i];
       }
@@ -2138,148 +2571,96 @@ self.onmessage = function (e) {
 
     _analysisState.frames += 1;
 
-    if (params.autoCenter) {
-      let cosX = 0, sinX = 0, cosY = 0, sinY = 0, totalMass = 0;
-      const size = params.size;
-
-      if (_ndState && _ndState.planeCount > 1) {
-        const trig = getTrigTables(size);
-        const cosT = trig.cos;
-        const sinT = trig.sin;
-        const ndTotal = _ndState.world.length;
-        const planeCells = cellCount * channelCount;
-        for (let offset = 0; offset < ndTotal; offset += planeCells) {
-          for (let y = 0; y < size; y++) {
-            const row = y * size;
-            const cy = cosT[y];
-            const sy = sinT[y];
-            for (let x = 0; x < size; x++) {
-              const i = row + x;
-              let val = 0;
-              for (let c = 0; c < channelCount; c++) val += _ndState.world[offset + c * cellCount + i];
-              totalMass += val;
-              const cx = cosT[x];
-              const sx = sinT[x];
-              cosX += val * cx;
-              sinX += val * sx;
-              cosY += val * cy;
-              sinY += val * sy;
-            }
-          }
-        }
-      } else if (_stepCenterCache.valid) {
-        cosX = _stepCenterCache.cosX;
-        sinX = _stepCenterCache.sinX;
-        cosY = _stepCenterCache.cosY;
-        sinY = _stepCenterCache.sinY;
-        totalMass = _stepCenterCache.mass;
-        _stepCenterCache.valid = false;
+    if (_stepCenterCache.valid) _stepCenterCache.valid = false;
+    if (_ndStepCache.valid) _ndStepCache.valid = false;
+    if (params.autoCenter && _ndState && _ndState.planeCount > 1) {
+      const ndDim = _ndState.dimension;
+      const ndDepth = _ndState.depth;
+      const ndPlaneCount = _ndState.planeCount;
+      const ndPlaneCellCount = cellCount * channelCount;
+      const ndCache = _ndState._cache;
+      const planeMass = ndCache.planeMass;
+      if (
+        _ndStepCache.planeMass &&
+        _ndStepCache.planeCount === ndPlaneCount
+      ) {
+        planeMass.set(_ndStepCache.planeMass.subarray(0, ndPlaneCount));
       } else {
-        const trig = getTrigTables(size);
-        const cosT = trig.cos;
-        const sinT = trig.sin;
-        for (let y = 0; y < size; y++) {
-          const row = y * size;
-          const cy = cosT[y];
-          const sy = sinT[y];
-          for (let x = 0; x < size; x++) {
-            const i = row + x;
-            let val = 0;
-            for (let c = 0; c < channelCount; c++) val += world[c * cellCount + i];
-            totalMass += val;
-            const cx = cosT[x];
-            const sx = sinT[x];
-            cosX += val * cx;
-            sinX += val * sx;
-            cosY += val * cy;
-            sinY += val * sy;
-          }
+        for (let p = 0; p < ndPlaneCount; p++) {
+          let pm = 0;
+          const base = p * ndPlaneCellCount;
+          for (let ii = 0; ii < ndPlaneCellCount; ii++)
+            pm += _ndState.world[base + ii];
+          planeMass[p] = pm;
         }
       }
-      if (totalMass > 1e-10) {
-        const cx = ((Math.atan2(sinX, cosX) / (2 * Math.PI)) * size + size) % size;
-        const cy = ((Math.atan2(sinY, cosY) / (2 * Math.PI)) * size + size) % size;
-        const shiftX = Math.round(size / 2 - cx);
-        const shiftY = Math.round(size / 2 - cy);
-        if (shiftX !== 0 || shiftY !== 0) {
-          autoCenterShift(world, size, shiftX, shiftY, channelCount);
-          autoCenterShift(potential, size, shiftX, shiftY, channelCount);
-          autoCenterShift(growth, size, shiftX, shiftY, channelCount);
-          if (change) autoCenterShift(change, size, shiftX, shiftY, channelCount);
-          if (_ndState && _ndState.planeCount > 1) {
-            const ndCh = channelCount * _ndState.planeCount;
-            autoCenterShift(_ndState.world, size, shiftX, shiftY, ndCh);
-            autoCenterShift(_ndState.potential, size, shiftX, shiftY, ndCh);
-            autoCenterShift(_ndState.growth, size, shiftX, shiftY, ndCh);
-            if (_ndState.growthOld) autoCenterShift(_ndState.growthOld, size, shiftX, shiftY, ndCh);
 
-            const ndDim = _ndState.dimension;
-            const ndDepth = _ndState.depth;
-            const ndPlaneCount = _ndState.planeCount;
-            const ndPlaneCellCount = cellCount * channelCount;
-            const ndCache = _ndState._cache;
-            const planeMass = ndCache.planeMass;
-            for (let p = 0; p < ndPlaneCount; p++) {
-              let pm = 0;
-              const base = p * ndPlaneCellCount;
-              for (let ii = 0; ii < ndPlaneCellCount; ii++) pm += _ndState.world[base + ii];
-              planeMass[p] = pm;
-            }
+      const depthCos = ndCache.depthCos;
+      const depthSin = ndCache.depthSin;
 
-            let cosZ = 0, sinZ = 0;
-            const depthCos = ndCache.depthCos;
-            const depthSin = ndCache.depthSin;
-            for (let z = 0; z < ndDepth; z++) {
-              let zMass = 0;
-              if (ndDim === 3) {
-                zMass = planeMass[z];
-              } else {
-                for (let w = 0; w < ndDepth; w++) zMass += planeMass[z + w * ndDepth];
-              }
-              cosZ += zMass * depthCos[z];
-              sinZ += zMass * depthSin[z];
-            }
-            const czND = ((Math.atan2(sinZ, cosZ) / (2 * Math.PI)) * ndDepth + ndDepth) % ndDepth;
-            const ndShiftZ = Math.round(ndDepth / 2 - czND);
-
-            let ndShiftW = 0;
-            if (ndDim >= 4) {
-              let cosW = 0, sinW = 0;
-              for (let w = 0; w < ndDepth; w++) {
-                let wMass = 0;
-                for (let z = 0; z < ndDepth; z++) wMass += planeMass[z + w * ndDepth];
-                cosW += wMass * depthCos[w];
-                sinW += wMass * depthSin[w];
-              }
-              const cwND = ((Math.atan2(sinW, cosW) / (2 * Math.PI)) * ndDepth + ndDepth) % ndDepth;
-              ndShiftW = Math.round(ndDepth / 2 - cwND);
-            }
-
-            if (ndShiftZ !== 0 || ndShiftW !== 0) {
-              const tmpBuf = ndCache.reorderTmp;
-              const reorder = (src) => {
-                for (let op = 0; op < ndPlaneCount; op++) {
-                  let np = op;
-                  if (ndDim === 3) {
-                    np = ((op + ndShiftZ) % ndDepth + ndDepth) % ndDepth;
-                  } else if (ndDim >= 4) {
-                    const z = op % ndDepth;
-                    const w = Math.floor(op / ndDepth);
-                    const nz = ((z + ndShiftZ) % ndDepth + ndDepth) % ndDepth;
-                    const nw = ((w + ndShiftW) % ndDepth + ndDepth) % ndDepth;
-                    np = nz + nw * ndDepth;
-                  }
-                  tmpBuf.set(src.subarray(op * ndPlaneCellCount, op * ndPlaneCellCount + ndPlaneCellCount), np * ndPlaneCellCount);
-                }
-                src.set(tmpBuf);
-              };
-              reorder(_ndState.world);
-              reorder(_ndState.potential);
-              reorder(_ndState.growth);
-              if (_ndState.growthOld) reorder(_ndState.growthOld);
-            }
-          }
+      let cosZ = 0,
+        sinZ = 0;
+      for (let z = 0; z < ndDepth; z++) {
+        let zMass = 0;
+        if (ndDim === 3) {
+          zMass = planeMass[z];
+        } else {
+          for (let w = 0; w < ndDepth; w++)
+            zMass += planeMass[z + w * ndDepth];
         }
+        cosZ += zMass * depthCos[z];
+        sinZ += zMass * depthSin[z];
+      }
+      const czND =
+        ((Math.atan2(sinZ, cosZ) / (2 * Math.PI)) * ndDepth + ndDepth) %
+        ndDepth;
+      const ndShiftZ = Math.round(ndDepth / 2 - czND);
+
+      let ndShiftW = 0;
+      if (ndDim >= 4) {
+        let cosW = 0,
+          sinW = 0;
+        for (let w = 0; w < ndDepth; w++) {
+          let wMass = 0;
+          for (let z = 0; z < ndDepth; z++)
+            wMass += planeMass[z + w * ndDepth];
+          cosW += wMass * depthCos[w];
+          sinW += wMass * depthSin[w];
+        }
+        const cwND =
+          ((Math.atan2(sinW, cosW) / (2 * Math.PI)) * ndDepth + ndDepth) %
+          ndDepth;
+        ndShiftW = Math.round(ndDepth / 2 - cwND);
+      }
+
+      if (ndShiftZ !== 0 || ndShiftW !== 0) {
+        const tmpBuf = ndCache.reorderTmp;
+        const reorder = (src) => {
+          for (let op = 0; op < ndPlaneCount; op++) {
+            let np = op;
+            if (ndDim === 3) {
+              np = (((op + ndShiftZ) % ndDepth) + ndDepth) % ndDepth;
+            } else if (ndDim >= 4) {
+              const z = op % ndDepth;
+              const w = Math.floor(op / ndDepth);
+              const nz = (((z + ndShiftZ) % ndDepth) + ndDepth) % ndDepth;
+              const nw = (((w + ndShiftW) % ndDepth) + ndDepth) % ndDepth;
+              np = nz + nw * ndDepth;
+            }
+            tmpBuf.set(
+              src.subarray(
+                op * ndPlaneCellCount,
+                op * ndPlaneCellCount + ndPlaneCellCount,
+              ),
+              np * ndPlaneCellCount,
+            );
+          }
+          src.set(tmpBuf);
+        };
+        reorder(_ndState.world);
+        reorder(_ndState.potential);
+        reorder(_ndState.growth);
+        if (_ndState.growthOld) reorder(_ndState.growthOld);
       }
     }
 
@@ -2309,7 +2690,11 @@ self.onmessage = function (e) {
     };
 
     let analysis;
-    if (_analysisState.frames % _analysisInterval === 0) {
+    const effectiveInterval =
+      _ndState && _ndState.planeCount > 1
+        ? _analysisIntervalND
+        : _analysisInterval;
+    if (_analysisState.frames % effectiveInterval === 0) {
       analysis = analyseStep(
         analysisWorld,
         analysisGrowth,
@@ -2320,7 +2705,11 @@ self.onmessage = function (e) {
       _lastAnalysisResult = analysis;
     } else {
       const quick = computeQuickStats(
-        analysisWorld, analysisGrowth, params.size, analysisParams, _analysisState,
+        analysisWorld,
+        analysisGrowth,
+        params.size,
+        analysisParams,
+        _analysisState,
       );
       analysis = _lastAnalysisResult
         ? Object.assign({}, _lastAnalysisResult, quick)

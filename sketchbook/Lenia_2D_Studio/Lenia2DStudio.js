@@ -70,46 +70,49 @@ function setupCanvasProperties(canvas) {
   frameRate(120);
 }
 
-function mouseClicked(e) {
-  return appcore ? appcore.handleMouseClicked(e) : false;
+function mouseClicked(event) {
+  return appcore ? appcore.handleMouseClicked(event) : false;
 }
 
-function mousePressed(e) {
-  return appcore ? appcore.handleMousePressed(e) : false;
+function mousePressed(event) {
+  return appcore ? appcore.handleMousePressed(event) : false;
 }
 
-function mouseDragged(e) {
-  return appcore ? appcore.handleMouseDragged(e) : false;
+function mouseDragged(event) {
+  return appcore ? appcore.handleMouseDragged(event) : false;
 }
 
-function mouseReleased(e) {
-  return appcore ? appcore.handleMouseReleased(e) : false;
+function mouseReleased(event) {
+  return appcore ? appcore.handleMouseReleased(event) : false;
 }
 
-function mouseWheel(e) {
-  return appcore ? appcore.handleMouseWheel(e) : false;
+function mouseWheel(event) {
+  return appcore ? appcore.handleMouseWheel(event) : false;
 }
 
-function touchStarted(e) {
+function touchStarted(event) {
   if (!appcore) return false;
-  appcore.handleMousePressed(e);
-  return appcore.handleMouseClicked(e);
+  appcore.handleMousePressed(event);
+  return appcore.handleMouseClicked(event);
 }
 
-function touchMoved(e) {
-  return appcore ? appcore.handleMouseDragged(e) : false;
+function touchMoved(event) {
+  return appcore ? appcore.handleMouseDragged(event) : false;
 }
 
-function touchEnded(e) {
-  return appcore ? appcore.handleMouseReleased(e) : false;
+function touchEnded(event) {
+  return appcore ? appcore.handleMouseReleased(event) : false;
 }
+
 function windowResized() {
   return appcore ? appcore.windowResized() : false;
 }
+
 function keyPressed(event) {
   const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
   return appcore ? appcore.handleKeyPressed(keyValue, keyCode) : false;
 }
+
 function keyReleased(event) {
   const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
   return appcore ? appcore.handleKeyReleased(keyValue, keyCode) : false;
