@@ -616,20 +616,20 @@ class Renderer {
     const mode = this.lastLegendRange?.mode || "world";
     const legendMetaByMode = {
       world: {
-        title: "WORLD",
-        quantity: "Cell state u [cell-state]",
+        title: "A",
+        quantity: "A^t (state field)",
       },
       potential: {
-        title: "POTENTIAL",
-        quantity: "Potential U [cell-state]",
+        title: "K*A",
+        quantity: "K * A^t (weighted sum)",
       },
       growth: {
-        title: "GROWTH",
-        quantity: "Growth G [gen^-1]",
+        title: "G",
+        quantity: "G(K * A^t) (growth mapping)",
       },
       kernel: {
-        title: "KERNEL",
-        quantity: "Kernel K [weight]",
+        title: "K",
+        quantity: "K (kernel)",
       },
     };
     const legendMeta = legendMetaByMode[mode] || legendMetaByMode.world;
