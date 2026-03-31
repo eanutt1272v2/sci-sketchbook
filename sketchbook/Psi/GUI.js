@@ -230,6 +230,12 @@ class GUI {
       .on("change", () => this.appcore.requestRender());
 
     overlay
+      .addBinding(this.appcore.params, "renderNodeOverlay", {
+        label: "Detected Nodes (N)",
+      })
+      .on("change", () => this.appcore.requestRender());
+
+    overlay
       .addBinding(this.appcore.params, "renderLegend", {
         label: "Legend (L)",
       })

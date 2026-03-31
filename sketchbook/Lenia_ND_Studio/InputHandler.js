@@ -102,7 +102,7 @@ class InputHandler {
 
     if (keyLower === "w" && !ctrlHeld) {
       params.s = Math.max(
-        0.001,
+        0.0001,
         Math.min(0.1, params.s + (shiftHeld ? 0.001 : 0.0001)),
       );
       this.appcore.updateAutomatonParams();
@@ -111,7 +111,7 @@ class InputHandler {
     }
     if (keyLower === "s" && !ctrlHeld) {
       params.s = Math.max(
-        0.001,
+        0.0001,
         Math.min(0.1, params.s - (shiftHeld ? 0.001 : 0.0001)),
       );
       this.appcore.updateAutomatonParams();

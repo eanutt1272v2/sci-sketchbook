@@ -155,8 +155,13 @@ class Renderer {
   }
 
   render() {
-    const { pixelSmoothing, renderOverlay, renderLegend, renderKeymapRef } =
-      this.appcore.params;
+    const {
+      pixelSmoothing,
+      renderOverlay,
+      renderNodeOverlay,
+      renderLegend,
+      renderKeymapRef,
+    } = this.appcore.params;
     const { buffer } = this;
 
     background(0);
@@ -176,6 +181,10 @@ class Renderer {
 
     if (renderOverlay) {
       this.renderOverlay();
+    }
+
+    if (renderNodeOverlay) {
+      this.renderNodeOverlay();
     }
 
     if (renderLegend) {
@@ -241,6 +250,223 @@ class Renderer {
     text(lines.join("\n"), panelX, panelY);
     this._disableOverlayShadow();
     pop();
+  }
+
+  _worldToScreen(axis1Value, axis2Value, params, axis1, axis2) {
+    const viewRadius = Math.max(1e-6, Number(params.viewRadius) || 1);
+    const centre1 = Number(params.viewCentre?.[axis1]) || 0;
+    const centre2 = Number(params.viewCentre?.[axis2]) || 0;
+
+    const xNorm = (axis1Value - centre1 + viewRadius) / (2 * viewRadius);
+    const yNorm = (axis2Value - centre2 + viewRadius) / (2 * viewRadius);
+
+    return {
+      x: xNorm * width,
+      y: yNorm * height,
+    };
+  }
+
+  _renderNodeTypeKey(radialCount, angularCount) {
+    const panelX = 20;
+    const panelY = height - 78;
+    const radialColour = [31, 119, 180, 230];
+    const angularColour = [214, 39, 40, 235];
+
+    push();
+    this._enableOverlayShadow();
+
+    fill(255);
+    textAlign(LEFT, TOP);
+    textSize(12);
+    text("Detected Nodes", panelX + 10, panelY + 1);
+
+    strokeWeight(2);
+
+    stroke(...radialColour);
+    line(panelX + 12, panelY + 30, panelX + 32, panelY + 30);
+    noStroke();
+    fill(255);
+    text(`Radial: ${radialCount}`, panelX + 40, panelY + 23);
+
+    stroke(...angularColour);
+    line(panelX + 12, panelY + 52, panelX + 32, panelY + 52);
+    noStroke();
+    fill(255);
+    text(`Angular: ${angularCount}`, panelX + 40, panelY + 45);
+
+    this._disableOverlayShadow();
+    pop();
+  }
+
+  renderNodeOverlay() {
+    const params = this.appcore.params;
+    const analyser = this.appcore.analyser;
+    if (!analyser || typeof analyser.computeNodeOverlayData !== "function") {
+      return;
+    }
+
+    const { axis1, axis2, fixedAxis } = this.appcore.getPlaneAxes();
+    const viewRadius = Math.max(1e-6, Number(params.viewRadius) || 1);
+    const centre1 = Number(params.viewCentre?.[axis1]) || 0;
+    const centre2 = Number(params.viewCentre?.[axis2]) || 0;
+    const fixedCoord =
+      (Number(params.viewCentre?.[fixedAxis]) || 0) +
+      (Number(params.sliceOffset) || 0);
+
+    const overlayData = analyser.computeNodeOverlayData({
+      ...params,
+      aMuMeters: this.appcore.aMuMeters,
+    });
+    const radialNodeRadii = overlayData.radialNodeRadii || [];
+    const angularNodeThetas = overlayData.angularNodeThetas || [];
+    const angularNodePhis = overlayData.angularNodePhis || [];
+    const radialColour = [31, 119, 180, 230];
+    const angularColour = [214, 39, 40, 235];
+
+    const pixelScale = Math.min(width, height) / (2 * viewRadius);
+
+    push();
+    noFill();
+    strokeWeight(1.6);
+
+    const origin = this._worldToScreen(0, 0, params, axis1, axis2);
+
+    stroke(...radialColour);
+    for (const radius of radialNodeRadii) {
+      if (!Number.isFinite(radius) || radius <= 0) continue;
+      if (Math.abs(fixedCoord) > radius) continue;
+
+      const inPlaneRadius = Math.sqrt(
+        Math.max(0, radius * radius - fixedCoord * fixedCoord),
+      );
+      const pxRadius = inPlaneRadius * pixelScale;
+      if (!Number.isFinite(pxRadius) || pxRadius <= 0.6) continue;
+      ellipse(origin.x, origin.y, 2 * pxRadius, 2 * pxRadius);
+    }
+
+    stroke(...angularColour);
+    if (params.slicePlane === "xy") {
+      for (const theta of angularNodeThetas) {
+        if (!Number.isFinite(theta)) continue;
+        const tanTheta = Math.tan(theta);
+        if (!Number.isFinite(tanTheta)) continue;
+        const radius = Math.abs(fixedCoord) * Math.abs(tanTheta);
+        const pxRadius = radius * pixelScale;
+        if (!Number.isFinite(pxRadius) || pxRadius <= 0.6) continue;
+        ellipse(origin.x, origin.y, 2 * pxRadius, 2 * pxRadius);
+      }
+
+      for (const phi of angularNodePhis) {
+        if (!Number.isFinite(phi)) continue;
+        const extent = viewRadius * 1.5;
+        const x1 = -extent * Math.cos(phi);
+        const y1 = -extent * Math.sin(phi);
+        const x2 = extent * Math.cos(phi);
+        const y2 = extent * Math.sin(phi);
+        const p1 = this._worldToScreen(x1, y1, params, axis1, axis2);
+        const p2 = this._worldToScreen(x2, y2, params, axis1, axis2);
+        line(p1.x, p1.y, p2.x, p2.y);
+      }
+    } else {
+      const samples = 160;
+      for (const theta of angularNodeThetas) {
+        if (!Number.isFinite(theta)) continue;
+        const tanTheta = Math.tan(theta);
+        if (!Number.isFinite(tanTheta) || Math.abs(tanTheta) < 1e-6) continue;
+
+        for (const sign of [-1, 1]) {
+          let prevPoint = null;
+          for (let i = 0; i <= samples; i++) {
+            const t = i / samples;
+            const axis1Value = centre1 - viewRadius + t * 2 * viewRadius;
+            const axis2Value =
+              (sign * Math.sqrt(axis1Value * axis1Value + fixedCoord * fixedCoord)) /
+              tanTheta;
+
+            const visible =
+              Number.isFinite(axis2Value) &&
+              axis2Value >= centre2 - viewRadius &&
+              axis2Value <= centre2 + viewRadius;
+
+            if (!visible) {
+              prevPoint = null;
+              continue;
+            }
+
+            const current = this._worldToScreen(
+              axis1Value,
+              axis2Value,
+              params,
+              axis1,
+              axis2,
+            );
+
+            if (prevPoint) {
+              line(prevPoint.x, prevPoint.y, current.x, current.y);
+            }
+
+            prevPoint = current;
+          }
+        }
+      }
+
+      for (const phi of angularNodePhis) {
+        if (!Number.isFinite(phi)) continue;
+
+        if (params.slicePlane === "xz") {
+          const sinPhi = Math.sin(phi);
+          if (Math.abs(sinPhi) < 1e-6) continue;
+          const xConst = (fixedCoord * Math.cos(phi)) / sinPhi;
+          if (xConst < centre1 - viewRadius || xConst > centre1 + viewRadius) {
+            continue;
+          }
+          const p1 = this._worldToScreen(
+            xConst,
+            centre2 - viewRadius,
+            params,
+            axis1,
+            axis2,
+          );
+          const p2 = this._worldToScreen(
+            xConst,
+            centre2 + viewRadius,
+            params,
+            axis1,
+            axis2,
+          );
+          line(p1.x, p1.y, p2.x, p2.y);
+        } else if (params.slicePlane === "yz") {
+          const cosPhi = Math.cos(phi);
+          if (Math.abs(cosPhi) < 1e-6) continue;
+          const yConst = (fixedCoord * Math.sin(phi)) / cosPhi;
+          if (yConst < centre1 - viewRadius || yConst > centre1 + viewRadius) {
+            continue;
+          }
+          const p1 = this._worldToScreen(
+            yConst,
+            centre2 - viewRadius,
+            params,
+            axis1,
+            axis2,
+          );
+          const p2 = this._worldToScreen(
+            yConst,
+            centre2 + viewRadius,
+            params,
+            axis1,
+            axis2,
+          );
+          line(p1.x, p1.y, p2.x, p2.y);
+        }
+      }
+    }
+
+    pop();
+
+    this._renderNodeTypeKey(
+      radialNodeRadii.length,
+      angularNodeThetas.length + angularNodePhis.length,
+    );
   }
 
   getSuperscript(num) {
@@ -411,6 +637,7 @@ class Renderer {
           ["C", "Cycle colour map"],
           ["M", "Toggle pixel smoothing"],
           ["O", "Toggle overlay"],
+          ["N", "Toggle detected node overlay"],
           ["L", "Toggle legend"],
           ["[ / ]", "Decrease / increase exposure"],
           ["- / +", "Decrease / increase resolution"],

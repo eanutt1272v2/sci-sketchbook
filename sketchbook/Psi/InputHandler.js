@@ -187,6 +187,10 @@ class InputHandler {
         this.appcore.toggleOverlay();
         logMsg = `Overlay: ${this.appcore.params.renderOverlay}`;
         break;
+      case "n":
+        this.appcore.toggleNodeOverlay();
+        logMsg = `Node Overlay: ${this.appcore.params.renderNodeOverlay}`;
+        break;
       case "l":
         this.appcore.toggleLegend();
         logMsg = `Legend: ${this.appcore.params.renderLegend}`;

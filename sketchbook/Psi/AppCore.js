@@ -39,6 +39,7 @@ class AppCore {
       resolution: 256,
       pixelSmoothing: true,
       renderOverlay: true,
+      renderNodeOverlay: false,
       renderLegend: true,
       renderKeymapRef: false,
 
@@ -121,6 +122,7 @@ class AppCore {
   changePlane(plane) {
     if (["xy", "xz", "yz"].includes(plane)) {
       this.params.slicePlane = plane;
+      this.refreshGUI();
       this.requestRender();
     }
   }
@@ -129,11 +131,16 @@ class AppCore {
     const maps = this.colourMapKeys;
     const currentIndex = maps.indexOf(this.params.colourMap);
     this.params.colourMap = maps[(currentIndex + 1) % maps.length];
+    this.refreshGUI();
     this.requestRender();
   }
 
   toggleOverlay() {
     this.params.renderOverlay = !this.params.renderOverlay;
+  }
+
+  toggleNodeOverlay() {
+    this.params.renderNodeOverlay = !this.params.renderNodeOverlay;
   }
 
   toggleLegend() {
@@ -154,11 +161,13 @@ class AppCore {
 
   resetViewRadius() {
     this.params.viewRadius = 45;
+    this.refreshGUI();
     this.requestRender();
   }
 
   resetSliceOffset() {
     this.params.sliceOffset = 0;
+    this.refreshGUI();
     this.requestRender();
   }
 
@@ -167,6 +176,7 @@ class AppCore {
     viewCentre.x = 0;
     viewCentre.y = 0;
     viewCentre.z = 0;
+    this.refreshGUI();
     this.requestRender();
   }
 
@@ -176,21 +186,25 @@ class AppCore {
       -this.params.viewRadius,
       this.params.viewRadius,
     );
+    this.refreshGUI();
     this.requestRender();
   }
 
   adjustViewRadius(delta) {
     this.params.viewRadius = constrain(this.params.viewRadius + delta, 1, 256);
+    this.refreshGUI();
     this.syncViewConstraints();
   }
 
   adjustExposure(delta) {
     this.params.exposure = constrain(this.params.exposure + delta, 0, 2);
+    this.refreshGUI();
     this.requestRender();
   }
 
   adjustResolution(delta) {
     this.params.resolution = constrain(this.params.resolution + delta, 64, 512);
+    this.refreshGUI();
     this.requestRender();
   }
 

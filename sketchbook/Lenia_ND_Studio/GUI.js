@@ -16,6 +16,8 @@ class GUI {
     this.pane = null;
     this.animalBinding = null;
     this.recordButton = null;
+    this.ndSliceZBinding = null;
+    this.ndSliceWBinding = null;
   }
 
   rebuildPane() {
@@ -29,6 +31,8 @@ class GUI {
       this.pane = null;
       this.animalBinding = null;
       this.recordButton = null;
+      this.ndSliceZBinding = null;
+      this.ndSliceWBinding = null;
       this.setupTabs();
     });
   }
@@ -147,7 +151,7 @@ class GUI {
       const depthMax = Math.max(1, (Number(params.ndDepth) || 2) - 1);
 
       if (String(params.viewMode) === "slice") {
-        world
+        this.ndSliceZBinding = world
           .addBinding(params, "ndSliceZ", {
             label: "Slice Z (PgUp/Dn)",
             min: 0,
@@ -160,7 +164,7 @@ class GUI {
       }
 
       if (dim >= 4) {
-        world
+        this.ndSliceWBinding = world
           .addBinding(params, "ndSliceW", {
             label: "Slice W (Scroll)",
             min: 0,
@@ -230,7 +234,7 @@ class GUI {
     });
 
     bindAutomaton(growth, "s", {
-      min: 0.001,
+      min: 0.0001,
       max: 0.1,
       step: 0.0001,
       label: "Width σ (W/S)",
@@ -276,7 +280,7 @@ class GUI {
 
     bindAutomaton(time, "T", {
       min: 1,
-      max: 50,
+      max: 1500,
       step: 1,
       label: "Steps T (T/G)",
     });
@@ -660,12 +664,42 @@ class GUI {
       : "⏺ Record (Ctrl+R)";
   }
 
+  syncNDSliceBounds() {
+    const params = this.params;
+    const dim = Number(params.dimension) || 2;
+    if (dim < 3) return;
+
+    const depth = Math.max(2, Math.floor(Number(params.ndDepth) || 2));
+    const depthMax = depth - 1;
+
+    if (this.ndSliceZBinding) {
+      this.ndSliceZBinding.min = 0;
+      this.ndSliceZBinding.max = depthMax;
+    }
+
+    if (this.ndSliceWBinding) {
+      this.ndSliceWBinding.min = 0;
+      this.ndSliceWBinding.max = depthMax;
+    }
+
+    params.ndSliceZ = Math.max(
+      0,
+      Math.min(depthMax, Math.floor(Number(params.ndSliceZ) || 0)),
+    );
+    params.ndSliceW = Math.max(
+      0,
+      Math.min(depthMax, Math.floor(Number(params.ndSliceW) || 0)),
+    );
+  }
+
   dispose() {
     if (this.pane) {
       this.pane.dispose();
       this.pane = null;
       this.animalBinding = null;
       this.recordButton = null;
+      this.ndSliceZBinding = null;
+      this.ndSliceWBinding = null;
     }
   }
 }

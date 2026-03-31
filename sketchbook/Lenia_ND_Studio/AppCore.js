@@ -903,7 +903,7 @@ class AppCore {
       R: (v) => Math.round(constrain(v, 2, 50)),
       T: (v) => Math.round(constrain(v, 1, 50)),
       m: (v) => constrain(v, 0, 0.5),
-      s: (v) => constrain(v, 0.001, 0.1),
+      s: (v) => constrain(v, 0.0001, 0.1),
       kn: (v) => Math.round(constrain(v, 1, 4)),
       gn: (v) => Math.round(constrain(v, 1, 3)),
       addNoise: (v) => constrain(v, 0, 10),
