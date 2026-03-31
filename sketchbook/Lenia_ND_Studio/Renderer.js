@@ -613,6 +613,27 @@ class Renderer {
   }
 
   renderLegend(vmin, vmax) {
+    const mode = this.lastLegendRange?.mode || "world";
+    const legendMetaByMode = {
+      world: {
+        title: "WORLD",
+        quantity: "Cell state u [cell-state]",
+      },
+      potential: {
+        title: "POTENTIAL",
+        quantity: "Potential U [cell-state]",
+      },
+      growth: {
+        title: "GROWTH",
+        quantity: "Growth G [gen^-1]",
+      },
+      kernel: {
+        title: "KERNEL",
+        quantity: "Kernel K [weight]",
+      },
+    };
+    const legendMeta = legendMetaByMode[mode] || legendMetaByMode.world;
+
     const effectiveVmin =
       vmin !== undefined
         ? vmin
@@ -626,7 +647,7 @@ class Renderer {
           ? this._lastViewVmax
           : 1;
 
-    const cacheKey = `${this.currentColourMap}|${effectiveVmin.toFixed(1)}|${effectiveVmax.toFixed(1)}|${width}|${height}`;
+    const cacheKey = `${mode}|${this.currentColourMap}|${effectiveVmin.toFixed(1)}|${effectiveVmax.toFixed(1)}|${width}|${height}`;
     if (this._legendGfx && this._legendCacheKey === cacheKey) {
       image(this._legendGfx, 0, 0);
       return;
@@ -691,6 +712,18 @@ class Renderer {
     );
     pg.text(effectiveVmax.toFixed(1), x0 - 5, y1);
 
+    pg.textAlign(CENTER, BOTTOM);
+    pg.textSize(10);
+    pg.text(legendMeta.title, x0 + barW * 0.5, y1 - 8);
+
+    pg.push();
+    pg.translate(x0 + barW * 0.5 + 10, y1 + barH * 0.5);
+    pg.rotate(-HALF_PI);
+    pg.textAlign(CENTER, CENTER);
+    pg.textSize(11);
+    pg.text(legendMeta.quantity, 0, 0);
+    pg.pop();
+
     this._disableOverlayShadow(pg);
     this._legendCacheKey = cacheKey;
     image(pg, 0, 0);
@@ -733,7 +766,7 @@ class Renderer {
         entries: [
           ["Z", "Reload current animal"],
           ["C / V", "Previous / next animal (Shift ±10)"],
-          ["X", "Place at random (Shift ×5)"],
+          ["X", "Place at random"],
           ["Shift+X", "Toggle click-to-place mode"],
           ["Ctrl+[/]", "Place scale -/+"],
           ["Ctrl+K", "Toggle auto-scale R, T"],
@@ -777,7 +810,8 @@ class Renderer {
           ["= / Shift+=", "Flip horiz / vert"],
           ["- (minus)", "Transpose"],
           ["PgUp/PgDn", "Shift Z-slice (3D+)"],
-          ["Home/End", "Scroll slice Z (3D+)"],
+          ["Home/End", "Shift Z-slice (3D+)"],
+          ["Wheel / Shift+Wheel", "Shift slice Z / W (3D+)"],
           ["Ctrl+End", "Toggle slice/projection (3D+)"],
         ],
       },
@@ -802,7 +836,7 @@ class Renderer {
         title: "Data",
         entries: [
           ["Ctrl+R", "Start / stop recording"],
-          ["Ctrl+S", "Save canvas as PNG"],
+          ["Ctrl+S", "Export image"],
           ["Ctrl+Shift+E", "Export world (JSON)"],
           ["Ctrl+Shift+W", "Import world (JSON)"],
           ["Ctrl+Shift+P/I", "Export / import params (JSON)"],

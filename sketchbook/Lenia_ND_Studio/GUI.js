@@ -165,8 +165,8 @@ class GUI {
 
       if (dim >= 4) {
         this.ndSliceWBinding = world
-          .addBinding(params, "ndSliceW", {
-            label: "Slice W (Scroll)",
+            .addBinding(params, "ndSliceW", {
+              label: "Slice W (Shift+Scroll)",
             min: 0,
             max: depthMax,
             step: 1,
