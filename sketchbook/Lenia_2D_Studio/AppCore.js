@@ -65,8 +65,8 @@ class AppCore {
 
       selectedAnimal: "",
       placeMode: true,
-      placeScale: 1,
-      autoScaleSimParams: false,
+      placeScale: 2,
+      autoScaleSimParams: true,
       autoCenter: false,
 
       imageFormat: "png",
@@ -287,6 +287,7 @@ class AppCore {
         return;
       }
 
+      // dont add params.running here! Will make it run too fast at ~200 fps!!!!
       if (this._stepPending) {
         this._stepPending = false;
         this._dispatchWorkerStep();
@@ -1714,11 +1715,11 @@ class AppCore {
       this.params.viewMode = "slice";
     }
 
+    this.params.placeScale = 1;
+
     this._applyAnimalSource();
 
     const animal = this._syncSelectedAnimalForActiveDimension(0);
-
-    this.params.running = false;
 
     if (sizeChanged) {
       this.changeResolution();

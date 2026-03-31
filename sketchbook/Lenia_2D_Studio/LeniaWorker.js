@@ -13,6 +13,14 @@ const _fft2DScratch = {
   col: null,
 };
 
+const _stepCenterCache = {
+  valid: false,
+  cosX: 0, sinX: 0, cosY: 0, sinY: 0, mass: 0,
+};
+
+let _autoCenterTmp = null;
+let _autoCenterTmpLen = 0;
+
 function _getFFT2DScratch(N) {
   if (_fft2DScratch.N !== N || !_fft2DScratch.row || !_fft2DScratch.col) {
     _fft2DScratch.N = N;
@@ -749,45 +757,68 @@ function stepFFT(
       ? changeOut
       : new Float32Array(count);
 
-  for (let i = 0; i < count; i++) {
-    const pot = potential[i];
-    const diff = pot - m;
-    let growth;
-    if (gn === 2) {
-      growth = Math.exp(-(diff * diff) * inv2s2) * 2 - 1;
-    } else if (gn === 3) {
-      growth = Math.abs(diff) <= s ? 1 : -1;
-    } else {
-      const base = Math.max(0, 1 - (diff * diff) * inv9s2);
-      const base2 = base * base;
-      growth = base2 * base2 * 2 - 1;
+  const trig = getTrigTables(size);
+  const cosT = trig.cos;
+  const sinT = trig.sin;
+  let acCosX = 0, acSinX = 0, acCosY = 0, acSinY = 0, acMass = 0;
+
+  for (let y = 0; y < size; y++) {
+    const row = y * size;
+    const cy = cosT[y];
+    const sy = sinT[y];
+    for (let x = 0; x < size; x++) {
+      const i = row + x;
+      const pot = potential[i];
+      const diff = pot - m;
+      let growth;
+      if (gn === 2) {
+        growth = Math.exp(-(diff * diff) * inv2s2) * 2 - 1;
+      } else if (gn === 3) {
+        growth = Math.abs(diff) <= s ? 1 : -1;
+      } else {
+        const base = Math.max(0, 1 - (diff * diff) * inv9s2);
+        const base2 = base * base;
+        growth = base2 * base2 * 2 - 1;
+      }
+      field[i] = growth;
+
+      let D;
+      if (isArita) {
+        D = (growth + 1) / 2 - cells[i];
+      } else {
+        D = growth;
+      }
+      if (hasOld && !isArita) D = 0.5 * (3 * field[i] - fieldOld[i]);
+
+      const deltaTerm = dtH * D;
+      let newVal = cells[i] + deltaTerm;
+      change[i] = deltaTerm;
+
+      if (hasNoise) newVal *= 1 + (Math.random() - 0.5) * noiseAmp;
+
+      if (softClip) {
+        const a = Math.exp(softK * newVal);
+        newVal = Math.log(1 / (a + 1) + softC) / -softK;
+      } else {
+        newVal = Math.max(0, Math.min(1, newVal));
+      }
+
+      if (hasQuant) newVal = Math.round(newVal * paramP) / paramP;
+      if (!hasMask || Math.random() > mr) cells[i] = newVal;
+
+      const v = cells[i];
+      acCosX += v * cosT[x]; acSinX += v * sinT[x];
+      acCosY += v * cy; acSinY += v * sy;
+      acMass += v;
     }
-    field[i] = growth;
-
-    let D;
-    if (isArita) {
-      D = (growth + 1) / 2 - cells[i];
-    } else {
-      D = growth;
-    }
-    if (hasOld && !isArita) D = 0.5 * (3 * field[i] - fieldOld[i]);
-
-    const deltaTerm = dtH * D;
-    let newVal = cells[i] + deltaTerm;
-    change[i] = deltaTerm;
-
-    if (hasNoise) newVal *= 1 + (Math.random() - 0.5) * noiseAmp;
-
-    if (softClip) {
-      const a = Math.exp(softK * newVal);
-      newVal = Math.log(1 / (a + 1) + softC) / -softK;
-    } else {
-      newVal = Math.max(0, Math.min(1, newVal));
-    }
-
-    if (hasQuant) newVal = Math.round(newVal * paramP) / paramP;
-    if (!hasMask || Math.random() > mr) cells[i] = newVal;
   }
+
+  _stepCenterCache.cosX = acCosX;
+  _stepCenterCache.sinX = acSinX;
+  _stepCenterCache.cosY = acCosY;
+  _stepCenterCache.sinY = acSinY;
+  _stepCenterCache.mass = acMass;
+  _stepCenterCache.valid = true;
 
   return change;
 }
@@ -1411,7 +1442,7 @@ let _ndKernelDim = 0;
 let _ndKernelSize = 0;
 const _analysisState = createAnalysisState();
 let _lastAnalysisResult = null;
-const _analysisInterval = 4;
+const _analysisInterval = 6;
 let _ndConfig = {
   dimension: 2,
   viewMode: "slice",
@@ -1701,8 +1732,13 @@ function ndStepState(params, ndConfig, kernelFFT, N, source2D, ndSeedWorld) {
 
 function autoCenterShift(arr, size, shiftX, shiftY, channelCount) {
   if (shiftX === 0 && shiftY === 0) return;
+  const len = arr.length;
+  if (!_autoCenterTmp || _autoCenterTmpLen < len) {
+    _autoCenterTmp = new Float32Array(len);
+    _autoCenterTmpLen = len;
+  }
+  const tmp = _autoCenterTmp;
   const cellCount = size * size;
-  const tmp = new Float32Array(arr.length);
   for (let c = 0; c < channelCount; c++) {
     const off = c * cellCount;
     for (let y = 0; y < size; y++) {
@@ -1713,7 +1749,7 @@ function autoCenterShift(arr, size, shiftX, shiftY, channelCount) {
       }
     }
   }
-  arr.set(tmp);
+  arr.set(len === _autoCenterTmpLen ? tmp : tmp.subarray(0, len));
 }
 
 function zoomPlanes(arr, size, planeCount, factor) {
@@ -2105,11 +2141,11 @@ self.onmessage = function (e) {
     if (params.autoCenter) {
       let cosX = 0, sinX = 0, cosY = 0, sinY = 0, totalMass = 0;
       const size = params.size;
-      const trig = getTrigTables(size);
-      const cosT = trig.cos;
-      const sinT = trig.sin;
 
       if (_ndState && _ndState.planeCount > 1) {
+        const trig = getTrigTables(size);
+        const cosT = trig.cos;
+        const sinT = trig.sin;
         const ndTotal = _ndState.world.length;
         const planeCells = cellCount * channelCount;
         for (let offset = 0; offset < ndTotal; offset += planeCells) {
@@ -2131,7 +2167,17 @@ self.onmessage = function (e) {
             }
           }
         }
+      } else if (_stepCenterCache.valid) {
+        cosX = _stepCenterCache.cosX;
+        sinX = _stepCenterCache.sinX;
+        cosY = _stepCenterCache.cosY;
+        sinY = _stepCenterCache.sinY;
+        totalMass = _stepCenterCache.mass;
+        _stepCenterCache.valid = false;
       } else {
+        const trig = getTrigTables(size);
+        const cosT = trig.cos;
+        const sinT = trig.sin;
         for (let y = 0; y < size; y++) {
           const row = y * size;
           const cy = cosT[y];

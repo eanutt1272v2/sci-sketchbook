@@ -11,7 +11,7 @@ function disposeAppCore() {
 
 const metadata = {
   name: "Psi",
-  version: "v2.8.4-dev",
+  version: "v2.8.5-dev",
   author: "@eanutt1272.v2",
 };
 

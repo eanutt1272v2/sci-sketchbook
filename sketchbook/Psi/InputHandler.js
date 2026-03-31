@@ -167,9 +167,22 @@ class InputHandler {
         this.appcore.toggleGUI();
         shouldRefreshGUI = false;
         break;
-      case "p":
+      case "f":
         this.appcore.exportImage();
         shouldRefreshGUI = false;
+        break;
+      case "v":
+        try {
+          if (this.appcore.media.isRecording) {
+            this.appcore.media.stopRecording();
+          } else {
+            this.appcore.media.startRecording();
+          }
+        } catch (error) {
+          console.error("[Psi] Recording toggle failed:", error);
+        }
+        this.appcore.refreshGUI();
+        logMsg = `Recording: ${this.appcore.media.isRecording}`;
         break;
       case "x":
         this.appcore.resetViewCentre();

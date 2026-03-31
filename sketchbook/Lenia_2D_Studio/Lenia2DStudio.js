@@ -12,7 +12,7 @@ function disposeAppCore() {
 
 const metadata = {
   name: "Lenia 2D Studio",
-  version: "v2.0.0-dev",
+  version: "v2.0.1-dev",
   author: "@eanutt1272.v2",
 };
 
@@ -67,7 +67,7 @@ function setupCanvasProperties(canvas) {
   noSmooth();
   textFont(font || "monospace");
   pixelDensity(1);
-  frameRate(60);
+  frameRate(120);
 }
 
 function mouseClicked(e) {

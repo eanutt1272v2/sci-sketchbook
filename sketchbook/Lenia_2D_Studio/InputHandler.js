@@ -391,6 +391,20 @@ class InputHandler {
       return false;
     }
 
+    if (ctrlHeld && keyLower === "r") {
+      try {
+        if (this.appcore.media.isRecording) {
+          this.appcore.media.stopRecording();
+        } else {
+          this.appcore.media.startRecording();
+        }
+      } catch (error) {
+        console.error("[Lenia] Recording toggle failed:", error);
+      }
+      this.appcore.gui?.syncMediaControls();
+      return false;
+    }
+
     if (ctrlHeld && keyLower === "s") {
       this.appcore.media.exportImage();
       return false;

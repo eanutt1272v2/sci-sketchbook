@@ -27,6 +27,14 @@ class Renderer {
     this._kernelDisplayCacheSize = 0;
     this._kernelDisplayCacheSource = null;
     this.uiFont = uiFont;
+    this._legendBarImg = null;
+    this._legendBarCachedMap = "";
+    this._legendGfx = null;
+    this._legendCacheKey = "";
+    this._scaleGfx = null;
+    this._scaleCacheKey = "";
+    this._statsGfx = null;
+    this._statsFrameCount = 0;
     this.setColourMap(initialColourMap);
   }
 
@@ -92,6 +100,13 @@ class Renderer {
     this._kernelDisplayCache = null;
     this._kernelDisplayCacheSize = 0;
     this._kernelDisplayCacheSource = null;
+    this._legendBarImg = null;
+    this._legendBarCachedMap = "";
+    if (this._legendGfx) { this._legendGfx.remove(); this._legendGfx = null; }
+    this._legendCacheKey = "";
+    if (this._scaleGfx) { this._scaleGfx.remove(); this._scaleGfx = null; }
+    this._scaleCacheKey = "";
+    if (this._statsGfx) { this._statsGfx.remove(); this._statsGfx = null; }
   }
 
   _wrapCoord(value) {
@@ -255,10 +270,8 @@ class Renderer {
       const total = currentSize * currentSize;
       for (let i = 0; i < total; i++) {
         const val = data[i];
-        if (Number.isFinite(val)) {
-          if (val < liveMin) liveMin = val;
-          if (val > liveMax) liveMax = val;
-        }
+        if (val < liveMin) liveMin = val;
+        if (val > liveMax) liveMax = val;
         let scaled = (val - vmin) * scale;
         if (scaled < 0) scaled = 0;
         else if (scaled > 255) scaled = 255;
@@ -269,10 +282,8 @@ class Renderer {
         const row = y * currentSize;
         for (let x = 0; x < currentSize; x++) {
           const val = data[row + x];
-          if (Number.isFinite(val)) {
-            if (val < liveMin) liveMin = val;
-            if (val > liveMax) liveMax = val;
-          }
+          if (val < liveMin) liveMin = val;
+          if (val > liveMax) liveMax = val;
           let scaled = (val - vmin) * scale;
           if (scaled < 0) scaled = 0;
           else if (scaled > 255) scaled = 255;
@@ -297,13 +308,11 @@ class Renderer {
     };
 
     this.img.updatePixels();
-    noSmooth();
     image(this.img, 0, 0, width, height);
   }
 
   renderCachedFrame() {
     if (this.img && this.img.width > 0 && this.img.height > 0) {
-      noSmooth();
       image(this.img, 0, 0, width, height);
       return true;
     }
@@ -408,50 +417,57 @@ class Renderer {
   }
 
   renderScale(R, params = null) {
+    const cacheKey = `${R}|${width}|${height}|${this.size}`;
+    if (this._scaleGfx && this._scaleCacheKey === cacheKey) {
+      image(this._scaleGfx, 0, 0);
+      return;
+    }
+
+    if (!this._scaleGfx || this._scaleGfx.width !== width || this._scaleGfx.height !== height) {
+      if (this._scaleGfx) this._scaleGfx.remove();
+      this._scaleGfx = createGraphics(width, height);
+    }
+    const pg = this._scaleGfx;
+    pg.clear();
+
     const cellPx = width / this.size;
     const scaleWidth = R * cellPx;
 
-    push();
-    this._enableOverlayShadow();
-    noStroke();
+    this._enableOverlayShadow(pg);
+    pg.noStroke();
 
     const sx = width - 50;
     const sy = height - 20;
-    fill(255);
-    rect(sx - scaleWidth, sy + 3, scaleWidth, 4);
-    this._applyTextFont();
-    textSize(10);
-    textAlign(LEFT, TOP);
-    text("1mm", sx + 10, sy);
+    pg.fill(255);
+    pg.rect(sx - scaleWidth, sy + 3, scaleWidth, 4);
+    this._applyTextFont(pg);
+    pg.textSize(10);
+    pg.textAlign(LEFT, TOP);
+    pg.text("1mm", sx + 10, sy);
 
     const lx = width - 50;
     const ly = height - 35;
-    stroke(200);
-    strokeWeight(1);
-    line(lx - 90, ly, lx, ly);
-    noStroke();
-    fill(200);
+    pg.stroke(200);
+    pg.strokeWeight(1);
+    pg.line(lx - 90, ly, lx, ly);
+    pg.noStroke();
+    pg.fill(200);
     const dotR = 2;
     for (const m of [0, -10, -50, -90]) {
-      ellipse(lx + m, ly, dotR * 2, dotR * 2);
+      pg.ellipse(lx + m, ly, dotR * 2, dotR * 2);
     }
-    fill(255);
-    textSize(10);
-    textAlign(LEFT, TOP);
-    text("2s", lx - 95, ly - 15);
-    text("1s", lx - 55, ly - 15);
+    pg.fill(255);
+    pg.textSize(10);
+    pg.textAlign(LEFT, TOP);
+    pg.text("2s", lx - 95, ly - 15);
+    pg.text("1s", lx - 55, ly - 15);
 
-    this._disableOverlayShadow();
-    pop();
+    this._disableOverlayShadow(pg);
+    this._scaleCacheKey = cacheKey;
+    image(pg, 0, 0);
   }
 
   renderLegend(vmin, vmax) {
-    const barW = 5;
-    const x0 = width - 20;
-    const y0 = height - 70;
-    const y1 = 20;
-    const barH = y0 - y1;
-
     const effectiveVmin =
       vmin !== undefined
         ? vmin
@@ -465,39 +481,67 @@ class Renderer {
           ? this._lastViewVmax
           : 1;
 
-    push();
-    this._enableOverlayShadow();
-
-    noStroke();
-    for (let py = 0; py < barH; py++) {
-      const t = 1 - py / barH;
-      const lutIndex = Math.min(252, Math.max(0, Math.round(t * 252))) * 3;
-      fill(this.lut[lutIndex], this.lut[lutIndex + 1], this.lut[lutIndex + 2]);
-      rect(x0, y1 + py, barW, 1);
+    const cacheKey = `${this.currentColourMap}|${effectiveVmin.toFixed(1)}|${effectiveVmax.toFixed(1)}|${width}|${height}`;
+    if (this._legendGfx && this._legendCacheKey === cacheKey) {
+      image(this._legendGfx, 0, 0);
+      return;
     }
 
-    this._disableOverlayShadow();
-    noFill();
-    stroke(200);
-    strokeWeight(1);
-    rect(x0 - 1, y1 - 1, barW + 2, barH + 2);
-    this._enableOverlayShadow();
+    if (this.currentColourMap !== this._legendBarCachedMap || !this._legendBarImg) {
+      this._legendBarImg = createImage(1, 253);
+      this._legendBarImg.loadPixels();
+      for (let i = 0; i < 253; i++) {
+        const lutIndex = (252 - i) * 3;
+        const idx = i * 4;
+        this._legendBarImg.pixels[idx] = this.lut[lutIndex];
+        this._legendBarImg.pixels[idx + 1] = this.lut[lutIndex + 1];
+        this._legendBarImg.pixels[idx + 2] = this.lut[lutIndex + 2];
+        this._legendBarImg.pixels[idx + 3] = 255;
+      }
+      this._legendBarImg.updatePixels();
+      this._legendBarCachedMap = this.currentColourMap;
+    }
 
-    noStroke();
-    fill(255);
-    this._applyTextFont();
-    textSize(10);
-    textAlign(RIGHT, CENTER);
-    text(effectiveVmin.toFixed(1), x0 - 5, y0);
-    text(
+    if (!this._legendGfx || this._legendGfx.width !== width || this._legendGfx.height !== height) {
+      if (this._legendGfx) this._legendGfx.remove();
+      this._legendGfx = createGraphics(width, height);
+    }
+    const pg = this._legendGfx;
+    pg.clear();
+
+    const barW = 5;
+    const x0 = width - 20;
+    const y0 = height - 70;
+    const y1 = 20;
+    const barH = y0 - y1;
+
+    this._enableOverlayShadow(pg);
+    pg.noSmooth();
+    pg.image(this._legendBarImg, x0, y1, barW, barH);
+
+    this._disableOverlayShadow(pg);
+    pg.noFill();
+    pg.stroke(200);
+    pg.strokeWeight(1);
+    pg.rect(x0 - 1, y1 - 1, barW + 2, barH + 2);
+    this._enableOverlayShadow(pg);
+
+    pg.noStroke();
+    pg.fill(255);
+    this._applyTextFont(pg);
+    pg.textSize(10);
+    pg.textAlign(RIGHT, CENTER);
+    pg.text(effectiveVmin.toFixed(1), x0 - 5, y0);
+    pg.text(
       ((effectiveVmin + effectiveVmax) / 2).toFixed(1),
       x0 - 5,
       (y1 + y0) / 2,
     );
-    text(effectiveVmax.toFixed(1), x0 - 5, y1);
+    pg.text(effectiveVmax.toFixed(1), x0 - 5, y1);
 
-    this._disableOverlayShadow();
-    pop();
+    this._disableOverlayShadow(pg);
+    this._legendCacheKey = cacheKey;
+    image(pg, 0, 0);
   }
 
   renderKeymapRef(metadata) {
@@ -586,6 +630,7 @@ class Renderer {
           ["H", "Hide / show GUI panel"],
           ["Ctrl+H", "Toggle stats overlay"],
           ["J", "Toggle motion overlay"],
+          ["Shift+J", "Toggle animal name"],
           ["K", "Toggle calc panels"],
           ["L", "Toggle legend"],
           ["B", "Toggle scale bar"],
@@ -596,6 +641,7 @@ class Renderer {
       {
         title: "Data",
         entries: [
+          ["Ctrl+R", "Start / stop recording"],
           ["Ctrl+S", "Save canvas as PNG"],
           ["Ctrl+Shift+E", "Export world (JSON)"],
           ["Ctrl+Shift+W", "Import world (JSON)"],
@@ -756,8 +802,6 @@ class Renderer {
   }
 
   renderAnimalName(animal) {
-    push();
-    textFont("monospace");
     if (!animal) return;
     const parts = [
       animal.code || "",
@@ -767,7 +811,7 @@ class Renderer {
     const label = parts.join(" ");
     if (!label) return;
     push();
-    this._applyTextFont();
+    textFont('monospace');
     this._enableOverlayShadow();
     noStroke();
     textSize(15);
@@ -776,10 +820,23 @@ class Renderer {
     text(label, width / 2, height - 20);
     this._disableOverlayShadow();
     pop();
-    pop();
   }
 
   renderStats(statistics, params) {
+    this._statsFrameCount += 1;
+    if (this._statsGfx && this._statsFrameCount % 6 !== 0) {
+      image(this._statsGfx, 0, 0);
+      return;
+    }
+
+    if (!this._statsGfx || this._statsGfx.width !== width || this._statsGfx.height !== height) {
+      if (this._statsGfx) this._statsGfx.remove();
+      this._statsGfx = createGraphics(width, height);
+    }
+
+    const pg = this._statsGfx;
+    pg.clear();
+
     const dt = 1 / params.T;
     const RN = Math.pow(params.R, 2);
     const dim = Math.max(2, Math.floor(Number(params.dimension) || 2));
@@ -847,16 +904,16 @@ class Renderer {
       `Period Confidence=${fmt((statistics.periodConfidence || 0) * 100, 2)} [%]`,
     ];
 
-    push();
-    this._applyTextFont();
-    this._enableOverlayShadow();
-    textAlign(LEFT, TOP);
-    textSize(12.5);
-    noStroke();
-    fill(255);
-    text(stats.join("\n"), 20, 20);
-    this._disableOverlayShadow();
-    pop();
+    this._applyTextFont(pg);
+    this._enableOverlayShadow(pg);
+    pg.textAlign(LEFT, TOP);
+    pg.textSize(12.5);
+    pg.noStroke();
+    pg.fill(255);
+    pg.text(stats.join("\n"), 20, 20);
+    this._disableOverlayShadow(pg);
+
+    image(pg, 0, 0);
   }
 
   renderCalcPanels(board, automaton, params) {
@@ -898,7 +955,6 @@ class Renderer {
     this._renderCalcPanelBorders(0, 0, panelSize, gap, cols, rows, panelCanvas);
     this.lastCalcPanelsFrame = panelCanvas;
 
-    noSmooth();
     image(panelCanvas, baseX, baseY, totalW, totalH);
   }
 
@@ -914,7 +970,6 @@ class Renderer {
       w: layout.totalW,
       h: layout.totalH,
     };
-    noSmooth();
     image(this.lastCalcPanelsFrame, b.x, b.y, b.w, b.h);
 
     return true;
@@ -1029,22 +1084,39 @@ class Renderer {
     const denom = Math.max(panelVmax - panelVmin, 1e-9);
 
     img.loadPixels();
-    for (let py = 0; py < panelSize; py++) {
-      const sy = Math.min(srcSize - 1, Math.floor((py / panelSize) * srcSize));
-      for (let px = 0; px < panelSize; px++) {
-        const sx = Math.min(
-          srcSize - 1,
-          Math.floor((px / panelSize) * srcSize),
-        );
-        const srcIndex = sy * srcSize + sx;
-        const v = Number(src[srcIndex]) || 0;
-        const t = constrain((v - panelVmin) / denom, 0, 1);
-        const lutIndex = Math.min(255, Math.max(0, Math.round(t * 255))) * 3;
-        const p = (py * panelSize + px) * 4;
-        img.pixels[p] = this.lut[lutIndex];
-        img.pixels[p + 1] = this.lut[lutIndex + 1];
-        img.pixels[p + 2] = this.lut[lutIndex + 2];
-        img.pixels[p + 3] = 255;
+    const scale255 = 255 / denom;
+    if (this._isLittleEndian) {
+      const packed = this.lutPacked;
+      const pixels32 = new Uint32Array(img.pixels.buffer);
+      for (let py = 0; py < panelSize; py++) {
+        const sy = Math.min(srcSize - 1, (py * srcSize / panelSize) | 0);
+        const srcRow = sy * srcSize;
+        const dstRow = py * panelSize;
+        for (let px = 0; px < panelSize; px++) {
+          const sx = Math.min(srcSize - 1, (px * srcSize / panelSize) | 0);
+          let scaled = ((src[srcRow + sx] || 0) - panelVmin) * scale255;
+          if (scaled < 0) scaled = 0;
+          else if (scaled > 255) scaled = 255;
+          pixels32[dstRow + px] = packed[(scaled + 0.5) | 0];
+        }
+      }
+    } else {
+      const lut = this.lut;
+      for (let py = 0; py < panelSize; py++) {
+        const sy = Math.min(srcSize - 1, (py * srcSize / panelSize) | 0);
+        const srcRow = sy * srcSize;
+        for (let px = 0; px < panelSize; px++) {
+          const sx = Math.min(srcSize - 1, (px * srcSize / panelSize) | 0);
+          let scaled = ((src[srcRow + sx] || 0) - panelVmin) * scale255;
+          if (scaled < 0) scaled = 0;
+          else if (scaled > 255) scaled = 255;
+          const lutIndex = ((scaled + 0.5) | 0) * 3;
+          const p = (py * panelSize + px) * 4;
+          img.pixels[p] = lut[lutIndex];
+          img.pixels[p + 1] = lut[lutIndex + 1];
+          img.pixels[p + 2] = lut[lutIndex + 2];
+          img.pixels[p + 3] = 255;
+        }
       }
     }
     img.updatePixels();
@@ -1074,5 +1146,12 @@ class Renderer {
     this._kernelDisplayCache = null;
     this._kernelDisplayCacheSize = 0;
     this._kernelDisplayCacheSource = null;
+    this._legendBarImg = null;
+    this._legendBarCachedMap = "";
+    if (this._legendGfx) { this._legendGfx.remove(); this._legendGfx = null; }
+    this._legendCacheKey = "";
+    if (this._scaleGfx) { this._scaleGfx.remove(); this._scaleGfx = null; }
+    this._scaleCacheKey = "";
+    if (this._statsGfx) { this._statsGfx.remove(); this._statsGfx = null; }
   }
 }

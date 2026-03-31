@@ -363,7 +363,6 @@ class GUI {
 
   createAnimalsTab(page) {
     const { params } = this;
-    this.addSeparator(page);
 
     const sourceDimension =
       this.animalLibrary && Number.isFinite(this.animalLibrary.activeDimension)
@@ -373,25 +372,25 @@ class GUI {
       ? this.animalLibrary.animals.length
       : 0;
 
-    this.animalBinding = page
-      .addBinding(params, "selectedAnimal", {
-        label: `Selected Animal (D${sourceDimension}, ${animalCount})`,
-        options: this.animalLibrary ? this.animalLibrary.getAnimalList() : {},
-      })
-      .on("change", () => this.appcore?.loadSelectedAnimalParams());
+    this.animalBinding = page.addBinding(params, "selectedAnimal", {
+      label: `Animal (D${sourceDimension}, ${animalCount})`,
+      options: this.animalLibrary ? this.animalLibrary.getAnimalList() : {},
+    });
 
     page
-      .addButton({ title: "Load Selected Animal" })
+      .addButton({ title: "Load Animal (Z)" })
       .on("click", () => this.appcore?.loadSelectedAnimal());
 
     this.addSeparator(page);
 
     const placementFolder = page.addFolder({
-      title: "Placement (animals may not tolerate scaling well)",
+      title: "Placement",
       expanded: true,
     });
 
-    placementFolder.addBinding(params, "placeMode", { label: "Place Mode" });
+    placementFolder.addBinding(params, "placeMode", {
+      label: "Click to Place",
+    });
 
     placementFolder
       .addBinding(params, "placeScale", {
@@ -405,9 +404,11 @@ class GUI {
         this.appcore.updatePlacementScale(params.placeScale);
       });
 
+    this.addSeparator(placementFolder);
+
     placementFolder
       .addBinding(params, "autoScaleSimParams", {
-        label: "Auto-scale Params",
+        label: "Auto-scale R, T",
       })
       .on("change", () => {
         if (!this.appcore || !params.autoScaleSimParams) return;
@@ -419,7 +420,7 @@ class GUI {
       });
 
     placementFolder
-      .addButton({ title: "Manually Scale Params" })
+      .addButton({ title: "Apply Scaled R, T" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
@@ -427,13 +428,10 @@ class GUI {
         this.appcore.applyScaledAnimalParams(animal, params.placeScale);
         this.appcore.updateAutomatonParams();
         this.appcore.refreshGUI();
-        console.log(
-          `[Lenia] Manually scaled params: R=${params.R}, T=${params.T}`,
-        );
       });
 
     placementFolder
-      .addButton({ title: "Reset to Params from Animal" })
+      .addButton({ title: "Reset R, T from Animal" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
