@@ -811,6 +811,7 @@ class Renderer {
     const label = parts.join(" ");
     if (!label) return;
     push();
+    // Need to use monospace in order to display cname Chinese characters correctly without them being replaced by tofu boxes :( Doesn't look as nice as Iosevka...
     textFont('monospace');
     this._enableOverlayShadow();
     noStroke();
