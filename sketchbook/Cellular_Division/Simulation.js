@@ -26,7 +26,9 @@ class Simulation {
     this._history = [];
     this._historySampleCounter = 0;
     this._workerStepIntervalMs = 22;
+    this._workerStepAdaptiveOffsetMs = 0;
     this._lastWorkerStepMs = 0;
+    this._lastPerfTuneMs = 0;
     this._particleBufferForWorker = null;
     this._renderParticleData = null;
 
@@ -191,8 +193,26 @@ class Simulation {
       const activeCount = this._lastResult
         ? this._lastResult.particleCount
         : this.particleCount;
-      this._workerStepIntervalMs = activeCount > 7000 ? 30 : 22;
+      const baseIntervalMs = activeCount > 7000 ? 30 : 22;
+      this._workerStepIntervalMs =
+        baseIntervalMs + this._workerStepAdaptiveOffsetMs;
       const nowMs = millis();
+
+      if (nowMs - this._lastPerfTuneMs >= 400) {
+        this._lastPerfTuneMs = nowMs;
+        const fps = Number(frameRate()) || 0;
+        if (fps > 0 && fps < 58) {
+          this._workerStepAdaptiveOffsetMs = Math.min(
+            18,
+            this._workerStepAdaptiveOffsetMs + 2,
+          );
+        } else if (fps > 72) {
+          this._workerStepAdaptiveOffsetMs = Math.max(
+            0,
+            this._workerStepAdaptiveOffsetMs - 1,
+          );
+        }
+      }
 
       if (
         this._workerReady &&

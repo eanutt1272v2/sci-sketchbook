@@ -287,11 +287,7 @@ class AppCore {
       if (this._pendingPlacement) {
         const pp = this._pendingPlacement;
         this._pendingPlacement = null;
-        if ((this.params.dimension || 2) > 2) {
-          this._placeAnimalND(pp.animal, pp.cellX, pp.cellY, pp.scale);
-        } else {
-          this._applyPlacement(pp);
-        }
+        this._executePlacementRequest(pp);
       }
 
       this._flushPendingMutations();
@@ -1312,26 +1308,71 @@ class AppCore {
     }
   }
 
-  placeAnimal(cellX, cellY) {
-    if (!this.params.placeMode) return;
+  _hasQueuedAction(name) {
+    return this._pendingActions.some((action) => action?.name === name);
+  }
 
-    const animal = this.getSelectedAnimal();
+  _resolveAnimalForPlacement(selection) {
+    const rawSelection =
+      selection !== null && typeof selection !== "undefined"
+        ? selection
+        : this.params.selectedAnimal;
+    const idx = parseInt(String(rawSelection), 10);
+    if (Number.isFinite(idx)) {
+      const animal = this.animalLibrary.getAnimal(idx);
+      if (animal) return animal;
+    }
+    return this.getSelectedAnimal();
+  }
+
+  _executePlacementRequest(request) {
+    if (!request) return;
+
+    const animal = this._resolveAnimalForPlacement(request.selection);
     if (!animal) return;
 
-    const scale = this.params.placeScale || 1;
-
-    if (!this.board.world || (this._worker && this._workerBusy)) {
-      this._pendingPlacement = { animal, cellX, cellY, scale };
-      return;
-    }
-
+    const scale = Number(request.scale) || 1;
     this._ensureBuffers();
 
     if ((this.params.dimension || 2) > 2) {
-      this._placeAnimalND(animal, cellX, cellY, scale);
+      this._placeAnimalND(animal, request.cellX, request.cellY, scale);
     } else {
-      this._applyPlacement({ animal, cellX, cellY, scale });
+      this._applyPlacement({
+        animal,
+        cellX: request.cellX,
+        cellY: request.cellY,
+        scale,
+      });
     }
+  }
+
+  placeAnimal(cellX, cellY) {
+    if (!this.params.placeMode) return;
+
+    const selection = this.params.selectedAnimal || "";
+    const animal = this._resolveAnimalForPlacement(selection);
+    if (!animal) return;
+
+    const scale = this.params.placeScale || 1;
+    const request = { selection, cellX, cellY, scale };
+
+    if (!this.board.world || (this._worker && this._workerBusy)) {
+      if (
+        this._hasQueuedAction("loadAnimalParams") ||
+        this._hasQueuedAction("loadAnimal")
+      ) {
+        this._queueAction("deferredPlacement", () =>
+          this._queueOrRunMutation(() => {
+            this._executePlacementRequest(request);
+          }),
+        );
+      } else {
+        this._pendingPlacement = request;
+      }
+      return;
+    }
+
+    this._executePlacementRequest(request);
   }
 
   _applyPlacement({ animal, cellX, cellY, scale }) {
@@ -1472,22 +1513,19 @@ class AppCore {
   }
 
   placeAnimalRandom() {
-    const animal = this.getSelectedAnimal();
+    const selection = this.params.selectedAnimal || "";
+    const animal = this._resolveAnimalForPlacement(selection);
     if (!animal) return;
 
     const size = this.params.gridSize;
     const cellX = Math.floor(Math.random() * size);
     const cellY = Math.floor(Math.random() * size);
     const scale = this.params.placeScale || 1;
+    const request = { selection, cellX, cellY, scale };
 
     this._queueAction("placeAnimalRandom", () =>
       this._queueOrRunMutation(() => {
-        this._ensureBuffers();
-        if ((this.params.dimension || 2) > 2) {
-          this._placeAnimalND(animal, cellX, cellY, scale);
-        } else {
-          this._applyPlacement({ animal, cellX, cellY, scale });
-        }
+        this._executePlacementRequest(request);
       }),
     );
   }

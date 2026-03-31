@@ -405,6 +405,9 @@ class GUI {
       label: `Animal (${animalCount} × ${sourceDimension}D)`,
       options: this.animalLibrary ? this.animalLibrary.getAnimalList() : {},
     });
+    this.animalBinding.on("change", () =>
+      this.appcore?.loadSelectedAnimalParams(),
+    );
 
     page
       .addButton({ title: "◀ Prev (C)" })
