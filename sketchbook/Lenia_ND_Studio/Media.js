@@ -145,9 +145,9 @@ class Media {
 
   exportWorldJSON() {
     const board = this.appcore?.board;
-    const hasBuffers = !!(board?.world && board?.potential && board?.growth);
+    const fields = this._collectFloat32Fields(board);
 
-    if (!hasBuffers) {
+    if (Object.keys(fields).length === 0) {
       if (!this._worldExportDeferred) {
         this._worldExportDeferred = true;
         if (typeof this.appcore?._queueAction === "function") {
@@ -171,6 +171,11 @@ class Media {
     if (!board || !Number.isFinite(board.size) || board.size <= 0) return;
     const expectedLength = board.size * board.size;
 
+    const worldPayload = { size: board.size };
+    for (const [key, arr] of Object.entries(fields)) {
+      worldPayload[key] = this._encodeFloatField(arr, expectedLength);
+    }
+
     const stats = this._getFullStatsSnapshot();
     const payload = {
       format: "simpipe.world",
@@ -178,15 +183,7 @@ class Media {
       params: this._getFullParamsSnapshot(),
       statistics: stats.statistics,
       series: stats.series,
-      world: {
-        size: board.size,
-        world: this._encodeFloatField(board.world, expectedLength),
-        potential: this._encodeFloatField(board.potential, expectedLength),
-        growth: this._encodeFloatField(board.growth, expectedLength),
-        growthOld: board.growthOld
-          ? this._encodeFloatField(board.growthOld, expectedLength)
-          : null,
-      },
+      world: worldPayload,
       exportedAt: new Date().toISOString(),
     };
 
@@ -202,9 +199,6 @@ class Media {
           typeof data !== "object" ||
           data.format !== "simpipe.world" ||
           !data.world ||
-          !data.world.world ||
-          !data.world.potential ||
-          !data.world.growth ||
           !data.params ||
           !data.statistics ||
           !Array.isArray(data.series)
@@ -227,35 +221,28 @@ class Media {
       throw new Error("[Lenia] Invalid world JSON: missing or invalid size");
     }
     const size = this.appcore._normaliseGridSize(rawSize);
-
     const expectedLength = size * size;
 
-    let world = null;
-    if (typeof data.world.world === "string") {
-      const legacy = RLECodec.decode(data.world.world, size, size);
-      world = new Float32Array(expectedLength);
-      world.set(legacy.subarray(0, Math.min(legacy.length, expectedLength)));
-    } else {
-      world = this._decodeFloatField(data.world.world, expectedLength);
-    }
-
-    const potential = this._decodeFloatField(
-      data.world.potential,
-      expectedLength,
-    );
-    const growth = this._decodeFloatField(data.world.growth, expectedLength);
-
-    let growthOld = null;
-    if (data.world.growthOld && typeof data.world.growthOld === "object") {
-      growthOld = this._decodeFloatField(data.world.growthOld, expectedLength);
+    const fields = {};
+    for (const [key, val] of Object.entries(data.world)) {
+      if (key === "size") continue;
+      if (typeof val === "string") {
+        const legacy = RLECodec.decode(val, size, size);
+        const arr = new Float32Array(expectedLength);
+        arr.set(legacy.subarray(0, Math.min(legacy.length, expectedLength)));
+        fields[key] = arr;
+      } else if (
+        val &&
+        typeof val === "object" &&
+        val.encoding === "rle-f32-v1"
+      ) {
+        fields[key] = this._decodeFloatField(val, expectedLength);
+      }
     }
 
     return {
       size,
-      world,
-      potential,
-      growth,
-      growthOld,
+      fields,
       params: data.params,
       statistics: data.statistics,
       series: data.series,
@@ -318,7 +305,7 @@ class Media {
           throw new Error("[Lenia] Invalid params JSON format");
         }
 
-        const result = this.appcore._applyImportedParamsSnapshot(data.params, {
+        const result = this.appcore._applyImportedParams(data.params, {
           allowGridSize: true,
         });
 
@@ -409,6 +396,19 @@ class Media {
       return out;
     }
     return value;
+  }
+
+  _collectFloat32Fields(container) {
+    const fields = {};
+    if (!container) return fields;
+    for (const key of Object.getOwnPropertyNames(container)) {
+      if (key.startsWith("_")) continue;
+      const val = container[key];
+      if (val instanceof Float32Array) {
+        fields[key] = val;
+      }
+    }
+    return fields;
   }
 
   _encodeFloatField(source, size) {

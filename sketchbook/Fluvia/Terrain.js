@@ -17,6 +17,10 @@ class Terrain {
     this.momentumXTrack = new Float32Array(this.area);
     this.momentumYTrack = new Float32Array(this.area);
 
+    this._float32Keys = Object.keys(this).filter(
+      (k) => this[k] instanceof Float32Array,
+    );
+
     this.sharedNormal = { x: 0, y: 0, z: 0 };
     this.bounds = {
       height: { min: 0, max: 1 },

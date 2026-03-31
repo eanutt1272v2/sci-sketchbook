@@ -865,7 +865,7 @@ class AppCore {
     return idx >= 0 ? idx : null;
   }
 
-  _applyImportedParamsSnapshot(rawParams, { allowGridSize = true } = {}) {
+  _applyImportedParams(rawParams, { allowGridSize = true } = {}) {
     if (!rawParams || typeof rawParams !== "object") {
       return { gridSizeChanged: false, dimensionChanged: false };
     }
@@ -873,222 +873,126 @@ class AppCore {
     const p = this.params;
     const beforeGridSize = p.gridSize;
     const beforeDimension = p.dimension;
-    const toNumber = (value, fallback) => {
-      const n = Number(value);
-      return Number.isFinite(n) ? n : fallback;
-    };
-    const toBoolean = (value, fallback) => {
-      if (typeof value === "boolean") return value;
-      if (value === "true") return true;
-      if (value === "false") return false;
-      return fallback;
+
+    const sanitised = { ...rawParams };
+
+    if ("b" in sanitised && typeof sanitised.b === "string") {
+      sanitised.b = sanitised.b
+        .split(",")
+        .map((v) => RLECodec.parseFraction(v))
+        .filter((v) => Number.isFinite(v));
+    }
+
+    if (
+      "selectedAnimal" in sanitised &&
+      (sanitised.selectedAnimal === null ||
+        sanitised.selectedAnimal === undefined)
+    ) {
+      sanitised.selectedAnimal = "";
+    }
+
+    if (!allowGridSize) delete sanitised.gridSize;
+
+    const prevColourMap = p.colourMap;
+    const prevRenderMode = p.renderMode;
+    const prevImageFormat = p.imageFormat;
+
+    this._mergeByTargetSchema(p, sanitised);
+
+    const numericConstraints = {
+      R: (v) => Math.round(constrain(v, 2, 50)),
+      T: (v) => Math.round(constrain(v, 1, 50)),
+      m: (v) => constrain(v, 0, 0.5),
+      s: (v) => constrain(v, 0.001, 0.1),
+      kn: (v) => Math.round(constrain(v, 1, 4)),
+      gn: (v) => Math.round(constrain(v, 1, 3)),
+      addNoise: (v) => constrain(v, 0, 10),
+      maskRate: (v) => constrain(v, 0, 10),
+      paramP: (v) => Math.round(constrain(v, 0, 64)),
+      placeScale: (v) => constrain(v, 0.25, 4),
+      recordingFPS: (v) => Math.round(constrain(v, 12, 120)),
+      videoBitrateMbps: (v) => constrain(v, 1, 64),
     };
 
-    if ("running" in rawParams)
-      p.running = toBoolean(rawParams.running, p.running);
-
-    if ("dimension" in rawParams) {
-      const incomingDimension =
-        typeof NDCompatibility !== "undefined"
-          ? NDCompatibility.coerceDimension(rawParams.dimension)
-          : 2;
-      p.dimension = incomingDimension;
-      if (this.animalLibrary && this.animalLibrary.setActiveDimension) {
-        this.animalLibrary.setActiveDimension(incomingDimension);
+    for (const [key, fn] of Object.entries(numericConstraints)) {
+      if (key in rawParams && typeof p[key] === "number") {
+        p[key] = fn(p[key]);
       }
-    }
-
-    if ("viewMode" in rawParams) {
-      p.viewMode =
-        typeof NDCompatibility !== "undefined"
-          ? NDCompatibility.coerceViewMode(p.dimension, rawParams.viewMode)
-          : "slice";
-    }
-
-    if ("ndDepth" in rawParams) {
-      p.ndDepth =
-        typeof NDCompatibility !== "undefined"
-          ? NDCompatibility.coerceDepth(rawParams.ndDepth, p.dimension)
-          : Math.max(
-              2,
-              Math.min(512, Math.floor(Number(rawParams.ndDepth) || 6)),
-            );
-    }
-
-    if ("ndSliceZ" in rawParams) {
-      p.ndSliceZ =
-        typeof NDCompatibility !== "undefined"
-          ? NDCompatibility.coerceSliceIndex(rawParams.ndSliceZ, p.ndDepth)
-          : Math.max(
-              0,
-              Math.min(
-                p.ndDepth - 1,
-                Math.floor(Number(rawParams.ndSliceZ) || 0),
-              ),
-            );
-    }
-
-    if ("ndSliceW" in rawParams) {
-      p.ndSliceW =
-        typeof NDCompatibility !== "undefined"
-          ? NDCompatibility.coerceSliceIndex(rawParams.ndSliceW, p.ndDepth)
-          : Math.max(
-              0,
-              Math.min(
-                p.ndDepth - 1,
-                Math.floor(Number(rawParams.ndSliceW) || 0),
-              ),
-            );
     }
 
     if (allowGridSize && "gridSize" in rawParams) {
-      p.gridSize = this._normaliseGridSize(rawParams.gridSize);
+      p.gridSize = this._normaliseGridSize(p.gridSize);
     }
 
-    if (
-      typeof NDCompatibility !== "undefined" &&
-      !(allowGridSize && "gridSize" in rawParams)
-    ) {
-      p.gridSize = NDCompatibility.coerceGridSize(p.gridSize, p.dimension);
-    }
-
-    if ("R" in rawParams)
-      p.R = Math.round(constrain(toNumber(rawParams.R, p.R), 2, 50));
-    if ("T" in rawParams)
-      p.T = Math.round(constrain(toNumber(rawParams.T, p.T), 1, 50));
-    if ("m" in rawParams) p.m = constrain(toNumber(rawParams.m, p.m), 0, 0.5);
-    if ("s" in rawParams)
-      p.s = constrain(toNumber(rawParams.s, p.s), 0.001, 0.1);
-    if ("kn" in rawParams)
-      p.kn = Math.round(constrain(toNumber(rawParams.kn, p.kn), 1, 4));
-    if ("gn" in rawParams)
-      p.gn = Math.round(constrain(toNumber(rawParams.gn, p.gn), 1, 3));
-    if ("addNoise" in rawParams) {
-      p.addNoise = constrain(toNumber(rawParams.addNoise, p.addNoise), 0, 10);
-    }
-    if ("maskRate" in rawParams) {
-      p.maskRate = constrain(toNumber(rawParams.maskRate, p.maskRate), 0, 10);
-    }
-    if ("paramP" in rawParams) {
-      p.paramP = Math.round(
-        constrain(toNumber(rawParams.paramP, p.paramP), 0, 64),
-      );
-    }
-    if ("softClip" in rawParams)
-      p.softClip = toBoolean(rawParams.softClip, p.softClip);
-    if ("multiStep" in rawParams)
-      p.multiStep = toBoolean(rawParams.multiStep, p.multiStep);
-
-    if ("b" in rawParams) {
-      const b = rawParams.b;
-      if (typeof b === "string") {
-        p.b = b
-          .split(",")
-          .map((v) => RLECodec.parseFraction(v))
-          .filter((v) => Number.isFinite(v));
-      } else if (Array.isArray(b)) {
-        p.b = b.map((v) => Number(v)).filter((v) => Number.isFinite(v));
+    if (typeof NDCompatibility !== "undefined") {
+      if ("dimension" in rawParams) {
+        p.dimension = NDCompatibility.coerceDimension(p.dimension);
+        if (this.animalLibrary?.setActiveDimension) {
+          this.animalLibrary.setActiveDimension(p.dimension);
+        }
       }
-      if (!Array.isArray(p.b) || p.b.length === 0) p.b = [1];
+      if ("viewMode" in rawParams) {
+        p.viewMode = NDCompatibility.coerceViewMode(p.dimension, p.viewMode);
+      }
+      if ("ndDepth" in rawParams) {
+        p.ndDepth = NDCompatibility.coerceDepth(p.ndDepth, p.dimension);
+      }
+      if ("ndSliceZ" in rawParams) {
+        p.ndSliceZ = NDCompatibility.coerceSliceIndex(p.ndSliceZ, p.ndDepth);
+      }
+      if ("ndSliceW" in rawParams) {
+        p.ndSliceW = NDCompatibility.coerceSliceIndex(p.ndSliceW, p.ndDepth);
+      }
+      if (!(allowGridSize && "gridSize" in rawParams)) {
+        p.gridSize = NDCompatibility.coerceGridSize(p.gridSize, p.dimension);
+      }
     }
+
+    if (!Array.isArray(p.b) || p.b.length === 0) p.b = [1];
 
     if (
       "colourMap" in rawParams &&
-      this.colourMapKeys.includes(rawParams.colourMap)
+      !this.colourMapKeys.includes(p.colourMap)
     ) {
-      p.colourMap = rawParams.colourMap;
+      p.colourMap = prevColourMap;
     }
 
-    if ("renderMode" in rawParams) {
-      const mode = String(rawParams.renderMode || "");
-      if (["world", "potential", "growth", "kernel"].includes(mode)) {
-        p.renderMode = mode;
+    if (
+      "renderMode" in rawParams &&
+      !["world", "potential", "growth", "kernel"].includes(p.renderMode)
+    ) {
+      p.renderMode = prevRenderMode;
+    }
+
+    if ("imageFormat" in rawParams) {
+      const fmt = String(p.imageFormat || "").toLowerCase();
+      if (!["png", "jpg", "jpeg", "webm", "mp4"].includes(fmt)) {
+        p.imageFormat = prevImageFormat;
+      } else {
+        p.imageFormat = fmt;
       }
     }
 
-    if ("renderGrid" in rawParams)
-      p.renderGrid = toBoolean(rawParams.renderGrid, p.renderGrid);
-    if ("renderScale" in rawParams)
-      p.renderScale = toBoolean(rawParams.renderScale, p.renderScale);
-    if ("renderLegend" in rawParams)
-      p.renderLegend = toBoolean(rawParams.renderLegend, p.renderLegend);
-    if ("renderStats" in rawParams)
-      p.renderStats = toBoolean(rawParams.renderStats, p.renderStats);
-    if ("renderMotionOverlay" in rawParams) {
-      p.renderMotionOverlay = toBoolean(
-        rawParams.renderMotionOverlay,
-        p.renderMotionOverlay,
-      );
-    }
-    if ("renderCalcPanels" in rawParams) {
-      p.renderCalcPanels = toBoolean(
-        rawParams.renderCalcPanels,
-        p.renderCalcPanels,
-      );
-    }
-    if ("renderKeymapRef" in rawParams) {
-      p.renderKeymapRef = toBoolean(
-        rawParams.renderKeymapRef,
-        p.renderKeymapRef,
-      );
-    }
     if ("selectedAnimal" in rawParams) {
       const incoming = rawParams.selectedAnimal;
       if (
-        incoming === "" ||
-        incoming === null ||
-        typeof incoming === "undefined"
+        incoming !== "" &&
+        incoming !== null &&
+        typeof incoming !== "undefined"
       ) {
-        p.selectedAnimal = "";
-      } else {
         const idx = parseInt(String(incoming), 10);
         if (
-          Number.isFinite(idx) &&
-          this.animalLibrary &&
-          idx >= 0 &&
-          idx < this.animalLibrary.animals.length
+          !Number.isFinite(idx) ||
+          !this.animalLibrary ||
+          idx < 0 ||
+          idx >= this.animalLibrary.animals.length
         ) {
-          p.selectedAnimal = String(idx);
+          p.selectedAnimal = "";
         }
       }
     }
 
     p.animalSource = "auto";
-
-    if ("placeMode" in rawParams)
-      p.placeMode = toBoolean(rawParams.placeMode, p.placeMode);
-    if ("placeScale" in rawParams) {
-      p.placeScale = constrain(
-        toNumber(rawParams.placeScale, p.placeScale),
-        0.25,
-        4,
-      );
-    }
-    if ("autoScaleSimParams" in rawParams) {
-      p.autoScaleSimParams = toBoolean(
-        rawParams.autoScaleSimParams,
-        p.autoScaleSimParams,
-      );
-    }
-
-    if ("imageFormat" in rawParams) {
-      const fmt = String(rawParams.imageFormat || "").toLowerCase();
-      if (["png", "jpg", "jpeg", "webm", "mp4"].includes(fmt)) {
-        p.imageFormat = fmt;
-      }
-    }
-    if ("recordingFPS" in rawParams) {
-      p.recordingFPS = Math.round(
-        constrain(toNumber(rawParams.recordingFPS, p.recordingFPS), 12, 120),
-      );
-    }
-    if ("videoBitrateMbps" in rawParams) {
-      p.videoBitrateMbps = constrain(
-        toNumber(rawParams.videoBitrateMbps, p.videoBitrateMbps),
-        1,
-        64,
-      );
-    }
 
     this._skipNextAnimalParamsLoad = true;
     this._lastAnimalParamsSelection = p.selectedAnimal || "";
@@ -1102,11 +1006,11 @@ class AppCore {
   }
 
   importWorldPayload(payload) {
-    if (!payload || !payload.world) return;
+    if (!payload || !payload.fields) return;
 
     this._queueAction("importWorld", () =>
       this._queueOrRunMutation(() => {
-        const applied = this._applyImportedParamsSnapshot(payload.params, {
+        const applied = this._applyImportedParams(payload.params, {
           allowGridSize: false,
         });
 
@@ -1128,41 +1032,20 @@ class AppCore {
 
         this._ensureBuffers();
 
-        const src = payload.world;
-        this.board.world.fill(0);
-        if (src instanceof Float32Array) {
-          this.board.world.set(src.subarray(0, this.board.world.length));
-        } else if (Array.isArray(src)) {
-          const n = Math.min(src.length, this.board.world.length);
-          for (let i = 0; i < n; i++) {
-            const v = Number(src[i]);
-            this.board.world[i] = Number.isFinite(v) ? constrain(v, 0, 1) : 0;
-          }
-        }
-
-        this.board.potential.fill(0);
-        if (payload.potential instanceof Float32Array) {
-          this.board.potential.set(
-            payload.potential.subarray(0, this.board.potential.length),
-          );
-        }
-
-        this.board.growth.fill(0);
-        const importedGrowth = payload.growth;
-        if (importedGrowth instanceof Float32Array) {
-          this.board.growth.set(
-            importedGrowth.subarray(0, this.board.growth.length),
-          );
-        }
-
-        if (this.board.growthOld) {
-          const importedGrowthOld = payload.growthOld;
-          if (importedGrowthOld instanceof Float32Array) {
-            this.board.growthOld.set(
-              importedGrowthOld.subarray(0, this.board.growthOld.length),
-            );
-          } else {
-            this.board.growthOld.fill(0);
+        for (const key of Object.getOwnPropertyNames(this.board)) {
+          if (key.startsWith("_")) continue;
+          const target = this.board[key];
+          if (!(target instanceof Float32Array)) continue;
+          target.fill(0);
+          const src = payload.fields[key];
+          if (src instanceof Float32Array) {
+            target.set(src.subarray(0, target.length));
+          } else if (Array.isArray(src)) {
+            const n = Math.min(src.length, target.length);
+            for (let i = 0; i < n; i++) {
+              const v = Number(src[i]);
+              target[i] = Number.isFinite(v) ? v : 0;
+            }
           }
         }
 
@@ -1189,8 +1072,9 @@ class AppCore {
           this.refreshGUI();
         }
 
+        const fieldKeys = Object.keys(payload.fields);
         console.log(
-          `[Lenia] Imported world: size=${this.params.gridSize}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}, potential=${payload.potential ? "restored" : "zeroed"}, growth=${payload.growth ? "restored" : "zeroed"}, growthOld=${payload.growthOld ? "restored" : "zeroed"}, selectedAnimal=${this.params.selectedAnimal || "none"}, placeScale=${this.params.placeScale || 1}`,
+          `[Lenia] Imported world: size=${this.params.gridSize}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}, fields=[${fieldKeys.join(",")}], selectedAnimal=${this.params.selectedAnimal || "none"}, placeScale=${this.params.placeScale || 1}`,
         );
       }),
     );
@@ -2064,6 +1948,71 @@ class AppCore {
 
     if (this.renderer && typeof this.renderer.dispose === "function") {
       this.renderer.dispose();
+    }
+  }
+
+  _isPlainObject(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  }
+
+  _mergeByTargetSchema(target, incoming) {
+    if (!this._isPlainObject(target) || !this._isPlainObject(incoming)) {
+      return;
+    }
+
+    for (const key of Object.keys(target)) {
+      if (!(key in incoming)) continue;
+
+      const sourceValue = incoming[key];
+      const targetValue = target[key];
+
+      if (ArrayBuffer.isView(targetValue)) {
+        if (!Array.isArray(sourceValue) && !ArrayBuffer.isView(sourceValue)) {
+          continue;
+        }
+        const typed = new targetValue.constructor(targetValue.length);
+        const limit = Math.min(typed.length, sourceValue.length || 0);
+        for (let i = 0; i < limit; i++) {
+          const n = Number(sourceValue[i]);
+          typed[i] = Number.isFinite(n) ? n : 0;
+        }
+        target[key] = typed;
+        continue;
+      }
+
+      if (Array.isArray(targetValue)) {
+        if (Array.isArray(sourceValue)) {
+          target[key] = JSON.parse(JSON.stringify(sourceValue));
+        }
+        continue;
+      }
+
+      if (this._isPlainObject(targetValue)) {
+        if (this._isPlainObject(sourceValue)) {
+          this._mergeByTargetSchema(targetValue, sourceValue);
+        }
+        continue;
+      }
+
+      if (typeof targetValue === "number") {
+        const n = Number(sourceValue);
+        if (Number.isFinite(n)) {
+          target[key] = n;
+        }
+        continue;
+      }
+
+      if (typeof targetValue === "boolean") {
+        target[key] = Boolean(sourceValue);
+        continue;
+      }
+
+      if (typeof targetValue === "string") {
+        target[key] = String(sourceValue);
+        continue;
+      }
+
+      target[key] = JSON.parse(JSON.stringify(sourceValue));
     }
   }
 }

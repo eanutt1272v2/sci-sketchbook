@@ -144,17 +144,18 @@ class AppCore {
 
   exportStatisticsCSV() {
     const s = this._getStatisticsSnapshot();
-    const rows = [
-      ["elapsedSeconds", s.elapsedSeconds],
-      ["population", s.population],
-      ["particleCount", s.particleCount],
-      ["fps", s.fps],
-      ["historyLength", Array.isArray(s.history) ? s.history.length : 0],
-    ];
+    const rows = [];
+    for (const [key, value] of Object.entries(s)) {
+      if (Array.isArray(value)) {
+        rows.push([key + "Length", value.length]);
+      } else {
+        rows.push([key, Number(value) || 0]);
+      }
+    }
 
     const csv =
       "key,value\n" +
-      rows.map((r) => `${r[0]},${Number(r[1]) || 0}`).join("\n");
+      rows.map((r) => `${r[0]},${r[1]}`).join("\n");
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
   }
 
@@ -191,53 +192,71 @@ class AppCore {
   }
 
   _getParamsSnapshot() {
-    return {
-      alpha: this.sim.getAlpha(),
-      beta: this.sim.getBeta(),
-      gamma: this.sim.getGamma(),
-      radius: this.sim.getRadius(),
-      trailAlpha: this.sim.getTrailAlpha(),
-      densityThreshold: this.sim.getDensityThreshold(),
-      particleCount: this.sim.particleCount,
-      paused: this.sim.isPaused(),
-    };
+    const sim = this.sim;
+    const snapshot = {};
+    for (const key of Object.keys(sim)) {
+      if (key.startsWith("_")) continue;
+      const val = sim[key];
+      if (typeof val === "number" || typeof val === "boolean") {
+        snapshot[key] = val;
+      }
+    }
+    return snapshot;
   }
 
   _applyParamsSnapshot(params) {
     if (!params || typeof params !== "object") return;
 
-    if ("alpha" in params) this.sim.setAlpha(Number(params.alpha));
-    if ("beta" in params) this.sim.setBeta(Number(params.beta));
-    if ("gamma" in params) this.sim.setGamma(Number(params.gamma));
-    if ("radius" in params) this.sim.setRadius(Number(params.radius));
-    if ("trailAlpha" in params)
-      this.sim.setTrailAlpha(Number(params.trailAlpha));
-    if ("densityThreshold" in params)
-      this.sim.setDensityThreshold(Number(params.densityThreshold));
+    const sim = this.sim;
+    let needsRestart = false;
+
+    for (const [key, value] of Object.entries(params)) {
+      if (key === "paused" || key === "particleCount") continue;
+      const setterName = "set" + key.charAt(0).toUpperCase() + key.slice(1);
+      if (typeof sim[setterName] === "function") {
+        sim[setterName](Number(value));
+      }
+    }
 
     if ("particleCount" in params) {
-      this.sim.setParticleCount(Number(params.particleCount));
-      this.restartSimulation();
+      sim.setParticleCount(Number(params.particleCount));
+      needsRestart = true;
     }
 
     if ("paused" in params) {
       const shouldPause = Boolean(params.paused);
-      if (this.sim.isPaused() !== shouldPause) {
-        this.sim.togglePause();
+      if (sim.isPaused() !== shouldPause) {
+        sim.togglePause();
       }
+    }
+
+    if (needsRestart) {
+      this.restartSimulation();
     }
   }
 
   _getStatisticsSnapshot() {
-    return {
-      fps: Number(frameRate()) || 0,
-      elapsedSeconds: this.sim.getElapsedSeconds(),
-      population: this.sim.getCellPopulation(),
-      particleCount: this.sim.getParticleCount(),
-      history: Array.isArray(this.sim.getCellHistory())
-        ? [...this.sim.getCellHistory()]
-        : [],
-    };
+    const sim = this.sim;
+    const paramKeys = new Set(Object.keys(this._getParamsSnapshot()));
+    const snapshot = { fps: Number(frameRate()) || 0 };
+
+    const proto = Object.getPrototypeOf(sim);
+    for (const name of Object.getOwnPropertyNames(proto)) {
+      if (!name.startsWith("get") || name.length <= 3) continue;
+      if (typeof sim[name] !== "function") continue;
+      const paramName = name.charAt(3).toLowerCase() + name.slice(4);
+      if (paramKeys.has(paramName)) continue;
+      try {
+        const val = sim[name]();
+        if (Array.isArray(val)) {
+          snapshot[paramName] = [...val];
+        } else if (typeof val === "number") {
+          snapshot[paramName] = val;
+        }
+      } catch (_) { /* skip */ }
+    }
+
+    return snapshot;
   }
 
   _openJSONFileDialog(onSuccess) {

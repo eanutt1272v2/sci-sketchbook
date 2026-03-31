@@ -302,7 +302,9 @@ class Media {
 
   exportWorldJSON() {
     const { terrain } = this.appcore;
-    if (!terrain.heightMap) {
+    const hasBuffers = terrain._float32Keys.some((k) => terrain[k]);
+
+    if (!hasBuffers) {
       if (!this._worldExportDeferred) {
         this._worldExportDeferred = true;
         if (typeof this.appcore._queueAction === "function") {
@@ -325,6 +327,13 @@ class Media {
 
     this._worldExportDeferred = false;
 
+    const maps = {};
+    for (const key of terrain._float32Keys) {
+      if (terrain[key] instanceof Float32Array) {
+        maps[key] = this._encodeWorldMap(terrain[key]);
+      }
+    }
+
     const payload = {
       format: "simpipe.world",
       metadata: this.appcore.metadata,
@@ -333,18 +342,7 @@ class Media {
       series: [],
       world: {
         terrainSize: terrain.size,
-        maps: {
-          heightMap: this._encodeWorldMap(terrain.heightMap),
-          originalHeightMap: this._encodeWorldMap(terrain.originalHeightMap),
-          bedrockMap: this._encodeWorldMap(terrain.bedrockMap),
-          sedimentMap: this._encodeWorldMap(terrain.sedimentMap),
-          dischargeMap: this._encodeWorldMap(terrain.dischargeMap),
-          dischargeTrack: this._encodeWorldMap(terrain.dischargeTrack),
-          momentumX: this._encodeWorldMap(terrain.momentumX),
-          momentumY: this._encodeWorldMap(terrain.momentumY),
-          momentumXTrack: this._encodeWorldMap(terrain.momentumXTrack),
-          momentumYTrack: this._encodeWorldMap(terrain.momentumYTrack),
-        },
+        maps,
       },
       exportedAt: new Date().toISOString(),
     };
@@ -375,19 +373,8 @@ class Media {
         const world = data.world;
         const maps = world.maps;
 
-        const requiredMaps = [
-          "heightMap",
-          "originalHeightMap",
-          "bedrockMap",
-          "sedimentMap",
-          "dischargeMap",
-          "dischargeTrack",
-          "momentumX",
-          "momentumY",
-          "momentumXTrack",
-          "momentumYTrack",
-        ];
-        for (const key of requiredMaps) {
+        const { terrain } = this.appcore;
+        for (const key of terrain._float32Keys) {
           if (!this._isEncodedWorldMap(maps[key])) {
             throw new Error(`[Fluvia] Invalid world JSON: missing maps.${key}`);
           }
@@ -406,61 +393,17 @@ class Media {
           this.appcore._reallocTerrainBuffers();
         }
 
-        const { terrain } = this.appcore;
-        this._copyArrayInto(
-          terrain.heightMap,
-          this._decodeWorldMap(maps.heightMap, terrain.heightMap.length),
-        );
-        this._copyArrayInto(
-          terrain.originalHeightMap,
-          this._decodeWorldMap(
-            maps.originalHeightMap,
-            terrain.originalHeightMap.length,
-          ),
-        );
-        this._copyArrayInto(
-          terrain.bedrockMap,
-          this._decodeWorldMap(maps.bedrockMap, terrain.bedrockMap.length),
-        );
-        this._copyArrayInto(
-          terrain.sedimentMap,
-          this._decodeWorldMap(maps.sedimentMap, terrain.sedimentMap.length),
-        );
-        this._copyArrayInto(
-          terrain.dischargeMap,
-          this._decodeWorldMap(maps.dischargeMap, terrain.dischargeMap.length),
-        );
-        this._copyArrayInto(
-          terrain.dischargeTrack,
-          this._decodeWorldMap(
-            maps.dischargeTrack,
-            terrain.dischargeTrack.length,
-          ),
-        );
-        this._copyArrayInto(
-          terrain.momentumX,
-          this._decodeWorldMap(maps.momentumX, terrain.momentumX.length),
-        );
-        this._copyArrayInto(
-          terrain.momentumY,
-          this._decodeWorldMap(maps.momentumY, terrain.momentumY.length),
-        );
-        this._copyArrayInto(
-          terrain.momentumXTrack,
-          this._decodeWorldMap(
-            maps.momentumXTrack,
-            terrain.momentumXTrack.length,
-          ),
-        );
-        this._copyArrayInto(
-          terrain.momentumYTrack,
-          this._decodeWorldMap(
-            maps.momentumYTrack,
-            terrain.momentumYTrack.length,
-          ),
-        );
+        const importedTerrain = this.appcore.terrain;
+        for (const key of importedTerrain._float32Keys) {
+          if (this._isEncodedWorldMap(maps[key])) {
+            this._copyArrayInto(
+              importedTerrain[key],
+              this._decodeWorldMap(maps[key], importedTerrain[key].length),
+            );
+          }
+        }
 
-        terrain.updateBoundsCache();
+        importedTerrain.updateBoundsCache();
         this.appcore.analyser.reinitialise();
         this._applyParamsSnapshot(data.params, {
           forceTerrainSize: incomingSize,
@@ -468,7 +411,7 @@ class Media {
         this._applyStatisticsSnapshot(data.statistics);
         this.appcore._initWorker();
         this.appcore.refreshGUI();
-        this._logInfo(`World JSON imported: size=${terrain.size}`);
+        this._logInfo(`World JSON imported: size=${importedTerrain.size}`);
       });
     });
   }

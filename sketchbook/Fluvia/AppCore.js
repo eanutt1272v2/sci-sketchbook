@@ -377,20 +377,9 @@ class AppCore {
   _reallocTerrainBuffers() {
     const { terrain } = this;
     const { area } = terrain;
-    if (!terrain.heightMap) terrain.heightMap = new Float32Array(area);
-    if (!terrain.originalHeightMap)
-      terrain.originalHeightMap = new Float32Array(area);
-    if (!terrain.bedrockMap) terrain.bedrockMap = new Float32Array(area);
-    if (!terrain.sedimentMap) terrain.sedimentMap = new Float32Array(area);
-    if (!terrain.dischargeMap) terrain.dischargeMap = new Float32Array(area);
-    if (!terrain.dischargeTrack)
-      terrain.dischargeTrack = new Float32Array(area);
-    if (!terrain.momentumX) terrain.momentumX = new Float32Array(area);
-    if (!terrain.momentumY) terrain.momentumY = new Float32Array(area);
-    if (!terrain.momentumXTrack)
-      terrain.momentumXTrack = new Float32Array(area);
-    if (!terrain.momentumYTrack)
-      terrain.momentumYTrack = new Float32Array(area);
+    for (const key of terrain._float32Keys) {
+      if (!terrain[key]) terrain[key] = new Float32Array(area);
+    }
   }
 
   handleWheel(event) {
