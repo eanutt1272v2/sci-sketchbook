@@ -29,7 +29,7 @@ class LeftPanel {
       this.panel.getY("restart"),
       this.panel.contentW(),
       28,
-      "Restart Simulation",
+      "Restart (R)",
       this.theme,
     );
 
@@ -38,7 +38,7 @@ class LeftPanel {
       this.panel.getY("pause"),
       this.panel.contentW(),
       28,
-      "Pause Simulation",
+      "Pause (Space)",
       this.theme,
     );
 
@@ -80,8 +80,8 @@ class LeftPanel {
 
   render() {
     this.pauseButton.label = this.sim.isPaused()
-      ? "Play Simulation"
-      : "Pause Simulation";
+      ? "Play (Space)"
+      : "Pause (Space)";
 
     this.panel.renderBackground();
     const px = this.panel.contentX();
@@ -297,16 +297,16 @@ class LeftPanel {
       ["Shift+I / Shift+P", "Import / export params (JSON)"],
       ["Shift+J / Shift+K", "Export statistics JSON / CSV"],
       ["Shift+O / Shift+S", "Import / export state (JSON)"],
-      ["Click value/particle field", "Start typing numeric input"],
-      ["Enter / Esc", "Apply / cancel typed input"],
-      ["1 / 2", "Alpha - / +"],
-      ["3 / 4", "Beta - / +"],
-      ["5 / 6", "Gamma - / +"],
-      ["7 / 8", "Radius - / +"],
-      ["9 / 0", "Trail alpha - / +"],
-      ["- / =", "Density threshold - / +"],
+      ["1 / 2", "Alpha \u03b1 - / +"],
+      ["3 / 4", "Beta \u03b2 - / +"],
+      ["5 / 6", "Gamma \u03b3 - / +"],
+      ["7 / 8", "Radius r - / +"],
+      ["9 / 0", "Trail alpha \u03c4 - / +"],
+      ["- / =", "Density \u03c1 - / +"],
       ["[ / ]", "Particles - / + (restart to apply)"],
       ["Hold Shift", "Apply 10x change step"],
+      ["Click value", "Start typing numeric input"],
+      ["Enter / Esc", "Apply / cancel typed input"],
     ];
 
     noStroke();

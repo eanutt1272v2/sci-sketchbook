@@ -218,7 +218,7 @@ class Renderer {
       `Pan ${axis1Label}=${viewCentre[axis1].toFixed(2)} [a₀]`,
       `Pan ${axis2Label}=${viewCentre[axis2].toFixed(2)} [a₀]`,
       `Mean Density=${this._fmtSci(stats.mean, 3)} [m⁻³]`,
-      `Density Standard Deviation=${this._fmtSci(stats.stdDev, 3)} [m⁻³]`,
+      `Density Std Dev=${this._fmtSci(stats.stdDev, 3)} [m⁻³]`,
       `Density Peak=${this._fmtSci(stats.peakDensity, 3)} [m⁻³]`,
       `Entropy=${this._fmtSci(stats.entropy, 3)}`,
       `Concentration=${this._fmtSci(stats.concentration, 3)}`,
@@ -387,6 +387,9 @@ class Renderer {
           ["W/S", "Increment/decrement n"],
           ["D/A", "Increment/decrement l"],
           ["E/Q", "Increment/decrement m"],
+          ["R/T", "Nuclear charge Z +/- 1"],
+          ["P", "Toggle reduced mass"],
+          ["G/B", "log₁₀ nucleus mass +/- 0.01"],
         ],
       },
       {
@@ -421,7 +424,6 @@ class Renderer {
           ["F", "Export image"],
           ["Shift+I / Shift+P", "Import / export params (JSON)"],
           ["Shift+S / Shift+C", "Export stats JSON / CSV"],
-          ["GUI: Media tab", "All data import/export options"],
         ],
       },
       {

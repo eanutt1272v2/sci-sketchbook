@@ -41,11 +41,11 @@ class GUI {
 
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Simulation" },
-        { title: "Parameters" },
-        { title: "Visuals" },
+        { title: "Sim" },
+        { title: "Params" },
+        { title: "Render" },
         { title: "Animals" },
-        { title: "Statistics" },
+        { title: "Stats" },
         { title: "Media" },
       ],
     });
@@ -78,18 +78,16 @@ class GUI {
       title: "Simulation Controls",
       expanded: true,
     });
-    run.addBinding(params, "running", { label: "Running" });
+    run.addBinding(params, "running", { label: "Running (Enter)" });
     run
-      .addButton({ title: "Step Once" })
+      .addButton({ title: "Step Once (Space)" })
       .on("click", () => this.appcore?.stepOnce());
     run
-      .addButton({ title: "Clear World" })
+      .addButton({ title: "Clear World (Del)" })
       .on("click", () => this.appcore?.clearWorld());
     run
-      .addButton({ title: "Randomise" })
+      .addButton({ title: "Randomise (N)" })
       .on("click", () => this.appcore?.randomiseWorld());
-    run.addBinding(params, "autoCenter", { label: "Auto-Center" });
-
     this.addSeparator(page);
 
     const perf = page.addFolder({ title: "Performance", expanded: true });
@@ -109,7 +107,7 @@ class GUI {
     const world = page.addFolder({ title: "World", expanded: true });
     world
       .addBinding(params, "gridSize", {
-        label: "Grid Size [cells]",
+        label: "Grid Size (\`)",
         options: sizeOptions,
       })
       .on("change", () =>
@@ -118,16 +116,66 @@ class GUI {
 
     world
       .addBinding(params, "dimension", {
-        label: "Dimension",
+        label: "Dimension (Ctrl+D)",
         options: { "2D": 2, "3D": 3, "4D": 4 },
       })
       .on("change", (event) =>
         this._runIfGUIIdle(() => this.appcore?.setDimension(event.value)),
       );
 
-    this.addSeparator(world);
+    const dim = Number(params.dimension) || 2;
 
-    const xform = world.addFolder({ title: "Transform", expanded: false });
+    if (dim >= 3) {
+      this.addSeparator(world);
+
+      world
+        .addBinding(params, "viewMode", {
+          label: "ND View (Ctrl+End)",
+          options: this.appcore
+            ? this.appcore.getViewModeOptions()
+            : { Slice: "slice", Projection: "projection" },
+        })
+        .on("change", (event) =>
+          this._runIfGUIIdle(() => this.appcore?.setViewMode(event.value)),
+        );
+
+      world.addBinding(params, "ndDepth", {
+        label: "Tensor Depth (auto)",
+        readonly: true,
+      });
+
+      const depthMax = Math.max(1, (Number(params.ndDepth) || 2) - 1);
+
+      if (String(params.viewMode) === "slice") {
+        world
+          .addBinding(params, "ndSliceZ", {
+            label: "Slice Z (PgUp/Dn)",
+            min: 0,
+            max: depthMax,
+            step: 1,
+          })
+          .on("change", () =>
+            this._runIfGUIIdle(() => this.appcore?.refreshNDView()),
+          );
+      }
+
+      if (dim >= 4) {
+        world
+          .addBinding(params, "ndSliceW", {
+            label: "Slice W (Scroll)",
+            min: 0,
+            max: depthMax,
+            step: 1,
+          })
+          .on("change", () =>
+            this._runIfGUIIdle(() => this.appcore?.refreshNDView()),
+          );
+      }
+    }
+
+    this.addSeparator(page);
+
+    const xform = page.addFolder({ title: "Transform" });
 
     xform
       .addButton({ title: "Shift Left (←)" })
@@ -162,54 +210,6 @@ class GUI {
     xform
       .addButton({ title: "Transpose (-)" })
       .on("click", () => this.appcore?.flipWorld(2));
-
-    const dim = Number(params.dimension) || 2;
-
-    if (dim >= 3) {
-      world
-        .addBinding(params, "viewMode", {
-          label: "ND View",
-          options: this.appcore
-            ? this.appcore.getViewModeOptions()
-            : { Slice: "slice", Projection: "projection" },
-        })
-        .on("change", (event) =>
-          this._runIfGUIIdle(() => this.appcore?.setViewMode(event.value)),
-        );
-
-      world.addBinding(params, "ndDepth", {
-        label: "Tensor Depth (auto)",
-        readonly: true,
-      });
-
-      const depthMax = Math.max(1, (Number(params.ndDepth) || 2) - 1);
-
-      if (String(params.viewMode) === "slice") {
-        world
-          .addBinding(params, "ndSliceZ", {
-            label: "Slice Z",
-            min: 0,
-            max: depthMax,
-            step: 1,
-          })
-          .on("change", () =>
-            this._runIfGUIIdle(() => this.appcore?.refreshNDView()),
-          );
-      }
-
-      if (dim >= 4) {
-        world
-          .addBinding(params, "ndSliceW", {
-            label: "Slice W",
-            min: 0,
-            max: depthMax,
-            step: 1,
-          })
-          .on("change", () =>
-            this._runIfGUIIdle(() => this.appcore?.refreshNDView()),
-          );
-      }
-    }
   }
 
   createParametersTab(page) {
@@ -226,18 +226,18 @@ class GUI {
       min: 0,
       max: 0.5,
       step: 0.001,
-      label: "Centre (μ)",
+      label: "Centre μ (Q/A)",
     });
 
     bindAutomaton(growth, "s", {
       min: 0.001,
       max: 0.1,
       step: 0.0001,
-      label: "Width (σ)",
+      label: "Width σ (W/S)",
     });
 
     bindAutomaton(growth, "gn", {
-      label: "Type",
+      label: "Growth Type (Ctrl+U)",
       options: {
         Polynomial: 1,
         Exponential: 2,
@@ -254,14 +254,14 @@ class GUI {
         min: 2,
         max: 50,
         step: 1,
-        label: "Radius (R)",
+        label: "Radius R (R/F)",
       })
       .on("change", (ev) => {
         if (this.appcore) this.appcore.zoomWorld(ev.value);
       });
 
     bindAutomaton(kernel, "kn", {
-      label: "Type",
+      label: "Kernel Type (Ctrl+Y)",
       options: {
         Polynomial: 1,
         Exponential: 2,
@@ -278,41 +278,41 @@ class GUI {
       min: 1,
       max: 50,
       step: 1,
-      label: "Steps (T)",
+      label: "Steps T (T/G)",
     });
 
-    bindAutomaton(time, "softClip", { label: "Soft Clipping" });
+    bindAutomaton(time, "softClip", { label: "Soft Clip (Ctrl+I)" });
 
-    bindAutomaton(time, "multiStep", { label: "Multi-Step" });
+    bindAutomaton(time, "multiStep", { label: "Multi-Step (Ctrl+M)" });
 
-    bindAutomaton(time, "aritaMode", { label: "Arita Mode (target)" });
+    bindAutomaton(time, "aritaMode", { label: "Arita Mode (Ctrl+P)" });
 
     bindAutomaton(time, "h", {
       min: 0.1,
       max: 1.0,
       step: 0.1,
-      label: "Weight (h)",
+      label: "Weight h (Ctrl+T/G)",
     });
 
     bindAutomaton(time, "addNoise", {
       min: 0,
       max: 10,
       step: 0.1,
-      label: "Noise",
+      label: "Noise (Ctrl+O)",
     });
 
     bindAutomaton(time, "maskRate", {
       min: 0,
       max: 10,
       step: 0.1,
-      label: "Mask Rate",
+      label: "Mask Rate (Ctrl+Shift+I)",
     });
 
     bindAutomaton(time, "paramP", {
       min: 0,
       max: 64,
       step: 1,
-      label: "Quantisation P",
+      label: "Quantise P (E/D)",
     });
   }
 
@@ -323,7 +323,7 @@ class GUI {
 
     maps
       .addBinding(params, "colourMap", {
-        label: "Colour Map",
+        label: "Colour Map (. ,)",
         options: this.appcore
           ? this.appcore.getColourMapOptions()
           : { greyscale: "greyscale" },
@@ -333,7 +333,7 @@ class GUI {
       );
 
     maps.addBinding(params, "renderMode", {
-      label: "Render Mode",
+      label: "Render Mode (Tab)",
       options: {
         World: "world",
         Potential: "potential",
@@ -346,22 +346,45 @@ class GUI {
 
     const overlay = page.addFolder({ title: "Overlays" });
 
-    overlay.addBinding(params, "renderGrid", { label: "Grid" });
-    overlay.addBinding(params, "renderScale", { label: "Scale Bar" });
-    overlay.addBinding(params, "renderLegend", { label: "Colour Legend" });
-    overlay.addBinding(params, "renderStats", { label: "Statistics" });
+    overlay.addBinding(params, "renderGrid", { label: "Grid (Shift+G)" });
+    overlay.addBinding(params, "renderScale", { label: "Scale Bar (B)" });
+    overlay.addBinding(params, "renderLegend", { label: "Legend (L)" });
+    overlay.addBinding(params, "renderStats", { label: "Statistics (Ctrl+H)" });
     overlay.addBinding(params, "renderMotionOverlay", {
-      label: "Motion Overlay",
+      label: "Motion (J)",
     });
     overlay.addBinding(params, "renderSymmetryOverlay", {
-      label: "Symmetry Overlay",
+      label: "Symmetry (Ctrl+J)",
     });
     overlay.addBinding(params, "renderCalcPanels", {
-      label: "Calculation Panels",
+      label: "Calc Panels (K)",
     });
     overlay.addBinding(params, "renderAnimalName", {
-      label: "Animal Name",
+      label: "Name (Shift+J)",
     });
+    this.addSeparator(page);
+
+    const polar = page.addFolder({ title: "Polar & Symmetry" });
+
+    polar.addBinding(params, "autoCenter", { label: "Auto-Centre (')" });
+
+    polar.addBinding(params, "polarMode", {
+      label: "Polar (Ctrl+')",
+      options: {
+        "Off": 0,
+        "Symmetry Overlay": 1,
+      },
+    });
+
+    polar.addBinding(params, "autoRotateMode", {
+      label: "Auto-Rotate (Shift+')",
+      options: {
+        "Off": 0,
+        "Arrow (velocity)": 1,
+        "Symmetry": 2,
+      },
+    });
+
   }
 
   createAnimalsTab(page) {
@@ -388,6 +411,9 @@ class GUI {
     page
       .addButton({ title: "Load Selected (Z)" })
       .on("click", () => this.appcore?.loadSelectedAnimal());
+    page
+      .addButton({ title: "Place Random (X)" })
+      .on("click", () => this.appcore?.placeAnimalRandom());
 
     this.addSeparator(page);
 
@@ -397,12 +423,12 @@ class GUI {
     });
 
     placementFolder.addBinding(params, "placeMode", {
-      label: "Click to Place",
+      label: "Click to Place (Shift+X)",
     });
 
     placementFolder
       .addBinding(params, "placeScale", {
-        label: "Scale",
+        label: "Scale (Ctrl+[/])",
         min: 0.25,
         max: 4,
         step: 0.05,
@@ -416,7 +442,7 @@ class GUI {
 
     placementFolder
       .addBinding(params, "autoScaleSimParams", {
-        label: "Auto-scale R, T",
+        label: "Auto-scale R, T (Ctrl+K)",
       })
       .on("change", () => {
         if (!this.appcore || !params.autoScaleSimParams) return;
@@ -428,7 +454,7 @@ class GUI {
       });
 
     placementFolder
-      .addButton({ title: "Apply Scaled R, T" })
+      .addButton({ title: "Apply Scaled R, T (Ctrl+Shift+K)" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
@@ -439,7 +465,7 @@ class GUI {
       });
 
     placementFolder
-      .addButton({ title: "Reset R, T from Animal" })
+      .addButton({ title: "Reset R, T (Ctrl+Shift+Z)" })
       .on("click", () => {
         if (!this.appcore) return;
         const animal = this.appcore.getSelectedAnimal();
@@ -481,7 +507,7 @@ class GUI {
         format,
       });
 
-    const metrics = page.addFolder({ title: "Core Metrics" });
+    const metrics = page.addFolder({ title: "Basic Metrics" });
     addStat(metrics, "gen", "Generation [gen]", formatInt);
     addStat(metrics, "time", "Time [μs]");
     addStat(metrics, "mass", "Mass [μg]");
@@ -563,17 +589,17 @@ class GUI {
 
     const imp = page.addFolder({ title: "Import" });
     imp
-      .addButton({ title: "Import Params (JSON)" })
+      .addButton({ title: "Import Params (Ctrl+Shift+I)" })
       .on("click", () => media?.importParamsJSON());
     imp
-      .addButton({ title: "Import World (JSON)" })
+      .addButton({ title: "Import World (Ctrl+Shift+W)" })
       .on("click", () => media?.importWorldJSON());
 
     this.addSeparator(page);
 
     const exp = page.addFolder({ title: "Export" });
     exp
-      .addButton({ title: "Export Params (JSON)" })
+      .addButton({ title: "Export Params (Ctrl+Shift+P)" })
       .on("click", () => media?.exportParamsJSON());
     exp
       .addButton({ title: "Export Stats (JSON)" })
@@ -582,7 +608,7 @@ class GUI {
       .addButton({ title: "Export Stats (CSV)" })
       .on("click", () => media?.exportStatisticsCSV());
     exp
-      .addButton({ title: "Export World (JSON)" })
+      .addButton({ title: "Export World (Ctrl+Shift+E)" })
       .on("click", () => media?.exportWorldJSON());
 
     const capture = exp.addFolder({ title: "Capture" });
@@ -602,7 +628,7 @@ class GUI {
     });
 
     this.recordButton = capture.addButton({
-      title: media?.isRecording ? "Stop Recording" : "Start Recording",
+      title: media?.isRecording ? "⏹ Stop (Ctrl+R)" : "⏺ Record (Ctrl+R)",
     });
 
     this.recordButton.on("click", () => {
@@ -623,15 +649,15 @@ class GUI {
     });
 
     capture
-      .addButton({ title: "Export Image" })
+      .addButton({ title: "Export Image (Ctrl+S)" })
       .on("click", () => media?.exportImage());
   }
 
   syncMediaControls() {
     if (!this.recordButton || !this.appcore || !this.appcore.media) return;
     this.recordButton.title = this.appcore.media.isRecording
-      ? "Stop Recording"
-      : "Start Recording";
+      ? "⏹ Stop (Ctrl+R)"
+      : "⏺ Record (Ctrl+R)";
   }
 
   dispose() {

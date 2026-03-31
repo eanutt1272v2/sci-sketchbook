@@ -73,10 +73,12 @@ class AppCore {
       renderAnimalName: true,
       renderKeymapRef: false,
 
+      polarMode: 0,
+      autoRotateMode: 0,
       selectedAnimal: "",
       placeMode: true,
-      placeScale: 2,
-      autoScaleSimParams: true,
+      placeScale: 1,
+      autoScaleSimParams: false,
       autoCenter: false,
 
       imageFormat: "png",
@@ -478,6 +480,11 @@ class AppCore {
       this.statistics.centerY,
     );
 
+    const autoRotAngle = this._computeAutoRotationAngle();
+    this.renderer.setAutoRotation(autoRotAngle);
+
+    this.renderer.beginAutoRotation();
+
     if (this.board.world) {
       this.renderer.render(
         this.board,
@@ -486,83 +493,59 @@ class AppCore {
         this.params.colourMap,
         this.params,
       );
+    } else {
+      this.renderer.renderCachedFrame();
+    }
 
-      if (this.params.renderGrid || this.params.renderMode === "kernel") {
-        this.renderer.renderGrid(this.params.R, this.params);
-      }
+    if (this.params.renderGrid || this.params.renderMode === "kernel") {
+      this.renderer.renderGrid(this.params.R, this.params);
+    }
 
-      if (
-        this.params.renderMotionOverlay &&
-        this.params.renderMode !== "kernel"
-      ) {
-        this.renderer.renderMotionOverlay(this.statistics, this.params);
-      }
+    if (
+      this.params.renderMotionOverlay &&
+      this.params.renderMode !== "kernel"
+    ) {
+      this.renderer.renderMotionOverlay(this.statistics, this.params);
+    }
 
-      if (
-        this.params.renderSymmetryOverlay &&
-        this.params.renderMode !== "kernel"
-      ) {
-        this.renderer.renderSymmetryOverlay(this.statistics, this.params);
-      }
+    if (
+      this.params.renderSymmetryOverlay &&
+      this.params.renderMode !== "kernel"
+    ) {
+      this.renderer.renderSymmetryOverlay(this.statistics, this.params);
+    }
 
-      if (this.params.renderScale) {
-        this.renderer.renderScale(this.params.R, this.params);
-      }
+    this.renderer.endAutoRotation();
 
-      if (this.params.renderLegend) {
-        this.renderer.renderLegend();
-      }
+    if (
+      this.params.renderSymmetryOverlay &&
+      this.params.renderMode !== "kernel"
+    ) {
+      this.renderer.renderSymmetryTitle(this.statistics);
+    }
 
-      if (this.params.renderStats) {
-        this.renderer.renderStats(this.statistics, this.params);
-      }
+    if (this.params.renderScale) {
+      this.renderer.renderScale(this.params.R, this.params);
+    }
 
-      if (this.params.renderAnimalName) {
-        const animal = this.getSelectedAnimal();
-        if (animal?.name) this.renderer.renderAnimalName(animal);
-      }
+    if (this.params.renderLegend) {
+      this.renderer.renderLegend();
+    }
 
+    if (this.params.renderStats) {
+      this.renderer.renderStats(this.statistics, this.params);
+    }
+
+    if (this.params.renderAnimalName) {
+      const animal = this.getSelectedAnimal();
+      if (animal?.name) this.renderer.renderAnimalName(animal);
+    }
+
+    if (this.board.world) {
       if (this.params.renderCalcPanels) {
         this.renderer.renderCalcPanels(this.board, this.automaton, this.params);
       }
     } else {
-      this.renderer.renderCachedFrame();
-
-      if (this.params.renderGrid || this.params.renderMode === "kernel") {
-        this.renderer.renderGrid(this.params.R, this.params);
-      }
-
-      if (
-        this.params.renderMotionOverlay &&
-        this.params.renderMode !== "kernel"
-      ) {
-        this.renderer.renderMotionOverlay(this.statistics, this.params);
-      }
-
-      if (
-        this.params.renderSymmetryOverlay &&
-        this.params.renderMode !== "kernel"
-      ) {
-        this.renderer.renderSymmetryOverlay(this.statistics, this.params);
-      }
-
-      if (this.params.renderScale) {
-        this.renderer.renderScale(this.params.R, this.params);
-      }
-
-      if (this.params.renderLegend) {
-        this.renderer.renderLegend();
-      }
-
-      if (this.params.renderStats) {
-        this.renderer.renderStats(this.statistics, this.params);
-      }
-
-      if (this.params.renderAnimalName) {
-        const animal = this.getSelectedAnimal();
-        if (animal?.name) this.renderer.renderAnimalName(animal);
-      }
-
       if (this.params.renderCalcPanels) {
         this.renderer.renderCachedCalcPanels();
       }
@@ -584,6 +567,21 @@ class AppCore {
     if (this.params.running) {
       this.analyser.updateFps();
     }
+  }
+
+  _computeAutoRotationAngle() {
+    const dim = this.params.dimension || 2;
+    if (dim !== 2) return 0;
+    const mode = this.params.autoRotateMode || 0;
+    if (mode === 0) return 0;
+    if (mode === 1) {
+      const angleRad = this.statistics.angle || 0;
+      return angleRad + Math.PI / 2;
+    }
+    if (mode === 2) {
+      return -(this.statistics.symmAngle || 0);
+    }
+    return 0;
   }
 
   stepOnce() {
@@ -1919,8 +1917,9 @@ class AppCore {
 
   handleMouseClicked(event) {
     if (this.canvasInteraction(event)) {
-      const cellX = Math.floor((mouseX / width) * this.params.gridSize);
-      const cellY = Math.floor((mouseY / height) * this.params.gridSize);
+      const cell = this.renderer.screenToCell(mouseX, mouseY);
+      const cellX = cell.x;
+      const cellY = cell.y;
 
       const nowMs = millis();
       const last = this._lastPlacement;

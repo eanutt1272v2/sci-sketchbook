@@ -16,15 +16,15 @@ class GUI {
   setupTabs() {
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Simulation" },
-        { title: "Visuals" },
-        { title: "Statistics" },
+        { title: "Sim" },
+        { title: "Render" },
+        { title: "Stats" },
         { title: "Media" },
       ],
     });
 
     this.createGeneralTab(tabs.pages[0]);
-    this.createVisualisationTab(tabs.pages[1]);
+    this.createRenderTab(tabs.pages[1]);
     this.createStatisticsTab(tabs.pages[2]);
     this.createMediaTab(tabs.pages[3]);
 
@@ -92,21 +92,21 @@ class GUI {
     });
 
     this.bindings.n = quantum.addBinding(this.appcore.params, "n", {
-      label: "n (principal)",
+      label: "n principal (W/S)",
       min: AppCore.QUANTUM_LIMITS.minN,
       max: AppCore.QUANTUM_LIMITS.maxN,
       step: 1,
     });
 
     this.bindings.l = quantum.addBinding(this.appcore.params, "l", {
-      label: "l (angular)",
+      label: "l angular (D/A)",
       min: 0,
       max: 0,
       step: 1,
     });
 
     this.bindings.m = quantum.addBinding(this.appcore.params, "m", {
-      label: "m (magnetic)",
+      label: "m magnetic (E/Q)",
       min: 0,
       max: 0,
       step: 1,
@@ -114,7 +114,7 @@ class GUI {
 
     this.bindings.nuclearCharge = quantum
       .addBinding(this.appcore.params, "nuclearCharge", {
-        label: "Z (nuclear charge)",
+        label: "Z charge (R/T)",
         min: 1,
         max: 20,
         step: 1,
@@ -132,7 +132,7 @@ class GUI {
 
     quantum
       .addBinding(this.appcore.params, "useReducedMass", {
-        label: "Use reduced mass",
+        label: "Reduced mass (P)",
       })
       .on("change", () => {
         this.appcore.requestRender();
@@ -142,7 +142,7 @@ class GUI {
 
     this.bindings.nucleusMassLog10 = quantum
       .addBinding(this.massControl, "nucleusMassLog10", {
-        label: "log10 Nucleus mass [kg]",
+        label: "log₁₀ mass (G/B)",
         min: -30,
         max: -24,
         step: 0.01,
@@ -172,7 +172,7 @@ class GUI {
     this.bindings.m.on("change", () => this.enforceConstraints());
   }
 
-  createVisualisationTab(page) {
+  createRenderTab(page) {
     const colourMapOptions = Object.keys(this.appcore.colourMaps).reduce(
       (obj, name) => {
         const entry = this.appcore.colourMaps[name] || {};
@@ -187,14 +187,14 @@ class GUI {
 
     appearance
       .addBinding(this.appcore.params, "colourMap", {
-        label: "Colour Map",
+        label: "Colour Map (C)",
         options: colourMapOptions,
       })
       .on("change", () => this.appcore.requestRender());
 
     appearance
       .addBinding(this.appcore.params, "exposure", {
-        label: "Exposure",
+        label: "Exposure ([/])",
         min: 0,
         max: 2,
       })
@@ -206,7 +206,7 @@ class GUI {
 
     quality
       .addBinding(this.appcore.params, "resolution", {
-        label: "Resolution (px)",
+        label: "Resolution (+/−)",
         min: 64,
         max: 512,
         step: 2,
@@ -215,7 +215,7 @@ class GUI {
 
     quality
       .addBinding(this.appcore.params, "pixelSmoothing", {
-        label: "Pixel Smoothing",
+        label: "Smoothing (M)",
       })
       .on("change", () => this.appcore.requestRender());
 
@@ -225,13 +225,13 @@ class GUI {
 
     overlay
       .addBinding(this.appcore.params, "renderOverlay", {
-        label: "Statistics Overlay",
+        label: "Statistics (O)",
       })
       .on("change", () => this.appcore.requestRender());
 
     overlay
       .addBinding(this.appcore.params, "renderLegend", {
-        label: "Colour Legend",
+        label: "Legend (L)",
       })
       .on("change", () => this.appcore.requestRender());
 
@@ -250,12 +250,12 @@ class GUI {
     );
 
     slice
-      .addButton({ title: "Reset View Radius" })
+      .addButton({ title: "Reset View Radius (Z)" })
       .on("click", () => this.appcore.resetViewRadius());
 
     slice
       .addBinding(this.appcore.params, "slicePlane", {
-        label: "Slice Plane",
+        label: "Slice Plane (1/2/3)",
         options: {
           "XY Plane (Slice Z)": "xy",
           "XZ Plane (Slice Y)": "xz",
@@ -275,7 +275,7 @@ class GUI {
     );
 
     slice
-      .addButton({ title: "Reset Slice Offset" })
+      .addButton({ title: "Reset Slice Offset (Space)" })
       .on("click", () => this.appcore.resetSliceOffset());
 
     this.bindings.viewRadius.on("change", () => this.updateViewConstraints());
@@ -313,7 +313,7 @@ class GUI {
       .on("change", () => this.appcore.requestRender());
 
     pan
-      .addButton({ title: "Reset View Centre" })
+      .addButton({ title: "Reset View Centre (X)" })
       .on("click", () => this.appcore.resetViewCentre());
   }
 
@@ -362,7 +362,7 @@ class GUI {
 
     distribution.addBinding(statistics, "stdDev", {
       readonly: true,
-      label: "Density Standard Deviation [m⁻³]",
+      label: "Density Std Dev [m⁻³]",
       format: formatSigned,
     });
 
@@ -407,7 +407,7 @@ class GUI {
     const imp = page.addFolder({ title: "Import" });
 
     imp
-      .addButton({ title: "Import Params (JSON)" })
+      .addButton({ title: "Import Params (Shift+I)" })
       .on("click", () => media.importParamsJSON());
 
     this.addSeparator(page);
@@ -415,13 +415,13 @@ class GUI {
     const exp = page.addFolder({ title: "Export" });
 
     exp
-      .addButton({ title: "Export Params (JSON)" })
+      .addButton({ title: "Export Params (Shift+P)" })
       .on("click", () => media.exportParamsJSON());
     exp
-      .addButton({ title: "Export Stats (JSON)" })
+      .addButton({ title: "Export Stats (Shift+S)" })
       .on("click", () => media.exportStatisticsJSON());
     exp
-      .addButton({ title: "Export Stats (CSV)" })
+      .addButton({ title: "Export Stats CSV (Shift+C)" })
       .on("click", () => media.exportStatisticsCSV());
 
     this.addSeparator(exp);
@@ -443,7 +443,7 @@ class GUI {
     });
 
     this.recordButton = capture.addButton({
-      title: media.isRecording ? "Stop Recording" : "Start Recording",
+      title: media.isRecording ? "⏹ Stop (V)" : "⏺ Record (V)",
     });
 
     this.recordButton.on("click", () => {
@@ -464,15 +464,15 @@ class GUI {
     });
 
     capture
-      .addButton({ title: "Export Image" })
+      .addButton({ title: "Export Image (F)" })
       .on("click", () => media.exportImage());
   }
 
   syncMediaControls() {
     if (!this.recordButton) return;
     this.recordButton.title = this.appcore.media.isRecording
-      ? "Stop Recording"
-      : "Start Recording";
+      ? "⏹ Stop (V)"
+      : "⏺ Record (V)";
   }
 
   enforceConstraints() {

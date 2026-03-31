@@ -15,10 +15,10 @@ class GUI {
   setupTabs() {
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Simulation" },
-        { title: "Parameters" },
-        { title: "Visuals" },
-        { title: "Statistics" },
+        { title: "Sim" },
+        { title: "Params" },
+        { title: "Render" },
+        { title: "Stats" },
         { title: "Media" },
       ],
     });
@@ -26,7 +26,7 @@ class GUI {
     const [general, erosion, visuals, stats, media] = tabs.pages;
     this.createGeneralTab(general);
     this.createErosionTab(erosion);
-    this.createVisualTab(visuals);
+    this.createRenderTab(visuals);
     this.createStatsTab(stats);
     this.createMediaTab(media);
   }
@@ -77,12 +77,12 @@ class GUI {
       title: "Simulation Controls",
       expanded: true,
     });
-    controls.addBinding(params, "running", { label: "Running" });
+    controls.addBinding(params, "running", { label: "Running (Space)" });
     controls
-      .addButton({ title: "Generate Terrain" })
+      .addButton({ title: "Generate Terrain (G)" })
       .on("click", () => this.appcore.generate());
     controls
-      .addButton({ title: "Reset Terrain" })
+      .addButton({ title: "Reset Terrain (R)" })
       .on("click", () => this.appcore.reset());
 
     this.addSeparator(page);
@@ -105,7 +105,7 @@ class GUI {
 
     const droplets = page.addFolder({ title: "Droplets", expanded: true });
     droplets.addBinding(params, "dropletsPerFrame", {
-      label: "Droplets/Frame",
+      label: "Droplets/Frame (I/K)",
       min: 0,
       max: 512,
       step: 1,
@@ -197,18 +197,18 @@ class GUI {
     });
   }
 
-  createVisualTab(page) {
+  createRenderTab(page) {
     const { params, colourMaps } = this.appcore;
 
     const render = page.addFolder({ title: "Render", expanded: true });
 
     render.addBinding(params, "renderMethod", {
-      label: "Render Method",
+      label: "Render Method (1/2)",
       options: { "3D": "3D", "2D": "2D" },
     });
 
     render.addBinding(params, "surfaceMap", {
-      label: "Surface Map",
+      label: "Surface Map (M)",
       options: {
         Composite: "composite",
         "Height Map": "height",
@@ -227,11 +227,11 @@ class GUI {
 
     render.addBinding(params, "colourMap", {
       options: colourMapOptions,
-      label: "Colour Map",
+      label: "Colour Map (C)",
     });
 
     render.addBinding(params, "heightScale", {
-      label: "Height Scale",
+      label: "Height Scale ([/])",
       min: 1,
       max: 256,
     });
@@ -240,9 +240,9 @@ class GUI {
 
     const overlay = page.addFolder({ title: "Overlays", expanded: true });
 
-    overlay.addBinding(params, "renderStats", { label: "Statistics Overlay" });
+    overlay.addBinding(params, "renderStats", { label: "Statistics (O)" });
 
-    overlay.addBinding(params, "renderLegend", { label: "Colour Legend" });
+    overlay.addBinding(params, "renderLegend", { label: "Legend (L)" });
 
     this.addSeparator(page);
 
@@ -324,7 +324,7 @@ class GUI {
 
     elevationFolder.addBinding(statistics, "elevationStdDev", {
       readonly: true,
-      label: "Elevation Standard Deviation [height]",
+      label: "Elevation Std Dev [height]",
       format: (v) => fmt(v, 3),
     });
 
@@ -542,29 +542,29 @@ class GUI {
 
     const imp = page.addFolder({ title: "Import" });
     imp
-      .addButton({ title: "Import Heightmap" })
+      .addButton({ title: "Import Heightmap (U)" })
       .on("click", () => media.openImportDialog());
     imp
-      .addButton({ title: "Import Params (JSON)" })
+      .addButton({ title: "Import Params (Shift+I)" })
       .on("click", () => media.importParamsJSON());
     imp
-      .addButton({ title: "Import World (JSON)" })
+      .addButton({ title: "Import World (Shift+Q)" })
       .on("click", () => media.importWorldJSON());
 
     this.addSeparator(page);
 
     const exp = page.addFolder({ title: "Export" });
     exp
-      .addButton({ title: "Export Params (JSON)" })
+      .addButton({ title: "Export Params (Shift+P)" })
       .on("click", () => media.exportParamsJSON());
     exp
-      .addButton({ title: "Export Stats (JSON)" })
+      .addButton({ title: "Export Stats (Shift+J)" })
       .on("click", () => media.exportStatisticsJSON());
     exp
-      .addButton({ title: "Export Stats (CSV)" })
+      .addButton({ title: "Export Stats CSV (Shift+K)" })
       .on("click", () => media.exportStatisticsCSV());
     exp
-      .addButton({ title: "Export World (JSON)" })
+      .addButton({ title: "Export World (Shift+W)" })
       .on("click", () => media.exportWorldJSON());
     exp
       .addButton({ title: "Export Heightmap (PNG)" })
@@ -589,7 +589,7 @@ class GUI {
     });
 
     const btn = capture.addButton({
-      title: media.isRecording ? "Stop Recording" : "Start Recording",
+      title: media.isRecording ? "⏹ Stop (V)" : "⏺ Record (V)",
     });
     this.recordButton = btn;
 
@@ -611,15 +611,15 @@ class GUI {
     });
 
     capture
-      .addButton({ title: "Export Image" })
+      .addButton({ title: "Export Image (F)" })
       .on("click", () => media.exportImage());
   }
 
   syncMediaControls() {
     if (this.recordButton) {
       this.recordButton.title = this.appcore.media.isRecording
-        ? "Stop Recording"
-        : "Start Recording";
+        ? "⏹ Stop (V)"
+        : "⏺ Record (V)";
     }
   }
 }

@@ -4,12 +4,12 @@ class ParameterSet {
     this.theme = theme;
 
     this.labels = [
-      "Alpha (α)",
-      "Beta (β)",
-      "Gamma (γ)",
-      "Radius (r)",
-      "Trail Alpha (τ)",
-      "Density Threshold (ρ)",
+      "Alpha α (1/2)",
+      "Beta β (3/4)",
+      "Gamma γ (5/6)",
+      "Radius r (7/8)",
+      "Trail Alpha τ (9/0)",
+      "Density ρ (−/=)",
     ];
     this.mins = [0, 0, 0, 5, 0, 1];
     this.maxes = [360, 90, 50, 50, 255, 60];

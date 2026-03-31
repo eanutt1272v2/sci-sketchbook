@@ -14,7 +14,7 @@ const Config = {
 
 const metadata = {
   name: "Cellular Division",
-  version: "v2.9.5-dev",
+  version: "v2.9.6-dev",
   author: "@eanutt1272.v2",
 };
 

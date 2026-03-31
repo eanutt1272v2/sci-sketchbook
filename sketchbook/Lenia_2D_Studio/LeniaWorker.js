@@ -247,8 +247,6 @@ function getTrigTables(size) {
 }
 
 function createAnalysisState(epsilon = 1e-10, maxHistory = 512) {
-  const symmetryBins = 64;
-  const maxRadii = 64;
   return {
     epsilon,
     maxHistory,
@@ -263,11 +261,6 @@ function createAnalysisState(epsilon = 1e-10, maxHistory = 512) {
     massHistoryCount: 0,
     massHistoryHead: 0,
     periodicityCentered: new Float64Array(maxHistory),
-    symmetryBins,
-    symmetryAngles: new Float32Array(symmetryBins),
-    symmetryHarmonics: new Float32Array(symmetryBins >> 1),
-    perRadiusAngles: new Float32Array(maxRadii * symmetryBins),
-    densitySum: new Float32Array(symmetryBins >> 1),
     densityEma: null,
     densityEmaAlpha: 0.05,
     lastSidesVec: null,
@@ -304,7 +297,8 @@ function getSymmetryTables(angularBins) {
   const harmonicSin = new Float64Array(halfBins * angularBins);
 
   for (let n = 0; n < angularBins; n++) {
-    const a = (2 * Math.PI * n) / angularBins;
+    // Start at PI/2 to match Python: th_range = linspace(pi/2, 5*pi/2, N+1)[:-1]
+    const a = Math.PI / 2 + (2 * Math.PI * n) / angularBins;
     thetaCos[n] = Math.cos(a);
     thetaSin[n] = Math.sin(a);
   }
@@ -1171,34 +1165,39 @@ function stepFFTND(
 function detectSymmetry(cells, size, stats, state, params) {
   const cx = stats.mass > state.epsilon ? stats.centerX : size / 2;
   const cy = stats.mass > state.epsilon ? stats.centerY : size / 2;
-  const maxRadius = Math.min(size >> 1, 64);
-  const angularBins = state.symmetryBins || 64;
-  const angles = state.symmetryAngles;
-  const harmonics = state.symmetryHarmonics;
+  // Match Python: SIZER = min(MIDX, MIDY) = size/2
+  const maxRadius = size >> 1;
+  // Match Python: SIZETH = SIZEX = size angular bins
+  const angularBins = size;
   const tables = getSymmetryTables(angularBins);
   const thetaCos = tables.thetaCos;
   const thetaSin = tables.thetaSin;
   const harmonicCos = tables.harmonicCos;
   const harmonicSin = tables.harmonicSin;
-  const rMax = Math.max(2, Math.floor(maxRadius));
+  const rMax = maxRadius; // SIZER radii: r=1..SIZER-1 → numRadii = SIZER-1
   const numRadii = rMax - 1;
-  const sampleDiv = 1 / numRadii;
-  const maxHarmonicSearch = Math.min(16, tables.halfBins);
+  // Match Python: SIZEF = MIDX = size/2 frequency bins
+  const numFreqBins = size >> 1;
+  const maxHarmonicSearch = numFreqBins;
 
-  const prAngles = state.perRadiusAngles;
+  // Allocate per-radius angular samples (numRadii × angularBins)
+  // Python: polar_array rows 0..SIZER-1, row 0 = outermost (r=SIZER-1), row SIZER-1 = r=0
+  // JS: rIdx 0 = innermost (r=1), rIdx numRadii-1 = outermost (r=SIZER-1)
+  const prAngles = new Float32Array(numRadii * angularBins);
   for (let r = 1; r < rMax; r++) {
-    const rOffset = (r - 1) * angularBins;
+    const rIdx = r - 1;
+    const rOffset = rIdx * angularBins;
     for (let theta = 0; theta < angularBins; theta++) {
       const ux = thetaCos[theta];
       const uy = thetaSin[theta];
-      const x = ((Math.round(cx + r * ux) % size) + size) % size;
-      const y = ((Math.round(cy + r * uy) % size) + size) % size;
+      // Match Python .astype(int) = truncation toward zero (Math.trunc)
+      const x = (((cx + r * ux) | 0) % size + size) % size;
+      const y = (((cy + r * uy) | 0) % size + size) % size;
       prAngles[rOffset + theta] = cells[y * size + x];
     }
   }
 
-  const densitySum = state.densitySum;
-  for (let k = 0; k < maxHarmonicSearch; k++) densitySum[k] = 0;
+  const densitySum = new Float32Array(maxHarmonicSearch);
 
   const sidesVec = new Uint8Array(numRadii);
   const angleVec = new Float32Array(numRadii);
@@ -1207,15 +1206,17 @@ function detectSymmetry(cells, size, stats, state, params) {
 
   for (let rIdx = 0; rIdx < numRadii; rIdx++) {
     const rOffset = rIdx * angularBins;
+    // Match Python polar_avg: average over first SIZEF columns (half theta range)
     let avg = 0;
-    for (let t = 0; t < angularBins; t++) avg += prAngles[rOffset + t];
-    avg /= angularBins;
+    for (let t = 0; t < numFreqBins; t++) avg += prAngles[rOffset + t];
+    avg /= numFreqBins;
     avgPerRadius[rIdx] = avg;
 
     let bestMag = 0,
       bestK = 0,
       bestCos = 0,
       bestSin = 0;
+    // Match Python: argmax(polar_density[:,2:SIZEF]) — search harmonics 2..SIZEF-1
     for (let k = 2; k < maxHarmonicSearch; k++) {
       const hRow = k * angularBins;
       let cs = 0,
@@ -1239,20 +1240,23 @@ function detectSymmetry(cells, size, stats, state, params) {
 
     sidesVec[rIdx] = bestK;
     if (bestK > 0) {
-      angleVec[rIdx] = Math.PI / 2 - Math.atan2(bestSin, bestCos) / bestK;
+      // Match Python np.fft.fft exp(-j...) sign convention: atan2(-sin, cos)
+      angleVec[rIdx] = Math.atan2(-bestSin, bestCos) / bestK;
     }
   }
 
+  // Density EMA (match Python: density_ema += alpha * (density_sum - density_ema))
   const alpha = state.densityEmaAlpha;
-  if (state.densityEma) {
+  if (state.densityEma && state.densityEma.length === maxHarmonicSearch) {
     for (let k = 2; k < maxHarmonicSearch; k++) {
       state.densityEma[k] += alpha * (densitySum[k] - state.densityEma[k]);
     }
   } else {
-    state.densityEma = new Float32Array(densitySum.length);
+    state.densityEma = new Float32Array(maxHarmonicSearch);
     state.densityEma.set(densitySum);
   }
 
+  // Global sides from density EMA (match Python: argmax(density_ema[2:SIZEF])+2)
   let maxDensity = 0;
   let maxIndex = 0;
   for (let k = 2; k < maxHarmonicSearch; k++) {
@@ -1262,20 +1266,18 @@ function detectSymmetry(cells, size, stats, state, params) {
     }
   }
 
+  // Compute global harmonic strengths for symmStrength ratio
+  const harmonics = new Float32Array(numFreqBins);
+  const angles = new Float32Array(angularBins);
   for (let theta = 0; theta < angularBins; theta++) {
-    angles[theta] = 0;
-  }
-  for (let r = 1; r < rMax; r++) {
-    const rOffset = (r - 1) * angularBins;
-    for (let theta = 0; theta < angularBins; theta++) {
-      angles[theta] += prAngles[rOffset + theta];
+    let sum = 0;
+    for (let rIdx = 0; rIdx < numRadii; rIdx++) {
+      sum += prAngles[rIdx * angularBins + theta];
     }
-  }
-  for (let theta = 0; theta < angularBins; theta++) {
-    angles[theta] *= sampleDiv;
+    angles[theta] = sum / numRadii;
   }
 
-  for (let k = 0; k < tables.halfBins; k++) {
+  for (let k = 0; k < numFreqBins; k++) {
     const row = k * angularBins;
     let cosSum = 0;
     let sinSum = 0;
@@ -1294,6 +1296,7 @@ function detectSymmetry(cells, size, stats, state, params) {
   const maxHarmonic = maxIndex > 0 ? harmonics[maxIndex] : 0;
   const symmStrength = maxAll > state.epsilon ? maxHarmonic / maxAll : 0;
 
+  // Rotation tracking using global averaged profile
   const canTrackRotation =
     maxIndex > 0 && maxHarmonic > state.epsilon * 10 && symmStrength >= 0.08;
   let rotSpeed = 0;
@@ -1308,7 +1311,8 @@ function detectSymmetry(cells, size, stats, state, params) {
       domSin += a * harmonicSin[row + n];
     }
 
-    const symmPhase = Math.atan2(domSin, domCos);
+    // Match Python np.fft.fft exp(-j...) sign: atan2(-sin, cos)
+    const symmPhase = Math.atan2(-domSin, domCos);
     const T = Math.max(1e-6, Number(params?.T) || 1);
     const dt = 1 / T;
 

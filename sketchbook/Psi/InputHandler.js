@@ -131,7 +131,37 @@ class InputHandler {
     let logMsg = "";
     let shouldRefreshGUI = true;
 
-    if (keyLower === "w" || keyLower === "s") {
+    if (keyLower === "r" && !shiftHeld) {
+      this.appcore.params.nuclearCharge = Math.max(
+        1,
+        Math.min(20, Math.round(this.appcore.params.nuclearCharge + 1)),
+      );
+      this.appcore.requestRender();
+      logMsg = `Z changed to ${this.appcore.params.nuclearCharge}`;
+    } else if (keyLower === "t" && !shiftHeld) {
+      this.appcore.params.nuclearCharge = Math.max(
+        1,
+        Math.min(20, Math.round(this.appcore.params.nuclearCharge - 1)),
+      );
+      this.appcore.requestRender();
+      logMsg = `Z changed to ${this.appcore.params.nuclearCharge}`;
+    } else if (keyLower === "p" && !shiftHeld) {
+      this.appcore.params.useReducedMass = !this.appcore.params.useReducedMass;
+      this.appcore.requestRender();
+      logMsg = `Reduced mass: ${this.appcore.params.useReducedMass}`;
+    } else if (keyLower === "g" && !shiftHeld) {
+      const current = Math.log10(this.appcore.params.nucleusMassKg);
+      const next = constrain(current + 0.01, -30, -24);
+      this.appcore.params.nucleusMassKg = Math.pow(10, next);
+      this.appcore.requestRender();
+      logMsg = `Nucleus mass log10 = ${next.toFixed(2)}`;
+    } else if (keyLower === "b" && !shiftHeld) {
+      const current = Math.log10(this.appcore.params.nucleusMassKg);
+      const next = constrain(current - 0.01, -30, -24);
+      this.appcore.params.nucleusMassKg = Math.pow(10, next);
+      this.appcore.requestRender();
+      logMsg = `Nucleus mass log10 = ${next.toFixed(2)}`;
+    } else if (keyLower === "w" || keyLower === "s") {
       this.appcore.updateQuantumNumbers("n", keyLower === "w" ? 1 : -1);
       logMsg = `n changed to ${this.appcore.params.n}`;
     } else if (keyLower === "d" || keyLower === "a") {

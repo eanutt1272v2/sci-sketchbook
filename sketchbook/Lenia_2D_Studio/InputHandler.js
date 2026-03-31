@@ -252,6 +252,22 @@ class InputHandler {
       return false;
     }
 
+    if (ctrlHeld && keyLower === "m") {
+      params.multiStep = !params.multiStep;
+      this.appcore.updateAutomatonParams();
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (ctrlHeld && keyLower === "d") {
+      const dims = [2, 3, 4];
+      const idx = dims.indexOf(Number(params.dimension) || 2);
+      const next = dims[(idx + 1) % dims.length];
+      this.appcore.setDimension(next);
+      this.appcore.refreshGUI();
+      return false;
+    }
+
     if (kCode === LEFT_ARROW && !ctrlHeld) {
       this.appcore.shiftWorld(shiftHeld ? -1 : -10, 0);
       return false;
@@ -310,8 +326,19 @@ class InputHandler {
       return false;
     }
 
-    if (keyValue === "'" && !ctrlHeld) {
+    if (keyValue === "'" && !ctrlHeld && !shiftHeld) {
       params.autoCenter = !params.autoCenter;
+      this.appcore.refreshGUI();
+      return false;
+    }
+    if (keyValue === "'" && shiftHeld && !ctrlHeld) {
+      params.autoRotateMode = (params.autoRotateMode + 1) % 3;
+      this.appcore.refreshGUI();
+      return false;
+    }
+    if (keyValue === "'" && ctrlHeld) {
+      params.polarMode = (params.polarMode + 1) % 2;
+      if (params.polarMode === 1) params.renderSymmetryOverlay = true;
       this.appcore.refreshGUI();
       return false;
     }
@@ -330,9 +357,14 @@ class InputHandler {
       return false;
     }
     if (keyLower === "x" && !ctrlHeld) {
-      const repeats = shiftHeld ? 5 : 1;
-      for (let i = 0; i < repeats; i++) this.appcore.placeAnimalRandom();
-      this.appcore.refreshGUI();
+      if (shiftHeld) {
+        params.placeMode = !params.placeMode;
+        this.appcore.refreshGUI();
+      } else {
+        const repeats = 1;
+        for (let i = 0; i < repeats; i++) this.appcore.placeAnimalRandom();
+        this.appcore.refreshGUI();
+      }
       return false;
     }
 
@@ -364,6 +396,11 @@ class InputHandler {
     }
     if (ctrlHeld && keyLower === "h") {
       params.renderStats = !params.renderStats;
+      this.appcore.refreshGUI();
+      return false;
+    }
+    if (ctrlHeld && keyLower === "j") {
+      params.renderSymmetryOverlay = !params.renderSymmetryOverlay;
       this.appcore.refreshGUI();
       return false;
     }
@@ -414,6 +451,58 @@ class InputHandler {
         console.error("[Lenia] Recording toggle failed:", error);
       }
       this.appcore.gui?.syncMediaControls();
+      return false;
+    }
+
+    if (ctrlHeld && !shiftHeld && keyLower === "k") {
+      params.autoScaleSimParams = !params.autoScaleSimParams;
+      if (params.autoScaleSimParams) {
+        const animal = this.appcore.getSelectedAnimal();
+        if (animal) {
+          this.appcore.applyScaledAnimalParams(animal, params.placeScale);
+          this.appcore.updateAutomatonParams();
+        }
+      }
+      this.appcore.refreshGUI();
+      return false;
+    }
+    if (ctrlHeld && shiftHeld && keyLower === "k") {
+      const animal = this.appcore.getSelectedAnimal();
+      if (animal) {
+        this.appcore.applyScaledAnimalParams(animal, params.placeScale);
+        this.appcore.updateAutomatonParams();
+        this.appcore.refreshGUI();
+      }
+      return false;
+    }
+    if (ctrlHeld && shiftHeld && keyLower === "z") {
+      const animal = this.appcore.getSelectedAnimal();
+      if (animal) {
+        this.appcore.animalLibrary.applyAnimalParameters(animal);
+        this.appcore.updateAutomatonParams();
+        this.appcore.refreshGUI();
+      }
+      return false;
+    }
+
+    if (ctrlHeld && (keyValue === "[" || kCode === 219)) {
+      params.placeScale = constrain(
+        Math.round((params.placeScale - 0.05) * 20) / 20,
+        0.25,
+        4,
+      );
+      this.appcore.updatePlacementScale(params.placeScale);
+      this.appcore.refreshGUI();
+      return false;
+    }
+    if (ctrlHeld && (keyValue === "]" || kCode === 221)) {
+      params.placeScale = constrain(
+        Math.round((params.placeScale + 0.05) * 20) / 20,
+        0.25,
+        4,
+      );
+      this.appcore.updatePlacementScale(params.placeScale);
+      this.appcore.refreshGUI();
       return false;
     }
 

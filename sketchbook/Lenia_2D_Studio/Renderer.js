@@ -38,7 +38,11 @@ class Renderer {
     this._viewOffsetActive = false;
     this._viewShiftX = 0;
     this._viewShiftY = 0;
+    this._viewTargetX = 0;
+    this._viewTargetY = 0;
     this._rollBuffer = null;
+    this._autoRotationAngle = 0;
+    this._autoRotationTarget = 0;
     this.setColourMap(initialColourMap);
   }
 
@@ -159,12 +163,78 @@ class Renderer {
       Number.isFinite(centerY)
     ) {
       const mid = this.size / 2;
-      this._viewShiftX = Math.round(mid - centerX);
-      this._viewShiftY = Math.round(mid - centerY);
+      const tx = mid - centerX;
+      const ty = mid - centerY;
+      const alpha = 0.12;
+      let dx = tx - this._viewTargetX;
+      let dy = ty - this._viewTargetY;
+      dx -= Math.round(dx / this.size) * this.size;
+      dy -= Math.round(dy / this.size) * this.size;
+      this._viewTargetX += dx;
+      this._viewTargetY += dy;
+      this._viewShiftX += alpha * (this._viewTargetX - this._viewShiftX);
+      this._viewShiftY += alpha * (this._viewTargetY - this._viewShiftY);
     } else {
       this._viewShiftX = 0;
       this._viewShiftY = 0;
+      this._viewTargetX = 0;
+      this._viewTargetY = 0;
     }
+  }
+
+  setAutoRotation(angleRadians) {
+    const target = Number.isFinite(angleRadians) ? angleRadians : 0;
+    if (Math.abs(target) < 1e-9 && Math.abs(this._autoRotationAngle) < 1e-9) {
+      this._autoRotationAngle = 0;
+      this._autoRotationTarget = 0;
+      return;
+    }
+    let delta = target - this._autoRotationTarget;
+    delta = delta - Math.round(delta / (2 * Math.PI)) * 2 * Math.PI;
+    this._autoRotationTarget += delta;
+    const alpha = 0.12;
+    this._autoRotationAngle += alpha * (this._autoRotationTarget - this._autoRotationAngle);
+  }
+
+  beginAutoRotation() {
+    const a = this._autoRotationAngle;
+    if (Math.abs(a) < 1e-6) return;
+    background(0);
+    push();
+    translate(width / 2, height / 2);
+    rotate(-a);
+    translate(-width / 2, -height / 2);
+  }
+
+  endAutoRotation() {
+    const a = this._autoRotationAngle;
+    if (Math.abs(a) < 1e-6) return;
+    pop();
+  }
+
+  screenToCell(screenX, screenY) {
+    let px = screenX;
+    let py = screenY;
+    const a = this._autoRotationAngle;
+    if (Math.abs(a) >= 1e-6) {
+      const cx = width / 2;
+      const cy = height / 2;
+      const dx = px - cx;
+      const dy = py - cy;
+      const cosA = Math.cos(a);
+      const sinA = Math.sin(a);
+      px = cx + dx * cosA - dy * sinA;
+      py = cy + dx * sinA + dy * cosA;
+    }
+    let cellX = Math.floor((px / width) * this.size);
+    let cellY = Math.floor((py / height) * this.size);
+    if (this._viewOffsetActive) {
+      const sx = Math.round(this._viewShiftX);
+      const sy = Math.round(this._viewShiftY);
+      cellX = ((cellX - sx) % this.size + this.size) % this.size;
+      cellY = ((cellY - sy) % this.size + this.size) % this.size;
+    }
+    return { x: cellX, y: cellY };
   }
 
   _rollViewData(src, size, shiftX, shiftY) {
@@ -331,8 +401,8 @@ class Renderer {
       data = this._rollViewData(
         data,
         currentSize,
-        this._viewShiftX,
-        this._viewShiftY,
+        Math.round(this._viewShiftX),
+        Math.round(this._viewShiftY),
       );
     }
 
@@ -664,6 +734,11 @@ class Renderer {
           ["Z", "Reload current animal"],
           ["C / V", "Previous / next animal (Shift ±10)"],
           ["X", "Place at random (Shift ×5)"],
+          ["Shift+X", "Toggle click-to-place mode"],
+          ["Ctrl+[/]", "Place scale -/+"],
+          ["Ctrl+K", "Toggle auto-scale R, T"],
+          ["Ctrl+Shift+K", "Apply scaled R, T"],
+          ["Ctrl+Shift+Z", "Reset R, T from animal"],
           ["N", "Random world (Shift=seeded)"],
           ["M", "Random world"],
           ["'", "Toggle auto-center"],
@@ -690,6 +765,8 @@ class Renderer {
           ["Ctrl+I", "Toggle soft clip (Shift=mask rate)"],
           ["Ctrl+O", "Cycle noise"],
           ["Ctrl+P", "Toggle Arita mode (Shift=reset mask+noise)"],
+          ["Ctrl+M", "Toggle multi-step"],
+          ["Ctrl+D", "Cycle dimension (2D/3D/4D)"],
         ],
       },
       {
@@ -711,6 +788,7 @@ class Renderer {
           [". / ,", "Next / prev colour map"],
           ["H", "Hide / show GUI panel"],
           ["Ctrl+H", "Toggle stats overlay"],
+          ["Ctrl+J", "Toggle symmetry overlay"],
           ["J", "Toggle motion overlay"],
           ["Shift+J", "Toggle animal name"],
           ["K", "Toggle calc panels"],
@@ -942,7 +1020,7 @@ class Renderer {
 
     const c254 = [127, 127, 127];
     const c255 = [255, 255, 255];
-    const dotR = 2;
+    const dotR = 4;
 
     push();
     this._enableOverlayShadow();
@@ -993,16 +1071,36 @@ class Renderer {
       }
     }
     this._disableOverlayShadow();
+    pop();
+  }
 
-    noStroke();
+  renderSymmetryTitle(statistics) {
+    const POLYGON_NAME = {
+      1: "irregular",
+      2: "bilateral",
+      3: "trimeric",
+      4: "tetrameric",
+      5: "pentameric",
+      6: "hexameric",
+      7: "heptameric",
+      8: "octameric",
+      9: "nonameric",
+      10: "decameric",
+      0: "polymeric",
+    };
+
+    const k = statistics.symmSides || 0;
+    if (k < 2) return;
+
+    push();
     this._enableOverlayShadow();
     this._applyTextFont();
-    textSize(13);
-    textAlign(LEFT, TOP);
+    noStroke();
     fill(255);
+    textSize(15);
+    textAlign(CENTER, TOP);
     const name = POLYGON_NAME[k <= 10 ? k : 0];
-    const pct = ((symmStrength || 0) * 100).toFixed(0);
-    text(`symmetry: ${k} (${name}) ${pct}%`, 10, 10);
+    text(`symmetry: ${k} (${name})`, width / 2, 20);
     this._disableOverlayShadow();
     pop();
   }
