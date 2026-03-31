@@ -616,20 +616,16 @@ class Renderer {
     const mode = this.lastLegendRange?.mode || "world";
     const legendMetaByMode = {
       world: {
-        title: "A",
-        quantity: "A^t (state field)",
+        title: "Aᵗ (state field)",
       },
       potential: {
-        title: "K*A",
-        quantity: "K * A^t (weighted sum)",
+        title: "K ∗ Aᵗ (weighted sum)",
       },
       growth: {
-        title: "G",
-        quantity: "G(K * A^t) (growth mapping)",
+        title: "G(K ∗ Aᵗ) (growth mapping)",
       },
       kernel: {
-        title: "K",
-        quantity: "K (kernel)",
+        title: "K (kernel)",
       },
     };
     const legendMeta = legendMetaByMode[mode] || legendMetaByMode.world;
@@ -712,16 +708,12 @@ class Renderer {
     );
     pg.text(effectiveVmax.toFixed(1), x0 - 5, y1);
 
-    pg.textAlign(CENTER, BOTTOM);
-    pg.textSize(10);
-    pg.text(legendMeta.title, x0 + barW * 0.5, y1 - 8);
-
     pg.push();
     pg.translate(x0 + barW * 0.5 + 10, y1 + barH * 0.5);
     pg.rotate(-HALF_PI);
     pg.textAlign(CENTER, CENTER);
     pg.textSize(11);
-    pg.text(legendMeta.quantity, 0, 0);
+    pg.text(legendMeta.title, 0, 0);
     pg.pop();
 
     this._disableOverlayShadow(pg);
