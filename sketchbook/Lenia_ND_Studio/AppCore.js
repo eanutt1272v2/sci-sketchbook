@@ -1910,6 +1910,10 @@ class AppCore {
         this.gui.syncMediaControls();
       }
 
+      if (this.gui && typeof this.gui.syncNDSliceBounds === "function") {
+        this.gui.syncNDSliceBounds();
+      }
+
       if (this.gui && this.gui.pane) this.gui.pane.refresh();
     } finally {
       this._isRefreshingGUI = false;
