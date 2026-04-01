@@ -113,22 +113,31 @@ class InputHandler {
     }
 
     if (keyLower === "r" && !ctrlHeld) {
-      const newR = Math.max(2, Math.min(50, params.R + (shiftHeld ? 1 : 10)));
+      const maxR = this.appcore?.getMaxKernelRadius
+        ? this.appcore.getMaxKernelRadius()
+        : 50;
+      const newR = Math.max(2, Math.min(maxR, params.R + (shiftHeld ? 1 : 10)));
       this.appcore.zoomWorld(newR);
       this.appcore.refreshGUI();
       return false;
     }
     if (keyLower === "f" && !ctrlHeld) {
-      const newR = Math.max(2, Math.min(50, params.R - (shiftHeld ? 1 : 10)));
+      const maxR = this.appcore?.getMaxKernelRadius
+        ? this.appcore.getMaxKernelRadius()
+        : 50;
+      const newR = Math.max(2, Math.min(maxR, params.R - (shiftHeld ? 1 : 10)));
       this.appcore.zoomWorld(newR);
       this.appcore.refreshGUI();
       return false;
     }
 
     if (keyLower === "t" && !ctrlHeld) {
+      const maxT = this.appcore?.getMaxTimeScale
+        ? this.appcore.getMaxTimeScale()
+        : 1500;
       params.T = shiftHeld
-        ? Math.min(50, params.T + 1)
-        : Math.min(50, params.T * 2);
+        ? Math.min(maxT, params.T + 1)
+        : Math.min(maxT, params.T * 2);
       this.appcore.updateAutomatonParams();
       this.appcore.refreshGUI();
       return false;

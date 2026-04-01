@@ -77,6 +77,9 @@ class GUI {
     const sizeOptions = this.appcore
       ? this.appcore.getGridSizeOptions(params.dimension)
       : { "64^2": 64, "128^2": 128, "256^2": 256, "512^2": 512 };
+    const pixelOptions = this.appcore
+      ? this.appcore.getPixelSizeOptions(params.dimension)
+      : { "4px (128)": 4, "2px (256)": 2, "1px (512)": 1 };
 
     const run = page.addFolder({
       title: "Simulation Controls",
@@ -119,6 +122,15 @@ class GUI {
       })
       .on("change", () =>
         this._runIfGUIIdle(() => this.appcore?.changeResolution()),
+      );
+
+    world
+      .addBinding(params, "pixelSize", {
+        label: "Pixel Size",
+        options: pixelOptions,
+      })
+      .on("change", (event) =>
+        this._runIfGUIIdle(() => this.appcore?.applyPixelSize(event.value)),
       );
 
     world
@@ -254,11 +266,14 @@ class GUI {
     this.addSeparator(page);
 
     const kernel = page.addFolder({ title: "Kernel Function", expanded: true });
+    const maxR = this.appcore?.getMaxKernelRadius
+      ? this.appcore.getMaxKernelRadius()
+      : 50;
 
     kernel
       .addBinding(params, "R", {
         min: 2,
-        max: 50,
+        max: maxR,
         step: 1,
         label: "Radius R (R/F)",
       })

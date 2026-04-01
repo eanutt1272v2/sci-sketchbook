@@ -27,7 +27,8 @@ class AppCore {
 
     this.params = {
       running: true,
-      gridSize: 128,
+      gridSize: 256,
+      pixelSize: 4,
 
       dimension: 2,
       animalSource: "auto",
@@ -71,8 +72,8 @@ class AppCore {
       autoRotateMode: 0,
       selectedAnimal: "",
       placeMode: true,
-      placeScale: 1,
-      autoScaleSimParams: false,
+      placeScale: 2,
+      autoScaleSimParams: true,
       autoCenter: false,
 
       imageFormat: "png",
@@ -689,7 +690,9 @@ class AppCore {
             randR1 < randR2
               ? randR1 + Math.floor(Math.random() * (randR2 - randR1))
               : randR1;
-          p.R = Math.round(Math.max(2, Math.min(50, R)));
+          p.R = Math.round(
+            Math.max(2, Math.min(this.getMaxKernelRadius(), R)),
+          );
           const B = 1 + Math.floor(Math.random() * 2);
           p.b = Array.from(
             { length: B },
@@ -753,7 +756,9 @@ class AppCore {
   }
 
   zoomWorld(newR) {
-    const targetR = Math.round(constrain(Number(newR) || this.params.R, 2, 50));
+    const targetR = Math.round(
+      constrain(Number(newR) || this.params.R, 2, this.getMaxKernelRadius()),
+    );
     const oldR = Number(this._prevR);
     const safeOldR = Number.isFinite(oldR) && oldR > 0 ? oldR : targetR;
 
@@ -850,8 +855,20 @@ class AppCore {
         this._restartWorker();
 
         const canvasSize = min(windowWidth, windowHeight);
+        const prevSize = this.board?.size || this.params.gridSize;
+        const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
         resizeCanvas(canvasSize, canvasSize);
-        this.board.resize(this.params.gridSize);
+        this._syncPixelSizeFromGrid();
+        if (
+          dim <= 2 &&
+          this.board?.world &&
+          prevSize > 0 &&
+          prevSize !== this.params.gridSize
+        ) {
+          this.board.resample(this.params.gridSize);
+        } else {
+          this.board.resize(this.params.gridSize);
+        }
         this.renderer.resize(this.params.gridSize);
 
         this._pendingPlacement = null;
@@ -859,6 +876,12 @@ class AppCore {
         this.analyser.resetStatistics();
 
         this._workerSendKernel();
+
+        if (this.gui && typeof this.gui.rebuildPane === "function") {
+          this.gui.rebuildPane();
+        } else {
+          this.refreshGUI();
+        }
       }),
     );
   }
@@ -868,7 +891,7 @@ class AppCore {
       return NDCompatibility.coerceGridSize(size, this.params.dimension);
     }
 
-    const fallback = [64, 128, 256, 512];
+    const fallback = [64, 128, 256, 512, 1024, 2048];
     const raw = Number(size);
     if (!Number.isFinite(raw) || raw <= 0) return this.params.gridSize;
     let closest = fallback[0];
@@ -968,9 +991,16 @@ class AppCore {
 
     this._mergeByTargetSchema(p, sanitised);
 
+    if (allowGridSize && "gridSize" in rawParams) {
+      p.gridSize = this._normaliseGridSize(p.gridSize);
+    }
+
+    const maxR = this.getMaxKernelRadius(p.gridSize);
+    const maxT = this.getMaxTimeScale();
+
     const numericConstraints = {
-      R: (v) => Math.round(constrain(v, 2, 50)),
-      T: (v) => Math.round(constrain(v, 1, 50)),
+      R: (v) => Math.round(constrain(v, 2, maxR)),
+      T: (v) => Math.round(constrain(v, 1, maxT)),
       m: (v) => constrain(v, 0, 1),
       s: (v) => Math.max(0.0001, v),
       kn: (v) => Math.round(constrain(v, 1, 4)),
@@ -989,9 +1019,7 @@ class AppCore {
       }
     }
 
-    if (allowGridSize && "gridSize" in rawParams) {
-      p.gridSize = this._normaliseGridSize(p.gridSize);
-    }
+    this._syncPixelSizeFromGrid();
 
     if (typeof NDCompatibility !== "undefined") {
       if ("dimension" in rawParams) {
@@ -1282,16 +1310,25 @@ class AppCore {
       this._queueOrRunMutation(() => {
         this._ensureBuffers();
         this.analyser.resetStatistics();
+        const resolutionScale = this.getResolutionScale();
+        const requestedScale = (this.params.placeScale || 1) * resolutionScale;
+
+        this._applyAnimalSimulationParams(animal, {
+          respectAutoScale: true,
+          forceScale: Math.abs(resolutionScale - 1) > 1e-6,
+          scale: requestedScale,
+        });
+
+        const actualScale = this._getActualAnimalScale(animal, requestedScale);
 
         const dim = Number(this.params.dimension) || 2;
         if (loadPattern && dim <= 2) {
-          const scale = this.params.placeScale || 1;
-          if (Math.abs(scale - 1) < 1e-6) {
+          if (Math.abs(actualScale - 1) < 1e-6) {
             this.board.loadPattern(animal);
           } else {
-            this.board.loadPatternScaled(animal, scale);
+            this.board.loadPatternScaled(animal, actualScale);
           }
-        } else {
+        } else if (loadPattern) {
           this.board.clear();
         }
 
@@ -1302,12 +1339,8 @@ class AppCore {
           }
         }
 
-        this._applyAnimalSimulationParams(animal, {
-          respectAutoScale: true,
-          scale: this.params.placeScale || 1,
-        });
-
         this.automaton.updateParameters(this.params);
+        this._prevR = this.params.R;
         this._workerSendKernel();
 
         this.refreshGUI();
@@ -1338,10 +1371,12 @@ class AppCore {
     const animal = this.getSelectedAnimal();
     if (!animal) return false;
 
+    const resolutionScale = this.getResolutionScale();
+
     this._applyAnimalSimulationParams(animal, {
       respectAutoScale,
-      forceScale,
-      scale: this.params.placeScale || 1,
+      forceScale: forceScale || Math.abs(resolutionScale - 1) > 1e-6,
+      scale: (this.params.placeScale || 1) * resolutionScale,
     });
     this.updateAutomatonParams();
     if (refreshGUI) this.refreshGUI();
@@ -1352,14 +1387,14 @@ class AppCore {
     const animal = this.getSelectedAnimal();
     if (!animal) return false;
 
-    this.applyScaledAnimalParams(animal, scale);
+    this.applyScaledAnimalParams(animal, scale * this.getResolutionScale());
     this.updateAutomatonParams();
     if (refreshGUI) this.refreshGUI();
     return true;
   }
 
   applyScaledAnimalParams(animal, scale = 1) {
-    if (!animal || !animal.params) return;
+    if (!animal || !animal.params) return scale;
 
     const sourceParams = Array.isArray(animal.params)
       ? animal.params.find((entry) => entry && typeof entry === "object") ||
@@ -1371,13 +1406,33 @@ class AppCore {
     const baseT = Number(sourceParams.T);
     const s = Number(scale) || 1;
 
-    if (Number.isFinite(baseR)) {
-      this.params.R = Math.round(constrain(baseR * s, 2, 50));
+    let actualScale = s;
+    if (Number.isFinite(baseR) && baseR > 0) {
+      this.params.R = Math.round(
+        constrain(baseR * s, 2, this.getMaxKernelRadius()),
+      );
+      actualScale = this.params.R / baseR;
     }
 
     if (Number.isFinite(baseT)) {
-      this.params.T = Math.round(constrain(baseT * s, 1, 50));
+      this.params.T = Math.round(
+        constrain(baseT * actualScale, 1, this.getMaxTimeScale()),
+      );
     }
+
+    return actualScale;
+  }
+
+  _getActualAnimalScale(animal, requestedScale) {
+    if (!animal || !animal.params) return requestedScale;
+    const sourceParams = Array.isArray(animal.params)
+      ? animal.params.find((e) => e && typeof e === "object") ||
+        animal.params[0] ||
+        {}
+      : animal.params;
+    const baseR = Number(sourceParams.R);
+    if (!Number.isFinite(baseR) || baseR <= 0) return requestedScale;
+    return this.params.R / baseR;
   }
 
   updatePlacementScale(scale) {
@@ -1451,7 +1506,10 @@ class AppCore {
     const animal = this._resolveAnimalForPlacement(request.selection);
     if (!animal) return;
 
-    const scale = Number(request.scale) || 1;
+    const rawScale = Number(request.scale) || 1;
+    const scale = this.params.autoScaleSimParams
+      ? this._getActualAnimalScale(animal, rawScale)
+      : rawScale;
     this._ensureBuffers();
 
     if ((this.params.dimension || 2) > 2) {
@@ -1776,12 +1834,96 @@ class AppCore {
     const sizes =
       typeof NDCompatibility !== "undefined"
         ? NDCompatibility.getGridSizeOptions(dim)
-        : [64, 128, 256, 512];
+        : [64, 128, 256, 512, 1024, 2048];
+    const canvasSize = min(windowWidth, windowHeight);
     const options = {};
     for (const size of sizes) {
-      options[`${size}^${dim}`] = size;
+      if (size <= canvasSize) {
+        options[`${size}^${dim}`] = size;
+      }
+    }
+    if (Object.keys(options).length === 0) {
+      options[`${sizes[0]}^${dim}`] = sizes[0];
     }
     return options;
+  }
+
+  getPixelSizeOptions(dimension = this.params.dimension) {
+    const dim =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceDimension(dimension)
+        : 2;
+    const canvasSize = min(windowWidth, windowHeight);
+    return typeof NDCompatibility !== "undefined"
+      ? NDCompatibility.getPixelSizeOptions(canvasSize, dim)
+      : { "4px (128)": 4, "2px (256)": 2, "1px (512)": 1 };
+  }
+
+  applyPixelSize(pixelSize) {
+    const canvasSize = min(windowWidth, windowHeight);
+    const oldGrid = Math.max(1, Math.floor(Number(this.params.gridSize) || 1));
+    const dim =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceDimension(this.params.dimension)
+        : 2;
+    const newGrid =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.gridSizeFromPixelSize(pixelSize, canvasSize, dim)
+        : this._normaliseGridSize(Math.floor(canvasSize / pixelSize));
+
+    if (!Number.isFinite(newGrid) || newGrid <= 0) return;
+
+    this.params.pixelSize = Math.max(
+      1,
+      Math.floor(canvasSize / Math.max(1, newGrid)),
+    );
+
+    if (newGrid !== oldGrid) {
+      const scale = newGrid / oldGrid;
+      this.params.R = Math.round(
+        constrain(
+          (Number(this.params.R) || 13) * scale,
+          2,
+          this.getMaxKernelRadius(newGrid),
+        ),
+      );
+      this.params.T = Math.round(
+        constrain((Number(this.params.T) || 10) * scale, 1, this.getMaxTimeScale()),
+      );
+    }
+
+    this.params.gridSize = newGrid;
+    this.changeResolution();
+  }
+
+  getMaxKernelRadius(gridSize = this.params.gridSize) {
+    const size = Math.max(1, Math.floor(Number(gridSize) || 1));
+    return Math.max(2, Math.floor(size / 2));
+  }
+
+  getMaxTimeScale() {
+    return 1500;
+  }
+
+  getResolutionScale(dimension = this.params.dimension) {
+    const dim =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceDimension(dimension)
+        : 2;
+    const baseGrid =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.getDefaultGridSize(dim)
+        : 128;
+    const grid = Math.max(1, Math.floor(Number(this.params.gridSize) || 1));
+    return grid / Math.max(1, baseGrid);
+  }
+
+  _syncPixelSizeFromGrid() {
+    const canvasSize = min(windowWidth, windowHeight);
+    this.params.pixelSize = Math.max(
+      1,
+      Math.floor(canvasSize / Math.max(1, this.params.gridSize)),
+    );
   }
 
   getWorldShapeLabel() {
@@ -1886,6 +2028,8 @@ class AppCore {
       if (sizeChanged) {
         this.changeResolution();
       }
+
+      this._syncPixelSizeFromGrid();
 
       if (animal) {
         this.loadAnimal(animal);

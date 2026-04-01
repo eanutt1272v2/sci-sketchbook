@@ -1,14 +1,19 @@
 class NDCompatibility {
   static SUPPORTED_DIMENSIONS = [2, 3, 4];
   static GRID_SIZE_OPTIONS_BY_DIMENSION = {
-    2: [64, 128, 256, 512],
-    3: [32, 64, 128],
-    4: [16, 32, 64],
+    2: [64, 128, 256, 512, 1024, 2048],
+    3: [32, 64, 128, 256],
+    4: [16, 32, 64, 128],
   };
   static DEFAULT_GRID_SIZE_BY_DIMENSION = {
     2: 128,
     3: 64,
     4: 32,
+  };
+  static DEFAULT_PIXEL_SIZE_BY_DIMENSION = {
+    2: 4,
+    3: 8,
+    4: 16,
   };
 
   static VIEW_MODES_BY_DIMENSION = {
@@ -51,6 +56,40 @@ class NDCompatibility {
   static getDefaultGridSize(dimension = 2) {
     const dim = this.coerceDimension(dimension);
     return this.DEFAULT_GRID_SIZE_BY_DIMENSION[dim] || 128;
+  }
+
+  static getDefaultPixelSize(dimension = 2) {
+    const dim = this.coerceDimension(dimension);
+    return this.DEFAULT_PIXEL_SIZE_BY_DIMENSION[dim] || 4;
+  }
+
+  static gridSizeFromPixelSize(pixelSize, canvasSize, dimension = 2) {
+    const px = Math.max(1, Math.round(pixelSize));
+    const raw = Math.floor(canvasSize / px);
+    const log2 = Math.floor(Math.log2(Math.max(1, raw)));
+    const pow2 = 1 << log2;
+    return this.coerceGridSize(pow2, dimension);
+  }
+
+  static pixelSizeFromGridSize(gridSize, canvasSize) {
+    return Math.max(1, Math.floor(canvasSize / Math.max(1, gridSize)));
+  }
+
+  static getPixelSizeOptions(canvasSize, dimension = 2) {
+    const options = this.getGridSizeOptions(dimension);
+    const result = {};
+    const seen = new Set();
+    for (const size of options) {
+      if (size > canvasSize) continue;
+      const px = Math.max(1, Math.floor(canvasSize / size));
+      if (seen.has(px)) continue;
+      seen.add(px);
+      result[`${px}px (${size})`] = px;
+    }
+    if (Object.keys(result).length === 0) {
+      result["1px"] = 1;
+    }
+    return result;
   }
 
   static coerceGridSize(value, dimension = 2) {
