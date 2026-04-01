@@ -221,24 +221,56 @@ class AppCore {
 
   _isKernelPayloadValid(data) {
     if (!data || typeof data !== "object") return false;
-    if (!(data.kernel instanceof ArrayBuffer)) return false;
-    if (!(data.kernelDX instanceof ArrayBuffer)) return false;
-    if (!(data.kernelDY instanceof ArrayBuffer)) return false;
-    if (!(data.kernelValues instanceof ArrayBuffer)) return false;
+
+    const getElementCount = (value, bytesPerElement) => {
+      if (value instanceof ArrayBuffer) {
+        if (value.byteLength % bytesPerElement !== 0) return null;
+        return value.byteLength / bytesPerElement;
+      }
+
+      if (ArrayBuffer.isView(value)) {
+        if (value.byteLength % bytesPerElement !== 0) return null;
+        return value.byteLength / bytesPerElement;
+      }
+
+      return null;
+    };
 
     const kernelSize = Number(data.kernelSize);
     if (!Number.isFinite(kernelSize) || kernelSize <= 0) return false;
 
-    const kernelFloatLen = data.kernel.byteLength / Float32Array.BYTES_PER_ELEMENT;
-    const kernelDxLen = data.kernelDX.byteLength / Int16Array.BYTES_PER_ELEMENT;
-    const kernelDyLen = data.kernelDY.byteLength / Int16Array.BYTES_PER_ELEMENT;
-    const kernelValuesLen =
-      data.kernelValues.byteLength / Float32Array.BYTES_PER_ELEMENT;
+    const expectedKernelLen = Math.round(kernelSize) * Math.round(kernelSize);
+    if (!Number.isFinite(expectedKernelLen) || expectedKernelLen <= 0) {
+      return false;
+    }
 
-    if (!Number.isInteger(kernelFloatLen) || kernelFloatLen <= 0) return false;
-    if (!Number.isInteger(kernelDxLen) || kernelDxLen <= 0) return false;
-    if (!Number.isInteger(kernelDyLen) || kernelDyLen <= 0) return false;
-    if (!Number.isInteger(kernelValuesLen) || kernelValuesLen <= 0) return false;
+    const kernelFloatLen = getElementCount(
+      data.kernel,
+      Float32Array.BYTES_PER_ELEMENT,
+    );
+    const kernelDxLen = getElementCount(
+      data.kernelDX,
+      Int16Array.BYTES_PER_ELEMENT,
+    );
+    const kernelDyLen = getElementCount(
+      data.kernelDY,
+      Int16Array.BYTES_PER_ELEMENT,
+    );
+    const kernelValuesLen = getElementCount(
+      data.kernelValues,
+      Float32Array.BYTES_PER_ELEMENT,
+    );
+
+    if (!Number.isInteger(kernelFloatLen) || kernelFloatLen !== expectedKernelLen)
+      return false;
+    if (!Number.isInteger(kernelDxLen) || kernelDxLen < 0) return false;
+    if (!Number.isInteger(kernelDyLen) || kernelDyLen < 0) return false;
+    if (!Number.isInteger(kernelValuesLen) || kernelValuesLen < 0)
+      return false;
+
+    if (kernelDxLen > expectedKernelLen) return false;
+    if (kernelDyLen > expectedKernelLen) return false;
+    if (kernelValuesLen > expectedKernelLen) return false;
 
     return kernelDxLen === kernelDyLen && kernelDyLen === kernelValuesLen;
   }
