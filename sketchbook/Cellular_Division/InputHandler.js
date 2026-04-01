@@ -125,7 +125,7 @@ class InputHandler {
       );
     } else if (keyCode === ENTER || keyCode === RETURN) {
       this.commitTyping();
-    } else if (keyCode === 27 || keyCode === ESC) {
+    } else if (keyCode === 27) {
       this.cancelTyping();
     }
   }

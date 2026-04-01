@@ -685,35 +685,16 @@ class Renderer {
   }
 
   _rebuildLUT(colourMapData) {
-    if (!colourMapData) return;
-
-    const poly = (coeffs, t) => {
-      let val = 0;
-      for (let i = coeffs.length - 1; i >= 0; i--) {
-        val = val * t + coeffs[i];
-      }
-      return val;
-    };
-
-    for (let i = 0; i < 256; i++) {
-      const t = i / 255;
-      const idx = i * 3;
-      const r = constrain(Math.round(poly(colourMapData.r, t) * 255), 0, 255);
-      const g = constrain(Math.round(poly(colourMapData.g, t) * 255), 0, 255);
-      const b = constrain(Math.round(poly(colourMapData.b, t) * 255), 0, 255);
-      this.lut[idx] = r;
-      this.lut[idx + 1] = g;
-      this.lut[idx + 2] = b;
-      if (this._isLittleEndian) {
-        this.lutPacked[i] = r | (g << 8) | (b << 16) | (255 << 24);
-      }
-    }
+    ColourMapLUT.buildLUT(
+      colourMapData,
+      this.lut,
+      this.lutPacked,
+      this._isLittleEndian,
+    );
   }
 
   _valueToColour(val) {
-    const v = Math.max(0, Math.min(1, val));
-    const lutIndex = Math.min(255, Math.max(0, Math.round(v * 255))) * 3;
-    return [this.lut[lutIndex], this.lut[lutIndex + 1], this.lut[lutIndex + 2]];
+    return ColourMapLUT.valueToColour(this.lut, val);
   }
 
   renderGrid(R, params = null) {
@@ -917,25 +898,6 @@ class Renderer {
   renderKeymapRef(metadata) {
     const { name, version } = metadata;
 
-    push();
-    fill(0, 220);
-    noStroke();
-    rect(0, 0, width, height);
-
-    fill(255);
-    textAlign(LEFT, TOP);
-    let x = 50;
-    let y = 50;
-    const lh = 26;
-
-    textSize(24);
-    text(`${name} ${version} Keymap Reference`, x, y);
-
-    y += 48;
-    textSize(14);
-
-    const colW = (width - 100) / 2;
-
     const sections = [
       {
         title: "Run Control",
@@ -1031,45 +993,7 @@ class Renderer {
       },
     ];
 
-    let col = 0;
-    let cx = x;
-    let cy = y;
-
-    for (const section of sections) {
-      if (cy + (section.entries.length + 2) * lh > height - 30 && col === 0) {
-        col = 1;
-        cx = x + colW;
-        cy = y;
-      }
-
-      fill(180, 220, 255);
-      textSize(13);
-      text(section.title.toUpperCase(), cx, cy);
-      cy += lh - 4;
-
-      stroke(255, 40);
-      line(cx, cy, cx + colW - 20, cy);
-      noStroke();
-      cy += 8;
-
-      for (const [k, desc] of section.entries) {
-        fill(255);
-        textSize(13);
-        text(k, cx, cy);
-        fill(200);
-        text(desc, cx + 130, cy);
-        cy += lh;
-      }
-
-      cy += 14;
-    }
-
-    fill(120);
-    textSize(11);
-    textAlign(CENTER, BOTTOM);
-    text("Press # to close", width / 2, height - 16);
-
-    pop();
+    KeymapRenderer.render(name, version, sections);
   }
 
   renderMotionOverlay(statistics, params = {}) {
@@ -1440,15 +1364,7 @@ class Renderer {
     const worldSize = this.size;
     const worldShape =
       dim === 2 ? `${worldSize}x${worldSize}` : `${worldSize}^${dim}`;
-    const fmt = (value, fixed = 3) => {
-      const n = Number(value) || 0;
-      const abs = Math.abs(n);
-      if (abs > 0 && abs < Math.pow(10, -fixed)) {
-        const [mant, exp] = n.toExponential(2).split("e");
-        return `${mant}e^${Number(exp)}`;
-      }
-      return n.toFixed(fixed);
-    };
+    const fmt = FormatUtils.formatFixed;
 
     const stats = [
       `FPS=${(Number(statistics.fps) || 0).toFixed(1)} [Hz]`,

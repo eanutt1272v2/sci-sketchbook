@@ -1,7 +1,6 @@
 class InputHandler {
   constructor(appcore) {
     this.appcore = appcore;
-    this._lastGuiRefreshMs = 0;
     this._pointerActive = false;
     this._lastPointer = { x: 0, y: 0 };
   }
@@ -39,7 +38,7 @@ class InputHandler {
   handleContinuousInput() {}
 
   handleKeyPressed(k, kCode) {
-    if (this.shouldIgnoreKeyboard()) return false;
+    if (KeyboardUtils.shouldIgnoreKeyboard()) return false;
 
     const keyValue = KeyboardUtils.normaliseKey(k);
     const keyLower = KeyboardUtils.toLower(keyValue);
@@ -556,7 +555,4 @@ class InputHandler {
     this.appcore.refreshGUI();
   }
 
-  shouldIgnoreKeyboard() {
-    return KeyboardUtils.isTypingTarget(document.activeElement);
-  }
 }

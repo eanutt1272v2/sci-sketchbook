@@ -274,20 +274,8 @@ class GUI {
 
   createStatsTab(page) {
     const { statistics } = this.appcore;
-    const fmt = (value, digits = 3) => {
-      const n = Number(value) || 0;
-      const abs = Math.abs(n);
-      if (abs > 0 && abs < Math.pow(10, -digits)) {
-        const [mantissa, exponent] = n.toExponential(2).split("e");
-        return `${mantissa}e^${Number(exponent)}`;
-      }
-      return n.toFixed(digits);
-    };
-    const fmtInt = (value) => {
-      const n = Number(value);
-      if (!Number.isFinite(n)) return "0";
-      return String(Math.round(n));
-    };
+    const fmt = FormatUtils.formatFixed;
+    const fmtInt = FormatUtils.formatInt;
 
     const perfFolder = page.addFolder({ title: "Performance & Time" });
 

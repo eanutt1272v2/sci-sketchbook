@@ -26,7 +26,7 @@ class InputHandler {
   }
 
   handleKeyPressed(k, kCode) {
-    if (this.shouldIgnoreKeyboard()) {
+    if (KeyboardUtils.shouldIgnoreKeyboard()) {
       return false;
     }
 
@@ -273,7 +273,7 @@ class InputHandler {
 
   handleContinuousInput() {
     if (
-      this.shouldIgnoreKeyboard() ||
+      KeyboardUtils.shouldIgnoreKeyboard() ||
       this.appcore.params.renderKeymapRef ||
       this.appcore.params.renderMethod !== "3D"
     ) {
@@ -325,7 +325,4 @@ class InputHandler {
     return is3D && !isUI && isCanvas;
   }
 
-  shouldIgnoreKeyboard() {
-    return KeyboardUtils.isTypingTarget(document.activeElement);
-  }
 }

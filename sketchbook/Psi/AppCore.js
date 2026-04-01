@@ -12,13 +12,7 @@ class AppCore {
     this.colourMapKeys = Object.keys(this.colourMaps);
 
     if (this.colourMapKeys.length === 0) {
-      this.colourMaps = {
-        greyscale: {
-          r: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-          g: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-          b: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        },
-      };
+      this.colourMaps = { greyscale: ColourMapLUT.GREYSCALE };
       this.colourMapKeys = ["greyscale"];
     }
 
@@ -231,24 +225,15 @@ class AppCore {
   }
 
   handleKeyPressed(k, kCode) {
-    return this._safeHandleKeyboard("press", () =>
+    return KeyboardUtils.safeHandle("Psi", "press", () =>
       this.input.handleKeyPressed(k, kCode),
     );
   }
 
   handleKeyReleased(k, kCode) {
-    return this._safeHandleKeyboard("release", () =>
+    return KeyboardUtils.safeHandle("Psi", "release", () =>
       this.input.handleKeyReleased(k, kCode),
     );
-  }
-
-  _safeHandleKeyboard(action, handler) {
-    try {
-      return handler();
-    } catch (error) {
-      console.error(`[Psi] Keyboard ${action} handling failed:`, error);
-      return false;
-    }
   }
 
   canvasInteraction(event) {

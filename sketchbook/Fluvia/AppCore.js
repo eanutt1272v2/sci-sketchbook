@@ -12,13 +12,7 @@ class AppCore {
     this.font = font;
 
     if (this.colourMapKeys.length === 0) {
-      this.colourMaps = {
-        greyscale: {
-          r: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-          g: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-          b: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        },
-      };
+      this.colourMaps = { greyscale: ColourMapLUT.GREYSCALE };
       this.colourMapKeys = ["greyscale"];
     }
 
@@ -399,24 +393,15 @@ class AppCore {
   }
 
   handleKeyPressed(k, kCode) {
-    return this._safeHandleKeyboard("press", () =>
+    return KeyboardUtils.safeHandle("Fluvia", "press", () =>
       this.input.handleKeyPressed(k, kCode),
     );
   }
 
   handleKeyReleased(k, kCode) {
-    return this._safeHandleKeyboard("release", () =>
+    return KeyboardUtils.safeHandle("Fluvia", "release", () =>
       this.input.handleKeyReleased(k, kCode),
     );
-  }
-
-  _safeHandleKeyboard(action, handler) {
-    try {
-      return handler();
-    } catch (error) {
-      console.error(`[Fluvia] Keyboard ${action} handling failed:`, error);
-      return false;
-    }
   }
 
   cycleColourMap(step) {

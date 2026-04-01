@@ -8,7 +8,7 @@ class InputHandler {
   }
 
   handleContinuousInput() {
-    if (this.shouldIgnoreKeyboard() || this.appcore.params.renderKeymapRef) {
+    if (KeyboardUtils.shouldIgnoreKeyboard() || this.appcore.params.renderKeymapRef) {
       return;
     }
 
@@ -97,7 +97,7 @@ class InputHandler {
       return false;
     }
 
-    if (this.shouldIgnoreKeyboard()) {
+    if (KeyboardUtils.shouldIgnoreKeyboard()) {
       return false;
     }
 
@@ -380,7 +380,4 @@ class InputHandler {
     this.gesture.pinch = null;
   }
 
-  shouldIgnoreKeyboard() {
-    return KeyboardUtils.isTypingTarget(document.activeElement);
-  }
 }

@@ -110,42 +110,12 @@ class Renderer {
     if (!colourData) return;
 
     this.currentColourMap = colourMap;
-    const channels = ["r", "g", "b"];
-
-    for (let i = 0; i < 256; i++) {
-      const intensity = i / 255;
-
-      for (let c = 0; c < 3; c++) {
-        const coeffs = colourData[channels[c]];
-        let val = 0;
-
-        for (let j = coeffs.length - 1; j >= 0; j--) {
-          val = val * intensity + coeffs[j];
-        }
-
-        this.lut[i * 3 + c] = constrain(val * 255, 0, 255);
-      }
-    }
+    ColourMapLUT.buildLUT(colourData, this.lut);
   }
 
   _samplePolyMapColour(mapName, t) {
     const map = this.appcore.colourMaps?.[mapName];
-    if (!map) return [255, 255, 255];
-
-    const clamped = constrain(t, 0, 1);
-    const channels = ["r", "g", "b"];
-    const out = [0, 0, 0];
-
-    for (let c = 0; c < 3; c++) {
-      const coeffs = map[channels[c]];
-      let val = 0;
-      for (let i = coeffs.length - 1; i >= 0; i--) {
-        val = val * clamped + coeffs[i];
-      }
-      out[c] = constrain(Math.round(val * 255), 0, 255);
-    }
-
-    return out;
+    return ColourMapLUT.sampleColour(map, t);
   }
 
   _sampleDeltaDivergentColour(t) {
@@ -690,63 +660,7 @@ class Renderer {
 
   renderKeymapRef() {
     const { name, version } = this.appcore.metadata;
-
-    push();
-    fill(0, 220);
-    noStroke();
-    rect(0, 0, width, height);
-
-    fill(255);
-    textAlign(LEFT, TOP);
-    const x = 50;
-    let y = 50;
-    const lh = 26;
-    const colW = (width - 100) / 2;
-
-    textSize(24);
-    text(`${name} ${version} Keymap Reference`, x, y);
-
-    y += 48;
-
-    let col = 0;
-    let cx = x;
-    let cy = y;
-
-    for (const section of this.keymapSections) {
-      if (cy + (section.entries.length + 2) * lh > height - 30 && col === 0) {
-        col = 1;
-        cx = x + colW;
-        cy = y + 50;
-      }
-
-      fill(180, 220, 255);
-      textSize(13);
-      text(section.title.toUpperCase(), cx, cy);
-      cy += lh - 4;
-
-      stroke(255, 40);
-      line(cx, cy, cx + colW - 20, cy);
-      noStroke();
-      cy += 8;
-
-      for (const [k, desc] of section.entries) {
-        fill(255);
-        textSize(13);
-        text(k, cx, cy);
-        fill(200);
-        text(desc, cx + 130, cy);
-        cy += lh;
-      }
-
-      cy += 14;
-    }
-
-    fill(120);
-    textSize(11);
-    textAlign(CENTER, BOTTOM);
-    text("Press # to close", width / 2, height - 16);
-
-    pop();
+    KeymapRenderer.render(name, version, this.keymapSections);
   }
 
   resize() {

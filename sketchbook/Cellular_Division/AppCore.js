@@ -43,15 +43,9 @@ class AppCore {
   }
 
   onKeyPressed() {
-    this._safeHandleKeyboard(() => this.ui.onKeyPressed());
-  }
-
-  _safeHandleKeyboard(handler) {
-    try {
-      handler();
-    } catch (error) {
-      console.error("[Cellular Division] Keyboard handling failed:", error);
-    }
+    KeyboardUtils.safeHandle("Cellular Division", "press", () =>
+      this.ui.onKeyPressed(),
+    );
   }
 
   windowResized() {

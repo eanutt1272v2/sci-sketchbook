@@ -19,6 +19,19 @@ class KeyboardUtils {
     );
   }
 
+  static shouldIgnoreKeyboard() {
+    return KeyboardUtils.isTypingTarget(document.activeElement);
+  }
+
+  static safeHandle(label, action, handler) {
+    try {
+      return handler();
+    } catch (error) {
+      console.error(`[${label}] Keyboard ${action} handling failed:`, error);
+      return false;
+    }
+  }
+
   static isShiftHeld() {
     return typeof keyIsDown === "function" && keyIsDown(SHIFT);
   }
