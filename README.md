@@ -1,6 +1,6 @@
 # sci-sketchbook <img src="logo.png" alt="sci-sketchbook logo" align="right" width="175">
 
-Interactive scientific and mathematical simulations built on p5.js, each running a dedicated Web Worker for compute-heavy kernels.
+Interactive, real-time scientific and mathematical simulations built on p5.js, each running a dedicated Web Worker for compute-heavy kernels.
 
 * p5.js 1.x
 * Tweakpane 4.x (GUI framework)
@@ -39,7 +39,7 @@ Live instances: <https://sci-sketchbook.onrender.com/> (will wind down) | <https
 
 ### 1. Sketch Index
 
-Each sketch is a self-contained browser application with its own simulation kernel, rendering pipeline, and parameter interface. All sketches share a common architecture such that a main-thread controller orchestrates a Web Worker that performs the numerically intensive computation, keeping the UI responsive at 60–75 FPS.
+Each sketch is a self-contained browser-based application with its own simulation kernel, rendering pipeline, and parameter tuning interface. All sketches share a unified architecture such that a main-thread controller orchestrates a Web Worker that performs the numerically intensive computation, keeping the UI responsive at 60–75 FPS.
 
 | Sketch | Domain | Method | Implementation |
 | :-- | :-- | :-- | :-- |
@@ -52,7 +52,7 @@ Each sketch is a self-contained browser application with its own simulation kern
 
 ### 2. Shared Infrastructure
 
-All sketches draw from a common `_shared/` directory:
+All sketches source a subset of methods from a common `_shared/` directory:
 
 | Resource | Path | Purpose |
 | :-- | :-- | :-- |
@@ -62,18 +62,18 @@ All sketches draw from a common `_shared/` directory:
 | Utilities | `_shared/utils/` | Shared codec, transform, and rendering helpers |
 | Styles | `_shared/styles/` | Common CSS |
 
-#### 2.1 Worker Communication Pattern
+#### 2.1 Worker Data Transfer Pattern
 
-Every sketch follows the same asynchronous pattern:
+Each sketch follows the same asynchronous process:
 
 1. Main thread initialises the simulation state and spawns a `Worker`.
 2. Each frame, the main thread posts a step/render request with `ArrayBuffer` ownership transfer.
 3. The worker performs the computation (FFT convolution, particle stepping, density evaluation, erosion solve) and returns updated buffers.
 4. The main thread applies the result to the renderer, never blocking on heavy computation.
 
-This design guarantees smooth interaction regardless of simulation cost.
+Hence, this design subsequently improves smoothness of interaction.
 
-#### 2.2 Export Protocol
+#### 2.2 SimPipe Export Standard
 
 All sketches support a common `simpipe.*` JSON standard for purposes such as parameter, statistics, and world-state import/export:
 
@@ -112,11 +112,7 @@ python3 -m http.server 8080
 Open `http://localhost:8080`.
 
 > [!NOTE]
-> Some sketches using `SharedArrayBuffer` or advanced Worker features may require specific HTTP headers (`Cross-Origin-Opener-Policy`, `Cross-Origin-Embedder-Policy`). The Docker + Caddy setup handles these automatically; a bare static server may not.
-
-#### 3.3 Processing sketches
-
-Open the corresponding `.pde` file in Processing 4.x and run.
+> Some sketches using `SharedArrayBuffer` or advanced Worker features may require specific HTTP headers (`Cross-Origin-Opener-Policy`, `Cross-Origin-Embedder-Policy`). The Docker + Caddy setup handles these automatically, however, a bare static server may not.
 
 ---
 
