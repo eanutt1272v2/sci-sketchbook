@@ -1443,6 +1443,15 @@ class AppCore {
     this.applySelectedAnimalScaledRT(next, { refreshGUI: true });
   }
 
+  disableAutoScale() {
+    this.params.autoScaleSimParams = false;
+    this.params.placeScale = 1;
+    this.applySelectedAnimalParams({
+      respectAutoScale: false,
+      refreshGUI: true,
+    });
+  }
+
   setPolarMode(mode, { refreshGUI = true } = {}) {
     const nextMode = Math.max(0, Math.min(4, Math.floor(Number(mode) || 0)));
     this.params.polarMode = nextMode;

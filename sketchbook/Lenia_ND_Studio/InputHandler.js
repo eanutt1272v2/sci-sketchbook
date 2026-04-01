@@ -459,11 +459,14 @@ class InputHandler {
     }
 
     if (ctrlHeld && !shiftHeld && keyLower === "k") {
-      params.autoScaleSimParams = !params.autoScaleSimParams;
       if (params.autoScaleSimParams) {
-        this.appcore.applySelectedAnimalScaledRT(params.placeScale);
+        this.appcore.disableAutoScale();
+      } else {
+        params.autoScaleSimParams = true;
+        this.appcore.applySelectedAnimalScaledRT(params.placeScale, {
+          refreshGUI: true,
+        });
       }
-      this.appcore.refreshGUI();
       return false;
     }
     if (ctrlHeld && shiftHeld && keyLower === "k") {

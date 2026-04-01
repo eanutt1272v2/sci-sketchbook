@@ -278,7 +278,9 @@ class GUI {
         label: "Radius R (R/F)",
       })
       .on("change", (ev) => {
-        if (this.appcore) this.appcore.zoomWorld(ev.value);
+        this._runIfGUIIdle(() => {
+          if (this.appcore) this.appcore.zoomWorld(ev.value);
+        });
       });
 
     bindAutomaton(kernel, "kn", {
@@ -477,10 +479,14 @@ class GUI {
         label: "Auto-scale R, T (Ctrl+K)",
       })
       .on("change", () => {
-        if (!this.appcore || !params.autoScaleSimParams) return;
-        this.appcore.applySelectedAnimalScaledRT(params.placeScale, {
-          refreshGUI: true,
-        });
+        if (!this.appcore) return;
+        if (params.autoScaleSimParams) {
+          this.appcore.applySelectedAnimalScaledRT(params.placeScale, {
+            refreshGUI: true,
+          });
+        } else {
+          this.appcore.disableAutoScale();
+        }
       });
 
     placementFolder
