@@ -12,7 +12,7 @@ function disposeAppCore() {
 
 const metadata = {
   name: "Lenia ND Studio",
-  version: "v2.1.1-dev",
+  version: "v2.1.2-dev",
   author: "@eanutt1272.v2",
 };
 

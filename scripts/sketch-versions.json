@@ -5,11 +5,11 @@
   },
   "Fluvia": {
     "file": "sketchbook/Fluvia/Fluvia.js",
-    "version": "v5.4.0-dev"
+    "version": "v5.4.1-dev"
   },
   "Lenia ND Studio": {
     "file": "sketchbook/Lenia_ND_Studio/LeniaNDStudio.js",
-    "version": "v2.1.1-dev"
+    "version": "v2.1.2-dev"
   },
   "Psi": {
     "file": "sketchbook/Psi/Psi.js",
