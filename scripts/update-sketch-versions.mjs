@@ -6,7 +6,10 @@ import { fileURLToPath } from "node:url";
 const VERSION_RE = /^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/;
 const DEFAULT_CONFIG_PATH = "scripts/sketch-versions.json";
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_CONFIG_ABS_PATH = path.resolve(SCRIPT_DIR, "sketch-versions.json");
+const DEFAULT_CONFIG_ABS_PATH = path.resolve(
+  SCRIPT_DIR,
+  "sketch-versions.json",
+);
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
 
 function fail(message) {
@@ -51,7 +54,8 @@ function parseArgs(argv) {
 
     if (arg === "--set") {
       const value = argv[i + 1];
-      if (!value) fail("Missing value after --set (expected '<Sketch>=<version>')");
+      if (!value)
+        fail("Missing value after --set (expected '<Sketch>=<version>')");
       options.setPairs.push(value);
       i += 1;
       continue;
@@ -73,7 +77,9 @@ function parseSetPair(raw) {
   const version = raw.slice(equalsIndex + 1).trim();
 
   if (!VERSION_RE.test(version)) {
-    fail(`Invalid version '${version}' for '${sketch}'. Expected format 'vX.Y.Z[-suffix]'`);
+    fail(
+      `Invalid version '${version}' for '${sketch}'. Expected format 'vX.Y.Z[-suffix]'`,
+    );
   }
 
   return { sketch, version };
@@ -91,7 +97,8 @@ function applySetPairs(config, setPairs) {
 
 function updateFileVersion(filePath, version) {
   const contents = fs.readFileSync(filePath, "utf8");
-  const pattern = /(const\s+metadata\s*=\s*\{[\s\S]*?\bversion\s*:\s*")([^"]+)(")/m;
+  const pattern =
+    /(const\s+metadata\s*=\s*\{[\s\S]*?\bversion\s*:\s*")([^"]+)(")/m;
 
   const match = contents.match(pattern);
   if (!match) {
@@ -134,7 +141,9 @@ function run() {
   if (options.setPairs.length > 0) {
     applySetPairs(config, options.setPairs);
     writeJson(configPath, config);
-    console.log(`[version-sync] Updated ${options.setPairs.length} entries in ${options.configPath}`);
+    console.log(
+      `[version-sync] Updated ${options.setPairs.length} entries in ${options.configPath}`,
+    );
   }
 
   const entries = Object.entries(config);
@@ -180,7 +189,9 @@ function run() {
     const result = updateFileVersion(filePath, entry.version);
     if (result.changed) {
       changedCount += 1;
-      console.log(`[sync] Updated ${name}: ${result.currentVersion} -> ${entry.version}`);
+      console.log(
+        `[sync] Updated ${name}: ${result.currentVersion} -> ${entry.version}`,
+      );
     } else {
       console.log(`[sync] Unchanged ${name}: ${entry.version}`);
     }

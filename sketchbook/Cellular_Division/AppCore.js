@@ -153,9 +153,7 @@ class AppCore {
       }
     }
 
-    const csv =
-      "key,value\n" +
-      rows.map((r) => `${r[0]},${r[1]}`).join("\n");
+    const csv = "key,value\n" + rows.map((r) => `${r[0]},${r[1]}`).join("\n");
     this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
   }
 
@@ -253,7 +251,9 @@ class AppCore {
         } else if (typeof val === "number") {
           snapshot[paramName] = val;
         }
-      } catch (_) { /* skip */ }
+      } catch (_) {
+        /* skip */
+      }
     }
 
     return snapshot;

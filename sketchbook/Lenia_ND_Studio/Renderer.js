@@ -41,6 +41,8 @@ class Renderer {
     this._viewTargetX = 0;
     this._viewTargetY = 0;
     this._rollBuffer = null;
+    this._polarBuffer = null;
+    this._polarHalfBuffer = null;
     this._autoRotationAngle = 0;
     this._autoRotationTarget = 0;
     this.setColourMap(initialColourMap);
@@ -51,30 +53,6 @@ class Renderer {
     if (!this.uiFont) return;
     if (typeof target.textFont !== "function") return;
     target.textFont(this.uiFont);
-  }
-
-  _enableOverlayShadow(ctx = null) {
-    const target = ctx || this;
-    const dc =
-      target?.drawingContext ||
-      (typeof drawingContext !== "undefined" ? drawingContext : null);
-    if (!dc) return;
-    dc.shadowColor = "rgba(0, 0, 0, 0.9)";
-    dc.shadowBlur = 4;
-    dc.shadowOffsetX = 2;
-    dc.shadowOffsetY = 2;
-  }
-
-  _disableOverlayShadow(ctx = null) {
-    const target = ctx || this;
-    const dc =
-      target?.drawingContext ||
-      (typeof drawingContext !== "undefined" ? drawingContext : null);
-    if (!dc) return;
-    dc.shadowColor = "rgba(0, 0, 0, 0)";
-    dc.shadowBlur = 0;
-    dc.shadowOffsetX = 0;
-    dc.shadowOffsetY = 0;
   }
 
   _computeDataRange(data) {
@@ -157,11 +135,7 @@ class Renderer {
 
   setViewOffset(active, centerX, centerY) {
     this._viewOffsetActive = active;
-    if (
-      active &&
-      Number.isFinite(centerX) &&
-      Number.isFinite(centerY)
-    ) {
+    if (active && Number.isFinite(centerX) && Number.isFinite(centerY)) {
       const mid = this.size / 2;
       const tx = mid - centerX;
       const ty = mid - centerY;
@@ -193,7 +167,8 @@ class Renderer {
     delta = delta - Math.round(delta / (2 * Math.PI)) * 2 * Math.PI;
     this._autoRotationTarget += delta;
     const alpha = 0.12;
-    this._autoRotationAngle += alpha * (this._autoRotationTarget - this._autoRotationAngle);
+    this._autoRotationAngle +=
+      alpha * (this._autoRotationTarget - this._autoRotationAngle);
   }
 
   beginAutoRotation() {
@@ -231,8 +206,8 @@ class Renderer {
     if (this._viewOffsetActive) {
       const sx = Math.round(this._viewShiftX);
       const sy = Math.round(this._viewShiftY);
-      cellX = ((cellX - sx) % this.size + this.size) % this.size;
-      cellY = ((cellY - sy) % this.size + this.size) % this.size;
+      cellX = (((cellX - sx) % this.size) + this.size) % this.size;
+      cellY = (((cellY - sy) % this.size) + this.size) % this.size;
     }
     return { x: cellX, y: cellY };
   }
@@ -281,6 +256,204 @@ class Renderer {
     }
 
     return out;
+  }
+
+  _safeArrayMax(arr, fallback = 1) {
+    if (!arr || typeof arr.length !== "number" || arr.length === 0) {
+      return fallback;
+    }
+    let maxVal = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < arr.length; i++) {
+      const v = Number(arr[i]);
+      if (!Number.isFinite(v)) continue;
+      if (v > maxVal) maxVal = v;
+    }
+    if (!Number.isFinite(maxVal) || Math.abs(maxVal) < 1e-12) return fallback;
+    return maxVal;
+  }
+
+  _interpLinear(src, outLen) {
+    const n =
+      Array.isArray(src) || src instanceof Float32Array ? src.length : 0;
+    if (n <= 0 || outLen <= 0) return new Float32Array(outLen);
+    if (n === 1) {
+      const out = new Float32Array(outLen);
+      out.fill(src[0]);
+      return out;
+    }
+    const out = new Float32Array(outLen);
+    const scale = (n - 1) / Math.max(1, outLen - 1);
+    for (let i = 0; i < outLen; i++) {
+      const p = i * scale;
+      const i0 = Math.floor(p);
+      const i1 = Math.min(n - 1, i0 + 1);
+      const t = p - i0;
+      out[i] = src[i0] * (1 - t) + src[i1] * t;
+    }
+    return out;
+  }
+
+  _buildPolarModeBuffer(size, polarMode, statistics, params = {}) {
+    if (!statistics) return null;
+    const sizer = size >> 1;
+    const ssq = size * size;
+    if (!this._polarBuffer || this._polarBuffer.length !== ssq) {
+      this._polarBuffer = new Float32Array(ssq);
+    }
+
+    if (polarMode === 2) {
+      const polarArray = statistics.polarArray;
+      if (!polarArray || polarArray.length < sizer * size) return null;
+
+      const out = this._polarBuffer;
+      out.fill(0);
+      const totalPolarRows = 2 * sizer - 1;
+      const copyLen = Math.min(polarArray.length, totalPolarRows * size);
+      out.set(polarArray.subarray(0, copyLen), 0);
+      if (totalPolarRows < size && totalPolarRows > 0) {
+        const lastSrc = (totalPolarRows - 1) * size;
+        const lastDst = totalPolarRows * size;
+        for (let x = 0; x < size; x++) {
+          out[lastDst + x] = out[lastSrc + x];
+        }
+      }
+
+      const polarTH = statistics.polarTH;
+      if (polarTH && polarTH.length >= size) {
+        const maxTH = this._safeArrayMax(polarTH, 1);
+        for (let x = 0; x < size; x++) {
+          const v = polarTH[x] / maxTH;
+          out[x] = v;
+          out[size + x] = v;
+        }
+
+        const k = Number(statistics.symmSides) || 0;
+        if (k > 0) {
+          const p = Math.ceil(size / k);
+          const interp = this._interpLinear(polarTH, p * k);
+          const maxI = this._safeArrayMax(interp, 1);
+          for (let i = 0; i < k; i++) {
+            const y = 3 + i;
+            if (y >= sizer) break;
+            const row = y * size;
+            for (let x = 0; x < p; x++) {
+              out[row + x] = interp[i * p + x] / maxI;
+            }
+          }
+        }
+      }
+
+      const mode = Number(params.autoRotateMode) || 0;
+      let angleShift = 0;
+      if (mode === 1) {
+        angleShift = -(Number(statistics.angle) || 0) / (2 * Math.PI) - 0.25;
+      } else if (mode === 2) {
+        angleShift = (Number(statistics.symmAngle) || 0) / (2 * Math.PI);
+      }
+      if (Math.abs(angleShift) > 1e-9) {
+        const frac = ((-angleShift % 1) + 1) % 1;
+        const shiftX = Math.floor(frac * size);
+        return this._rollViewData(out, size, shiftX, 0);
+      }
+      return out;
+    }
+
+    if (polarMode === 3) {
+      const seriesTH = statistics.seriesTH;
+      const seriesR = statistics.seriesR;
+      if (!Array.isArray(seriesTH) || !Array.isArray(seriesR)) return null;
+
+      const out = this._polarBuffer;
+      out.fill(0);
+
+      const xLen = Math.min(seriesTH.length, Math.max(0, sizer));
+      if (xLen > 0) {
+        let xMax = 0;
+        for (let i = seriesTH.length - xLen; i < seriesTH.length; i++) {
+          xMax = Math.max(xMax, this._safeArrayMax(seriesTH[i], 0));
+        }
+        xMax = Math.max(1e-12, xMax);
+        const mid = size >> 1;
+        for (let i = 0; i < xLen; i++) {
+          const src = seriesTH[seriesTH.length - xLen + i];
+          const y = mid + (xLen - 1 - i);
+          if (!src || y < 0 || y >= size) continue;
+          const row = y * size;
+          for (let x = 0; x < size && x < src.length; x++) {
+            out[row + x] = src[x] / xMax;
+          }
+        }
+      }
+
+      const yLen = Math.min(seriesR.length, size);
+      if (yLen > 0) {
+        let yMax = 0;
+        for (let i = seriesR.length - yLen; i < seriesR.length; i++) {
+          yMax = Math.max(yMax, this._safeArrayMax(seriesR[i], 0));
+        }
+        yMax = Math.max(1e-12, yMax);
+        const start = seriesR.length - yLen;
+        for (let r = 0; r < sizer; r++) {
+          const row = r * size;
+          for (let c = 0; c < yLen; c++) {
+            const vec = seriesR[start + c];
+            const v = vec && r < vec.length ? vec[r] : 0;
+            out[row + c] = v / yMax;
+          }
+        }
+      }
+
+      return out;
+    }
+
+    if (polarMode === 4) {
+      const polarDensity = statistics.polarDensity;
+      if (!polarDensity || polarDensity.length < sizer * sizer) return null;
+      const rotateWSum = statistics.rotateWSum;
+      const densitySum = statistics.densitySum;
+
+      const halfLen = size * sizer;
+      if (!this._polarHalfBuffer || this._polarHalfBuffer.length !== halfLen) {
+        this._polarHalfBuffer = new Float32Array(halfLen);
+      }
+      const half = this._polarHalfBuffer;
+      half.fill(0);
+      const maxDensity = this._safeArrayMax(polarDensity, 1);
+      for (let i = 0; i < sizer * sizer; i++) {
+        half[i] = polarDensity[i] / maxDensity;
+      }
+
+      const maxRotate = this._safeArrayMax(rotateWSum, 1);
+      for (let i = 0; i < sizer * sizer; i++) {
+        const v = rotateWSum && i < rotateWSum.length ? rotateWSum[i] : 0;
+        half[sizer * sizer + i] = v / maxRotate;
+      }
+
+      if (densitySum && densitySum.length > 0) {
+        const maxSum = this._safeArrayMax(densitySum, 1);
+        for (let x = 0; x < sizer && x < densitySum.length; x++) {
+          const v = densitySum[x] / maxSum;
+          half[x] = v;
+          half[sizer + x] = v;
+        }
+      }
+
+      const out = this._polarBuffer;
+      out.fill(0);
+      for (let y = 0; y < size; y++) {
+        const srcRow = y * sizer;
+        const dstRow = y * size;
+        for (let x = 0; x < sizer; x++) {
+          const v = half[srcRow + x];
+          const dx = x * 2;
+          out[dstRow + dx] = v;
+          if (dx + 1 < size) out[dstRow + dx + 1] = v;
+        }
+      }
+      return out;
+    }
+
+    return null;
   }
 
   _getViewSpec(board, automaton, rawMode, params) {
@@ -375,7 +548,14 @@ class Renderer {
     };
   }
 
-  render(board, automaton, renderMode, colourMapName, params = null) {
+  render(
+    board,
+    automaton,
+    renderMode,
+    colourMapName,
+    params = null,
+    statistics = null,
+  ) {
     this.setColourMap(colourMapName);
     const view = this._getViewSpec(board, automaton, renderMode, params);
     let data = view.data;
@@ -388,6 +568,26 @@ class Renderer {
     this._lastViewVmin = vmin;
     this._lastViewVmax = vmax;
 
+    const polarMode = Math.max(
+      0,
+      Math.min(4, Math.floor(Number(params?.polarMode) || 0)),
+    );
+    if (polarMode >= 2) {
+      const polarData = this._buildPolarModeBuffer(
+        currentSize,
+        polarMode,
+        statistics,
+        params,
+      );
+      if (polarData && polarData.length === currentSize * currentSize) {
+        data = polarData;
+        if (polarMode >= 3) {
+          vmin = 0;
+          vmax = 1;
+        }
+      }
+    }
+
     if (this.img.width !== currentSize || this.img.height !== currentSize) {
       this.img = createImage(currentSize, currentSize);
     }
@@ -395,6 +595,7 @@ class Renderer {
     if (
       this._viewOffsetActive &&
       renderMode !== "kernel" &&
+      polarMode < 2 &&
       data &&
       (this._viewShiftX !== 0 || this._viewShiftY !== 0)
     ) {
@@ -524,10 +725,8 @@ class Renderer {
 
     const sx = this._viewOffsetActive ? this._viewShiftX : 0;
     const sy = this._viewOffsetActive ? this._viewShiftY : 0;
-    const adjMidX =
-      ((((mid + sx) % this.size) + this.size) % this.size);
-    const adjMidY =
-      ((((mid + sy) % this.size) + this.size) % this.size);
+    const adjMidX = (((mid + sx) % this.size) + this.size) % this.size;
+    const adjMidY = (((mid + sy) % this.size) + this.size) % this.size;
 
     push();
     noStroke();
@@ -578,7 +777,6 @@ class Renderer {
     const cellPx = width / this.size;
     const scaleWidth = R * cellPx;
 
-    this._enableOverlayShadow(pg);
     pg.noStroke();
 
     const sx = width - 50;
@@ -607,7 +805,6 @@ class Renderer {
     pg.text("2s", lx - 95, ly - 15);
     pg.text("1s", lx - 55, ly - 15);
 
-    this._disableOverlayShadow(pg);
     this._scaleCacheKey = cacheKey;
     image(pg, 0, 0);
   }
@@ -684,16 +881,13 @@ class Renderer {
     const y1 = 20;
     const barH = y0 - y1;
 
-    this._enableOverlayShadow(pg);
     pg.noSmooth();
     pg.image(this._legendBarImg, x0, y1, barW, barH);
 
-    this._disableOverlayShadow(pg);
     pg.noFill();
     pg.stroke(200);
     pg.strokeWeight(1);
     pg.rect(x0 - 1, y1 - 1, barW + 2, barH + 2);
-    this._enableOverlayShadow(pg);
 
     pg.noStroke();
     pg.fill(255);
@@ -716,7 +910,6 @@ class Renderer {
     pg.text(legendMeta.title, 0, 0);
     pg.pop();
 
-    this._disableOverlayShadow(pg);
     this._legendCacheKey = cacheKey;
     image(pg, 0, 0);
   }
@@ -725,7 +918,6 @@ class Renderer {
     const { name, version } = metadata;
 
     push();
-    this._enableOverlayShadow();
     fill(0, 220);
     noStroke();
     rect(0, 0, width, height);
@@ -764,8 +956,8 @@ class Renderer {
           ["Ctrl+K", "Toggle auto-scale R, T"],
           ["Ctrl+Shift+K", "Apply scaled R, T"],
           ["Ctrl+Shift+Z", "Reset R, T from animal"],
-          ["N", "Random world (Shift=seeded)"],
-          ["M", "Random world"],
+          ["N", "Random cells (Shift=seeded)"],
+          ["M", "Random params (Shift=incremental)"],
           ["'", "Toggle auto-center"],
         ],
       },
@@ -812,6 +1004,8 @@ class Renderer {
         entries: [
           ["Tab", "Cycle render mode (Shift=reverse)"],
           [". / ,", "Next / prev colour map"],
+          ["Ctrl+'", "Cycle polar mode (Off/Symmetry/Polar/History/Strength)"],
+          ["' / Shift+'", "Toggle auto-center / cycle auto-rotate"],
           ["H", "Hide / show GUI panel"],
           ["Ctrl+H", "Toggle stats overlay"],
           ["Ctrl+J", "Toggle symmetry overlay"],
@@ -875,7 +1069,6 @@ class Renderer {
     textAlign(CENTER, BOTTOM);
     text("Press # to close", width / 2, height - 16);
 
-    this._disableOverlayShadow();
     pop();
   }
 
@@ -959,7 +1152,6 @@ class Renderer {
     const c255 = [255, 255, 255];
 
     push();
-    this._enableOverlayShadow();
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
         const adjx = i * this.size + ms_x + vsx;
@@ -998,38 +1190,26 @@ class Renderer {
         }
       }
     }
-    this._disableOverlayShadow();
     pop();
   }
 
   renderSymmetryOverlay(statistics, params = {}) {
-    const POLYGON_NAME = {
-      1: "irregular",
-      2: "bilateral",
-      3: "trimeric",
-      4: "tetrameric",
-      5: "pentameric",
-      6: "hexameric",
-      7: "heptameric",
-      8: "octameric",
-      9: "nonameric",
-      10: "decameric",
-      0: "polymeric",
-    };
-
-    const { mass, centerX, centerY, symmSides, symmStrength, symmAngle } =
-      statistics;
+    const { mass, centerX, centerY, symmSides, symmAngle } = statistics;
     const sidesVec = statistics.sidesVec;
     const angleVec = statistics.angleVec;
     const rotateVec = statistics.rotateVec;
     const symmMaxRadius = statistics.symmMaxRadius || 0;
+    const polarMode = Math.max(
+      0,
+      Math.min(4, Math.floor(Number(params.polarMode) || 0)),
+    );
 
-    const hasValidCenter =
-      Number.isFinite(centerX) && Number.isFinite(centerY);
+    const hasValidCenter = Number.isFinite(centerX) && Number.isFinite(centerY);
     const hasVisibleMass = Number.isFinite(mass) && mass > 1e-10;
     const k = symmSides || 0;
 
-    if (!hasValidCenter || !hasVisibleMass || k < 2) return;
+    if (polarMode === 0) return;
+    if (!hasValidCenter || !hasVisibleMass) return;
 
     const T = Number(params.T) || 10;
     const cellPx = width / this.size;
@@ -1037,28 +1217,61 @@ class Renderer {
 
     const vsx = this._viewOffsetActive ? this._viewShiftX : 0;
     const vsy = this._viewOffsetActive ? this._viewShiftY : 0;
-    const m1x =
-      (((centerX + vsx) % this.size) + this.size) % this.size;
-    const m1y =
-      (((centerY + vsy) % this.size) + this.size) % this.size;
+    const m1x = (((centerX + vsx) % this.size) + this.size) % this.size;
+    const m1y = (((centerY + vsy) % this.size) + this.size) % this.size;
     const m1px = m1x * cellPx;
     const m1py = m1y * cellPx;
 
     const c254 = [127, 127, 127];
     const c255 = [255, 255, 255];
-    const dotR = 4;
+    const dotR = 2;
+    const splitY = (this.size / 2) * cellPx;
 
     push();
-    this._enableOverlayShadow();
 
     const maxDist = Math.max(this.size, this.size);
-    stroke(c254[0], c254[1], c254[2]);
-    strokeWeight(1);
-    for (let i = 0; i < k; i++) {
-      const angle = (2 * Math.PI * i) / k + a;
-      const dx = Math.sin(angle) * maxDist;
-      const dy = Math.cos(angle) * maxDist;
-      line(m1px, m1py, (m1x - dx) * cellPx, (m1y - dy) * cellPx);
+
+    if (polarMode === 1 && k >= 2) {
+      stroke(c254[0], c254[1], c254[2]);
+      strokeWeight(1);
+      for (let i = 0; i < k; i++) {
+        const angle = (2 * Math.PI * i) / k + a;
+        const dx = Math.sin(angle) * maxDist;
+        const dy = Math.cos(angle) * maxDist;
+        line(m1px, m1py, (m1x - dx) * cellPx, (m1y - dy) * cellPx);
+      }
+    }
+
+    const drawPolarMode2Lines = polarMode === 2;
+    if (drawPolarMode2Lines || polarMode === 3 || polarMode === 4) {
+      stroke(c254[0], c254[1], c254[2]);
+      strokeWeight(1);
+      line(0, splitY, width, splitY);
+    }
+
+    if (drawPolarMode2Lines && k > 1) {
+      stroke(c254[0], c254[1], c254[2]);
+      strokeWeight(1);
+      for (let i = 0; i < k; i++) {
+        const xNorm = (((i / k - a / (2 * Math.PI) + 0.5) % 1) + 1) % 1;
+        const x = xNorm * this.size * cellPx;
+        line(x, 0, x, height);
+      }
+    }
+
+    if (polarMode === 4) {
+      const sizeF = Math.max(1, Math.floor(this.size / 2));
+      for (let kk = 1; kk < sizeF; kk += 5) {
+        const x = kk * 2 * cellPx;
+        stroke(c254[0], c254[1], c254[2]);
+        strokeWeight(1);
+        line(x, 0, x, height);
+        noStroke();
+        fill(c255[0], c255[1], c255[2]);
+        textSize(10);
+        textAlign(LEFT, CENTER);
+        text(String(kk), x + 2, splitY);
+      }
     }
 
     if (sidesVec && angleVec) {
@@ -1068,8 +1281,37 @@ class Renderer {
         if (kk < 2) continue;
         const aa = angleVec[rIdx];
         const ww = rotateVec ? rotateVec[rIdx] * T : 0;
-        const dist = rIdx + 1;
+        const dist = symmMaxRadius - rIdx;
         const col = kk === k ? c255 : c254;
+
+        if (polarMode === 4) {
+          const x = Math.floor(((kk + 1) * cellPx) / 2);
+          const y = Math.max(0, Math.min(height, rIdx * cellPx));
+          stroke(c255[0], c255[1], c255[2]);
+          strokeWeight(1);
+          line(x, y, x - (ww / (2 * Math.PI)) * this.size * cellPx, y);
+          noStroke();
+          fill(c255[0], c255[1], c255[2]);
+          ellipse(x, y, dotR * 2, dotR * 2);
+          continue;
+        }
+
+        if (drawPolarMode2Lines) {
+          for (let i = 0; i < kk; i++) {
+            const xNorm = (((i / kk - aa / (2 * Math.PI) + 0.5) % 1) + 1) % 1;
+            const x = xNorm * this.size * cellPx;
+            const y = Math.max(0, Math.min(height, rIdx * cellPx));
+            stroke(col[0], col[1], col[2]);
+            strokeWeight(1);
+            line(x, y, x - (ww / (2 * Math.PI)) * this.size * cellPx, y);
+            noStroke();
+            fill(col[0], col[1], col[2]);
+            ellipse(x, y, dotR * 2, dotR * 2);
+          }
+          continue;
+        }
+
+        if (polarMode !== 1) continue;
 
         for (let i = 0; i < kk; i++) {
           const angle = (2 * Math.PI * i) / kk + aa;
@@ -1096,11 +1338,10 @@ class Renderer {
         }
       }
     }
-    this._disableOverlayShadow();
     pop();
   }
 
-  renderSymmetryTitle(statistics) {
+  renderSymmetryTitle(statistics, params = {}) {
     const POLYGON_NAME = {
       1: "irregular",
       2: "bilateral",
@@ -1116,10 +1357,14 @@ class Renderer {
     };
 
     const k = statistics.symmSides || 0;
+    const polarMode = Math.max(
+      0,
+      Math.min(4, Math.floor(Number(params.polarMode) || 0)),
+    );
+    if (polarMode === 0) return;
     if (k < 2) return;
 
     push();
-    this._enableOverlayShadow();
     this._applyTextFont();
     noStroke();
     fill(255);
@@ -1127,7 +1372,6 @@ class Renderer {
     textAlign(CENTER, TOP);
     const name = POLYGON_NAME[k <= 10 ? k : 0];
     text(`symmetry: ${k} (${name})`, width / 2, 20);
-    this._disableOverlayShadow();
     pop();
   }
 
@@ -1142,13 +1386,11 @@ class Renderer {
     if (!label) return;
     push();
     textFont("monospace");
-    this._enableOverlayShadow();
     noStroke();
     textSize(15);
     textAlign(CENTER, BOTTOM);
     fill(255);
     text(label, width / 2, height - 20);
-    this._disableOverlayShadow();
     pop();
   }
 
@@ -1241,13 +1483,11 @@ class Renderer {
     ];
 
     this._applyTextFont(pg);
-    this._enableOverlayShadow(pg);
     pg.textAlign(LEFT, TOP);
     pg.textSize(12.5);
     pg.noStroke();
     pg.fill(255);
     pg.text(stats.join("\n"), 20, 20);
-    this._disableOverlayShadow(pg);
 
     image(pg, 0, 0);
   }
@@ -1352,7 +1592,6 @@ class Renderer {
   ) {
     const ctx = target || this;
     ctx.push();
-    this._enableOverlayShadow(ctx);
     ctx.noFill();
     ctx.stroke(255, 210);
     ctx.strokeWeight(1);
@@ -1363,7 +1602,6 @@ class Renderer {
         ctx.rect(x, y, panelSize, panelSize);
       }
     }
-    this._disableOverlayShadow(ctx);
     ctx.pop();
   }
 
@@ -1398,7 +1636,6 @@ class Renderer {
 
     if (!hasData) {
       ctx.push();
-      this._enableOverlayShadow(ctx);
       ctx.noStroke();
       ctx.fill(0, 170);
       ctx.rect(x + 1, y + 1, panelSize - 2, panelSize - 2);
@@ -1407,7 +1644,6 @@ class Renderer {
       ctx.textAlign(LEFT, TOP);
       ctx.fill(255, 220);
       ctx.text(`${label} (pending)`, x + 6, y + 4);
-      this._disableOverlayShadow(ctx);
       ctx.pop();
       return;
     }
@@ -1464,12 +1700,10 @@ class Renderer {
     ctx.noStroke();
     ctx.fill(0, 200);
     this._applyTextFont(ctx);
-    this._enableOverlayShadow(ctx);
     ctx.textSize(10);
     ctx.textAlign(LEFT, TOP);
     ctx.fill(255);
     ctx.text(label, x + 6, y + 4);
-    this._disableOverlayShadow(ctx);
     ctx.pop();
   }
 

@@ -45,6 +45,9 @@ class Analyser {
 
   constructor(statistics = null, renderData = null) {
     this.series = [];
+    this.polarSeriesTH = [];
+    this.polarSeriesR = [];
+    this.maxPolarSeries = 512;
     this.statistics = statistics || {
       gen: 0,
       time: 0,
@@ -153,7 +156,27 @@ class Analyser {
     statistics.sidesVec = workerStats.sidesVec || null;
     statistics.angleVec = workerStats.angleVec || null;
     statistics.rotateVec = workerStats.rotateVec || null;
+    statistics.radiusVec = workerStats.radiusVec || null;
     statistics.symmMaxRadius = workerStats.symmMaxRadius || 0;
+    statistics.polarArray = workerStats.polarArray || null;
+    statistics.polarTH = workerStats.polarTH || null;
+    statistics.polarR = workerStats.polarR || null;
+    statistics.polarDensity = workerStats.polarDensity || null;
+    statistics.rotateWSum = workerStats.rotateWSum || null;
+    statistics.densitySum = workerStats.densitySum || null;
+
+    if (workerStats.polarTH && workerStats.polarR) {
+      this.polarSeriesTH.push(new Float32Array(workerStats.polarTH));
+      this.polarSeriesR.push(new Float32Array(workerStats.polarR));
+      if (this.polarSeriesTH.length > this.maxPolarSeries) {
+        this.polarSeriesTH.shift();
+      }
+      if (this.polarSeriesR.length > this.maxPolarSeries) {
+        this.polarSeriesR.shift();
+      }
+    }
+    statistics.seriesTH = this.polarSeriesTH;
+    statistics.seriesR = this.polarSeriesR;
   }
 
   resetStatistics() {
@@ -198,6 +221,16 @@ class Analyser {
     statistics.period = 0;
     statistics.periodConfidence = 0;
     statistics.fps = 0;
+    statistics.polarArray = null;
+    statistics.polarTH = null;
+    statistics.polarR = null;
+    statistics.polarDensity = null;
+    statistics.rotateWSum = null;
+    statistics.densitySum = null;
+    statistics.seriesTH = [];
+    statistics.seriesR = [];
+    this.polarSeriesTH = [];
+    this.polarSeriesR = [];
   }
 
   updateFps() {

@@ -50,30 +50,6 @@ class LeftPanel {
     this.cacheHitBoxes();
   }
 
-  _enableOverlayShadow(ctx = null) {
-    const target = ctx || this;
-    const dc =
-      target?.drawingContext ||
-      (typeof drawingContext !== "undefined" ? drawingContext : null);
-    if (!dc) return;
-    dc.shadowColor = "rgba(0, 0, 0, 0.9)";
-    dc.shadowBlur = 4;
-    dc.shadowOffsetX = 2;
-    dc.shadowOffsetY = 2;
-  }
-
-  _disableOverlayShadow(ctx = null) {
-    const target = ctx || this;
-    const dc =
-      target?.drawingContext ||
-      (typeof drawingContext !== "undefined" ? drawingContext : null);
-    if (!dc) return;
-    dc.shadowColor = "rgba(0, 0, 0, 0)";
-    dc.shadowBlur = 0;
-    dc.shadowOffsetX = 0;
-    dc.shadowOffsetY = 0;
-  }
-
   setInputHandler(input) {
     this.input = input;
   }
@@ -100,7 +76,6 @@ class LeftPanel {
     const elapsed = this.sim.getElapsedSeconds();
 
     noStroke();
-    this._enableOverlayShadow();
     fill(this.theme.textSecondary);
     textSize(this.theme.textSizeSecondary);
     textAlign(LEFT, TOP);
@@ -117,7 +92,6 @@ class LeftPanel {
       px,
       this.panel.getY("cells"),
     );
-    this._disableOverlayShadow();
   }
 
   renderSimulationControls(px) {
@@ -126,7 +100,6 @@ class LeftPanel {
     }
 
     noStroke();
-    this._enableOverlayShadow();
     fill(this.theme.textMuted);
     textSize(this.theme.textSizeCaption);
     textAlign(LEFT, TOP);
@@ -135,7 +108,6 @@ class LeftPanel {
       px,
       this.panel.getY("particleCaption"),
     );
-    this._disableOverlayShadow();
 
     this.renderParticleInput(px);
     this.restartButton.render();
@@ -153,14 +125,12 @@ class LeftPanel {
     rect(px, iy, iw, 24, 4);
 
     fill(this.theme.textPrimary);
-    this._enableOverlayShadow();
     textSize(this.theme.textSizeSecondary);
     textAlign(LEFT, TOP);
     const render = isTyping
       ? `${this.input.getTypingBuffer()}_`
       : str(this.sim.getParticleCount());
     text(render, px + 8, iy + 5);
-    this._disableOverlayShadow();
   }
 
   renderGraph() {
@@ -189,7 +159,6 @@ class LeftPanel {
     line(x0 + 5, y0 + gh - 5, x0 + gw - 5, y0 + gh - 5);
 
     fill(this.theme.textMuted);
-    this._enableOverlayShadow();
     textSize(9);
     textAlign(RIGHT, CENTER);
     text("0", x0 - 4, y0 + gh - 5);
@@ -197,7 +166,6 @@ class LeftPanel {
 
     textAlign(CENTER, TOP);
     text("Cell population over time", x0 + gw / 2, y0 + gh);
-    this._disableOverlayShadow();
 
     stroke(200, 80, 80);
     strokeWeight(1.5);
@@ -266,7 +234,6 @@ class LeftPanel {
 
   renderKeymapReference() {
     push();
-    this._enableOverlayShadow();
     fill(0, 220);
     noStroke();
     rect(0, 0, width, height);
@@ -318,7 +285,6 @@ class LeftPanel {
       y += lineH;
     }
 
-    this._disableOverlayShadow();
     pop();
   }
 
@@ -326,13 +292,11 @@ class LeftPanel {
     const { name, version, author } = metadata;
 
     push();
-    this._enableOverlayShadow();
     noStroke();
     fill(255, 170);
     textSize(12);
     textAlign(LEFT, BOTTOM);
     text(`${name} ${version} by ${author}`, 12, height - 12);
-    this._disableOverlayShadow();
     pop();
   }
 }

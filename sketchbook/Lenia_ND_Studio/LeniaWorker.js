@@ -12,6 +12,22 @@ const _fft2DScratch = {
   row: null,
   col: null,
 };
+const _symmScratch = {
+  size: 0,
+  prAngles: null,
+  radiusVec: null,
+  densitySum: null,
+  sidesVec: null,
+  angleVec: null,
+  rotateVec: null,
+  avgPerRadius: null,
+  polarDensity: null,
+  polarAngle: null,
+  polarRotate: null,
+  polarTH: null,
+  polarR: null,
+  rotateWSum: null,
+};
 
 const _stepCenterCache = {
   valid: false,
@@ -24,6 +40,11 @@ const _stepCenterCache = {
 
 let _autoCenterTmp = null;
 let _autoCenterTmpLen = 0;
+let _autoCenterTyLut = null;
+let _autoCenterTyLutSize = 0;
+
+let _mcAnalysisScratch = null;
+let _mcAnalysisScratchLen = 0;
 
 const _GROWTH_LUT_SIZE = 32768;
 const _GROWTH_LUT_UMAX = 20;
@@ -263,6 +284,7 @@ function createAnalysisState(epsilon = 1e-10, maxHistory = 512) {
     periodicityCentered: new Float64Array(maxHistory),
     densityEma: null,
     densityEmaAlpha: 0.05,
+    lastPolarAngle: null,
     lastSidesVec: null,
     lastAngleVec: null,
     frames: 0,
@@ -281,6 +303,7 @@ function resetAnalysisState(state) {
   state.massHistoryCount = 0;
   state.massHistoryHead = 0;
   state.densityEma = null;
+  state.lastPolarAngle = null;
   state.lastSidesVec = null;
   state.lastAngleVec = null;
   state.frames = 0;
@@ -297,7 +320,6 @@ function getSymmetryTables(angularBins) {
   const harmonicSin = new Float64Array(halfBins * angularBins);
 
   for (let n = 0; n < angularBins; n++) {
-    // Start at PI/2 to match Python: th_range = linspace(pi/2, 5*pi/2, N+1)[:-1]
     const a = Math.PI / 2 + (2 * Math.PI * n) / angularBins;
     thetaCos[n] = Math.cos(a);
     thetaSin[n] = Math.sin(a);
@@ -315,6 +337,79 @@ function getSymmetryTables(angularBins) {
   entry = { thetaCos, thetaSin, harmonicCos, harmonicSin, halfBins };
   _symmetryCache.set(angularBins, entry);
   return entry;
+}
+
+function _gaussianKernel1D(sigma) {
+  const s = Math.max(1e-6, Number(sigma) || 1);
+  const radius = Math.max(1, Math.ceil(s * 3));
+  const size = radius * 2 + 1;
+  const kernel = new Float64Array(size);
+  const denom = 2 * s * s;
+  let sum = 0;
+  for (let i = -radius; i <= radius; i++) {
+    const v = Math.exp(-(i * i) / denom);
+    kernel[i + radius] = v;
+    sum += v;
+  }
+  if (sum > 0) {
+    for (let i = 0; i < size; i++) kernel[i] /= sum;
+  }
+  return { kernel, radius };
+}
+
+function _reflectIndex(i, n) {
+  if (n <= 1) return 0;
+  let x = i;
+  const max = n - 1;
+  while (x < 0 || x > max) {
+    if (x < 0) x = -x;
+    else x = max - (x - max);
+  }
+  return x;
+}
+
+let _blurTemp = null;
+let _blurOut = null;
+let _blurLen = 0;
+
+function blurPolarArray(polar, numRadii, angularBins, sigmaR = 2, sigmaT = 1) {
+  const { kernel: kr, radius: rr } = _gaussianKernel1D(sigmaR);
+  const { kernel: kt, radius: rt } = _gaussianKernel1D(sigmaT);
+
+  const len = numRadii * angularBins;
+  if (_blurLen !== len) {
+    _blurTemp = new Float32Array(len);
+    _blurOut = new Float32Array(len);
+    _blurLen = len;
+  }
+  const temp = _blurTemp;
+  const out = _blurOut;
+
+  for (let r = 0; r < numRadii; r++) {
+    const rowBase = r * angularBins;
+    for (let t = 0; t < angularBins; t++) {
+      let acc = 0;
+      for (let k = -rr; k <= rr; k++) {
+        const ri = _reflectIndex(r + k, numRadii);
+        acc += polar[ri * angularBins + t] * kr[k + rr];
+      }
+      temp[rowBase + t] = acc;
+    }
+  }
+
+  for (let r = 0; r < numRadii; r++) {
+    const rowBase = r * angularBins;
+    for (let t = 0; t < angularBins; t++) {
+      let acc = 0;
+      for (let k = -rt; k <= rt; k++) {
+        const ti = _reflectIndex(t + k, angularBins);
+        acc += temp[rowBase + ti] * kt[k + rt];
+      }
+      out[rowBase + t] = acc;
+    }
+  }
+
+  return out;
 }
 
 function unwrapAngleDelta(current, previous) {
@@ -839,6 +934,11 @@ function stepFFT(
     acCosY = 0,
     acSinY = 0,
     acMass = 0;
+  const lutE = _growthLutExp;
+  const lutP = _growthLutPoly;
+  const lutEScale = _GLI_EXP;
+  const lutPScale = _GLI_POLY;
+  const lutLast = _GROWTH_LUT_SIZE - 1;
 
   for (let y = 0; y < size; y++) {
     const row = y * size;
@@ -850,13 +950,25 @@ function stepFFT(
       const diff = pot - m;
       let growth;
       if (gn === 2) {
-        growth = Math.exp(-(diff * diff) * inv2s2) * 2 - 1;
+        const u = diff * diff * inv2s2;
+        const fi = u * lutEScale;
+        const idx = fi | 0;
+        if (idx >= lutLast) {
+          growth = -1;
+        } else {
+          growth = lutE[idx] + (lutE[idx + 1] - lutE[idx]) * (fi - idx);
+        }
       } else if (gn === 3) {
         growth = Math.abs(diff) <= s ? 1 : -1;
       } else {
-        const base = Math.max(0, 1 - diff * diff * inv9s2);
-        const base2 = base * base;
-        growth = base2 * base2 * 2 - 1;
+        const v = diff * diff * inv9s2;
+        const fi = v * lutPScale;
+        const idx = fi | 0;
+        if (idx >= lutLast) {
+          growth = -1;
+        } else {
+          growth = lutP[idx] + (lutP[idx + 1] - lutP[idx]) * (fi - idx);
+        }
       }
       field[i] = growth;
 
@@ -878,7 +990,8 @@ function stepFFT(
         const a = Math.exp(softK * newVal);
         newVal = Math.log(1 / (a + 1) + softC) / -softK;
       } else {
-        newVal = Math.max(0, Math.min(1, newVal));
+        if (newVal < 0) newVal = 0;
+        else if (newVal > 1) newVal = 1;
       }
 
       if (hasQuant) newVal = Math.round(newVal * paramP) / paramP;
@@ -1162,77 +1275,106 @@ function stepFFTND(
   _ndStepCache.valid = true;
 }
 
-function detectSymmetry(cells, size, stats, state, params) {
+function detectSymmetry(cells, polarSource, size, stats, state, params) {
   const cx = stats.mass > state.epsilon ? stats.centerX : size / 2;
   const cy = stats.mass > state.epsilon ? stats.centerY : size / 2;
-  // Match Python: SIZER = min(MIDX, MIDY) = size/2
-  const maxRadius = size >> 1;
-  // Match Python: SIZETH = SIZEX = size angular bins
+  const sizer = size >> 1;
   const angularBins = size;
   const tables = getSymmetryTables(angularBins);
   const thetaCos = tables.thetaCos;
   const thetaSin = tables.thetaSin;
   const harmonicCos = tables.harmonicCos;
   const harmonicSin = tables.harmonicSin;
-  const rMax = maxRadius; // SIZER radii: r=1..SIZER-1 → numRadii = SIZER-1
-  const numRadii = rMax - 1;
-  // Match Python: SIZEF = MIDX = size/2 frequency bins
-  const numFreqBins = size >> 1;
+  const numRadii = sizer;
+  const numFreqBins = sizer;
   const maxHarmonicSearch = numFreqBins;
 
-  // Allocate per-radius angular samples (numRadii × angularBins)
-  // Python: polar_array rows 0..SIZER-1, row 0 = outermost (r=SIZER-1), row SIZER-1 = r=0
-  // JS: rIdx 0 = innermost (r=1), rIdx numRadii-1 = outermost (r=SIZER-1)
-  const prAngles = new Float32Array(numRadii * angularBins);
-  for (let r = 1; r < rMax; r++) {
-    const rIdx = r - 1;
+  const totalPolarRows = 2 * sizer - 1;
+  if (_symmScratch.size !== size) {
+    _symmScratch.size = size;
+    _symmScratch.prAngles = new Float32Array(totalPolarRows * angularBins);
+    _symmScratch.radiusVec = new Float32Array(numRadii);
+    _symmScratch.densitySum = new Float32Array(maxHarmonicSearch);
+    _symmScratch.sidesVec = new Uint8Array(numRadii);
+    _symmScratch.angleVec = new Float32Array(numRadii);
+    _symmScratch.rotateVec = new Float32Array(numRadii);
+    _symmScratch.avgPerRadius = new Float32Array(numRadii);
+    _symmScratch.polarDensity = new Float32Array(numRadii * numFreqBins);
+    _symmScratch.polarAngle = new Float32Array(numRadii * numFreqBins);
+    _symmScratch.polarRotate = new Float32Array(numRadii * numFreqBins);
+    _symmScratch.polarTH = new Float32Array(angularBins);
+    _symmScratch.polarR = new Float32Array(numRadii);
+    _symmScratch.rotateWSum = new Float32Array(numRadii * numFreqBins);
+  }
+  const prAngles = _symmScratch.prAngles;
+  const radiusVec = _symmScratch.radiusVec;
+  prAngles.fill(0);
+  radiusVec.fill(0);
+  for (let rIdx = 0; rIdx < totalPolarRows; rIdx++) {
+    const r = sizer - 1 - rIdx;
     const rOffset = rIdx * angularBins;
+    if (rIdx < numRadii) radiusVec[rIdx] = r;
     for (let theta = 0; theta < angularBins; theta++) {
       const ux = thetaCos[theta];
       const uy = thetaSin[theta];
-      // Match Python .astype(int) = truncation toward zero (Math.trunc)
-      const x = (((cx + r * ux) | 0) % size + size) % size;
-      const y = (((cy + r * uy) | 0) % size + size) % size;
-      prAngles[rOffset + theta] = cells[y * size + x];
+      const x = ((Math.trunc(cx + r * ux) % size) + size) % size;
+      const y = ((Math.trunc(cy + r * uy) % size) + size) % size;
+      prAngles[rOffset + theta] = polarSource[y * size + x];
     }
   }
 
-  const densitySum = new Float32Array(maxHarmonicSearch);
+  const polarAngles = blurPolarArray(prAngles, numRadii, angularBins, 2, 1);
 
-  const sidesVec = new Uint8Array(numRadii);
-  const angleVec = new Float32Array(numRadii);
-  const rotateVec = new Float32Array(numRadii);
-  const avgPerRadius = new Float32Array(numRadii);
+  const densitySum = _symmScratch.densitySum;
+  const sidesVec = _symmScratch.sidesVec;
+  const angleVec = _symmScratch.angleVec;
+  const rotateVec = _symmScratch.rotateVec;
+  const avgPerRadius = _symmScratch.avgPerRadius;
+  const polarDensity = _symmScratch.polarDensity;
+  const polarAngle = _symmScratch.polarAngle;
+  const polarRotate = _symmScratch.polarRotate;
+  densitySum.fill(0);
+  sidesVec.fill(0);
+  angleVec.fill(0);
+  rotateVec.fill(0);
+  avgPerRadius.fill(0);
+  polarDensity.fill(0);
+  polarAngle.fill(0);
+  polarRotate.fill(0);
 
   for (let rIdx = 0; rIdx < numRadii; rIdx++) {
     const rOffset = rIdx * angularBins;
-    // Match Python polar_avg: average over first SIZEF columns (half theta range)
     let avg = 0;
-    for (let t = 0; t < numFreqBins; t++) avg += prAngles[rOffset + t];
+    for (let t = 0; t < numFreqBins; t++) avg += polarAngles[rOffset + t];
     avg /= numFreqBins;
     avgPerRadius[rIdx] = avg;
 
-    let bestMag = 0,
-      bestK = 0,
-      bestCos = 0,
-      bestSin = 0;
-    // Match Python: argmax(polar_density[:,2:SIZEF]) — search harmonics 2..SIZEF-1
-    for (let k = 2; k < maxHarmonicSearch; k++) {
+    let bestMag = 0;
+    let bestK = 0;
+
+    for (let k = 0; k < numFreqBins; k++) {
       const hRow = k * angularBins;
       let cs = 0,
         ss = 0;
       for (let n = 0; n < angularBins; n++) {
-        const a = prAngles[rOffset + n];
+        const a = polarAngles[rOffset + n];
         cs += a * harmonicCos[hRow + n];
         ss += a * harmonicSin[hRow + n];
       }
+
       const mag = Math.sqrt(cs * cs + ss * ss) / angularBins;
-      densitySum[k] += mag;
-      if (mag > bestMag) {
-        bestMag = mag;
-        bestK = k;
-        bestCos = cs;
-        bestSin = ss;
+      const idx = rIdx * numFreqBins + k;
+      polarDensity[idx] = k === 0 ? 0 : mag;
+
+      const denom = k === 0 ? 1 : k;
+      polarAngle[idx] = Math.atan2(-ss, cs) / denom;
+
+      if (k >= 2) {
+        densitySum[k] += mag;
+        if (mag > bestMag) {
+          bestMag = mag;
+          bestK = k;
+        }
       }
     }
 
@@ -1240,12 +1382,34 @@ function detectSymmetry(cells, size, stats, state, params) {
 
     sidesVec[rIdx] = bestK;
     if (bestK > 0) {
-      // Match Python np.fft.fft exp(-j...) sign convention: atan2(-sin, cos)
-      angleVec[rIdx] = Math.atan2(-bestSin, bestCos) / bestK;
+      angleVec[rIdx] = polarAngle[rIdx * numFreqBins + bestK];
     }
   }
 
-  // Density EMA (match Python: density_ema += alpha * (density_sum - density_ema))
+  if (
+    state.lastPolarAngle &&
+    state.lastPolarAngle.length === polarAngle.length
+  ) {
+    for (let rIdx = 0; rIdx < numRadii; rIdx++) {
+      const rowBase = rIdx * numFreqBins;
+      for (let k = 0; k < numFreqBins; k++) {
+        const idx = rowBase + k;
+        const denom = k === 0 ? 1 : k;
+        const maxAngle = Math.PI / denom;
+        let d = polarAngle[idx] - state.lastPolarAngle[idx];
+        d = ((d + 3 * maxAngle) % (2 * maxAngle)) - maxAngle;
+        polarRotate[idx] = d;
+      }
+    }
+  }
+  if (
+    !state.lastPolarAngle ||
+    state.lastPolarAngle.length !== polarAngle.length
+  ) {
+    state.lastPolarAngle = new Float32Array(polarAngle.length);
+  }
+  state.lastPolarAngle.set(polarAngle);
+
   const alpha = state.densityEmaAlpha;
   if (state.densityEma && state.densityEma.length === maxHarmonicSearch) {
     for (let k = 2; k < maxHarmonicSearch; k++) {
@@ -1256,7 +1420,6 @@ function detectSymmetry(cells, size, stats, state, params) {
     state.densityEma.set(densitySum);
   }
 
-  // Global sides from density EMA (match Python: argmax(density_ema[2:SIZEF])+2)
   let maxDensity = 0;
   let maxIndex = 0;
   for (let k = 2; k < maxHarmonicSearch; k++) {
@@ -1266,102 +1429,79 @@ function detectSymmetry(cells, size, stats, state, params) {
     }
   }
 
-  // Compute global harmonic strengths for symmStrength ratio
-  const harmonics = new Float32Array(numFreqBins);
-  const angles = new Float32Array(angularBins);
-  for (let theta = 0; theta < angularBins; theta++) {
-    let sum = 0;
-    for (let rIdx = 0; rIdx < numRadii; rIdx++) {
-      sum += prAngles[rIdx * angularBins + theta];
-    }
-    angles[theta] = sum / numRadii;
-  }
-
-  for (let k = 0; k < numFreqBins; k++) {
-    const row = k * angularBins;
-    let cosSum = 0;
-    let sinSum = 0;
-    for (let n = 0; n < angularBins; n++) {
-      const a = angles[n];
-      cosSum += a * harmonicCos[row + n];
-      sinSum += a * harmonicSin[row + n];
-    }
-    harmonics[k] = Math.sqrt(cosSum * cosSum + sinSum * sinSum) / angularBins;
-  }
-
-  let maxAll = 0;
-  for (let i = 0; i < harmonics.length; i++) {
-    if (harmonics[i] > maxAll) maxAll = harmonics[i];
-  }
-  const maxHarmonic = maxIndex > 0 ? harmonics[maxIndex] : 0;
-  const symmStrength = maxAll > state.epsilon ? maxHarmonic / maxAll : 0;
-
-  // Rotation tracking using global averaged profile
-  const canTrackRotation =
-    maxIndex > 0 && maxHarmonic > state.epsilon * 10 && symmStrength >= 0.08;
-  let rotSpeed = 0;
-
-  if (canTrackRotation) {
-    let domCos = 0;
-    let domSin = 0;
-    const row = maxIndex * angularBins;
-    for (let n = 0; n < angularBins; n++) {
-      const a = angles[n];
-      domCos += a * harmonicCos[row + n];
-      domSin += a * harmonicSin[row + n];
-    }
-
-    // Match Python np.fft.fft exp(-j...) sign: atan2(-sin, cos)
-    const symmPhase = Math.atan2(-domSin, domCos);
-    const T = Math.max(1e-6, Number(params?.T) || 1);
-    const dt = 1 / T;
-
-    if (state.lastSymmPhase !== null && state.lastSymmOrder === maxIndex) {
-      let dPhase = symmPhase - state.lastSymmPhase;
-      if (dPhase > Math.PI) dPhase -= 2 * Math.PI;
-      if (dPhase < -Math.PI) dPhase += 2 * Math.PI;
-
-      const dTheta = dPhase / maxIndex;
-      rotSpeed = dTheta / dt;
-    }
-
-    state.lastSymmPhase = symmPhase;
-    state.lastSymmOrder = maxIndex;
-  } else {
-    state.lastSymmPhase = null;
-    state.lastSymmOrder = 0;
-  }
-
-  stats.symmSides = maxIndex > 0 ? maxIndex : 0;
-  stats.symmStrength = symmStrength;
-  stats.rotationSpeed = Number.isFinite(rotSpeed) ? rotSpeed : 0;
-
-  if (
-    state.lastAngleVec &&
-    state.lastSidesVec &&
-    state.lastAngleVec.length === numRadii
-  ) {
-    for (let rIdx = 0; rIdx < numRadii; rIdx++) {
-      if (sidesVec[rIdx] > 1 && state.lastSidesVec[rIdx] === sidesVec[rIdx]) {
-        let dPhase = angleVec[rIdx] - state.lastAngleVec[rIdx];
-        const maxAngle = Math.PI / sidesVec[rIdx];
-        dPhase = ((dPhase + 3 * maxAngle) % (2 * maxAngle)) - maxAngle;
-        rotateVec[rIdx] = dPhase;
-      }
+  for (let rIdx = 0; rIdx < numRadii; rIdx++) {
+    const kk = sidesVec[rIdx];
+    if (kk > 1) {
+      const idx = rIdx * numFreqBins + kk;
+      angleVec[rIdx] = polarAngle[idx];
+      rotateVec[rIdx] = polarRotate[idx];
     }
   }
+
   state.lastSidesVec = sidesVec;
-  state.lastAngleVec = new Float32Array(angleVec);
+  if (
+    !state.lastAngleVecCopy ||
+    state.lastAngleVecCopy.length !== angleVec.length
+  ) {
+    state.lastAngleVecCopy = new Float32Array(angleVec.length);
+  }
+  state.lastAngleVecCopy.set(angleVec);
+  state.lastAngleVec = state.lastAngleVecCopy;
 
   stats.sidesVec = sidesVec;
   stats.angleVec = angleVec;
   stats.rotateVec = rotateVec;
+  stats.radiusVec = radiusVec;
   stats.symmMaxRadius = numRadii;
+  stats.rotateWAvg = null;
+  stats.polarArray = prAngles;
+
+  const polarTH = _symmScratch.polarTH;
+  const polarR = _symmScratch.polarR;
+  polarTH.fill(0);
+  polarR.fill(0);
+  for (let t = 0; t < angularBins; t++) {
+    let sum = 0;
+    for (let rIdx = 0; rIdx < numRadii; rIdx++) {
+      sum += prAngles[rIdx * angularBins + t];
+    }
+    polarTH[t] = numRadii > 0 ? sum / numRadii : 0;
+  }
+  for (let rIdx = 0; rIdx < numRadii; rIdx++) {
+    let sum = 0;
+    const base = rIdx * angularBins;
+    for (let t = 0; t < angularBins; t++) {
+      sum += prAngles[base + t];
+    }
+    polarR[rIdx] = angularBins > 0 ? sum / angularBins : 0;
+  }
+
+  const rotateWSum = _symmScratch.rotateWSum;
+  for (let i = 0; i < polarRotate.length; i++) {
+    rotateWSum[i] = polarRotate[i] * polarDensity[i];
+  }
+
+  stats.polarTH = polarTH;
+  stats.polarR = polarR;
+  stats.polarDensity = polarDensity;
+  stats.rotateWSum = rotateWSum;
+  stats.densitySum = densitySum;
+
+  let maxEma = 0;
+  for (let k = 2; k < maxHarmonicSearch; k++) {
+    if (state.densityEma[k] > maxEma) maxEma = state.densityEma[k];
+  }
+
+  stats.symmSides = maxIndex > 0 ? maxIndex : 0;
+  stats.symmStrength =
+    maxEma > state.epsilon && maxIndex >= 2
+      ? state.densityEma[maxIndex] / maxEma
+      : 0;
 
   stats.symmAngle = 0;
   stats.symmRotate = 0;
   if (maxIndex > 1) {
-    for (let rIdx = numRadii - 1; rIdx >= 0; rIdx--) {
+    for (let rIdx = 0; rIdx < numRadii; rIdx++) {
       if (sidesVec[rIdx] === maxIndex) {
         stats.symmAngle = angleVec[rIdx];
         stats.symmRotate = rotateVec[rIdx];
@@ -1369,6 +1509,11 @@ function detectSymmetry(cells, size, stats, state, params) {
       }
     }
   }
+
+  const T = Math.max(1e-6, Number(params?.T) || 1);
+  stats.rotationSpeed = Number.isFinite(stats.symmRotate)
+    ? stats.symmRotate * T
+    : 0;
 }
 
 function detectPeriodicity(stats, params, state) {
@@ -1445,6 +1590,16 @@ function computeQuickStats(cells, field, size, params, state) {
     gCosY = 0,
     gSinY = 0;
   let gMass = 0;
+
+  const hasCachedCentre = _stepCenterCache.valid;
+  if (hasCachedCentre) {
+    cosX = _stepCenterCache.cosX;
+    sinX = _stepCenterCache.sinX;
+    cosY = _stepCenterCache.cosY;
+    sinY = _stepCenterCache.sinY;
+    mass = _stepCenterCache.mass;
+  }
+
   const trig = getTrigTables(size);
   const cosT = trig.cos;
   const sinT = trig.sin;
@@ -1456,9 +1611,15 @@ function computeQuickStats(cells, field, size, params, state) {
     for (let x = 0; x < size; x++) {
       const i = row + x;
       const val = cells[i];
-      mass += val;
+      if (!hasCachedCentre) {
+        mass += val;
+        cosX += val * cosT[x];
+        sinX += val * sinT[x];
+        cosY += val * cy;
+        sinY += val * sy;
+      }
       if (val > maxValue) maxValue = val;
-      const gv = Math.max(0, field[i]);
+      const gv = field[i];
       if (gv > 0) {
         growth += gv;
         gMass += gv;
@@ -1467,10 +1628,6 @@ function computeQuickStats(cells, field, size, params, state) {
         gCosY += gv * cy;
         gSinY += gv * sy;
       }
-      cosX += val * cosT[x];
-      sinX += val * sinT[x];
-      cosY += val * cy;
-      sinY += val * sy;
     }
   }
 
@@ -1532,7 +1689,7 @@ function computeQuickStats(cells, field, size, params, state) {
   };
 }
 
-function analyseStep(cells, field, change, params, state) {
+function analyseStep(cells, potential, field, change, params, state) {
   const stats = {
     mass: 0,
     growth: 0,
@@ -1723,7 +1880,12 @@ function analyseStep(cells, field, change, params, state) {
     }
   }
 
-  detectSymmetry(cells, size, stats, state, params);
+  const renderMode = params.renderMode || "world";
+  let polarSource;
+  if (renderMode === "potential" && potential) polarSource = potential;
+  else if (renderMode === "growth" && field) polarSource = field;
+  else polarSource = cells;
+  detectSymmetry(cells, polarSource, size, stats, state, params);
   detectPeriodicity(stats, params, state);
 
   if (state.lastCentreX !== null) {
@@ -2095,7 +2257,11 @@ function autoCenterShift(arr, size, shiftX, shiftY, channelCount) {
   const cellCount = size * size;
   const sx = ((shiftX % size) + size) % size;
   const sy = ((shiftY % size) + size) % size;
-  const tyLut = new Int32Array(size);
+  if (_autoCenterTyLutSize !== size) {
+    _autoCenterTyLut = new Int32Array(size);
+    _autoCenterTyLutSize = size;
+  }
+  const tyLut = _autoCenterTyLut;
   for (let y = 0; y < size; y++) {
     tyLut[y] = ((y + sy) % size) * size;
   }
@@ -2201,7 +2367,6 @@ self.onmessage = function (e) {
     const mutation = msg.mutation || {};
     const channelCount = 1;
     const cellCount = params.size * params.size;
-    const expectedLength = cellCount * channelCount;
 
     let world = new Float32Array(msg.world);
     let potential = new Float32Array(msg.potential);
@@ -2463,12 +2628,14 @@ self.onmessage = function (e) {
 
     const analysis = analyseStep(
       world.subarray(0, cellCount),
+      potential.subarray(0, cellCount),
       growth.subarray(0, cellCount),
       null,
       {
         size: params.size,
         T: params.T,
         R: params.R,
+        renderMode: params.renderMode || "world",
         dimension:
           Number(_ndConfig?.dimension) || Number(params?.dimension) || 2,
       },
@@ -2584,10 +2751,7 @@ self.onmessage = function (e) {
       const ndPlaneCellCount = cellCount * channelCount;
       const ndCache = _ndState._cache;
       const planeMass = ndCache.planeMass;
-      if (
-        _ndStepCache.planeMass &&
-        _ndStepCache.planeCount === ndPlaneCount
-      ) {
+      if (_ndStepCache.planeMass && _ndStepCache.planeCount === ndPlaneCount) {
         planeMass.set(_ndStepCache.planeMass.subarray(0, ndPlaneCount));
       } else {
         for (let p = 0; p < ndPlaneCount; p++) {
@@ -2609,8 +2773,7 @@ self.onmessage = function (e) {
         if (ndDim === 3) {
           zMass = planeMass[z];
         } else {
-          for (let w = 0; w < ndDepth; w++)
-            zMass += planeMass[z + w * ndDepth];
+          for (let w = 0; w < ndDepth; w++) zMass += planeMass[z + w * ndDepth];
         }
         cosZ += zMass * depthCos[z];
         sinZ += zMass * depthSin[z];
@@ -2626,8 +2789,7 @@ self.onmessage = function (e) {
           sinW = 0;
         for (let w = 0; w < ndDepth; w++) {
           let wMass = 0;
-          for (let z = 0; z < ndDepth; z++)
-            wMass += planeMass[z + w * ndDepth];
+          for (let z = 0; z < ndDepth; z++) wMass += planeMass[z + w * ndDepth];
           cosW += wMass * depthCos[w];
           sinW += wMass * depthSin[w];
         }
@@ -2669,17 +2831,33 @@ self.onmessage = function (e) {
     }
 
     let analysisWorld = world;
+    let analysisPotential = potential;
     let analysisGrowth = growth;
     let analysisChange = change;
 
     if (channelCount > 1) {
-      analysisWorld = new Float32Array(cellCount);
-      analysisGrowth = new Float32Array(cellCount);
-      analysisChange = new Float32Array(cellCount);
+      if (_mcAnalysisScratchLen !== cellCount) {
+        _mcAnalysisScratch = {
+          world: new Float32Array(cellCount),
+          potential: new Float32Array(cellCount),
+          growth: new Float32Array(cellCount),
+          change: new Float32Array(cellCount),
+        };
+        _mcAnalysisScratchLen = cellCount;
+      }
+      analysisWorld = _mcAnalysisScratch.world;
+      analysisPotential = _mcAnalysisScratch.potential;
+      analysisGrowth = _mcAnalysisScratch.growth;
+      analysisChange = _mcAnalysisScratch.change;
+      analysisWorld.fill(0);
+      analysisPotential.fill(0);
+      analysisGrowth.fill(0);
+      analysisChange.fill(0);
       for (let c = 0; c < channelCount; c++) {
         const offset = c * cellCount;
         for (let i = 0; i < cellCount; i++) {
           analysisWorld[i] += world[offset + i];
+          analysisPotential[i] += potential[offset + i];
           analysisGrowth[i] += growth[offset + i];
           analysisChange[i] += change[offset + i];
         }
@@ -2690,6 +2868,7 @@ self.onmessage = function (e) {
       size: params.size,
       T: params.T,
       R: params.R,
+      renderMode: params.renderMode || "world",
       dimension: Number(_ndConfig?.dimension) || Number(params?.dimension) || 2,
     };
 
@@ -2701,6 +2880,7 @@ self.onmessage = function (e) {
     if (_analysisState.frames % effectiveInterval === 0) {
       analysis = analyseStep(
         analysisWorld,
+        analysisPotential,
         analysisGrowth,
         analysisChange,
         analysisParams,

@@ -13,30 +13,6 @@ class Renderer {
     this.lastAMu = 5.29177210903e-11;
   }
 
-  _enableOverlayShadow(ctx = null) {
-    const target = ctx || this;
-    const dc =
-      target?.drawingContext ||
-      (typeof drawingContext !== "undefined" ? drawingContext : null);
-    if (!dc) return;
-    dc.shadowColor = "rgba(0, 0, 0, 0.9)";
-    dc.shadowBlur = 4;
-    dc.shadowOffsetX = 2;
-    dc.shadowOffsetY = 2;
-  }
-
-  _disableOverlayShadow(ctx = null) {
-    const target = ctx || this;
-    const dc =
-      target?.drawingContext ||
-      (typeof drawingContext !== "undefined" ? drawingContext : null);
-    if (!dc) return;
-    dc.shadowColor = "rgba(0, 0, 0, 0)";
-    dc.shadowBlur = 0;
-    dc.shadowOffsetX = 0;
-    dc.shadowOffsetY = 0;
-  }
-
   dispose() {
     this.buffer = null;
   }
@@ -179,12 +155,12 @@ class Renderer {
       image(buffer, 0, 0, width, height);
     }
 
-    if (renderOverlay) {
-      this.renderOverlay();
-    }
-
     if (renderNodeOverlay) {
       this.renderNodeOverlay();
+    }
+
+    if (renderOverlay) {
+      this.renderOverlay();
     }
 
     if (renderLegend) {
@@ -240,7 +216,6 @@ class Renderer {
     ];
 
     push();
-    this._enableOverlayShadow();
     textAlign(LEFT, TOP);
     textSize(12);
     noStroke();
@@ -248,7 +223,6 @@ class Renderer {
     const panelY = 20;
     fill(255);
     text(lines.join("\n"), panelX, panelY);
-    this._disableOverlayShadow();
     pop();
   }
 
@@ -273,7 +247,6 @@ class Renderer {
     const angularColour = [214, 39, 40, 235];
 
     push();
-    this._enableOverlayShadow();
 
     fill(255);
     textAlign(LEFT, TOP);
@@ -294,7 +267,6 @@ class Renderer {
     fill(255);
     text(`Angular: ${angularCount}`, panelX + 40, panelY + 45);
 
-    this._disableOverlayShadow();
     pop();
   }
 
@@ -380,7 +352,8 @@ class Renderer {
             const t = i / samples;
             const axis1Value = centre1 - viewRadius + t * 2 * viewRadius;
             const axis2Value =
-              (sign * Math.sqrt(axis1Value * axis1Value + fixedCoord * fixedCoord)) /
+              (sign *
+                Math.sqrt(axis1Value * axis1Value + fixedCoord * fixedCoord)) /
               tanTheta;
 
             const visible =
@@ -491,7 +464,6 @@ class Renderer {
 
   renderLegend() {
     push();
-    this._enableOverlayShadow();
     const { colourMap, exposure } = this.appcore.params;
     this.updateLUT(colourMap || "rocket");
 
@@ -516,12 +488,10 @@ class Renderer {
     drawingContext.fillStyle = grad;
     drawingContext.fillRect(x - w, y1, w, h);
 
-    this._disableOverlayShadow();
     noFill();
     stroke(255, 255, 255, 200);
     strokeWeight(1.5);
     rect(x - w, y1, w, h);
-    this._enableOverlayShadow();
 
     const maxV = Math.max(1e-30, Number(this.lastLegendPeak) || 0);
     const k = Math.floor(Math.log10(maxV));
@@ -581,7 +551,6 @@ class Renderer {
     textSize(12);
     text("Probability density |ψ|² [m⁻³]", 0, 0);
     pop();
-    this._disableOverlayShadow();
     pop();
   }
 
@@ -589,7 +558,6 @@ class Renderer {
     const { name, version } = this.appcore.metadata;
 
     push();
-    this._enableOverlayShadow();
     fill(0, 220);
     noStroke();
     rect(0, 0, width, height);
@@ -697,7 +665,6 @@ class Renderer {
     textAlign(CENTER, BOTTOM);
     text("Press # to close", width / 2, height - 16);
 
-    this._disableOverlayShadow();
     pop();
   }
 }

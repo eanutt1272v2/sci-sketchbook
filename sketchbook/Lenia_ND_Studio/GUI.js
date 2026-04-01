@@ -90,8 +90,11 @@ class GUI {
       .addButton({ title: "Clear World (Del)" })
       .on("click", () => this.appcore?.clearWorld());
     run
-      .addButton({ title: "Randomise (N)" })
+      .addButton({ title: "Random Cells (N)" })
       .on("click", () => this.appcore?.randomiseWorld());
+    run
+      .addButton({ title: "Random Params (M)" })
+      .on("click", () => this.appcore?.randomiseParams(false));
     this.addSeparator(page);
 
     const perf = page.addFolder({ title: "Performance", expanded: true });
@@ -165,8 +168,8 @@ class GUI {
 
       if (dim >= 4) {
         this.ndSliceWBinding = world
-            .addBinding(params, "ndSliceW", {
-              label: "Slice W (Shift+Scroll)",
+          .addBinding(params, "ndSliceW", {
+            label: "Slice W (Shift+Scroll)",
             min: 0,
             max: depthMax,
             step: 1,
@@ -228,14 +231,13 @@ class GUI {
 
     bindAutomaton(growth, "m", {
       min: 0,
-      max: 0.5,
+      max: 1,
       step: 0.001,
       label: "Centre μ (Q/A)",
     });
 
     bindAutomaton(growth, "s", {
       min: 0.0001,
-      max: 0.1,
       step: 0.0001,
       label: "Width σ (W/S)",
     });
@@ -372,23 +374,31 @@ class GUI {
 
     polar.addBinding(params, "autoCenter", { label: "Auto-Centre (')" });
 
-    polar.addBinding(params, "polarMode", {
-      label: "Polar (Ctrl+')",
-      options: {
-        "Off": 0,
-        "Symmetry Overlay": 1,
-      },
-    });
+    polar
+      .addBinding(params, "polarMode", {
+        label: "Polar (Ctrl+')",
+        options: {
+          Off: 0,
+          Symmetry: 1,
+          Polar: 2,
+          History: 3,
+          Strength: 4,
+        },
+      })
+      .on("change", (event) =>
+        this._runIfGUIIdle(() =>
+          this.appcore?.setPolarMode(event.value, { refreshGUI: true }),
+        ),
+      );
 
     polar.addBinding(params, "autoRotateMode", {
       label: "Auto-Rotate (Shift+')",
       options: {
-        "Off": 0,
+        Off: 0,
         "Arrow (velocity)": 1,
-        "Symmetry": 2,
+        Symmetry: 2,
       },
     });
-
   }
 
   createAnimalsTab(page) {
@@ -453,34 +463,28 @@ class GUI {
       })
       .on("change", () => {
         if (!this.appcore || !params.autoScaleSimParams) return;
-        const animal = this.appcore.getSelectedAnimal();
-        if (!animal) return;
-        this.appcore.applyScaledAnimalParams(animal, params.placeScale);
-        this.appcore.updateAutomatonParams();
-        this.appcore.refreshGUI();
+        this.appcore.applySelectedAnimalScaledRT(params.placeScale, {
+          refreshGUI: true,
+        });
       });
 
     placementFolder
       .addButton({ title: "Apply Scaled R, T (Ctrl+Shift+K)" })
       .on("click", () => {
         if (!this.appcore) return;
-        const animal = this.appcore.getSelectedAnimal();
-        if (!animal) return;
-        this.appcore.applyScaledAnimalParams(animal, params.placeScale);
-        this.appcore.updateAutomatonParams();
-        this.appcore.refreshGUI();
+        this.appcore.applySelectedAnimalScaledRT(params.placeScale, {
+          refreshGUI: true,
+        });
       });
 
     placementFolder
-      .addButton({ title: "Reset R, T (Ctrl+Shift+Z)" })
+      .addButton({ title: "Reset Animal Params (Ctrl+Shift+Z)" })
       .on("click", () => {
         if (!this.appcore) return;
-        const animal = this.appcore.getSelectedAnimal();
-        if (animal) {
-          this.appcore.animalLibrary.applyAnimalParameters(animal);
-          this.appcore.updateAutomatonParams();
-          this.appcore.refreshGUI();
-        }
+        this.appcore.applySelectedAnimalParams({
+          respectAutoScale: true,
+          refreshGUI: true,
+        });
       });
   }
 

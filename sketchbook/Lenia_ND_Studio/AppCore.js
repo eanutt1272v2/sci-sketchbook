@@ -470,13 +470,20 @@ class AppCore {
   render() {
     this.input.handleContinuousInput();
 
+    const polarMode = Math.max(
+      0,
+      Math.min(4, Math.floor(Number(this.params.polarMode) || 0)),
+    );
+
+    const isKernel = this.params.renderMode === "kernel";
+
     this.renderer.setViewOffset(
-      this.params.autoCenter,
+      this.params.autoCenter && !isKernel,
       this.statistics.centerX,
       this.statistics.centerY,
     );
 
-    const autoRotAngle = this._computeAutoRotationAngle();
+    const autoRotAngle = isKernel ? 0 : this._computeAutoRotationAngle();
     this.renderer.setAutoRotation(autoRotAngle);
 
     this.renderer.beginAutoRotation();
@@ -488,17 +495,23 @@ class AppCore {
         this.params.renderMode,
         this.params.colourMap,
         this.params,
+        this.statistics,
       );
     } else {
       this.renderer.renderCachedFrame();
     }
 
-    if (this.params.renderGrid || this.params.renderMode === "kernel") {
+    const canRenderWorldGrid = polarMode <= 1;
+    if (
+      canRenderWorldGrid &&
+      (this.params.renderGrid || this.params.renderMode === "kernel")
+    ) {
       this.renderer.renderGrid(this.params.R, this.params);
     }
 
     if (
       this.params.renderMotionOverlay &&
+      polarMode <= 1 &&
       this.params.renderMode !== "kernel"
     ) {
       this.renderer.renderMotionOverlay(this.statistics, this.params);
@@ -513,18 +526,15 @@ class AppCore {
 
     this.renderer.endAutoRotation();
 
-    if (
-      this.params.renderSymmetryOverlay &&
-      this.params.renderMode !== "kernel"
-    ) {
-      this.renderer.renderSymmetryTitle(this.statistics);
+    if (this.params.renderSymmetryOverlay) {
+      this.renderer.renderSymmetryTitle(this.statistics, this.params);
     }
 
-    if (this.params.renderScale) {
+    if (this.params.renderScale && polarMode <= 1) {
       this.renderer.renderScale(this.params.R, this.params);
     }
 
-    if (this.params.renderLegend) {
+    if (this.params.renderLegend && polarMode <= 1) {
       this.renderer.renderLegend();
     }
 
@@ -568,6 +578,7 @@ class AppCore {
   _computeAutoRotationAngle() {
     const dim = this.params.dimension || 2;
     if (dim !== 2) return 0;
+    if ((Number(this.params.polarMode) || 0) > 1) return 0;
     const mode = this.params.autoRotateMode || 0;
     if (mode === 0) return 0;
     if (mode === 1) {
@@ -633,6 +644,74 @@ class AppCore {
         this.analyser.resetStatistics();
         this.analyser.reset();
         this.automaton.reset();
+      }),
+    );
+  }
+
+  randomiseParams(incremental = false) {
+    this._queueAction("randomiseParams", () =>
+      this._queueOrRunMutation(() => {
+        const p = this.params;
+        const size2 = Math.log2(p.gridSize);
+        const dim = p.dimension || 2;
+        const randR1 = Math.floor(Math.pow(2, size2 - 7) * dim * 5);
+        const randR2 = Math.floor(Math.pow(2, size2 - 5) * dim * 5);
+
+        if (incremental) {
+          const isSmall = Math.random() < 0.2;
+          const localAdj = (val, delta, vmin, vmax, digits) => {
+            const f = Math.pow(10, digits);
+            return (
+              Math.round(
+                Math.max(
+                  vmin,
+                  Math.min(vmax, val + (Math.random() * 2 - 1) * delta),
+                ) * f,
+              ) / f
+            );
+          };
+          p.m = localAdj(p.m, isSmall ? 0.02 : 0.05, 0.1, 1.0, 3);
+          p.s = localAdj(p.s, isSmall ? 0.002 : 0.005, 0.01, 1.0, 4);
+          p.h = localAdj(p.h, 0.1, 0.1, 1.0, 2);
+          if (!isSmall && Math.random() < 0.08 && p.b.length > 1) {
+            p.b.pop();
+            if (p.b.length === 1) p.b = [1];
+          } else if (!isSmall && Math.random() < 0.08 && p.b.length < 3) {
+            p.b.push(0);
+          }
+          if (!(p.b.length === 1 && p.b[0] === 1)) {
+            for (let bi = 0; bi < p.b.length; bi++) {
+              if (Math.random() < (isSmall ? 0.04 : 0.2)) {
+                const step = (Math.floor(Math.random() * 3) - 1) / 12;
+                p.b[bi] = Math.max(
+                  0,
+                  Math.min(1, Math.round((p.b[bi] + step) * 12) / 12),
+                );
+              }
+            }
+          }
+        } else {
+          const R =
+            randR1 < randR2
+              ? randR1 + Math.floor(Math.random() * (randR2 - randR1))
+              : randR1;
+          p.R = Math.round(Math.max(2, Math.min(50, R)));
+          const B = 1 + Math.floor(Math.random() * 2);
+          p.b = Array.from(
+            { length: B },
+            () => Math.round(Math.random() * 12) / 12,
+          );
+          p.b[Math.floor(Math.random() * B)] = 1;
+          const globalRand = (vmin, vmax, digits) => {
+            const f = Math.pow(10, digits);
+            return Math.round((Math.random() * (vmax - vmin) + vmin) * f) / f;
+          };
+          p.m = globalRand(0.1, 0.5, 3);
+          const sFactor = Math.random() * 2.5 + 0.5;
+          p.s = Math.round((p.m / 10) * sFactor * 10000) / 10000;
+          p.h = globalRand(0.1, 1.0, 2);
+        }
+        this.updateAutomatonParams();
       }),
     );
   }
@@ -898,8 +977,8 @@ class AppCore {
     const numericConstraints = {
       R: (v) => Math.round(constrain(v, 2, 50)),
       T: (v) => Math.round(constrain(v, 1, 50)),
-      m: (v) => constrain(v, 0, 0.5),
-      s: (v) => constrain(v, 0.0001, 0.1),
+      m: (v) => constrain(v, 0, 1),
+      s: (v) => Math.max(0.0001, v),
       kn: (v) => Math.round(constrain(v, 1, 4)),
       gn: (v) => Math.round(constrain(v, 1, 3)),
       addNoise: (v) => constrain(v, 0, 10),
@@ -946,10 +1025,7 @@ class AppCore {
 
     if (!Array.isArray(p.b) || p.b.length === 0) p.b = [1];
 
-    if (
-      "colourMap" in rawParams &&
-      !this.colourMapKeys.includes(p.colourMap)
-    ) {
+    if ("colourMap" in rawParams && !this.colourMapKeys.includes(p.colourMap)) {
       p.colourMap = prevColourMap;
     }
 
@@ -1166,42 +1242,11 @@ class AppCore {
   loadAnimal(animal) {
     if (!animal) return;
 
-    this._queueAction("loadAnimal", () =>
-      this._queueOrRunMutation(() => {
-        this._ensureBuffers();
-        this.analyser.resetStatistics();
-
-        const dim = Number(this.params.dimension) || 2;
-        if (dim <= 2) {
-          const scale = this.params.placeScale || 1;
-          if (Math.abs(scale - 1) < 1e-6) {
-            this.board.loadPattern(animal);
-          } else {
-            this.board.loadPatternScaled(animal, scale);
-          }
-        } else {
-          this.board.clear();
-        }
-
-        if (dim > 2) {
-          const ndSeed = this._packNDSeed(animal);
-          if (ndSeed) {
-            this._ndSeedWorld = ndSeed;
-          }
-        }
-
-        this.animalLibrary.applyAnimalParameters(animal);
-
-        if (this.params.autoScaleSimParams) {
-          this.applyScaledAnimalParams(animal, this.params.placeScale || 1);
-        }
-
-        this.automaton.updateParameters(this.params);
-        this._workerSendKernel();
-
-        this.refreshGUI();
-      }),
+    this._pendingActions = this._pendingActions.filter(
+      (action) => action.name !== "loadAnimalParams",
     );
+
+    this._queueAnimalLoad(animal, { loadPattern: true });
   }
 
   loadSelectedAnimal() {
@@ -1233,17 +1278,40 @@ class AppCore {
   loadAnimalParams(animal) {
     if (!animal) return;
 
-    this._queueAction("loadAnimalParams", () =>
+    this._queueAnimalLoad(animal, { loadPattern: false });
+  }
+
+  _queueAnimalLoad(animal, { loadPattern = true } = {}) {
+    const actionName = loadPattern ? "loadAnimal" : "loadAnimalParams";
+
+    this._queueAction(actionName, () =>
       this._queueOrRunMutation(() => {
         this._ensureBuffers();
         this.analyser.resetStatistics();
-        this.board.clear();
 
-        this.animalLibrary.applyAnimalParameters(animal);
-
-        if (this.params.autoScaleSimParams) {
-          this.applyScaledAnimalParams(animal, this.params.placeScale || 1);
+        const dim = Number(this.params.dimension) || 2;
+        if (loadPattern && dim <= 2) {
+          const scale = this.params.placeScale || 1;
+          if (Math.abs(scale - 1) < 1e-6) {
+            this.board.loadPattern(animal);
+          } else {
+            this.board.loadPatternScaled(animal, scale);
+          }
+        } else {
+          this.board.clear();
         }
+
+        if (loadPattern && dim > 2) {
+          const ndSeed = this._packNDSeed(animal);
+          if (ndSeed) {
+            this._ndSeedWorld = ndSeed;
+          }
+        }
+
+        this._applyAnimalSimulationParams(animal, {
+          respectAutoScale: true,
+          scale: this.params.placeScale || 1,
+        });
 
         this.automaton.updateParameters(this.params);
         this._workerSendKernel();
@@ -1251,6 +1319,49 @@ class AppCore {
         this.refreshGUI();
       }),
     );
+  }
+
+  _applyAnimalSimulationParams(
+    animal,
+    { respectAutoScale = true, forceScale = false, scale = 1 } = {},
+  ) {
+    if (!animal) return false;
+
+    this.animalLibrary.applyAnimalParameters(animal);
+
+    if (forceScale || (respectAutoScale && this.params.autoScaleSimParams)) {
+      this.applyScaledAnimalParams(animal, scale);
+    }
+
+    return true;
+  }
+
+  applySelectedAnimalParams({
+    respectAutoScale = true,
+    forceScale = false,
+    refreshGUI = false,
+  } = {}) {
+    const animal = this.getSelectedAnimal();
+    if (!animal) return false;
+
+    this._applyAnimalSimulationParams(animal, {
+      respectAutoScale,
+      forceScale,
+      scale: this.params.placeScale || 1,
+    });
+    this.updateAutomatonParams();
+    if (refreshGUI) this.refreshGUI();
+    return true;
+  }
+
+  applySelectedAnimalScaledRT(scale, { refreshGUI = false } = {}) {
+    const animal = this.getSelectedAnimal();
+    if (!animal) return false;
+
+    this.applyScaledAnimalParams(animal, scale);
+    this.updateAutomatonParams();
+    if (refreshGUI) this.refreshGUI();
+    return true;
   }
 
   applyScaledAnimalParams(animal, scale = 1) {
@@ -1280,12 +1391,27 @@ class AppCore {
     this.params.placeScale = next;
 
     if (!this.params.autoScaleSimParams) return;
-    const animal = this.getSelectedAnimal();
-    if (!animal) return;
+    this.applySelectedAnimalScaledRT(next, { refreshGUI: true });
+  }
 
-    this.applyScaledAnimalParams(animal, next);
-    this.updateAutomatonParams();
-    this.refreshGUI();
+  setPolarMode(mode, { refreshGUI = true } = {}) {
+    const nextMode = Math.max(0, Math.min(4, Math.floor(Number(mode) || 0)));
+    this.params.polarMode = nextMode;
+    if (nextMode > 0) {
+      this.params.renderSymmetryOverlay = true;
+    }
+    if (refreshGUI) this.refreshGUI();
+    return nextMode;
+  }
+
+  cyclePolarMode(delta = 1, { refreshGUI = true } = {}) {
+    const current = Math.max(
+      0,
+      Math.min(4, Math.floor(Number(this.params.polarMode) || 0)),
+    );
+    const step = Math.floor(Number(delta) || 0) || 1;
+    const next = (((current + step) % 5) + 5) % 5;
+    return this.setPolarMode(next, { refreshGUI });
   }
 
   loadSelectedAnimalParams() {
@@ -1356,19 +1482,20 @@ class AppCore {
     const scale = this.params.placeScale || 1;
     const request = { selection, cellX, cellY, scale };
 
+    if (
+      this._hasQueuedAction("loadAnimalParams") ||
+      this._hasQueuedAction("loadAnimal")
+    ) {
+      this._queueAction("deferredPlacement", () =>
+        this._queueOrRunMutation(() => {
+          this._executePlacementRequest(request);
+        }),
+      );
+      return;
+    }
+
     if (!this.board.world || (this._worker && this._workerBusy)) {
-      if (
-        this._hasQueuedAction("loadAnimalParams") ||
-        this._hasQueuedAction("loadAnimal")
-      ) {
-        this._queueAction("deferredPlacement", () =>
-          this._queueOrRunMutation(() => {
-            this._executePlacementRequest(request);
-          }),
-        );
-      } else {
-        this._pendingPlacement = request;
-      }
+      this._pendingPlacement = request;
       return;
     }
 
