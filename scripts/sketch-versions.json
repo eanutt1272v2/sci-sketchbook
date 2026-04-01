@@ -8,8 +8,8 @@
     "version": "v5.4.0-dev"
   },
   "Lenia ND Studio": {
-    "file": "sketchbook/Lenia_2D_Studio/LeniaNDStudio.js",
-    "version": "v2.1.0-dev"
+    "file": "sketchbook/Lenia_ND_Studio/LeniaNDStudio.js",
+    "version": "v2.1.1-dev"
   },
   "Psi": {
     "file": "sketchbook/Psi/Psi.js",

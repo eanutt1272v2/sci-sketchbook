@@ -1242,14 +1242,14 @@ class Renderer {
       }
     }
 
-    const drawPolarMode2Lines = polarMode === 2;
-    if (drawPolarMode2Lines || polarMode === 3 || polarMode === 4) {
+    const renderPolarMode2Lines = polarMode === 2;
+    if (renderPolarMode2Lines || polarMode === 3 || polarMode === 4) {
       stroke(c254[0], c254[1], c254[2]);
       strokeWeight(1);
       line(0, splitY, width, splitY);
     }
 
-    if (drawPolarMode2Lines && k > 1) {
+    if (renderPolarMode2Lines && k > 1) {
       stroke(c254[0], c254[1], c254[2]);
       strokeWeight(1);
       for (let i = 0; i < k; i++) {
@@ -1296,7 +1296,7 @@ class Renderer {
           continue;
         }
 
-        if (drawPolarMode2Lines) {
+        if (renderPolarMode2Lines) {
           for (let i = 0; i < kk; i++) {
             const xNorm = (((i / kk - aa / (2 * Math.PI) + 0.5) % 1) + 1) % 1;
             const x = xNorm * this.size * cellPx;
@@ -1365,7 +1365,7 @@ class Renderer {
     if (k < 2) return;
 
     push();
-    this._applyTextFont();
+    if (this.uiFont) textFont(this.uiFont);
     noStroke();
     fill(255);
     textSize(15);
@@ -1377,20 +1377,41 @@ class Renderer {
 
   renderAnimalName(animal) {
     if (!animal) return;
-    const parts = [
-      animal.code || "",
-      animal.name || "",
-      animal.cname ? `${animal.cname}` : "",
-    ].filter(Boolean);
-    const label = parts.join(" ");
-    if (!label) return;
+    const latinParts = [animal.code || "", animal.name || ""].filter(Boolean);
+    const latinLabel = latinParts.join(" ");
+    const cname = animal.cname || "";
+    if (!latinLabel && !cname) return;
+
+    const y = height - 20;
     push();
-    textFont("monospace");
     noStroke();
+    fill(255);
     textSize(15);
     textAlign(CENTER, BOTTOM);
-    fill(255);
-    text(label, width / 2, height - 20);
+
+    if (cname && latinLabel) {
+      if (this.uiFont) textFont(this.uiFont);
+      const latinText = latinLabel + " ";
+      const latinW = textWidth(latinText);
+      textFont(
+        "'Noto Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif",
+      );
+      const cnameW = textWidth(cname);
+      const startX = (width - latinW - cnameW) / 2;
+      if (this.uiFont) textFont(this.uiFont);
+      textAlign(LEFT, BOTTOM);
+      text(latinText, startX, y);
+      textFont(
+        "'Noto Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif",
+      );
+      text(cname, startX + latinW, y);
+    } else if (latinLabel) {
+      if (this.uiFont) textFont(this.uiFont);
+      text(latinLabel, width / 2, y);
+    } else {
+      textFont("'Noto Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif");
+      text(cname, width / 2, y);
+    }
     pop();
   }
 
