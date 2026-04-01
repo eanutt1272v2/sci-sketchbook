@@ -27,8 +27,8 @@ class AppCore {
 
     this.params = {
       running: true,
-      gridSize: 256,
-      pixelSize: 4,
+      gridSize: 128,
+      pixelSize: 9,
 
       dimension: 2,
       animalSource: "auto",
@@ -172,6 +172,7 @@ class AppCore {
     this._skipNextAnimalParamsLoad = false;
     this._lastAnimalParamsSelection = null;
     this._changeRecycleBuffer = null;
+    this._resolutionTransitionActive = false;
     this._initWorker();
   }
 
@@ -322,13 +323,59 @@ class AppCore {
     return out;
   }
 
+  _normalisePlacementRequest(
+    request,
+    fromSize = this.params.gridSize,
+    toSize = this.params.gridSize,
+  ) {
+    if (!request || typeof request !== "object") return null;
+
+    const sourceSize = Math.max(1, Math.floor(Number(fromSize) || 1));
+    const targetSize = Math.max(1, Math.floor(Number(toSize) || 1));
+
+    const rawCellX = Math.floor(Number(request.cellX));
+    const rawCellY = Math.floor(Number(request.cellY));
+    if (!Number.isFinite(rawCellX) || !Number.isFinite(rawCellY)) return null;
+
+    const remap = (coord) => {
+      if (sourceSize === targetSize) {
+        return ((coord % targetSize) + targetSize) % targetSize;
+      }
+
+      const ratio = (coord + 0.5) / sourceSize;
+      const mapped = Math.floor(ratio * targetSize);
+      return ((mapped % targetSize) + targetSize) % targetSize;
+    };
+
+    const rawScale = Number(request.scale);
+    const scale = Number.isFinite(rawScale) ? rawScale : 1;
+
+    return {
+      selection:
+        request.selection === null || typeof request.selection === "undefined"
+          ? ""
+          : String(request.selection),
+      cellX: remap(rawCellX),
+      cellY: remap(rawCellY),
+      scale,
+    };
+  }
+
   _tryExecutePendingPlacement() {
     if (!this._pendingPlacement) return;
     if (this._workerBusy) return;
+    if (this._resolutionTransitionActive) return;
+    if (this._hasQueuedAction("changeResolution")) return;
     if (!this.board.world) return;
 
-    const pp = this._pendingPlacement;
+    const boardSize = this.board?.size || this.params.gridSize;
+    const pp = this._normalisePlacementRequest(
+      this._pendingPlacement,
+      boardSize,
+      boardSize,
+    );
     this._pendingPlacement = null;
+    if (!pp) return;
     this._executePlacementRequest(pp);
   }
 
@@ -338,12 +385,15 @@ class AppCore {
       return;
     }
 
-    const expectedLength = this.params.gridSize * this.params.gridSize;
+    const expectedSize = this.board?.size || this.params.gridSize;
+    const expectedLength = expectedSize * expectedSize;
 
     if (data.type === "kernelReady") {
       if (!this._isKernelPayloadValid(data)) {
         console.error("[Lenia] Ignoring malformed kernelReady payload");
         this._workerBusy = false;
+        this._flushPendingMutations();
+        this._tryExecutePendingPlacement();
         return;
       }
 
@@ -361,6 +411,8 @@ class AppCore {
         this._workerRequestView();
         return;
       }
+
+      this._tryExecutePendingPlacement();
 
       if (
         (Number(this.params.dimension) || 2) > 2 &&
@@ -396,17 +448,24 @@ class AppCore {
         console.error("[Lenia] Ignoring malformed view payload");
         this._workerBusy = false;
         this._ensureBuffers();
-          this._tryExecutePendingPlacement();
+        this._flushPendingMutations();
+        this._tryExecutePendingPlacement();
         return;
       }
 
       if (payloadLength !== expectedLength) {
-        console.warn(
+        const log =
+          this._resolutionTransitionActive ||
+          this._hasQueuedAction("changeResolution")
+            ? console.debug
+            : console.warn;
+        log(
           `[Lenia] Ignoring stale view payload (len=${payloadLength}, expected=${expectedLength})`,
         );
         this._workerBusy = false;
         this._ensureBuffers();
-          this._tryExecutePendingPlacement();
+        this._flushPendingMutations();
+        this._tryExecutePendingPlacement();
         return;
       }
 
@@ -422,7 +481,8 @@ class AppCore {
         console.error("[Lenia] Ignoring malformed view payload");
         this._workerBusy = false;
         this._ensureBuffers();
-          this._tryExecutePendingPlacement();
+        this._flushPendingMutations();
+        this._tryExecutePendingPlacement();
         return;
       }
 
@@ -440,7 +500,10 @@ class AppCore {
       this._flushPendingMutations();
       if (this._kernelPending) {
         this._workerSendKernel();
+        return;
       }
+
+      this._tryExecutePendingPlacement();
       return;
     }
 
@@ -465,17 +528,24 @@ class AppCore {
         console.error("[Lenia] Ignoring malformed step payload");
         this._workerBusy = false;
         this._changeRecycleBuffer = null;
-          this._tryExecutePendingPlacement();
+        this._flushPendingMutations();
+        this._tryExecutePendingPlacement();
         return;
       }
 
       if (payloadLength !== expectedLength) {
-        console.warn(
+        const log =
+          this._resolutionTransitionActive ||
+          this._hasQueuedAction("changeResolution")
+            ? console.debug
+            : console.warn;
+        log(
           `[Lenia] Ignoring stale step payload (len=${payloadLength}, expected=${expectedLength})`,
         );
         this._workerBusy = false;
         this._changeRecycleBuffer = null;
-          this._tryExecutePendingPlacement();
+        this._flushPendingMutations();
+        this._tryExecutePendingPlacement();
         return;
       }
 
@@ -498,6 +568,7 @@ class AppCore {
         console.error("[Lenia] Ignoring malformed step payload");
         this._workerBusy = false;
         this._changeRecycleBuffer = null;
+        this._flushPendingMutations();
         this._tryExecutePendingPlacement();
         return;
       }
@@ -518,13 +589,9 @@ class AppCore {
       this._workerBusy = false;
       this.analyser.countStep();
 
-      if (this._pendingPlacement) {
-        const pp = this._pendingPlacement;
-        this._pendingPlacement = null;
-        this._executePlacementRequest(pp);
-      }
-
       this._flushPendingMutations();
+
+      this._tryExecutePendingPlacement();
 
       this._postStepUpdate(data.analysis);
 
@@ -1088,37 +1155,50 @@ class AppCore {
   }
 
   changeResolution() {
+    this._resolutionTransitionActive = true;
     this._queueAction("changeResolution", () =>
       this._queueOrRunMutation(() => {
-        this._restartWorker();
+        try {
+          this._restartWorker();
 
-        const canvasSize = min(windowWidth, windowHeight);
-        const prevSize = this.board?.size || this.params.gridSize;
-        const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
-        resizeCanvas(canvasSize, canvasSize);
-        this._syncPixelSizeFromGrid();
-        if (
-          dim <= 2 &&
-          this.board?.world &&
-          prevSize > 0 &&
-          prevSize !== this.params.gridSize
-        ) {
-          this.board.resample(this.params.gridSize);
-        } else {
-          this.board.resize(this.params.gridSize);
-        }
-        this.renderer.resize(this.params.gridSize);
+          const canvasSize = min(windowWidth, windowHeight);
+          const prevSize = this.board?.size || this.params.gridSize;
+          const dim = Math.max(
+            2,
+            Math.floor(Number(this.params.dimension) || 2),
+          );
+          const pendingPlacement = this._normalisePlacementRequest(
+            this._pendingPlacement,
+            prevSize,
+            this.params.gridSize,
+          );
+          resizeCanvas(canvasSize, canvasSize);
+          this._syncPixelSizeFromGrid();
+          if (
+            dim <= 2 &&
+            this.board?.world &&
+            prevSize > 0 &&
+            prevSize !== this.params.gridSize
+          ) {
+            this.board.resample(this.params.gridSize);
+          } else {
+            this.board.resize(this.params.gridSize);
+          }
+          this.renderer.resize(this.params.gridSize);
 
-        this._pendingPlacement = null;
-        this.analyser.reset();
-        this.analyser.resetStatistics();
+          this._pendingPlacement = pendingPlacement;
+          this.analyser.reset();
+          this.analyser.resetStatistics();
 
-        this._workerSendKernel();
+          this._workerSendKernel();
 
-        if (this.gui && typeof this.gui.rebuildPane === "function") {
-          this.gui.rebuildPane();
-        } else {
-          this.refreshGUI();
+          if (this.gui && typeof this.gui.rebuildPane === "function") {
+            this.gui.rebuildPane();
+          } else {
+            this.refreshGUI();
+          }
+        } finally {
+          this._resolutionTransitionActive = false;
         }
       }),
     );
@@ -1257,8 +1337,6 @@ class AppCore {
       }
     }
 
-    this._syncPixelSizeFromGrid();
-
     if (typeof NDCompatibility !== "undefined") {
       if ("dimension" in rawParams) {
         p.dimension = NDCompatibility.coerceDimension(p.dimension);
@@ -1282,6 +1360,8 @@ class AppCore {
         p.gridSize = NDCompatibility.coerceGridSize(p.gridSize, p.dimension);
       }
     }
+
+    this._syncPixelSizeFromGrid();
 
     if (!Array.isArray(p.b) || p.b.length === 0) p.b = [1];
 
@@ -1359,6 +1439,7 @@ class AppCore {
           resizeCanvas(canvasSize, canvasSize);
           this.board.resize(nextSize);
           this.renderer.resize(nextSize);
+          this._syncPixelSizeFromGrid();
           this._pendingPlacement = null;
         }
 
@@ -1779,7 +1860,14 @@ class AppCore {
     if (!animal) return;
 
     const scale = this.params.placeScale || 1;
-    const request = { selection, cellX, cellY, scale };
+    const boardSize = this.board?.size || this.params.gridSize;
+    const request = this._normalisePlacementRequest({
+      selection,
+      cellX,
+      cellY,
+      scale,
+    }, boardSize, boardSize);
+    if (!request) return;
 
     if (
       this._hasQueuedAction("loadAnimalParams") ||
@@ -1963,6 +2051,7 @@ class AppCore {
     this._workerBusy = false;
     this._stepPending = false;
     this._kernelPending = false;
+    this._viewPending = false;
     this._changeRecycleBuffer = null;
     this._pendingMutations.length = 0;
     this._initWorker();
@@ -2468,6 +2557,8 @@ class AppCore {
     }
 
     resizeCanvas(canvasSize, canvasSize, true);
+    this._syncPixelSizeFromGrid();
+    this.refreshGUI();
     return false;
   }
 
