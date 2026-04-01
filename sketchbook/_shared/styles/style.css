@@ -87,8 +87,6 @@ canvas {
 
 .tp-dfwv {
   width: 400px !important;
-  border-radius: 10px;
-  backdrop-filter: blur(3px);
 }
 
 .tp-dfwv,
