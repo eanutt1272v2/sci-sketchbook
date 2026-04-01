@@ -8,7 +8,7 @@
     }
     respond @bad_method "Method Not Allowed" 405
 
-    @bad_origin expression `{http.request.header.Origin} != "" && {http.request.header.Origin} != "https://" + {http.request.host} && {http.request.header.Origin} != "http://" + {http.request.host}`
+    @bad_origin expression `{http.request.header.Origin} != "" && {http.request.header.Sec-Fetch-Site} == "cross-site"`
     respond @bad_origin "Forbidden origin" 403
 
     @preflight method OPTIONS

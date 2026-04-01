@@ -394,7 +394,6 @@ class AppCore {
         return;
       }
 
-      // don't add params.running here; it will make it run too fast (~200 fps)!!!!
       if (this._stepPending) {
         this._stepPending = false;
         this._dispatchWorkerStep();

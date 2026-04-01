@@ -173,15 +173,13 @@ rolling history of population counts is maintained for graphing.
 
 ### 5. Model Parameters
 
-|  Parameter  | Symbol |         Description          | Default |   Range   |
-| :---------: | :----: | :--------------------------: | :-----: | :-------: |
-|    Alpha    |  $\alpha$  |  Base turning angle (degrees)  |   180   |  0–360  |
-|    Beta     |  $\beta$   | Turn multiplier per neighbour (degrees) |   17    |  0–180  |
-|    Gamma    |  $\gamma$  |     Velocity scaling coefficient      |  13.4   | 0–100  |
-|   Radius    |   $r$    |     Sensing radius (pixels)      |   15    |  1–100  |
-| Trail Alpha |  $\tau$  | Motion-blur transparency (0 = full trail) |   200   |  0–255  |
-|   Density   |  $\rho$  | Neighbour threshold for high-density flag |   20    |  1–100  |
-| Particles   |  $P$   |     Total particle count      | $\lfloor WH / 120.96 \rfloor$ | 100–20 000 |
+* Alpha ($\alpha$): base turning angle in degrees. Default `180`, range `0–360`.
+* Beta ($\beta$): turn multiplier per neighbour in degrees. Default `17`, range `0–180`.
+* Gamma ($\gamma$): velocity scaling coefficient. Default `13.4`, range `0–100`.
+* Radius ($r$): sensing radius in pixels. Default `15`, range `1–100`.
+* Trail Alpha ($\tau$): motion-blur transparency (`0` = full trail). Default `200`, range `0–255`.
+* Density ($\rho$): neighbour threshold for high-density flag. Default `20`, range `1–100`.
+* Particles ($P$): total particle count. Default `$\lfloor WH / 120.96 \rfloor$`, range `100–20 000`.
 
 > [!NOTE]
 > The default particle count is calibrated to canvas area, maintaining roughly

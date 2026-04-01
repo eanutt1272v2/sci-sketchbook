@@ -18,8 +18,8 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
       - ./sketchbook:/srv:ro,Z
-      - caddy_data:/data:Z
-      - caddy_config:/config:Z
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
   caddy_data:
