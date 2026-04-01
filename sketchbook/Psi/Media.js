@@ -90,6 +90,10 @@ class Media extends MediaCore {
 
     this._mergeByTargetSchema(this.appcore.params, data.params);
 
+    if (typeof this.appcore._sanitisePhysicalParams === "function") {
+      this.appcore._sanitisePhysicalParams();
+    }
+
     this.appcore.gui.enforceConstraints();
     this.appcore.syncViewConstraints();
   }

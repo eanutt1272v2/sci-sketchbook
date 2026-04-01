@@ -4,6 +4,10 @@ class AppCore {
     maxN: 12,
   });
 
+  static ALLOWED_SLICE_PLANES = Object.freeze(["xy", "xz", "yz"]);
+
+  static ALLOWED_IMAGE_FORMATS = Object.freeze(["png", "jpg", "jpeg", "webp"]);
+
   constructor(assets) {
     const { metadata, colourMaps, font } = assets;
 
@@ -326,39 +330,89 @@ class AppCore {
     const params = this.params;
     const protonMassKg = 1.67262192369e-27;
 
-    params.n = Math.max(
+    const clampNumber = (value, min, max, fallback = min) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return fallback;
+      if (numeric < min) return min;
+      if (numeric > max) return max;
+      return numeric;
+    };
+
+    const clampInteger = (value, min, max, fallback = min) =>
+      Math.round(clampNumber(value, min, max, fallback));
+
+    params.n = clampInteger(
+      params.n,
       AppCore.QUANTUM_LIMITS.minN,
-      Math.min(
-        AppCore.QUANTUM_LIMITS.maxN,
-        Math.round(Number(params.n) || AppCore.QUANTUM_LIMITS.minN),
-      ),
+      AppCore.QUANTUM_LIMITS.maxN,
+      AppCore.QUANTUM_LIMITS.minN,
     );
 
-    params.l = Math.max(
-      0,
-      Math.min(params.n - 1, Math.round(Number(params.l) || 0)),
-    );
+    params.l = clampInteger(params.l, 0, params.n - 1, 0);
 
-    params.m = Math.max(
-      -params.l,
-      Math.min(params.l, Math.round(Number(params.m) || 0)),
-    );
+    params.m = clampInteger(params.m, -params.l, params.l, 0);
 
-    params.nuclearCharge = Math.max(
-      1,
-      Math.round(Number(params.nuclearCharge) || 1),
-    );
+    params.nuclearCharge = clampInteger(params.nuclearCharge, 1, 20, 1);
 
     params.useReducedMass = params.useReducedMass !== false;
 
-    const rawMass = Number(params.nucleusMassKg);
     const fallbackMass =
       params.nuclearCharge === 1
         ? protonMassKg
         : Math.max(protonMassKg, params.nuclearCharge * protonMassKg);
 
-    params.nucleusMassKg =
-      Number.isFinite(rawMass) && rawMass > 0 ? rawMass : fallbackMass;
+    params.nucleusMassKg = clampNumber(
+      params.nucleusMassKg,
+      1e-33,
+      1e-20,
+      fallbackMass,
+    );
+
+    if (!this.colourMapKeys.includes(params.colourMap)) {
+      params.colourMap = this.colourMapKeys[0];
+    }
+    params.exposure = clampNumber(params.exposure, 0, 2, 0.75);
+
+    params.resolution = clampInteger(params.resolution, 64, 512, 256);
+    params.pixelSmoothing = params.pixelSmoothing !== false;
+    params.renderOverlay = params.renderOverlay !== false;
+    params.renderNodeOverlay = Boolean(params.renderNodeOverlay);
+    params.renderLegend = params.renderLegend !== false;
+    params.renderKeymapRef = Boolean(params.renderKeymapRef);
+
+    params.viewRadius = clampNumber(params.viewRadius, 1, 256, 45);
+    if (!AppCore.ALLOWED_SLICE_PLANES.includes(params.slicePlane)) {
+      params.slicePlane = "xz";
+    }
+    params.sliceOffset = clampNumber(
+      params.sliceOffset,
+      -params.viewRadius,
+      params.viewRadius,
+      0,
+    );
+
+    const vc = params.viewCentre && typeof params.viewCentre === "object"
+      ? params.viewCentre
+      : { x: 0, y: 0, z: 0 };
+    params.viewCentre = {
+      x: clampNumber(vc.x, -1024, 1024, 0),
+      y: clampNumber(vc.y, -1024, 1024, 0),
+      z: clampNumber(vc.z, -1024, 1024, 0),
+    };
+
+    const fmt = String(params.imageFormat || "png").toLowerCase();
+    params.imageFormat = AppCore.ALLOWED_IMAGE_FORMATS.includes(fmt)
+      ? fmt
+      : "png";
+    params.recordingFPS = clampInteger(params.recordingFPS, 12, 120, 60);
+    params.videoBitrateMbps = clampNumber(params.videoBitrateMbps, 1, 64, 8);
+
+    this._analysisConfig.resolution = clampInteger(
+      this._analysisConfig.resolution,
+      64,
+      512,
+      384,
+    );
   }
 
   getNormalisationPeak() {
@@ -426,6 +480,8 @@ class AppCore {
     const requestId = ++this._renderRequestId;
     this._workerBusy = true;
     this._renderPending = false;
+    const reuseGridBuffer =
+      this._gridRecycleBuffer instanceof ArrayBuffer ? this._gridRecycleBuffer : null;
     const msg = {
       type: "render",
       requestId,
@@ -448,7 +504,7 @@ class AppCore {
       analysisSignature,
       analysisResolution: this._analysisConfig.resolution,
       analysisViewRadius,
-      reuseGridBuffer: this._gridRecycleBuffer,
+      reuseGridBuffer,
     };
     this._worker.postMessage(msg, this._takeGridRecycleTransfer());
   }
@@ -485,7 +541,7 @@ class AppCore {
   }
 
   _onWorkerMessage(data) {
-    if (data.type !== "result") return;
+    if (!data || typeof data !== "object" || data.type !== "result") return;
 
     if (Number(data.requestId) !== this._renderRequestId) {
       return;
@@ -496,9 +552,25 @@ class AppCore {
       return;
     }
 
+    const safeResolution = Math.max(
+      64,
+      Math.min(512, Math.round(Number(data.resolution) || this.params.resolution)),
+    );
+    const expectedBytes = safeResolution * safeResolution * Float32Array.BYTES_PER_ELEMENT;
+    if (data.grid.byteLength !== expectedBytes) {
+      this._workerBusy = false;
+      return;
+    }
+
+    const safePeak = Number(data.peak);
+
     this._workerBusy = false;
     this._applyWorkerAnalysis(data);
-    this.renderer.renderFromGrid(data.grid, data.peak, data.resolution);
+    this.renderer.renderFromGrid(
+      data.grid,
+      Number.isFinite(safePeak) && safePeak > 0 ? safePeak : 1e-30,
+      safeResolution,
+    );
     this._gridRecycleBuffer = data.grid;
 
     if (this._renderPending) {

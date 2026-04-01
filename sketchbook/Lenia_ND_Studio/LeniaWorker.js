@@ -2312,23 +2312,97 @@ function zoomPlanes(arr, size, planeCount, factor) {
   }
 }
 
+function _clamp(value, min, max) {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
+function _toFiniteNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function _toInteger(value, fallback, min, max) {
+  const numeric = Math.round(_toFiniteNumber(value, fallback));
+  return _clamp(numeric, min, max);
+}
+
+function _sanitiseWorkerParams(rawParams) {
+  const source = rawParams && typeof rawParams === "object" ? rawParams : {};
+  const params = { ...source };
+
+  params.size = _toInteger(source.size, 128, 16, 2048);
+  params.R = _toInteger(source.R, 13, 1, Math.max(1, Math.floor(params.size / 2)));
+  params.T = _clamp(_toFiniteNumber(source.T, 10), 0.1, 512);
+  params.m = _clamp(_toFiniteNumber(source.m, 0.15), 0, 1);
+  params.s = _clamp(_toFiniteNumber(source.s, 0.015), 0.0001, 1);
+  params.kn = _toInteger(source.kn, 1, 1, 4);
+  params.gn = _toInteger(source.gn, 1, 1, 3);
+  params.h = _clamp(_toFiniteNumber(source.h, 1), 0.01, 2);
+  params.addNoise = _clamp(_toFiniteNumber(source.addNoise, 0), 0, 10);
+  params.maskRate = _clamp(_toFiniteNumber(source.maskRate, 0), 0, 10);
+  params.paramP = _toInteger(source.paramP, 0, 0, 64);
+  params.softClip = Boolean(source.softClip);
+  params.multiStep = Boolean(source.multiStep);
+
+  if (Array.isArray(source.b)) {
+    const b = source.b
+      .slice(0, 8)
+      .map((v) => _clamp(_toFiniteNumber(v, 0), 0, 1))
+      .filter((v) => Number.isFinite(v));
+    params.b = b.length > 0 ? b : [1];
+  } else {
+    params.b = [1];
+  }
+
+  return params;
+}
+
+function _toFloat32Array(buffer, expectedLength) {
+  if (!(buffer instanceof ArrayBuffer)) {
+    return new Float32Array(Math.max(0, expectedLength || 0));
+  }
+
+  const incoming = new Float32Array(buffer);
+  if (!Number.isFinite(expectedLength) || expectedLength <= 0) {
+    return incoming;
+  }
+
+  if (incoming.length === expectedLength) {
+    return incoming;
+  }
+
+  const out = new Float32Array(expectedLength);
+  out.set(incoming.subarray(0, Math.min(incoming.length, expectedLength)));
+  return out;
+}
+
 self.onmessage = function (e) {
-  const msg = e.data;
+  const msg = e && e.data && typeof e.data === "object" ? e.data : null;
+  if (!msg || typeof msg.type !== "string") return;
+
+  if (
+    !["kernel", "ndMutation", "transform", "view", "step"].includes(msg.type)
+  ) {
+    return;
+  }
 
   if (msg.type === "kernel") {
+    const params = _sanitiseWorkerParams(msg.params);
     if (msg.ndConfig && typeof msg.ndConfig === "object") {
       _ndConfig = msg.ndConfig;
     }
     resetAnalysisState(_analysisState);
 
-    const info = buildKernel(msg.params);
-    const size = msg.params.size || 128;
+    const info = buildKernel(params);
+    const size = params.size || 128;
     _N = nextPow2(size);
     _kernelFFT = buildKernelFFT(info.kernelConvolution, info.kernelSize, _N);
 
     const ndDim = Number(_ndConfig?.dimension) || 2;
     if (ndDim > 2) {
-      const ndKernel = buildKernelND(msg.params, size, ndDim);
+      const ndKernel = buildKernelND(params, size, ndDim);
       _ndKernelFFT = buildKernelFFTND(ndKernel, size, ndDim);
       _ndKernelDim = ndDim;
       _ndKernelSize = size;
@@ -2363,14 +2437,15 @@ self.onmessage = function (e) {
     if (msg.ndConfig && typeof msg.ndConfig === "object") {
       _ndConfig = msg.ndConfig;
     }
-    const params = msg.params;
+    const params = _sanitiseWorkerParams(msg.params);
     const mutation = msg.mutation || {};
     const channelCount = 1;
     const cellCount = params.size * params.size;
+    const expectedLength = cellCount * channelCount;
 
-    let world = new Float32Array(msg.world);
-    let potential = new Float32Array(msg.potential);
-    let growth = new Float32Array(msg.growth);
+    let world = _toFloat32Array(msg.world, expectedLength);
+    let potential = _toFloat32Array(msg.potential, expectedLength);
+    let growth = _toFloat32Array(msg.growth, expectedLength);
 
     if (!_ndState) {
       ndEnsureState(params, _ndConfig, world, null);
@@ -2518,15 +2593,15 @@ self.onmessage = function (e) {
     if (msg.ndConfig && typeof msg.ndConfig === "object") {
       _ndConfig = msg.ndConfig;
     }
-    const params = msg.params;
+    const params = _sanitiseWorkerParams(msg.params);
     const transform = msg.transform || {};
     const channelCount = 1;
     const cellCount = params.size * params.size;
     const expectedLength = cellCount * channelCount;
 
-    let world = new Float32Array(msg.world);
-    let potential = new Float32Array(msg.potential);
-    let growth = new Float32Array(msg.growth);
+    let world = _toFloat32Array(msg.world, expectedLength);
+    let potential = _toFloat32Array(msg.potential, expectedLength);
+    let growth = _toFloat32Array(msg.growth, expectedLength);
 
     if ((Number(_ndConfig?.dimension) || 2) > 2 && _ndState) {
       const { size } = _ndState;
@@ -2589,7 +2664,7 @@ self.onmessage = function (e) {
       _ndConfig = msg.ndConfig;
     }
 
-    const params = msg.params;
+    const params = _sanitiseWorkerParams(msg.params);
     const channelCount = 1;
     const cellCount = params.size * params.size;
     const expectedLength = cellCount * channelCount;
@@ -2603,11 +2678,11 @@ self.onmessage = function (e) {
       return arr;
     };
 
-    let world = ensureLength(new Float32Array(msg.world));
-    let potential = ensureLength(new Float32Array(msg.potential));
-    let growth = ensureLength(new Float32Array(msg.growth));
+    let world = ensureLength(_toFloat32Array(msg.world, expectedLength));
+    let potential = ensureLength(_toFloat32Array(msg.potential, expectedLength));
+    let growth = ensureLength(_toFloat32Array(msg.growth, expectedLength));
     let growthOld = msg.growthOld
-      ? ensureLength(new Float32Array(msg.growthOld))
+      ? ensureLength(_toFloat32Array(msg.growthOld, expectedLength))
       : null;
 
     if ((Number(_ndConfig?.dimension) || 2) > 2) {
@@ -2663,17 +2738,20 @@ self.onmessage = function (e) {
     if (msg.ndConfig && typeof msg.ndConfig === "object") {
       _ndConfig = msg.ndConfig;
     }
-    const worldIn = new Float32Array(msg.world);
-    const potentialIn = new Float32Array(msg.potential);
-    const growthIn = new Float32Array(msg.growth);
-    const growthOldIn = msg.growthOld ? new Float32Array(msg.growthOld) : null;
-    const changeOutIn = msg.changeBuffer
-      ? new Float32Array(msg.changeBuffer)
-      : null;
-    const params = msg.params;
+    const params = _sanitiseWorkerParams(msg.params);
     const channelCount = 1;
     const cellCount = params.size * params.size;
     const expectedLength = cellCount * channelCount;
+
+    const worldIn = _toFloat32Array(msg.world, expectedLength);
+    const potentialIn = _toFloat32Array(msg.potential, expectedLength);
+    const growthIn = _toFloat32Array(msg.growth, expectedLength);
+    const growthOldIn = msg.growthOld
+      ? _toFloat32Array(msg.growthOld, expectedLength)
+      : null;
+    const changeOutIn = msg.changeBuffer
+      ? _toFloat32Array(msg.changeBuffer, expectedLength)
+      : null;
 
     const ensureLength = (arr) => {
       if (!arr || arr.length !== expectedLength) {

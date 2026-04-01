@@ -30,9 +30,8 @@ Live instances: <https://sci-sketchbook.onrender.com/> (will wind down) | <https
 ### Deployment
 
 * [Running Locally](#3-running-locally)
-* [Docker Deployment](#31-docker--caddy-recommended)
+* [Podman Deployment](#31-podman--caddy-recommended)
 * [Static Server](#32-single-sketch-via-static-server)
-* [Processing Sketches](#33-processing-sketches)
 * [Licence](#licence)
 
 ---
@@ -90,17 +89,20 @@ All sketches support a common `simpipe.*` JSON standard for purposes such as par
 
 ### 3. Running Locally
 
-#### 3.1 Docker + Caddy (recommended)
+#### 3.1 Podman + Caddy (recommended)
 
 ```bash
 git clone https://github.com/eanutt1272v2/sci-sketchbook.git
 cd sci-sketchbook
-docker compose up -d
+podman compose up -d --build
 ```
 
-Open `http://localhost` and navigate to `sketchbook/<Sketch_Name>/`.
+Open `http://localhost:8080` and navigate to `sketchbook/<Sketch_Name>/`.
 
-The Caddy reverse proxy serves all sketches with correct MIME types and headers for Web Worker and SharedArrayBuffer support.
+The Caddy reverse proxy serves all sketches with correct MIME types and hardened security headers for Worker and SharedArrayBuffer support, including COOP/COEP plus origin and method validation.
+
+> [!TIP]
+> If your Podman installation does not include the Compose plugin, use `podman-compose up -d --build` instead.
 
 #### 3.2 Single sketch via static server
 
@@ -112,7 +114,7 @@ python3 -m http.server 8080
 Open `http://localhost:8080`.
 
 > [!NOTE]
-> Some sketches using `SharedArrayBuffer` or advanced Worker features may require specific HTTP headers (`Cross-Origin-Opener-Policy`, `Cross-Origin-Embedder-Policy`). The Docker + Caddy setup handles these automatically, however, a bare static server may not.
+> Some sketches using `SharedArrayBuffer` or advanced Worker features require cross-origin isolation headers (`Cross-Origin-Opener-Policy`, `Cross-Origin-Embedder-Policy`). The Podman + Caddy setup applies these headers automatically, however, a bare static server may not.
 
 ---
 

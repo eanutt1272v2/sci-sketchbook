@@ -3,6 +3,7 @@ class Media extends MediaCore {
     super(appcore, "[Fluvia][Media]");
     this._heightmapExportDeferred = false;
     this._worldExportDeferred = false;
+    this._maxEncodedMapChars = 32 * 1024 * 1024;
 
     this.importInput = this._createHiddenInput("image/*", (file) =>
       this.handleHeightmapImport(file),
@@ -228,9 +229,11 @@ class Media extends MediaCore {
           throw new Error("[Fluvia] Invalid world JSON: invalid terrainSize");
         }
 
+        const normalisedSize = this.appcore._normaliseTerrainSize(incomingSize);
+
         this.appcore._terminateWorker();
-        if (incomingSize !== this.appcore.params.terrainSize) {
-          this.appcore.params.terrainSize = incomingSize;
+        if (normalisedSize !== this.appcore.params.terrainSize) {
+          this.appcore.params.terrainSize = normalisedSize;
           this.appcore.terrain = new Terrain(this.appcore);
         } else {
           this.appcore._reallocTerrainBuffers();
@@ -249,7 +252,7 @@ class Media extends MediaCore {
         importedTerrain.updateBoundsCache();
         this.appcore.analyser.reinitialise();
         this._applyParamsSnapshot(data.params, {
-          forceTerrainSize: incomingSize,
+          forceTerrainSize: normalisedSize,
         });
         this._applyStatisticsSnapshot(data.statistics);
         this.appcore._initWorker();
@@ -368,6 +371,8 @@ class Media extends MediaCore {
       source &&
       typeof source === "object" &&
       source.encoding === "rle-f32-v1" &&
+      Number.isFinite(Number(source.length)) &&
+      Number(source.length) > 0 &&
       typeof source.data === "string"
     );
   }
@@ -384,6 +389,10 @@ class Media extends MediaCore {
       );
     }
 
+    if (source.data.length > this._maxEncodedMapChars) {
+      throw new Error("[Fluvia] Encoded world map exceeds size limit");
+    }
+
     return RLECodec.decodeFloat32Array(source.data, length);
   }
 
@@ -393,8 +402,14 @@ class Media extends MediaCore {
     const target = this.appcore.params;
     this._mergeByTargetSchema(target, incoming);
 
+    if (typeof this.appcore._sanitiseParams === "function") {
+      this.appcore._sanitiseParams();
+    }
+
     if (typeof options.forceTerrainSize === "number") {
-      target.terrainSize = options.forceTerrainSize;
+      target.terrainSize = this.appcore._normaliseTerrainSize(
+        options.forceTerrainSize,
+      );
     }
   }
 

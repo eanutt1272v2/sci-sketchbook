@@ -6,6 +6,89 @@ const CONSTS = {
   bohrRadiusM: 5.29177210903e-11,
 };
 
+function clamp(value, min, max) {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
+function toFiniteNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function toInteger(value, fallback, min, max) {
+  const numeric = Math.round(toFiniteNumber(value, fallback));
+  return clamp(numeric, min, max);
+}
+
+function sanitiseRenderPayload(data) {
+  const n = toInteger(data.n, 1, 1, 12);
+  const l = toInteger(data.l, 0, 0, n - 1);
+  const m = toInteger(data.m, 0, -l, l);
+  const res = toInteger(data.res, 256, 64, 512);
+
+  const viewRadius = clamp(toFiniteNumber(data.viewRadius, 45), 1, 256);
+  const slicePlane = ["xy", "xz", "yz"].includes(data.slicePlane)
+    ? data.slicePlane
+    : "xz";
+  const sliceOffset = clamp(
+    toFiniteNumber(data.sliceOffset, 0),
+    -viewRadius,
+    viewRadius,
+  );
+
+  const viewCentreRaw =
+    data.viewCentre && typeof data.viewCentre === "object"
+      ? data.viewCentre
+      : {};
+  const viewCentre = {
+    x: clamp(toFiniteNumber(viewCentreRaw.x, 0), -1024, 1024),
+    y: clamp(toFiniteNumber(viewCentreRaw.y, 0), -1024, 1024),
+    z: clamp(toFiniteNumber(viewCentreRaw.z, 0), -1024, 1024),
+  };
+
+  const nuclearCharge = toInteger(data.nuclearCharge, 1, 1, 20);
+  const useReducedMass = data.useReducedMass !== false;
+  const fallbackMass =
+    nuclearCharge === 1
+      ? CONSTS.protonMassKg
+      : Math.max(CONSTS.protonMassKg, nuclearCharge * CONSTS.protonMassKg);
+  const nucleusMassKg = clamp(
+    toFiniteNumber(data.nucleusMassKg, fallbackMass),
+    1e-33,
+    1e-20,
+  );
+
+  return {
+    requestId: toInteger(data.requestId, 0, 0, 0x7fffffff),
+    n,
+    l,
+    m,
+    res,
+    viewRadius,
+    slicePlane,
+    sliceOffset,
+    viewCentre,
+    nuclearCharge,
+    useReducedMass,
+    nucleusMassKg,
+    includeAnalysis: Boolean(data.includeAnalysis),
+    analysisSignature:
+      typeof data.analysisSignature === "string"
+        ? data.analysisSignature.slice(0, 256)
+        : "",
+    analysisResolution: toInteger(data.analysisResolution, 384, 64, 512),
+    analysisViewRadius: clamp(
+      toFiniteNumber(data.analysisViewRadius, viewRadius),
+      1,
+      512,
+    ),
+    reuseGridBuffer:
+      data.reuseGridBuffer instanceof ArrayBuffer ? data.reuseGridBuffer : null,
+  };
+}
+
 function logGamma(z) {
   const coeffs = [
     676.5203681218851, -1259.1392167224028, 771.32342877765313,
@@ -390,72 +473,46 @@ function computeGrid(
 }
 
 self.onmessage = function (e) {
-  const { type } = e.data;
+  const msg = e && e.data && typeof e.data === "object" ? e.data : {};
+  const { type } = msg;
 
   if (type === "render") {
-    const {
-      requestId,
-      n,
-      l,
-      m,
-      res,
-      viewRadius,
-      slicePlane,
-      sliceOffset,
-      viewCentre,
-      nuclearCharge,
-      useReducedMass,
-      nucleusMassKg,
-      includeAnalysis,
-      analysisSignature,
-      analysisResolution,
-      analysisViewRadius,
-    } = e.data;
-
-    const charge = Math.max(1, Math.round(Number(nuclearCharge) || 1));
-    const reducedMassEnabled = useReducedMass !== false;
-    const nucleusMass = Number(nucleusMassKg) || undefined;
+    const safe = sanitiseRenderPayload(msg);
 
     const { grid, peak } = computeGrid(
-      n,
-      l,
-      m,
-      res,
-      viewRadius,
-      slicePlane,
-      sliceOffset,
-      viewCentre,
-      charge,
-      reducedMassEnabled,
-      nucleusMass,
-      e.data.reuseGridBuffer || null,
+      safe.n,
+      safe.l,
+      safe.m,
+      safe.res,
+      safe.viewRadius,
+      safe.slicePlane,
+      safe.sliceOffset,
+      safe.viewCentre,
+      safe.nuclearCharge,
+      safe.useReducedMass,
+      safe.nucleusMassKg,
+      safe.reuseGridBuffer,
     );
 
     let analysisStats = null;
     let analysisPeak = null;
     let analysisAMu = null;
-    let canonicalResolution = Math.max(
-      32,
-      Math.round(Number(analysisResolution) || 384),
-    );
-    let canonicalViewRadius = Math.max(
-      1,
-      Number(analysisViewRadius) || viewRadius,
-    );
+    const canonicalResolution = safe.analysisResolution;
+    const canonicalViewRadius = safe.analysisViewRadius;
 
-    if (includeAnalysis) {
+    if (safe.includeAnalysis) {
       const canonical = computeGrid(
-        n,
-        l,
-        m,
+        safe.n,
+        safe.l,
+        safe.m,
         canonicalResolution,
         canonicalViewRadius,
-        slicePlane,
-        sliceOffset,
+        safe.slicePlane,
+        safe.sliceOffset,
         { x: 0, y: 0, z: 0 },
-        charge,
-        reducedMassEnabled,
-        nucleusMass,
+        safe.nuclearCharge,
+        safe.useReducedMass,
+        safe.nucleusMassKg,
       );
 
       analysisPeak = canonical.peak;
@@ -465,11 +522,11 @@ self.onmessage = function (e) {
         canonicalResolution,
         canonicalViewRadius,
         {
-          n,
-          l,
-          nuclearCharge: charge,
-          useReducedMass: reducedMassEnabled,
-          nucleusMassKg: nucleusMass,
+          n: safe.n,
+          l: safe.l,
+          nuclearCharge: safe.nuclearCharge,
+          useReducedMass: safe.useReducedMass,
+          nucleusMassKg: safe.nucleusMassKg,
         },
       );
     }
@@ -477,15 +534,15 @@ self.onmessage = function (e) {
     self.postMessage(
       {
         type: "result",
-        requestId,
-        resolution: res,
+        requestId: safe.requestId,
+        resolution: safe.res,
         grid: grid.buffer,
         peak,
         analysisPeak,
         analysisAMu,
         analysisResolution: canonicalResolution,
         analysisViewRadius: canonicalViewRadius,
-        analysisSignature: includeAnalysis ? analysisSignature : "",
+        analysisSignature: safe.includeAnalysis ? safe.analysisSignature : "",
         analysisStats,
       },
       [grid.buffer],

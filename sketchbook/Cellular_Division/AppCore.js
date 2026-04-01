@@ -3,6 +3,7 @@ class AppCore {
     const { metadata = null } = assets;
 
     this.metadata = metadata;
+    this.maxJSONImportBytes = 32 * 1024 * 1024;
     this.theme = new Theme();
     this.sim = new Simulation(this.theme);
     this.ui = new UIManager(this);
@@ -176,9 +177,12 @@ class AppCore {
 
       const history = data?.statistics?.history;
       if (Array.isArray(history)) {
-        this.sim._history = history
-          .map((value) => Number(value) || 0)
-          .slice(-Math.max(10, width));
+        const maxHistory = Math.max(10, width);
+        const trimmed = history.slice(-maxHistory);
+        this.sim._history = trimmed.map((value) => {
+          const numeric = Number(value);
+          return Number.isFinite(numeric) ? numeric : 0;
+        });
       }
     });
   }
@@ -262,6 +266,14 @@ class AppCore {
     input.addEventListener("change", (event) => {
       const file = event.target.files && event.target.files[0];
       if (!file) {
+        document.body.removeChild(input);
+        return;
+      }
+
+      if (file.size > this.maxJSONImportBytes) {
+        console.error(
+          `[Cellular Division] JSON import failed: file too large (${file.size} bytes, max ${this.maxJSONImportBytes})`,
+        );
         document.body.removeChild(input);
         return;
       }

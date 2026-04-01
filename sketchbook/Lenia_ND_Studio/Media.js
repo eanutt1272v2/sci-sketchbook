@@ -2,6 +2,7 @@ class Media extends MediaCore {
   constructor(appcore) {
     super(appcore, "[Lenia][Media]");
     this._worldExportDeferred = false;
+    this._maxEncodedFieldChars = 32 * 1024 * 1024;
   }
 
   exportWorldJSON() {
@@ -87,7 +88,14 @@ class Media extends MediaCore {
     const fields = {};
     for (const [key, val] of Object.entries(data.world)) {
       if (key === "size") continue;
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
+        continue;
+      }
+
       if (typeof val === "string") {
+        if (val.length > this._maxEncodedFieldChars) {
+          throw new Error("[Lenia] Invalid world JSON: encoded field exceeds size limit");
+        }
         const legacy = RLECodec.decode(val, size, size);
         const arr = new Float32Array(expectedLength);
         arr.set(legacy.subarray(0, Math.min(legacy.length, expectedLength)));
@@ -266,6 +274,10 @@ class Media extends MediaCore {
       throw new Error(
         `[Lenia] Invalid world JSON: encoded float field length mismatch (expected ${expectedLength}, got ${length})`,
       );
+    }
+
+    if (source.data.length > this._maxEncodedFieldChars) {
+      throw new Error("[Lenia] Invalid world JSON: encoded float field exceeds size limit");
     }
 
     return RLECodec.decodeFloat32Array(source.data, length);

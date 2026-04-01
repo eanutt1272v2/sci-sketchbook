@@ -211,8 +211,70 @@ class AppCore {
     });
   }
 
+  _bufferToFloat32(buffer, expectedLength) {
+    if (!(buffer instanceof ArrayBuffer)) return null;
+    if (buffer.byteLength !== expectedLength * Float32Array.BYTES_PER_ELEMENT) {
+      return null;
+    }
+    return new Float32Array(buffer);
+  }
+
+  _isKernelPayloadValid(data) {
+    if (!data || typeof data !== "object") return false;
+    if (!(data.kernel instanceof ArrayBuffer)) return false;
+    if (!(data.kernelDX instanceof ArrayBuffer)) return false;
+    if (!(data.kernelDY instanceof ArrayBuffer)) return false;
+    if (!(data.kernelValues instanceof ArrayBuffer)) return false;
+
+    const kernelSize = Number(data.kernelSize);
+    if (!Number.isFinite(kernelSize) || kernelSize <= 0) return false;
+
+    const kernelFloatLen = data.kernel.byteLength / Float32Array.BYTES_PER_ELEMENT;
+    const kernelDxLen = data.kernelDX.byteLength / Int16Array.BYTES_PER_ELEMENT;
+    const kernelDyLen = data.kernelDY.byteLength / Int16Array.BYTES_PER_ELEMENT;
+    const kernelValuesLen =
+      data.kernelValues.byteLength / Float32Array.BYTES_PER_ELEMENT;
+
+    if (!Number.isInteger(kernelFloatLen) || kernelFloatLen <= 0) return false;
+    if (!Number.isInteger(kernelDxLen) || kernelDxLen <= 0) return false;
+    if (!Number.isInteger(kernelDyLen) || kernelDyLen <= 0) return false;
+    if (!Number.isInteger(kernelValuesLen) || kernelValuesLen <= 0) return false;
+
+    return kernelDxLen === kernelDyLen && kernelDyLen === kernelValuesLen;
+  }
+
+  _normaliseImportedSeries(series, maxRows = 10000, maxCols = 64) {
+    if (!Array.isArray(series)) return [];
+    const start = Math.max(0, series.length - maxRows);
+    const out = [];
+    for (let i = start; i < series.length; i++) {
+      const row = series[i];
+      if (!Array.isArray(row)) continue;
+      const safeRow = new Array(Math.min(row.length, maxCols));
+      for (let j = 0; j < safeRow.length; j++) {
+        const n = Number(row[j]);
+        safeRow[j] = Number.isFinite(n) ? n : 0;
+      }
+      out.push(safeRow);
+    }
+    return out;
+  }
+
   _onWorkerMessage(data) {
+    if (!data || typeof data !== "object" || typeof data.type !== "string") {
+      this._workerBusy = false;
+      return;
+    }
+
+    const expectedLength = this.params.gridSize * this.params.gridSize;
+
     if (data.type === "kernelReady") {
+      if (!this._isKernelPayloadValid(data)) {
+        console.error("[Lenia] Ignoring malformed kernelReady payload");
+        this._workerBusy = false;
+        return;
+      }
+
       this.automaton.applyWorkerKernel(data);
       this._workerBusy = false;
 
@@ -244,11 +306,26 @@ class AppCore {
     }
 
     if (data.type === "view") {
+      const world = this._bufferToFloat32(data.world, expectedLength);
+      const potential = this._bufferToFloat32(data.potential, expectedLength);
+      const growth = this._bufferToFloat32(data.growth, expectedLength);
+      const growthOld =
+        data.growthOld === null || typeof data.growthOld === "undefined"
+          ? null
+          : this._bufferToFloat32(data.growthOld, expectedLength);
+
+      if (!world || !potential || !growth || (data.growthOld && !growthOld)) {
+        console.error("[Lenia] Ignoring malformed view payload");
+        this._workerBusy = false;
+        this._ensureBuffers();
+        return;
+      }
+
       const b = this.board;
-      b.world = new Float32Array(data.world);
-      b.potential = new Float32Array(data.potential);
-      b.growth = new Float32Array(data.growth);
-      b.growthOld = data.growthOld ? new Float32Array(data.growthOld) : null;
+      b.world = world;
+      b.potential = potential;
+      b.growth = growth;
+      b.growthOld = growthOld;
 
       if (data.analysis) {
         this.analyser.applyWorkerStatistics(data.analysis, this.automaton);
@@ -263,14 +340,37 @@ class AppCore {
     }
 
     if (data.type === "result") {
+      const world = this._bufferToFloat32(data.world, expectedLength);
+      const potential = this._bufferToFloat32(data.potential, expectedLength);
+      const growth = this._bufferToFloat32(data.growth, expectedLength);
+      const change = this._bufferToFloat32(data.change, expectedLength);
+      const growthOld =
+        data.growthOld === null || typeof data.growthOld === "undefined"
+          ? null
+          : this._bufferToFloat32(data.growthOld, expectedLength);
+
+      if (
+        !world ||
+        !potential ||
+        !growth ||
+        !change ||
+        (data.growthOld && !growthOld)
+      ) {
+        console.error("[Lenia] Ignoring malformed step payload");
+        this._workerBusy = false;
+        this._ensureBuffers();
+        this._changeRecycleBuffer = null;
+        return;
+      }
+
       const b = this.board;
 
-      b.world = new Float32Array(data.world);
-      b.potential = new Float32Array(data.potential);
-      b.growth = new Float32Array(data.growth);
-      b.growthOld = data.growthOld ? new Float32Array(data.growthOld) : null;
+      b.world = world;
+      b.potential = potential;
+      b.growth = growth;
+      b.growthOld = growthOld;
 
-      this.automaton.change = new Float32Array(data.change);
+      this.automaton.change = change;
       this._changeRecycleBuffer = data.change;
       this.automaton.gen++;
       this.automaton.time =
@@ -1149,10 +1249,10 @@ class AppCore {
         this.analyser.resetStatistics();
         this.analyser.reset();
         if (payload.statistics && typeof payload.statistics === "object") {
-          Object.assign(this.statistics, payload.statistics);
+          this._mergeByTargetSchema(this.statistics, payload.statistics);
         }
         if (Array.isArray(payload.series)) {
-          this.analyser.series = JSON.parse(JSON.stringify(payload.series));
+          this.analyser.series = this._normaliseImportedSeries(payload.series);
         }
 
         this._workerSendKernel();

@@ -69,11 +69,20 @@ class Analyser {
   }
 
   _copyFromBuffer(target, buffer, TypedArrayCtor) {
-    const incoming = new TypedArrayCtor(buffer);
-    if (!target || target.length !== incoming.length) {
-      target = new TypedArrayCtor(incoming.length);
+    if (!(buffer instanceof ArrayBuffer)) {
+      return target;
     }
-    target.set(incoming);
+
+    const incoming = new TypedArrayCtor(buffer);
+    const targetLength = target && typeof target.length === "number" ? target.length : 0;
+    const outputLength = targetLength > 0 ? targetLength : incoming.length;
+
+    if (!target || target.length !== outputLength) {
+      target = new TypedArrayCtor(outputLength);
+    }
+
+    target.fill(0);
+    target.set(incoming.subarray(0, outputLength));
     return target;
   }
 

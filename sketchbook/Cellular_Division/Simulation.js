@@ -101,6 +101,8 @@ class Simulation {
   }
 
   _onWorkerMessage(data) {
+    if (!data || typeof data !== "object") return;
+
     if (data.type === "ready") {
       this._workerReady = true;
       this._workerBusy = false;
@@ -112,8 +114,22 @@ class Simulation {
     }
     if (data.type !== "result") return;
 
+    if (!(data.particleData instanceof ArrayBuffer)) {
+      this._workerBusy = false;
+      return;
+    }
+
     this._workerBusy = false;
     const sourceParticleData = new Float32Array(data.particleData);
+    const derivedCount = Math.floor(sourceParticleData.length / 4);
+    const requestedCount = Math.round(Number(data.particleCount));
+    const particleCount =
+      Number.isFinite(requestedCount) &&
+      requestedCount >= 0 &&
+      requestedCount <= derivedCount
+        ? requestedCount
+        : derivedCount;
+
     if (
       !this._renderParticleData ||
       this._renderParticleData.length !== sourceParticleData.length
@@ -124,9 +140,11 @@ class Simulation {
 
     this._lastResult = {
       particleData: this._renderParticleData,
-      particleCount: data.particleCount,
-      population: data.population,
-      elapsed: data.elapsed,
+      particleCount,
+      population: Number.isFinite(Number(data.population))
+        ? Number(data.population)
+        : 0,
+      elapsed: Number.isFinite(Number(data.elapsed)) ? Number(data.elapsed) : 0,
       paused: data.paused,
     };
     this._particleBufferForWorker = data.particleData;

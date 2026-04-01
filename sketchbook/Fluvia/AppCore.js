@@ -1,4 +1,6 @@
 class AppCore {
+  static ALLOWED_TERRAIN_SIZES = Object.freeze([128, 256, 512]);
+
   constructor(assets) {
     const { metadata, vertShader, fragShader, colourMaps, font } = assets;
 
@@ -102,8 +104,152 @@ class AppCore {
       compositeMeanWaterAlpha: 0,
     };
 
+    this._defaultColourPalette = {
+      skyColour: { ...this.params.skyColour },
+      steepColour: { ...this.params.steepColour },
+      flatColour: { ...this.params.flatColour },
+      sedimentColour: { ...this.params.sedimentColour },
+      waterColour: { ...this.params.waterColour },
+    };
+
     this.initialiseModules();
     this.terrain.generate();
+  }
+
+  _clampNumber(value, min, max, fallback = min) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    if (numeric < min) return min;
+    if (numeric > max) return max;
+    return numeric;
+  }
+
+  _normaliseTerrainSize(value) {
+    const allowed = AppCore.ALLOWED_TERRAIN_SIZES;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return this.params.terrainSize;
+    }
+
+    let nearest = allowed[0];
+    let nearestDistance = Math.abs(allowed[0] - numeric);
+    for (let i = 1; i < allowed.length; i++) {
+      const distance = Math.abs(allowed[i] - numeric);
+      if (distance < nearestDistance) {
+        nearest = allowed[i];
+        nearestDistance = distance;
+      }
+    }
+
+    return nearest;
+  }
+
+  _sanitiseColour(value, fallback) {
+    const source = value && typeof value === "object" ? value : fallback;
+    return {
+      r: Math.round(this._clampNumber(source.r, 0, 255, fallback.r)),
+      g: Math.round(this._clampNumber(source.g, 0, 255, fallback.g)),
+      b: Math.round(this._clampNumber(source.b, 0, 255, fallback.b)),
+    };
+  }
+
+  _sanitiseParams() {
+    const p = this.params;
+
+    p.running = Boolean(p.running);
+    p.renderStats = Boolean(p.renderStats);
+    p.renderLegend = Boolean(p.renderLegend);
+    p.renderKeymapRef = Boolean(p.renderKeymapRef);
+
+    p.terrainSize = this._normaliseTerrainSize(p.terrainSize);
+
+    p.dropletsPerFrame = Math.round(
+      this._clampNumber(p.dropletsPerFrame, 0, 2048, 256),
+    );
+    p.maxAge = Math.round(this._clampNumber(p.maxAge, 8, 2048, 500));
+    p.minVolume = this._clampNumber(p.minVolume, 1e-5, 1, 0.01);
+
+    p.noiseScale = this._clampNumber(p.noiseScale, 0.01, 10, 0.6);
+    p.noiseOctaves = Math.round(this._clampNumber(p.noiseOctaves, 1, 12, 8));
+    p.amplitudeFalloff = this._clampNumber(
+      p.amplitudeFalloff,
+      0,
+      1,
+      0.6,
+    );
+
+    p.sedimentErosionRate = this._clampNumber(p.sedimentErosionRate, 0, 1, 0.1);
+    p.bedrockErosionRate = this._clampNumber(p.bedrockErosionRate, 0, 1, 0.1);
+    p.depositionRate = this._clampNumber(p.depositionRate, 0, 1, 0.1);
+    p.evaporationRate = this._clampNumber(p.evaporationRate, 0.0001, 1, 0.001);
+    p.precipitationRate = this._clampNumber(p.precipitationRate, 0, 10, 1);
+
+    p.entrainment = this._clampNumber(p.entrainment, 0, 20, 1);
+    p.gravity = this._clampNumber(p.gravity, 0, 10, 1);
+    p.momentumTransfer = this._clampNumber(p.momentumTransfer, 0, 10, 1);
+
+    p.learningRate = this._clampNumber(p.learningRate, 0, 1, 0.1);
+    p.maxHeightDiff = this._clampNumber(p.maxHeightDiff, 0.0001, 2, 0.01);
+    p.settlingRate = this._clampNumber(p.settlingRate, 0, 1, 0.8);
+
+    p.renderMethod = p.renderMethod === "2D" ? "2D" : "3D";
+    if (
+      !["composite", "height", "slope", "discharge", "sediment", "delta"].includes(
+        p.surfaceMap,
+      )
+    ) {
+      p.surfaceMap = "composite";
+    }
+    if (!this.colourMapKeys.includes(p.colourMap)) {
+      p.colourMap = this.colourMapKeys[0];
+    }
+
+    p.heightScale = this._clampNumber(p.heightScale, 1, 1024, 100);
+    p.lightDir = {
+      x: this._clampNumber(p.lightDir?.x, -1000, 1000, 50),
+      y: this._clampNumber(p.lightDir?.y, -1000, 1000, 50),
+      z: this._clampNumber(p.lightDir?.z, -1000, 1000, -50),
+    };
+    p.specularIntensity = this._clampNumber(
+      p.specularIntensity,
+      0,
+      4096,
+      100,
+    );
+
+    p.skyColour = this._sanitiseColour(p.skyColour, this._defaultColourPalette.skyColour);
+    p.steepColour = this._sanitiseColour(
+      p.steepColour,
+      this._defaultColourPalette.steepColour,
+    );
+    p.flatColour = this._sanitiseColour(p.flatColour, this._defaultColourPalette.flatColour);
+    p.sedimentColour = this._sanitiseColour(
+      p.sedimentColour,
+      this._defaultColourPalette.sedimentColour,
+    );
+    p.waterColour = this._sanitiseColour(
+      p.waterColour,
+      this._defaultColourPalette.waterColour,
+    );
+
+    const format = String(p.imageFormat || "png").toLowerCase();
+    p.imageFormat = ["png", "jpg", "jpeg", "webp"].includes(format)
+      ? format
+      : "png";
+    p.recordingFPS = Math.round(this._clampNumber(p.recordingFPS, 12, 120, 60));
+    p.videoBitrateMbps = this._clampNumber(p.videoBitrateMbps, 1, 64, 8);
+  }
+
+  _isValidFloatBuffer(buffer, expectedLength) {
+    return (
+      buffer instanceof ArrayBuffer &&
+      buffer.byteLength === expectedLength * Float32Array.BYTES_PER_ELEMENT
+    );
+  }
+
+  _restoreTerrainBuffers() {
+    this._reallocTerrainBuffers();
+    this._workerBusy = false;
   }
 
   initialiseModules() {
@@ -157,6 +303,8 @@ class AppCore {
   }
 
   update() {
+    this._sanitiseParams();
+
     const { camera, params } = this;
 
     this.input.handleContinuousInput();
@@ -193,6 +341,8 @@ class AppCore {
     if (!this._worker || this._workerBusy) {
       return;
     }
+
+    this._sanitiseParams();
 
     const { terrain, params } = this;
 
@@ -261,12 +411,33 @@ class AppCore {
   }
 
   _onWorkerMessage(data) {
-    if (data.type !== "result") return;
-    if (data.requestId !== this._workerRequestId) {
+    if (!data || typeof data !== "object" || data.type !== "result") return;
+    if (Number(data.requestId) !== this._workerRequestId) {
       return;
     }
 
     const { terrain } = this;
+    const expectedLength = terrain.area;
+    const requiredBuffers = [
+      "heightMap",
+      "bedrockMap",
+      "sedimentMap",
+      "dischargeMap",
+      "dischargeTrack",
+      "momentumX",
+      "momentumY",
+      "momentumXTrack",
+      "momentumYTrack",
+    ];
+
+    for (const key of requiredBuffers) {
+      if (!this._isValidFloatBuffer(data[key], expectedLength)) {
+        console.error(`[Fluvia] Invalid worker payload for ${key}`);
+        this._restoreTerrainBuffers();
+        return;
+      }
+    }
+
     terrain.heightMap = new Float32Array(data.heightMap);
     terrain.bedrockMap = new Float32Array(data.bedrockMap);
     terrain.sedimentMap = new Float32Array(data.sedimentMap);
@@ -277,7 +448,7 @@ class AppCore {
     terrain.momentumXTrack = new Float32Array(data.momentumXTrack);
     terrain.momentumYTrack = new Float32Array(data.momentumYTrack);
 
-    this.analyser.applyWorkerAnalysis(data.analysis);
+    this.analyser.applyWorkerAnalysis(data.analysis || {});
 
     this._workerBusy = false;
   }

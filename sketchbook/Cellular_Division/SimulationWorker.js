@@ -3,9 +3,66 @@
 const TWO_PI = Math.PI * 2;
 const GRID_SIZE = 30;
 const CELLS_INTERVAL = 15;
+const MAX_PARTICLES = 300000;
+
+const PARAM_LIMITS = Object.freeze({
+  alpha: { min: 0, max: 360 },
+  beta: { min: 0, max: 90 },
+  gamma: { min: 0, max: 50 },
+  radius: { min: 5, max: 50 },
+  densityThreshold: { min: 1, max: 60 },
+});
 
 function radians(deg) {
   return (deg * Math.PI) / 180;
+}
+
+function clamp(value, min, max) {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
+function toFiniteNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function toInteger(value, fallback, min, max) {
+  const numeric = Math.round(toFiniteNumber(value, fallback));
+  return clamp(numeric, min, max);
+}
+
+function sanitiseInitialMessage(msg) {
+  const canvasW = toInteger(msg.canvasW, 800, 1, 16384);
+  const canvasH = toInteger(msg.canvasH, 600, 1, 16384);
+
+  return {
+    canvasW,
+    canvasH,
+    alpha: clamp(toFiniteNumber(msg.alpha, 180), 0, 360),
+    beta: clamp(toFiniteNumber(msg.beta, 17), 0, 90),
+    gamma: clamp(toFiniteNumber(msg.gamma, 13.4), 0, 50),
+    radius: clamp(toFiniteNumber(msg.radius, 15), 5, 50),
+    densityThreshold: toInteger(msg.densityThreshold, 20, 1, 60),
+    count: toInteger(msg.count, 0, 0, MAX_PARTICLES),
+  };
+}
+
+function applyParamUpdate(key, value) {
+  if (!Object.prototype.hasOwnProperty.call(PARAM_LIMITS, key)) return false;
+  const limits = PARAM_LIMITS[key];
+  state[key] = clamp(toFiniteNumber(value, state[key]), limits.min, limits.max);
+
+  if (state.species) {
+    state.species = new Species(
+      state.alpha,
+      state.beta,
+      state.gamma,
+      state.radius,
+    );
+  }
+  return true;
 }
 
 function wrapCoordinate(v, dim) {
@@ -239,13 +296,15 @@ const state = {
 };
 
 function initSimulation(msg) {
-  state.canvasW = msg.canvasW;
-  state.canvasH = msg.canvasH;
-  state.alpha = msg.alpha;
-  state.beta = msg.beta;
-  state.gamma = msg.gamma;
-  state.radius = msg.radius;
-  state.densityThreshold = msg.densityThreshold;
+  const safe = sanitiseInitialMessage(msg);
+
+  state.canvasW = safe.canvasW;
+  state.canvasH = safe.canvasH;
+  state.alpha = safe.alpha;
+  state.beta = safe.beta;
+  state.gamma = safe.gamma;
+  state.radius = safe.radius;
+  state.densityThreshold = safe.densityThreshold;
   state.paused = false;
 
   state.species = new Species(
@@ -258,7 +317,7 @@ function initSimulation(msg) {
   state.cellTracker = new CellTracker(state.canvasW);
   state.startTime = Date.now();
 
-  const count = msg.count;
+  const count = safe.count;
   state.particles = new Array(count);
   for (let i = 0; i < count; i++) {
     state.particles[i] = new Particle(state.canvasW, state.canvasH);
@@ -289,7 +348,8 @@ function buildResult(reuseBuffer) {
   const n = state.particles.length;
   const requiredByteLength = n * 4 * Float32Array.BYTES_PER_ELEMENT;
   const outputBuffer =
-    reuseBuffer && reuseBuffer.byteLength === requiredByteLength
+    reuseBuffer instanceof ArrayBuffer &&
+    reuseBuffer.byteLength === requiredByteLength
       ? reuseBuffer
       : new ArrayBuffer(requiredByteLength);
   const data = new Float32Array(outputBuffer);
@@ -315,7 +375,9 @@ function buildResult(reuseBuffer) {
 }
 
 self.onmessage = function (e) {
-  const msg = e.data || {};
+  const msg = e && e.data && typeof e.data === "object" ? e.data : {};
+
+  if (typeof msg.type !== "string") return;
 
   switch (msg.type) {
     case "init":
@@ -326,31 +388,23 @@ self.onmessage = function (e) {
 
     case "tick": {
       tick();
-      const result = buildResult(msg.particleDataBuffer || null);
+      const reuseBuffer =
+        msg.particleDataBuffer instanceof ArrayBuffer
+          ? msg.particleDataBuffer
+          : null;
+      const result = buildResult(reuseBuffer);
       self.postMessage(result, [result.particleData]);
       break;
     }
 
     case "setParam":
-      state[msg.key] = msg.value;
-      if (
-        msg.key === "alpha" ||
-        msg.key === "beta" ||
-        msg.key === "gamma" ||
-        msg.key === "radius"
-      ) {
-        state.species = new Species(
-          state.alpha,
-          state.beta,
-          state.gamma,
-          state.radius,
-        );
-      }
+      if (typeof msg.key !== "string") break;
+      applyParamUpdate(msg.key, msg.value);
       break;
 
     case "setParticleCount": {
       const oldCount = state.particles.length;
-      const newCount = msg.count;
+      const newCount = toInteger(msg.count, oldCount, 0, MAX_PARTICLES);
       if (newCount > oldCount) {
         for (let i = oldCount; i < newCount; i++) {
           state.particles.push(new Particle(state.canvasW, state.canvasH));
@@ -362,7 +416,10 @@ self.onmessage = function (e) {
     }
 
     case "setPaused":
-      state.paused = msg.value;
+      state.paused = Boolean(msg.value);
+      break;
+
+    default:
       break;
   }
 };

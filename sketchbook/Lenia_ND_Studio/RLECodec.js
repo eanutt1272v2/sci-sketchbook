@@ -1,6 +1,6 @@
 class RLECodec {
   static parse(rleString) {
-    return this._parseGridRows(rleString);
+    return this._parseGridRows(rleString, 8192, 8192);
   }
 
   static decode(rleString, width, height = width) {
@@ -14,7 +14,7 @@ class RLECodec {
     }
 
     const normalised = this._normaliseInput(rleString);
-    const rows = this._parseGridRows(normalised);
+    const rows = this._parseGridRows(normalised, outWidth, outHeight);
 
     if (!normalised.includes("$") && rows.length > 0) {
       const flat = rows[0];
@@ -175,10 +175,19 @@ class RLECodec {
     return new Float32Array(copy.buffer);
   }
 
-  static _parseGridRows(rleString) {
+  static _parseGridRows(rleString, maxWidth = Infinity, maxRows = Infinity) {
     const rows = [[]];
     const input = this._normaliseInput(rleString);
     let rowIndex = 0;
+
+    const widthCap =
+      Number.isFinite(Number(maxWidth)) && Number(maxWidth) > 0
+        ? Math.floor(Number(maxWidth))
+        : Infinity;
+    const rowCap =
+      Number.isFinite(Number(maxRows)) && Number(maxRows) > 0
+        ? Math.floor(Number(maxRows))
+        : Infinity;
 
     for (let i = 0; i < input.length; ) {
       let count = 0;
@@ -200,6 +209,7 @@ class RLECodec {
       if (ch === "$") {
         const lineBreaks = count > 0 ? count : 1;
         for (let k = 0; k < lineBreaks; k++) {
+          if (rows.length >= rowCap) break;
           rows.push([]);
           rowIndex++;
         }
@@ -216,7 +226,11 @@ class RLECodec {
       const runCount = count > 0 ? count : 1;
       const value = this._tokenToValue(tokenInfo.token);
       const row = rows[rowIndex];
-      for (let k = 0; k < runCount; k++) {
+
+      const remaining =
+        widthCap === Infinity ? runCount : Math.max(0, widthCap - row.length);
+      const appendCount = Math.min(runCount, remaining);
+      for (let k = 0; k < appendCount; k++) {
         row.push(value);
       }
 
@@ -224,9 +238,14 @@ class RLECodec {
     }
 
     if (rows.length === 0) return [[]];
-    const maxLen = rows.reduce((max, row) => Math.max(max, row.length), 0);
+    const observedMax = rows.reduce((max, row) => Math.max(max, row.length), 0);
+    const maxLen =
+      widthCap === Infinity ? observedMax : Math.min(observedMax, widthCap);
     return rows.map((row) => {
       const padded = row.slice();
+      if (padded.length > maxLen) {
+        padded.length = maxLen;
+      }
       while (padded.length < maxLen) padded.push(0);
       return padded;
     });

@@ -122,6 +122,85 @@ function clamp(value, min, max) {
   return value < min ? min : value > max ? max : value;
 }
 
+function toFiniteNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function toInteger(value, fallback, min, max) {
+  const numeric = Math.round(toFiniteNumber(value, fallback));
+  return clamp(numeric, min, max);
+}
+
+function coerceFloatMap(buffer, length) {
+  if (!(buffer instanceof ArrayBuffer)) {
+    return new Float32Array(length);
+  }
+
+  const incoming = new Float32Array(buffer);
+  if (incoming.length === length) {
+    return incoming;
+  }
+
+  const out = new Float32Array(length);
+  out.set(incoming.subarray(0, Math.min(incoming.length, length)));
+  return out;
+}
+
+function sanitiseStepPayload(data) {
+  const size = toInteger(data.size, 256, 8, 2048);
+  const area = size * size;
+  const params = data.params && typeof data.params === "object" ? data.params : {};
+
+  return {
+    requestId: toInteger(data.requestId, 0, 0, 0x7fffffff),
+    size,
+    area,
+    randomSeed: toInteger(data.randomSeed, 1, 0, 0xffffffff),
+    params: {
+      dropletsPerFrame: toInteger(params.dropletsPerFrame, 256, 0, 4096),
+      maxAge: toInteger(params.maxAge, 500, 1, 4096),
+      minVolume: clamp(toFiniteNumber(params.minVolume, 0.01), 1e-6, 10),
+      precipitationRate: clamp(
+        toFiniteNumber(params.precipitationRate, 1),
+        0,
+        10,
+      ),
+      gravity: clamp(toFiniteNumber(params.gravity, 1), 0, 20),
+      momentumTransfer: clamp(
+        toFiniteNumber(params.momentumTransfer, 1),
+        0,
+        20,
+      ),
+      entrainment: clamp(toFiniteNumber(params.entrainment, 1), 0, 50),
+      depositionRate: clamp(toFiniteNumber(params.depositionRate, 0.1), 0, 1),
+      evaporationRate: clamp(
+        toFiniteNumber(params.evaporationRate, 0.001),
+        1e-6,
+        1,
+      ),
+      sedimentErosionRate: clamp(
+        toFiniteNumber(params.sedimentErosionRate, 0.1),
+        0,
+        1,
+      ),
+      bedrockErosionRate: clamp(
+        toFiniteNumber(params.bedrockErosionRate, 0.1),
+        0,
+        1,
+      ),
+      maxHeightDiff: clamp(
+        toFiniteNumber(params.maxHeightDiff, 0.01),
+        1e-5,
+        4,
+      ),
+      settlingRate: clamp(toFiniteNumber(params.settlingRate, 0.8), 0, 1),
+      learningRate: clamp(toFiniteNumber(params.learningRate, 0.1), 0, 1),
+      heightScale: clamp(toFiniteNumber(params.heightScale, 100), 1, 4096),
+    },
+  };
+}
+
 function thermalErosion(state, x, y) {
   const {
     size,
@@ -521,39 +600,41 @@ const analysisState = {
 };
 
 self.onmessage = function (e) {
-  const data = e.data || {};
+  const data = e && e.data && typeof e.data === "object" ? e.data : {};
   if (data.type !== "step") return;
 
+  const safe = sanitiseStepPayload(data);
+
   const state = {
-    size: data.size,
-    area: data.size * data.size,
-    randomSeed: data.randomSeed,
+    size: safe.size,
+    area: safe.area,
+    randomSeed: safe.randomSeed,
 
-    dropletsPerFrame: data.params.dropletsPerFrame,
-    maxAge: data.params.maxAge,
-    minVolume: data.params.minVolume,
-    precipitationRate: data.params.precipitationRate,
-    gravity: data.params.gravity,
-    momentumTransfer: data.params.momentumTransfer,
-    entrainment: data.params.entrainment,
-    depositionRate: data.params.depositionRate,
-    evaporationRate: data.params.evaporationRate,
-    sedimentErosionRate: data.params.sedimentErosionRate,
-    bedrockErosionRate: data.params.bedrockErosionRate,
-    maxHeightDiff: data.params.maxHeightDiff,
-    settlingRate: data.params.settlingRate,
-    learningRate: data.params.learningRate,
-    heightScale: data.params.heightScale,
+    dropletsPerFrame: safe.params.dropletsPerFrame,
+    maxAge: safe.params.maxAge,
+    minVolume: safe.params.minVolume,
+    precipitationRate: safe.params.precipitationRate,
+    gravity: safe.params.gravity,
+    momentumTransfer: safe.params.momentumTransfer,
+    entrainment: safe.params.entrainment,
+    depositionRate: safe.params.depositionRate,
+    evaporationRate: safe.params.evaporationRate,
+    sedimentErosionRate: safe.params.sedimentErosionRate,
+    bedrockErosionRate: safe.params.bedrockErosionRate,
+    maxHeightDiff: safe.params.maxHeightDiff,
+    settlingRate: safe.params.settlingRate,
+    learningRate: safe.params.learningRate,
+    heightScale: safe.params.heightScale,
 
-    heightMap: new Float32Array(data.heightMap),
-    bedrockMap: new Float32Array(data.bedrockMap),
-    sedimentMap: new Float32Array(data.sedimentMap),
-    dischargeMap: new Float32Array(data.dischargeMap),
-    dischargeTrack: new Float32Array(data.dischargeTrack),
-    momentumX: new Float32Array(data.momentumX),
-    momentumY: new Float32Array(data.momentumY),
-    momentumXTrack: new Float32Array(data.momentumXTrack),
-    momentumYTrack: new Float32Array(data.momentumYTrack),
+    heightMap: coerceFloatMap(data.heightMap, safe.area),
+    bedrockMap: coerceFloatMap(data.bedrockMap, safe.area),
+    sedimentMap: coerceFloatMap(data.sedimentMap, safe.area),
+    dischargeMap: coerceFloatMap(data.dischargeMap, safe.area),
+    dischargeTrack: coerceFloatMap(data.dischargeTrack, safe.area),
+    momentumX: coerceFloatMap(data.momentumX, safe.area),
+    momentumY: coerceFloatMap(data.momentumY, safe.area),
+    momentumXTrack: coerceFloatMap(data.momentumXTrack, safe.area),
+    momentumYTrack: coerceFloatMap(data.momentumYTrack, safe.area),
   };
 
   hydraulicErosion(state);
@@ -563,7 +644,7 @@ self.onmessage = function (e) {
   self.postMessage(
     {
       type: "result",
-      requestId: data.requestId,
+      requestId: safe.requestId,
       heightMap: state.heightMap.buffer,
       bedrockMap: state.bedrockMap.buffer,
       sedimentMap: state.sedimentMap.buffer,

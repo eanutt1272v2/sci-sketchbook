@@ -2,6 +2,7 @@ class MediaCore {
   constructor(appcore, logTag) {
     this.appcore = appcore;
     this.logTag = logTag;
+    this.maxJSONImportBytes = 32 * 1024 * 1024;
     this.mediaRecorder = null;
     this.recordingStream = null;
     this.recordedChunks = [];
@@ -164,6 +165,18 @@ class MediaCore {
   }
 
   _readJSONFile(file, onSuccess) {
+    if (!file || typeof file.size !== "number") {
+      this._logError("JSON import failed: invalid file handle");
+      return;
+    }
+
+    if (file.size > this.maxJSONImportBytes) {
+      this._logError(
+        `JSON import failed: file too large (${file.size} bytes, max ${this.maxJSONImportBytes})`,
+      );
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -205,7 +218,16 @@ class MediaCore {
   }
 
   _isPlainObject(value) {
-    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+
+    const proto = Object.getPrototypeOf(value);
+    return proto === Object.prototype || proto === null;
+  }
+
+  _isSafeObjectKey(key) {
+    return key !== "__proto__" && key !== "constructor" && key !== "prototype";
   }
 
   _cloneJSONCompatible(value) {
@@ -218,6 +240,7 @@ class MediaCore {
     if (this._isPlainObject(value)) {
       const out = {};
       for (const [key, entry] of Object.entries(value)) {
+        if (!this._isSafeObjectKey(key)) continue;
         out[key] = this._cloneJSONCompatible(entry);
       }
       return out;
@@ -252,7 +275,8 @@ class MediaCore {
 
       if (Array.isArray(targetValue)) {
         if (Array.isArray(sourceValue)) {
-          target[key] = this._cloneJSONCompatible(sourceValue);
+          const maxLength = targetValue.length > 0 ? targetValue.length : 1024;
+          target[key] = this._cloneJSONCompatible(sourceValue.slice(0, maxLength));
         }
         continue;
       }
@@ -276,7 +300,8 @@ class MediaCore {
       }
 
       if (typeof targetValue === "string") {
-        target[key] = String(sourceValue);
+        const text = String(sourceValue);
+        target[key] = text.length > 1024 ? text.slice(0, 1024) : text;
         continue;
       }
 
