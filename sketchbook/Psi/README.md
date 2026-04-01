@@ -12,7 +12,7 @@ Real-time numerical visualiser of hydrogenic bound-state probability densities. 
 * Normalised radial functions via associated Laguerre recurrence and log-gamma normalisation.
 
 * Complex spherical harmonics via associated Legendre recurrence.
-* Stationary-state wavefunction evaluated on $x$–$z$, $x$–$y$, or $y$–$z$ slice planes.
+* Stationary-state wavefunction evaluated on $x$– $z$, $x$–$y$, or $y$–$z$ slice planes.
 * Probability density with tone-mapped LUT rendering and exposure gamma correction.
 * Bisection-refined node detection for radial, polar, and azimuthal nodal surfaces.
 * Reduced-mass Bohr radius and electron–nucleus reduced mass for arbitrary nuclear charge $Z$.
