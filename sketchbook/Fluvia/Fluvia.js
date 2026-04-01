@@ -12,7 +12,7 @@ function disposeAppCore() {
 
 const metadata = {
   name: "Fluvia",
-  version: "v5.3.5-dev",
+  version: "v5.4.0-dev",
   author: "@eanutt1272.v2",
 };
 
