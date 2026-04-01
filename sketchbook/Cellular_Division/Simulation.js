@@ -31,6 +31,13 @@ class Simulation {
     this._lastPerfTuneMs = 0;
     this._particleBufferForWorker = null;
     this._renderParticleData = null;
+    this._densityColours = {
+      highDensity: "rgb(255,80,255)",
+      veryDense: "rgb(255,255,100)",
+      dense: "rgb(0,0,255)",
+      moderate: "rgb(180,100,50)",
+      sparse: "rgb(80,255,80)",
+    };
 
     this.theme = theme;
 
@@ -278,16 +285,11 @@ class Simulation {
       if (!this._lastResult) return;
       const { particleData, particleCount } = this._lastResult;
       const ctx = drawingContext;
+      const colours = this._densityColours;
 
       ctx.save();
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
-
-      const colourHighDensity = "rgb(255,80,255)";
-      const colourVeryDense = "rgb(255,255,100)";
-      const colourDense = "rgb(0,0,255)";
-      const colourModerate = "rgb(180,100,50)";
-      const colourSparse = "rgb(80,255,80)";
 
       let currentFill = "";
 
@@ -296,15 +298,17 @@ class Simulation {
         const closeCount = particleData[base + 2];
         const neighbourCount = particleData[base + 3];
 
-        let nextFill = colourSparse;
+        let nextFill = colours.sparse;
         if (closeCount > 15) {
-          nextFill = colourHighDensity;
+          nextFill = colours.highDensity;
         } else if (neighbourCount > 35) {
-          nextFill = colourVeryDense;
+          nextFill = colours.veryDense;
         } else if (neighbourCount > 15) {
-          nextFill = colourDense;
+          nextFill = colours.dense;
         } else if (neighbourCount >= 13) {
-          nextFill = colourModerate;
+          nextFill = colours.moderate;
+        } else {
+          nextFill = colours.sparse;
         }
 
         if (nextFill !== currentFill) {

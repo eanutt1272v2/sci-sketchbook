@@ -212,11 +212,41 @@ class AppCore {
   }
 
   _bufferToFloat32(buffer, expectedLength) {
-    if (!(buffer instanceof ArrayBuffer)) return null;
-    if (buffer.byteLength !== expectedLength * Float32Array.BYTES_PER_ELEMENT) {
+    let view = null;
+    if (buffer instanceof ArrayBuffer) {
+      view = new Float32Array(buffer);
+    } else if (ArrayBuffer.isView(buffer)) {
+      if (buffer.byteLength % Float32Array.BYTES_PER_ELEMENT !== 0) {
+        return null;
+      }
+      view = new Float32Array(
+        buffer.buffer,
+        buffer.byteOffset,
+        buffer.byteLength / Float32Array.BYTES_PER_ELEMENT,
+      );
+    } else {
       return null;
     }
-    return new Float32Array(buffer);
+
+    if (view.length !== expectedLength) {
+      return null;
+    }
+
+    return view;
+  }
+
+  _getFloatPayloadLength(buffer) {
+    if (buffer instanceof ArrayBuffer) {
+      if (buffer.byteLength % Float32Array.BYTES_PER_ELEMENT !== 0) return null;
+      return buffer.byteLength / Float32Array.BYTES_PER_ELEMENT;
+    }
+
+    if (ArrayBuffer.isView(buffer)) {
+      if (buffer.byteLength % Float32Array.BYTES_PER_ELEMENT !== 0) return null;
+      return buffer.byteLength / Float32Array.BYTES_PER_ELEMENT;
+    }
+
+    return null;
   }
 
   _isKernelPayloadValid(data) {
@@ -292,6 +322,16 @@ class AppCore {
     return out;
   }
 
+  _tryExecutePendingPlacement() {
+    if (!this._pendingPlacement) return;
+    if (this._workerBusy) return;
+    if (!this.board.world) return;
+
+    const pp = this._pendingPlacement;
+    this._pendingPlacement = null;
+    this._executePlacementRequest(pp);
+  }
+
   _onWorkerMessage(data) {
     if (!data || typeof data !== "object" || typeof data.type !== "string") {
       this._workerBusy = false;
@@ -338,18 +378,51 @@ class AppCore {
     }
 
     if (data.type === "view") {
-      const world = this._bufferToFloat32(data.world, expectedLength);
-      const potential = this._bufferToFloat32(data.potential, expectedLength);
-      const growth = this._bufferToFloat32(data.growth, expectedLength);
+      const payloadLength = this._getFloatPayloadLength(data.world);
+      const potentialLength = this._getFloatPayloadLength(data.potential);
+      const growthLength = this._getFloatPayloadLength(data.growth);
+      const growthOldLength =
+        data.growthOld === null || typeof data.growthOld === "undefined"
+          ? null
+          : this._getFloatPayloadLength(data.growthOld);
+
+      if (
+        !Number.isInteger(payloadLength) ||
+        payloadLength <= 0 ||
+        potentialLength !== payloadLength ||
+        growthLength !== payloadLength ||
+        (growthOldLength !== null && growthOldLength !== payloadLength)
+      ) {
+        console.error("[Lenia] Ignoring malformed view payload");
+        this._workerBusy = false;
+        this._ensureBuffers();
+          this._tryExecutePendingPlacement();
+        return;
+      }
+
+      if (payloadLength !== expectedLength) {
+        console.warn(
+          `[Lenia] Ignoring stale view payload (len=${payloadLength}, expected=${expectedLength})`,
+        );
+        this._workerBusy = false;
+        this._ensureBuffers();
+          this._tryExecutePendingPlacement();
+        return;
+      }
+
+      const world = this._bufferToFloat32(data.world, payloadLength);
+      const potential = this._bufferToFloat32(data.potential, payloadLength);
+      const growth = this._bufferToFloat32(data.growth, payloadLength);
       const growthOld =
         data.growthOld === null || typeof data.growthOld === "undefined"
           ? null
-          : this._bufferToFloat32(data.growthOld, expectedLength);
+          : this._bufferToFloat32(data.growthOld, payloadLength);
 
       if (!world || !potential || !growth || (data.growthOld && !growthOld)) {
         console.error("[Lenia] Ignoring malformed view payload");
         this._workerBusy = false;
         this._ensureBuffers();
+          this._tryExecutePendingPlacement();
         return;
       }
 
@@ -372,14 +445,48 @@ class AppCore {
     }
 
     if (data.type === "result") {
-      const world = this._bufferToFloat32(data.world, expectedLength);
-      const potential = this._bufferToFloat32(data.potential, expectedLength);
-      const growth = this._bufferToFloat32(data.growth, expectedLength);
-      const change = this._bufferToFloat32(data.change, expectedLength);
+      const payloadLength = this._getFloatPayloadLength(data.world);
+      const potentialLength = this._getFloatPayloadLength(data.potential);
+      const growthLength = this._getFloatPayloadLength(data.growth);
+      const changeLength = this._getFloatPayloadLength(data.change);
+      const growthOldLength =
+        data.growthOld === null || typeof data.growthOld === "undefined"
+          ? null
+          : this._getFloatPayloadLength(data.growthOld);
+
+      if (
+        !Number.isInteger(payloadLength) ||
+        payloadLength <= 0 ||
+        potentialLength !== payloadLength ||
+        growthLength !== payloadLength ||
+        changeLength !== payloadLength ||
+        (growthOldLength !== null && growthOldLength !== payloadLength)
+      ) {
+        console.error("[Lenia] Ignoring malformed step payload");
+        this._workerBusy = false;
+        this._changeRecycleBuffer = null;
+          this._tryExecutePendingPlacement();
+        return;
+      }
+
+      if (payloadLength !== expectedLength) {
+        console.warn(
+          `[Lenia] Ignoring stale step payload (len=${payloadLength}, expected=${expectedLength})`,
+        );
+        this._workerBusy = false;
+        this._changeRecycleBuffer = null;
+          this._tryExecutePendingPlacement();
+        return;
+      }
+
+      const world = this._bufferToFloat32(data.world, payloadLength);
+      const potential = this._bufferToFloat32(data.potential, payloadLength);
+      const growth = this._bufferToFloat32(data.growth, payloadLength);
+      const change = this._bufferToFloat32(data.change, payloadLength);
       const growthOld =
         data.growthOld === null || typeof data.growthOld === "undefined"
           ? null
-          : this._bufferToFloat32(data.growthOld, expectedLength);
+          : this._bufferToFloat32(data.growthOld, payloadLength);
 
       if (
         !world ||
@@ -390,8 +497,8 @@ class AppCore {
       ) {
         console.error("[Lenia] Ignoring malformed step payload");
         this._workerBusy = false;
-        this._ensureBuffers();
         this._changeRecycleBuffer = null;
+        this._tryExecutePendingPlacement();
         return;
       }
 

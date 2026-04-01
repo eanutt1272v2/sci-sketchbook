@@ -286,7 +286,6 @@ class AppCore {
   }
 
   _requestRenderNow() {
-    this._sanitisePhysicalParams();
     if (!this._worker) {
       return;
     }

@@ -268,6 +268,7 @@ class AppCore {
     this._lastWorkerStepMs = 0;
     this._pendingActions = [];
     this._lastVisualSignature = this._computeVisualSignature();
+    this._lastVisualSignatureCheckMs = 0;
     this._initWorker();
   }
 
@@ -309,10 +310,14 @@ class AppCore {
 
     this.input.handleContinuousInput();
 
-    const visualSignature = this._computeVisualSignature();
-    if (visualSignature !== this._lastVisualSignature) {
-      this.renderer.textureDirty = true;
-      this._lastVisualSignature = visualSignature;
+    const nowMs = performance.now();
+    if (nowMs - this._lastVisualSignatureCheckMs >= 120) {
+      const visualSignature = this._computeVisualSignature();
+      if (visualSignature !== this._lastVisualSignature) {
+        this.renderer.textureDirty = true;
+        this._lastVisualSignature = visualSignature;
+      }
+      this._lastVisualSignatureCheckMs = nowMs;
     }
 
     if (params.running) {
