@@ -1,6 +1,6 @@
 # sci-sketchbook <img src="logo.png" alt="sci-sketchbook logo" align="right" width="175">
 
-Interactive, real-time scientific and mathematical simulations built on p5.js, each running a dedicated Web Worker for compute-heavy kernels.
+A specialised and niche repository of interactive scientific simulations constructed using JavaScript. We couple p5.js graphical rendering with the Tweakpane library's parameterised GUI to offer a scientific environment for the exploration of mathematical and physical phenomena. In addition, they each run a dedicated Web Worker for compute-heavy processes.
 
 * p5.js 1.x
 * Tweakpane 4.x (GUI framework)
