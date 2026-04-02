@@ -119,11 +119,7 @@ class Media extends MediaCore {
   }
 
   exportImage() {
-    save(
-      globalThis._renderer,
-      this._getFilename(this.appcore.params.imageFormat),
-    );
-    this._logInfo("Image exported");
+    super.exportImage();
   }
 
   exportStatisticsCSV() {

@@ -2,7 +2,7 @@
 
 Real-time numerical visualiser of hydrogenic bound-state probability densities. It computes $|\psi_{n,\ell,m}(r,\theta,\phi)|^2$ on configurable slice planes using consistent and standardised SI units, reduced-mass Bohr radius scaling, stable log-gamma normalisation for radial functions, and complex spherical harmonics with the Condon–Shortley phase.
 
-* p5.js 1.x
+* p5.js 2.2.3
 * Web Worker (density-grid computation kernel)
 * Tweakpane 4.x (parameter interface)
 * Lanczos log-gamma approximation
@@ -231,14 +231,28 @@ For hydrogenic ions with $Z > 1$, the nuclear mass $M$ must be specified to eval
 
 All wavefunction computation runs in a dedicated Web Worker. The main thread posts a render request containing quantum numbers, view parameters, and an `ArrayBuffer`; the worker evaluates the density at each grid point and returns the buffer with ownership:
 
-```text
-Main                          Worker
-  │─── render(n,l,m,Z,…,buf) ──→│
-  │                             │  for each pixel:
-  │                             │    (x,y,z) → (r,θ,φ)
-  │                             │    R_nl(r) · Y_lm(θ,φ) → |ψ|²
-  │                             │  track peak density
-  │←── result(buf, peak, a_μ) ──│
+```mermaid
+---
+title: Main-Worker Render Process
+---
+flowchart LR
+    Main["Main"] 
+    Worker["Worker"]
+    Call["render(n,l,m,Z,…,buf)"]
+    Loop["for each pixel"]
+    Coord["(x,y,z) → (r,θ,φ)"]
+    Compute["R_nl(r) · Y_lm(θ,φ) → |ψ|²"]
+    Peak["track peak density"]
+    Return["result(buf, peak, a_μ)"]
+
+    Main --> Call
+    Call --> Worker
+    Worker --> Loop
+    Loop --> Coord
+    Coord --> Compute
+    Compute --> Peak
+    Peak --> Return
+    Return --> Main
 ```
 
 The worker caches normalisation constants by a hash of $(n, \ell, m, Z, M)$ so that panning and zooming (which change only view parameters) reuse the cached values.

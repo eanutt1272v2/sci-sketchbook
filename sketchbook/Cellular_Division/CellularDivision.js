@@ -28,11 +28,14 @@ function disposeAppCore() {
   appcore = null;
 }
 
-function preload() {
-  font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
-}
+async function setup() {
+  try {
+    font = await loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
+  } catch (error) {
+    console.error("[Cellular Division] Failed to load startup assets:", error);
+    return;
+  }
 
-function setup() {
   mainCanvas = createCanvas(windowWidth, windowHeight);
   setupCanvasProperties(mainCanvas);
 

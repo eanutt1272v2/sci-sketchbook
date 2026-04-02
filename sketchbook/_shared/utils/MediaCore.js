@@ -58,10 +58,30 @@ class MediaCore {
     this.dataImportInput.click();
   }
 
+  _resolveCanvasElement() {
+    const rendererCanvas = globalThis._renderer?.elt;
+    if (rendererCanvas instanceof HTMLCanvasElement) {
+      return rendererCanvas;
+    }
+
+    const drawingCanvas = globalThis.drawingContext?.canvas;
+    if (drawingCanvas instanceof HTMLCanvasElement) {
+      return drawingCanvas;
+    }
+
+    const globalCanvas = globalThis.canvas;
+    if (globalCanvas instanceof HTMLCanvasElement) {
+      return globalCanvas;
+    }
+
+    const domCanvas = document.querySelector("canvas");
+    return domCanvas instanceof HTMLCanvasElement ? domCanvas : null;
+  }
+
   startRecording() {
     if (this.isRecording) return;
 
-    const sourceCanvas = globalThis._renderer?.elt;
+    const sourceCanvas = this._resolveCanvasElement();
     if (!sourceCanvas) {
       this._logError("No valid canvas found");
       return;
@@ -154,10 +174,28 @@ class MediaCore {
 
   exportImage() {
     try {
-      save(
-        globalThis._renderer,
-        this._getFilename(this.appcore.params.imageFormat),
-      );
+      const sourceCanvas = this._resolveCanvasElement();
+      if (!sourceCanvas) {
+        this._logError("Image export failed: no valid canvas found");
+        return;
+      }
+
+      const filename = this._getFilename(this.appcore.params.imageFormat);
+      const dot = filename.lastIndexOf(".");
+      const basename = dot > 0 ? filename.slice(0, dot) : filename;
+      const extension = dot > 0
+        ? filename.slice(dot + 1)
+        : String(this.appcore.params.imageFormat || "png");
+
+      if (typeof saveCanvas === "function") {
+        saveCanvas(sourceCanvas, basename, extension);
+      } else if (typeof save === "function") {
+        save(sourceCanvas, filename);
+      } else {
+        this._logError("Image export failed: no supported save method found");
+        return;
+      }
+
       this._logInfo("Image exported");
     } catch (err) {
       this._logError("Image export failed:", err);

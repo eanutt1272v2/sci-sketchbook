@@ -2,7 +2,7 @@
 
 Interactive, real-time scientific and mathematical simulations built on p5.js, each running a dedicated Web Worker for compute-heavy kernels.
 
-* p5.js 1.x
+* p5.js 2.2.3
 * Tweakpane 4.x (GUI framework)
 * Web Workers (parallel computation)
 * WebGL / GLSL (3D rendering pipeline)

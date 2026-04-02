@@ -2,7 +2,7 @@
 
 Lagrangian particle-based hydraulic erosion simulation with momentum-coupled meandering, thermal diffusion, and a dual-layer bedrock–sediment terrain model. Water droplets traverse a heightmap, eroding bedrock, transporting sediment, and depositing material to produce realistic fluvial landforms such as drainage basins, meandering rivers, alluvial fans, and meander scarring.
 
-* p5.js 1.x (2D & WebGL 3D rendering)
+* p5.js 2.2.3 (2D & WebGL 3D rendering)
 * Web Worker (hydraulic + thermal solver)
 * GLSL shaders (3D terrain mesh with dynamic lighting)
 * Tweakpane 4.x (parameter interface)

@@ -2,7 +2,7 @@
 
 Worker-accelerated implementation of the Primordial Particle System (PPS), an artificial-life model in which identical particles, governed by a single local turning rule, spontaneously self-organise into dividing cell-like structures.
 
-* p5.js 1.x
+* p5.js 2.2.3
 * Web Worker (particle stepping & population tracking)
 * Spatial hashing (O(1) neighbourhood queries)
 

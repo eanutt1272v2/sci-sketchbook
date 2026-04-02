@@ -17,14 +17,19 @@ class InputHandler {
     let needsRender = false;
     let syncViewConstraints = false;
 
-    if (keyIsDown(LEFT_ARROW) || keyIsDown(RIGHT_ARROW)) {
+    const leftDown = KeyboardUtils.isKeyDown("LEFT_ARROW", 37);
+    const rightDown = KeyboardUtils.isKeyDown("RIGHT_ARROW", 39);
+    const upDown = KeyboardUtils.isKeyDown("UP_ARROW", 38);
+    const downDown = KeyboardUtils.isKeyDown("DOWN_ARROW", 40);
+
+    if (leftDown || rightDown) {
       if (shiftHeld) {
         const step = max(0.25, params.viewRadius * 0.03);
-        const delta = keyIsDown(RIGHT_ARROW) ? step : -step;
+        const delta = rightDown ? step : -step;
         this.panCurrentPlane(delta, 0);
       } else {
         params.sliceOffset = constrain(
-          params.sliceOffset + (keyIsDown(RIGHT_ARROW) ? 0.5 : -0.5),
+          params.sliceOffset + (rightDown ? 0.5 : -0.5),
           -params.viewRadius,
           params.viewRadius,
         );
@@ -33,15 +38,15 @@ class InputHandler {
       needsRender = true;
     }
 
-    if (keyIsDown(UP_ARROW) || keyIsDown(DOWN_ARROW)) {
+    if (upDown || downDown) {
       if (shiftHeld) {
         const step = max(0.25, params.viewRadius * 0.03);
-        const delta = keyIsDown(UP_ARROW) ? -step : step;
+        const delta = upDown ? -step : step;
         this.panCurrentPlane(0, delta);
         needsRender = true;
       } else {
-        const zoomIn = keyIsDown(UP_ARROW);
-        const zoomOut = keyIsDown(DOWN_ARROW);
+        const zoomIn = upDown;
+        const zoomOut = downDown;
 
         if (zoomIn !== zoomOut) {
           const zoomScale = zoomOut ? 1.02 : 0.98;

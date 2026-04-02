@@ -16,16 +16,32 @@ const metadata = {
   author: "@eanutt1272.v2",
 };
 
-function preload() {
-  font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
-  animalsData = loadJSON("../../_shared/data/animals.json");
-  animalsData3D = loadJSON("../../_shared/data/animals3D.json");
-  animalsData4D = loadJSON("../../_shared/data/animals4D.json");
+async function setup() {
+  try {
+    const [
+      loadedFont,
+      loadedAnimals2D,
+      loadedAnimals3D,
+      loadedAnimals4D,
+      loadedColourMaps,
+    ] = await Promise.all([
+      loadFont("../../_shared/fonts/Iosevka-Regular.ttf"),
+      loadJSON("../../_shared/data/animals.json"),
+      loadJSON("../../_shared/data/animals3D.json"),
+      loadJSON("../../_shared/data/animals4D.json"),
+      loadJSON("../../_shared/data/colour-maps.json"),
+    ]);
 
-  colourMaps = loadJSON("../../_shared/data/colour-maps.json");
-}
+    font = loadedFont;
+    animalsData = loadedAnimals2D;
+    animalsData3D = loadedAnimals3D;
+    animalsData4D = loadedAnimals4D;
+    colourMaps = loadedColourMaps;
+  } catch (error) {
+    console.error("[Lenia] Failed to load startup assets:", error);
+    return;
+  }
 
-function setup() {
   const canvasSize = min(windowWidth, windowHeight);
   mainCanvas = createCanvas(canvasSize, canvasSize);
 

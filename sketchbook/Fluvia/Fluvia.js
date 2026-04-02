@@ -16,20 +16,29 @@ const metadata = {
   author: "@eanutt1272.v2",
 };
 
-function preload() {
-  font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
-  colourMaps = loadJSON("../../_shared/data/colour-maps.json");
-  loadStrings(
-    "../../_shared/shaders/vert.glsl",
-    (lines) => (vertShader = lines.join("\n")),
-  );
-  loadStrings(
-    "../../_shared/shaders/frag.glsl",
-    (lines) => (fragShader = lines.join("\n")),
-  );
-}
+async function setup() {
+  try {
+    const [loadedFont, loadedColourMaps, loadedVertLines, loadedFragLines] =
+      await Promise.all([
+        loadFont("../../_shared/fonts/Iosevka-Regular.ttf"),
+        loadJSON("../../_shared/data/colour-maps.json"),
+        loadStrings("../../_shared/shaders/vert.glsl"),
+        loadStrings("../../_shared/shaders/frag.glsl"),
+      ]);
 
-function setup() {
+    font = loadedFont;
+    colourMaps = loadedColourMaps;
+    vertShader = Array.isArray(loadedVertLines)
+      ? loadedVertLines.join("\n")
+      : "";
+    fragShader = Array.isArray(loadedFragLines)
+      ? loadedFragLines.join("\n")
+      : "";
+  } catch (error) {
+    console.error("[Fluvia] Failed to load startup assets:", error);
+    return;
+  }
+
   const canvasSize = min(windowWidth, windowHeight);
   mainCanvas = createCanvas(canvasSize, canvasSize);
 
@@ -92,8 +101,16 @@ function mouseDragged(event) {
   return appcore ? appcore.handlePointer(event) : false;
 }
 
+function mousePressed(event) {
+  return appcore ? appcore.handlePointerStart(event) : false;
+}
+
+function mouseReleased(event) {
+  return appcore ? appcore.handlePointerEnd(event) : false;
+}
+
 function touchStarted(event) {
-  return appcore ? appcore.handlePointer(event) : false;
+  return appcore ? appcore.handlePointerStart(event) : false;
 }
 
 function touchMoved(event) {
@@ -101,5 +118,5 @@ function touchMoved(event) {
 }
 
 function touchEnded(event) {
-  return appcore ? appcore.handlePointer(event) : false;
+  return appcore ? appcore.handlePointerEnd(event) : false;
 }

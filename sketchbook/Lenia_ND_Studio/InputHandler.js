@@ -46,6 +46,10 @@ class InputHandler {
     const ctrlHeld = KeyboardUtils.isCtrlHeld();
     const { params } = this.appcore;
     const dim = params.dimension || 2;
+    const leftArrow = KeyboardUtils.keyCode("LEFT_ARROW", 37);
+    const rightArrow = KeyboardUtils.keyCode("RIGHT_ARROW", 39);
+    const upArrow = KeyboardUtils.keyCode("UP_ARROW", 38);
+    const downArrow = KeyboardUtils.keyCode("DOWN_ARROW", 40);
 
     if (keyValue === "#") {
       params.renderKeymapRef = !params.renderKeymapRef;
@@ -270,19 +274,19 @@ class InputHandler {
       return false;
     }
 
-    if (kCode === LEFT_ARROW && !ctrlHeld) {
+    if (kCode === leftArrow && !ctrlHeld) {
       this.appcore.shiftWorld(shiftHeld ? -1 : -10, 0);
       return false;
     }
-    if (kCode === RIGHT_ARROW && !ctrlHeld) {
+    if (kCode === rightArrow && !ctrlHeld) {
       this.appcore.shiftWorld(shiftHeld ? 1 : 10, 0);
       return false;
     }
-    if (kCode === UP_ARROW && !ctrlHeld) {
+    if (kCode === upArrow && !ctrlHeld) {
       this.appcore.shiftWorld(0, shiftHeld ? -1 : -10);
       return false;
     }
-    if (kCode === DOWN_ARROW && !ctrlHeld) {
+    if (kCode === downArrow && !ctrlHeld) {
       this.appcore.shiftWorld(0, shiftHeld ? 1 : 10);
       return false;
     }
@@ -295,11 +299,11 @@ class InputHandler {
       return false;
     }
 
-    if (ctrlHeld && kCode === LEFT_ARROW) {
+    if (ctrlHeld && kCode === leftArrow) {
       this.appcore.rotateWorld(shiftHeld ? -15 : -90);
       return false;
     }
-    if (ctrlHeld && kCode === RIGHT_ARROW) {
+    if (ctrlHeld && kCode === rightArrow) {
       this.appcore.rotateWorld(shiftHeld ? 15 : 90);
       return false;
     }

@@ -15,12 +15,20 @@ const metadata = {
   author: "@eanutt1272.v2",
 };
 
-function preload() {
-  font = loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
-  colourMaps = loadJSON("../../_shared/data/colour-maps.json");
-}
+async function setup() {
+  try {
+    const [loadedFont, loadedColourMaps] = await Promise.all([
+      loadFont("../../_shared/fonts/Iosevka-Regular.ttf"),
+      loadJSON("../../_shared/data/colour-maps.json"),
+    ]);
 
-function setup() {
+    font = loadedFont;
+    colourMaps = loadedColourMaps;
+  } catch (error) {
+    console.error("[Psi] Failed to load startup assets:", error);
+    return;
+  }
+
   const canvasSize = min(windowWidth, windowHeight);
   const mainCanvas = createCanvas(canvasSize, canvasSize);
 

@@ -54,6 +54,10 @@ class AppCore {
         ? "viridis"
         : this.colourMapKeys[0],
 
+      cameraSmoothing: 0.82,
+      cameraOrbitSensitivity: 0.007,
+      cameraZoomSensitivity: 0.5,
+
       lightDir: { x: 50, y: 50, z: -50 },
       specularIntensity: 100,
 
@@ -203,6 +207,20 @@ class AppCore {
     if (!this.colourMapKeys.includes(p.colourMap)) {
       p.colourMap = this.colourMapKeys[0];
     }
+
+    p.cameraSmoothing = this._clampNumber(p.cameraSmoothing, 0, 0.98, 0.82);
+    p.cameraOrbitSensitivity = this._clampNumber(
+      p.cameraOrbitSensitivity,
+      0.001,
+      0.03,
+      0.007,
+    );
+    p.cameraZoomSensitivity = this._clampNumber(
+      p.cameraZoomSensitivity,
+      0.05,
+      3,
+      0.5,
+    );
 
     p.heightScale = this._clampNumber(p.heightScale, 1, 1024, 100);
     p.lightDir = {
@@ -558,6 +576,14 @@ class AppCore {
 
   handlePointer(event) {
     return this.input.handlePointer(event);
+  }
+
+  handlePointerStart(event) {
+    return this.input.handlePointerStart(event);
+  }
+
+  handlePointerEnd(event) {
+    return this.input.handlePointerEnd(event);
   }
 
   resize() {

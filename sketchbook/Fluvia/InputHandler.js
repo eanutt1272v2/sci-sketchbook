@@ -25,6 +25,19 @@ class InputHandler {
     }
   }
 
+  handlePointerStart(event) {
+    if (this.canvasInteraction(event)) {
+      this.appcore.camera.beginPointer(event);
+      this.appcore.camera.handlePointer(event);
+      return false;
+    }
+  }
+
+  handlePointerEnd() {
+    this.appcore.camera.endPointer();
+    return false;
+  }
+
   handleKeyPressed(k, kCode) {
     if (KeyboardUtils.shouldIgnoreKeyboard()) {
       return false;
@@ -233,10 +246,15 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "w" || kCode === UP_ARROW) this.keys.up = true;
-    if (keyLower === "s" || kCode === DOWN_ARROW) this.keys.down = true;
-    if (keyLower === "a" || kCode === LEFT_ARROW) this.keys.left = true;
-    if (keyLower === "d" || kCode === RIGHT_ARROW) this.keys.right = true;
+    const upArrow = KeyboardUtils.keyCode("UP_ARROW", 38);
+    const downArrow = KeyboardUtils.keyCode("DOWN_ARROW", 40);
+    const leftArrow = KeyboardUtils.keyCode("LEFT_ARROW", 37);
+    const rightArrow = KeyboardUtils.keyCode("RIGHT_ARROW", 39);
+
+    if (keyLower === "w" || kCode === upArrow) this.keys.up = true;
+    if (keyLower === "s" || kCode === downArrow) this.keys.down = true;
+    if (keyLower === "a" || kCode === leftArrow) this.keys.left = true;
+    if (keyLower === "d" || kCode === rightArrow) this.keys.right = true;
 
     return false;
   }
@@ -263,10 +281,15 @@ class InputHandler {
       this.keys.zoomOut = false;
     }
 
-    if (keyLower === "w" || kCode === UP_ARROW) this.keys.up = false;
-    if (keyLower === "s" || kCode === DOWN_ARROW) this.keys.down = false;
-    if (keyLower === "a" || kCode === LEFT_ARROW) this.keys.left = false;
-    if (keyLower === "d" || kCode === RIGHT_ARROW) this.keys.right = false;
+    const upArrow = KeyboardUtils.keyCode("UP_ARROW", 38);
+    const downArrow = KeyboardUtils.keyCode("DOWN_ARROW", 40);
+    const leftArrow = KeyboardUtils.keyCode("LEFT_ARROW", 37);
+    const rightArrow = KeyboardUtils.keyCode("RIGHT_ARROW", 39);
+
+    if (keyLower === "w" || kCode === upArrow) this.keys.up = false;
+    if (keyLower === "s" || kCode === downArrow) this.keys.down = false;
+    if (keyLower === "a" || kCode === leftArrow) this.keys.left = false;
+    if (keyLower === "d" || kCode === rightArrow) this.keys.right = false;
 
     return false;
   }

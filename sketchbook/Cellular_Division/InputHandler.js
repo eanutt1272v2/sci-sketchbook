@@ -123,7 +123,7 @@ class InputHandler {
         0,
         this.typingBuffer.length - 1,
       );
-    } else if (keyCode === ENTER || keyCode === RETURN) {
+    } else if (KeyboardUtils.isEnterOrReturn(keyCode)) {
       this.commitTyping();
     } else if (keyCode === 27) {
       this.cancelTyping();
@@ -267,7 +267,7 @@ class InputHandler {
   }
 
   isBackspace() {
-    return keyCode === BACKSPACE || keyCode === DELETE;
+    return KeyboardUtils.isBackspaceOrDelete(keyCode);
   }
 
   getParamValue(index) {

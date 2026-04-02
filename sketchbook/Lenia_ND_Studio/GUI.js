@@ -250,6 +250,7 @@ class GUI {
 
     bindAutomaton(growth, "s", {
       min: 0.0001,
+      max: 1,
       step: 0.0001,
       label: "Width σ (W/S)",
     });
@@ -377,7 +378,7 @@ class GUI {
       label: "Motion (J)",
     });
     overlay.addBinding(params, "renderSymmetryOverlay", {
-      label: "Symmetry (Ctrl+J)",
+      label: "Symmetry Overlay (Applies when Polar Mode is on) (Ctrl+J)",
     });
     overlay.addBinding(params, "renderCalcPanels", {
       label: "Calc Panels (K)",

@@ -2,7 +2,7 @@
 
 FFT-accelerated continuous cellular automaton studio implementing Lenia with configurable kernel and growth function families, multi-shell convolution, and full 2D, 3D, and 4D support. Includes a curated organism catalogue with taxonomic classification and tools for exploring the parameter space of smooth life-like dynamics.
 
-* p5.js 1.x
+* p5.js 2.2.3
 * Web Worker (FFT convolution, kernel construction, analysis)
 * Tweakpane 4.x (parameter interface)
 * Radix-2 FFT (Cooley–Tukey, N-dimensional pencil decomposition)

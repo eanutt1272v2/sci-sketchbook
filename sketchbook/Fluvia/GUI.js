@@ -236,6 +236,29 @@ class GUI {
       max: 256,
     });
 
+    const camera = page.addFolder({ title: "Camera", expanded: true });
+
+    camera.addBinding(params, "cameraSmoothing", {
+      label: "Motion Smoothing",
+      min: 0,
+      max: 0.98,
+      step: 0.01,
+    });
+
+    camera.addBinding(params, "cameraOrbitSensitivity", {
+      label: "Orbit Sensitivity",
+      min: 0.001,
+      max: 0.03,
+      step: 0.0005,
+    });
+
+    camera.addBinding(params, "cameraZoomSensitivity", {
+      label: "Zoom Sensitivity",
+      min: 0.05,
+      max: 3,
+      step: 0.05,
+    });
+
     this.addSeparator(page);
 
     const overlay = page.addFolder({ title: "Overlays", expanded: true });

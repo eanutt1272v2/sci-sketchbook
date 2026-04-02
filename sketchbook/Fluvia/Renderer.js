@@ -3,10 +3,14 @@ class Renderer {
     this.appcore = appcore;
 
     this.canvas3D = createGraphics(width, height, WEBGL);
-    this.terrainShader = this.canvas3D.createShader(
-      this.appcore.shaders.vert,
-      this.appcore.shaders.frag,
-    );
+    this._warned3DFallback = false;
+    this.terrainShader =
+      this.canvas3D && typeof this.canvas3D.createShader === "function"
+        ? this.canvas3D.createShader(
+            this.appcore.shaders.vert,
+            this.appcore.shaders.frag,
+          )
+        : null;
 
     const { size } = this.appcore.terrain;
     this.canvas2D = createImage(size, size);
@@ -70,6 +74,36 @@ class Renderer {
         ],
       },
     ];
+  }
+
+  _getRenderer3D() {
+    const renderer = this.canvas3D?._renderer;
+    return renderer && renderer.isP3D ? renderer : null;
+  }
+
+  _canRender3D() {
+    const renderer3D = this._getRenderer3D();
+    return (
+      renderer3D &&
+      this.canvas3D &&
+      this.terrainShader &&
+      typeof this.canvas3D.shader === "function" &&
+      typeof this.canvas3D.plane === "function" &&
+      typeof renderer3D.camera === "function" &&
+      typeof renderer3D.perspective === "function"
+    );
+  }
+
+  _apply3DCamera(eye, up) {
+    const renderer3D = this._getRenderer3D();
+    if (!renderer3D) {
+      return false;
+    }
+
+    const aspect = width / max(1, height);
+    renderer3D.perspective(PI / 3, aspect, 0.1, 30000);
+    renderer3D.camera(eye.x, eye.y, eye.z, 0, 0, 0, up.x, up.y, up.z);
+    return true;
   }
 
   reinitialise() {
@@ -360,7 +394,7 @@ class Renderer {
       !terrain.sedimentMap ||
       !terrain.dischargeMap
     ) {
-      if (this.appcore.params.renderMethod === "3D") {
+      if (this.appcore.params.renderMethod === "3D" && this.canvas3D) {
         image(this.canvas3D, 0, 0, width, height);
       } else {
         image(this.canvas2D, 0, 0, width, height);
@@ -369,7 +403,19 @@ class Renderer {
       return;
     }
 
-    const is3D = this.appcore.params.renderMethod === "3D";
+    let is3D = this.appcore.params.renderMethod === "3D";
+    if (is3D && !this._canRender3D()) {
+      if (!this._warned3DFallback) {
+        console.warn(
+          "[Fluvia] WebGL graphics API unavailable, falling back to 2D rendering",
+        );
+        this._warned3DFallback = true;
+      }
+      this.appcore.params.renderMethod = "2D";
+      this.appcore.refreshGUI();
+      is3D = false;
+    }
+
     const nowMs = performance.now();
     const shouldUpdateTexture =
       this.textureDirty ||
@@ -400,6 +446,11 @@ class Renderer {
 
   render3D() {
     const { canvas3D, terrainShader, heightMapTexture, canvas2D } = this;
+    if (!this._canRender3D()) {
+      this.render2D();
+      return;
+    }
+
     const { terrain, params, camera } = this.appcore;
     const eye = camera.getEyePosition();
     const up = camera.getUpVector();
@@ -412,8 +463,11 @@ class Renderer {
 
     canvas3D.push();
     canvas3D.resetMatrix();
-    canvas3D.perspective(PI / 3, width / height, 0.1, 30000);
-    canvas3D.camera(eye.x, eye.y, eye.z, 0, 0, 0, up.x, up.y, up.z);
+    if (!this._apply3DCamera(eye, up)) {
+      canvas3D.pop();
+      this.render2D();
+      return;
+    }
 
     canvas3D.noStroke();
     canvas3D.shader(terrainShader);
