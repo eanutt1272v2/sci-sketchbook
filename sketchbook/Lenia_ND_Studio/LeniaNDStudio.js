@@ -4,6 +4,16 @@ let appcore;
 let font, animalsData, animalsData3D, animalsData4D, colourMaps;
 let mainCanvas;
 
+function createReadbackOptimisedCanvas(widthPx, heightPx) {
+  const canvasEl = document.createElement("canvas");
+  try {
+    canvasEl.getContext("2d", { willReadFrequently: true });
+  } catch {
+    canvasEl.getContext("2d");
+  }
+  return createCanvas(widthPx, heightPx, canvasEl);
+}
+
 function disposeAppCore() {
   if (!appcore || typeof appcore.dispose !== "function") return;
   appcore.dispose();
@@ -43,7 +53,7 @@ async function setup() {
   }
 
   const canvasSize = min(windowWidth, windowHeight);
-  mainCanvas = createCanvas(canvasSize, canvasSize);
+  mainCanvas = createReadbackOptimisedCanvas(canvasSize, canvasSize);
 
   setupCanvasProperties(mainCanvas);
 

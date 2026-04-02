@@ -22,6 +22,16 @@ let appcore;
 let font;
 let mainCanvas;
 
+function createReadbackOptimisedCanvas(widthPx, heightPx) {
+  const canvasEl = document.createElement("canvas");
+  try {
+    canvasEl.getContext("2d", { willReadFrequently: true });
+  } catch {
+    canvasEl.getContext("2d");
+  }
+  return createCanvas(widthPx, heightPx, canvasEl);
+}
+
 function disposeAppCore() {
   if (!appcore || typeof appcore.dispose !== "function") return;
   appcore.dispose();
@@ -36,7 +46,7 @@ async function setup() {
     return;
   }
 
-  mainCanvas = createCanvas(windowWidth, windowHeight);
+  mainCanvas = createReadbackOptimisedCanvas(windowWidth, windowHeight);
   setupCanvasProperties(mainCanvas);
 
   requestAnimationFrame(() => {

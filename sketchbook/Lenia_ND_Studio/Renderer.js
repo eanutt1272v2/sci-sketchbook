@@ -6,7 +6,7 @@ class Renderer {
     uiFont = null,
   ) {
     this.size = size;
-    this.img = createImage(this.size, this.size);
+    this.img = this._createReadbackBuffer(this.size, this.size);
 
     this.colourMaps = colourMaps;
     this.currentColourMap = "";
@@ -48,6 +48,30 @@ class Renderer {
     this.setColourMap(initialColourMap);
   }
 
+  _createReadbackBuffer(widthPx, heightPx) {
+    const canvasEl = document.createElement("canvas");
+    try {
+      canvasEl.getContext("2d", { willReadFrequently: true });
+    } catch {
+      canvasEl.getContext("2d");
+    }
+
+    const buffer = createGraphics(widthPx, heightPx, canvasEl);
+    if (typeof buffer.pixelDensity === "function") {
+      buffer.pixelDensity(1);
+    }
+    if (typeof buffer.noSmooth === "function") {
+      buffer.noSmooth();
+    }
+    return buffer;
+  }
+
+  _releaseBuffer(buffer) {
+    if (buffer && typeof buffer.remove === "function") {
+      buffer.remove();
+    }
+  }
+
   _applyTextFont(ctx = null) {
     const target = ctx || this;
     if (!this.uiFont) return;
@@ -79,13 +103,19 @@ class Renderer {
 
   resize(size) {
     this.size = size;
-    this.img = createImage(this.size, this.size);
+    this._releaseBuffer(this.img);
+    this.img = this._createReadbackBuffer(this.size, this.size);
+    if (Array.isArray(this.calcPanelImages)) {
+      this.calcPanelImages.forEach((panel) => this._releaseBuffer(panel));
+    }
     this.calcPanelImages = [];
+    this._releaseBuffer(this.calcPanelsCanvas);
     this.calcPanelsCanvas = null;
     this.lastCalcPanelsFrame = null;
     this._kernelDisplayCache = null;
     this._kernelDisplayCacheSize = 0;
     this._kernelDisplayCacheSource = null;
+    this._releaseBuffer(this._legendBarImg);
     this._legendBarImg = null;
     this._legendBarCachedMap = "";
     if (this._legendGfx) {
@@ -589,7 +619,8 @@ class Renderer {
     }
 
     if (this.img.width !== currentSize || this.img.height !== currentSize) {
-      this.img = createImage(currentSize, currentSize);
+      this._releaseBuffer(this.img);
+      this.img = this._createReadbackBuffer(currentSize, currentSize);
     }
 
     if (
@@ -831,7 +862,8 @@ class Renderer {
       this.currentColourMap !== this._legendBarCachedMap ||
       !this._legendBarImg
     ) {
-      this._legendBarImg = createImage(1, 253);
+      this._releaseBuffer(this._legendBarImg);
+      this._legendBarImg = this._createReadbackBuffer(1, 253);
       this._legendBarImg.loadPixels();
       for (let i = 0; i < 253; i++) {
         const lutIndex = (252 - i) * 3;
@@ -1013,49 +1045,27 @@ class Renderer {
     const m1x = centerX;
     const m1y = centerY;
 
-    let m0x, m0y;
-    if (
+    let dx = 0;
+    let dy = 0;
+
+    // Match Python reference: infer per-step displacement directly from
+    // analysed speed/angle when available.
+    if (Number.isFinite(speed) && speed > 1e-10 && Number.isFinite(angle)) {
+      dx = Math.cos(angle) * speed;
+      dy = Math.sin(angle) * speed;
+    } else if (
       Number.isFinite(this._lastCenterX) &&
       Number.isFinite(this._lastCenterY)
     ) {
-      m0x = this._lastCenterX;
-      m0y = this._lastCenterY;
-    } else {
-      m0x = m1x;
-      m0y = m1y;
+      dx = this._torusDelta(m1x, this._lastCenterX, this.size);
+      dy = this._torusDelta(m1y, this._lastCenterY, this.size);
     }
+
+    const m0x = m1x - dx;
+    const m0y = m1y - dy;
+
     this._lastCenterX = m1x;
     this._lastCenterY = m1y;
-
-    let dx = m1x - m0x;
-    let dy = m1y - m0y;
-    if (dx > this.size / 2) dx -= this.size;
-    if (dx < -this.size / 2) dx += this.size;
-    if (dy > this.size / 2) dy -= this.size;
-    if (dy < -this.size / 2) dy += this.size;
-
-    const running = !!params.running;
-    const hasNewMotion = Math.abs(dx) + Math.abs(dy) > 1e-6;
-    if (running && hasNewMotion) {
-      const alpha = 0.15;
-      if (
-        Number.isFinite(this._lastMotionDx) &&
-        Number.isFinite(this._lastMotionDy)
-      ) {
-        this._lastMotionDx += alpha * (dx - this._lastMotionDx);
-        this._lastMotionDy += alpha * (dy - this._lastMotionDy);
-      } else {
-        this._lastMotionDx = dx;
-        this._lastMotionDy = dy;
-      }
-    }
-    if (
-      Number.isFinite(this._lastMotionDx) &&
-      Number.isFinite(this._lastMotionDy)
-    ) {
-      dx = this._lastMotionDx;
-      dy = this._lastMotionDy;
-    }
 
     const m2x = m0x + dx * T;
     const m2y = m0y + dy * T;
@@ -1495,6 +1505,7 @@ class Renderer {
       this.calcPanelsCanvas.width !== totalW ||
       this.calcPanelsCanvas.height !== totalH
     ) {
+      this._releaseBuffer(this.calcPanelsCanvas);
       this.calcPanelsCanvas = createGraphics(totalW, totalH);
       if (typeof this.calcPanelsCanvas.pixelDensity === "function") {
         this.calcPanelsCanvas.pixelDensity(1);
@@ -1549,7 +1560,8 @@ class Renderer {
 
     let img = this.calcPanelImages[panelIndex];
     if (!img || img.width !== panelSize || img.height !== panelSize) {
-      img = createImage(panelSize, panelSize);
+      this._releaseBuffer(img);
+      img = this._createReadbackBuffer(panelSize, panelSize);
       this.calcPanelImages[panelIndex] = img;
     }
     return img;
@@ -1645,6 +1657,12 @@ class Renderer {
   }
 
   dispose() {
+    this._releaseBuffer(this.img);
+    if (Array.isArray(this.calcPanelImages)) {
+      this.calcPanelImages.forEach((panel) => this._releaseBuffer(panel));
+    }
+    this._releaseBuffer(this.calcPanelsCanvas);
+    this._releaseBuffer(this._legendBarImg);
     this.img = null;
     this.calcPanelImages = [];
     this.calcPanelsCanvas = null;

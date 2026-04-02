@@ -13,8 +13,8 @@ class Renderer {
         : null;
 
     const { size } = this.appcore.terrain;
-    this.canvas2D = createImage(size, size);
-    this.heightMapTexture = createImage(size, size);
+    this.canvas2D = this._createReadbackBuffer(size, size);
+    this.heightMapTexture = this._createReadbackBuffer(size, size);
 
     this.lut = new Uint8ClampedArray(256 * 3);
     this.currentColourMap = "";
@@ -76,6 +76,24 @@ class Renderer {
     ];
   }
 
+  _createReadbackBuffer(widthPx, heightPx) {
+    const canvasEl = document.createElement("canvas");
+    try {
+      canvasEl.getContext("2d", { willReadFrequently: true });
+    } catch {
+      canvasEl.getContext("2d");
+    }
+
+    const buffer = createGraphics(widthPx, heightPx, canvasEl);
+    if (typeof buffer.pixelDensity === "function") {
+      buffer.pixelDensity(1);
+    }
+    if (typeof buffer.noSmooth === "function") {
+      buffer.noSmooth();
+    }
+    return buffer;
+  }
+
   _getRenderer3D() {
     const renderer = this.canvas3D?._renderer;
     return renderer && renderer.isP3D ? renderer : null;
@@ -108,8 +126,17 @@ class Renderer {
 
   reinitialise() {
     const { size } = this.appcore.terrain;
-    this.canvas2D = createImage(size, size);
-    this.heightMapTexture = createImage(size, size);
+    if (this.canvas2D && typeof this.canvas2D.remove === "function") {
+      this.canvas2D.remove();
+    }
+    if (
+      this.heightMapTexture &&
+      typeof this.heightMapTexture.remove === "function"
+    ) {
+      this.heightMapTexture.remove();
+    }
+    this.canvas2D = this._createReadbackBuffer(size, size);
+    this.heightMapTexture = this._createReadbackBuffer(size, size);
     this.textureDirty = true;
   }
 
@@ -728,6 +755,15 @@ class Renderer {
   dispose() {
     if (this.canvas3D && typeof this.canvas3D.remove === "function") {
       this.canvas3D.remove();
+    }
+    if (this.canvas2D && typeof this.canvas2D.remove === "function") {
+      this.canvas2D.remove();
+    }
+    if (
+      this.heightMapTexture &&
+      typeof this.heightMapTexture.remove === "function"
+    ) {
+      this.heightMapTexture.remove();
     }
     this.canvas3D = null;
     this.canvas2D = null;

@@ -13,7 +13,28 @@ class Renderer {
     this.lastAMu = 5.29177210903e-11;
   }
 
+  _createReadbackBuffer(widthPx, heightPx) {
+    const canvasEl = document.createElement("canvas");
+    try {
+      canvasEl.getContext("2d", { willReadFrequently: true });
+    } catch {
+      canvasEl.getContext("2d");
+    }
+
+    const buffer = createGraphics(widthPx, heightPx, canvasEl);
+    if (typeof buffer.pixelDensity === "function") {
+      buffer.pixelDensity(1);
+    }
+    if (typeof buffer.noSmooth === "function") {
+      buffer.noSmooth();
+    }
+    return buffer;
+  }
+
   dispose() {
+    if (this.buffer && typeof this.buffer.remove === "function") {
+      this.buffer.remove();
+    }
     this.buffer = null;
   }
 
@@ -82,7 +103,10 @@ class Renderer {
       this.buffer.width !== res ||
       this.buffer.height !== res
     ) {
-      this.buffer = createImage(res, res);
+      if (this.buffer && typeof this.buffer.remove === "function") {
+        this.buffer.remove();
+      }
+      this.buffer = this._createReadbackBuffer(res, res);
     }
     this.renderToBuffer(this.grid, peak, res, colourMap, exposure);
   }

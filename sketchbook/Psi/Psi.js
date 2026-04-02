@@ -3,6 +3,16 @@ p5.disableFriendlyErrors = true;
 let appcore;
 let colourMaps, font;
 
+function createReadbackOptimisedCanvas(widthPx, heightPx) {
+  const canvasEl = document.createElement("canvas");
+  try {
+    canvasEl.getContext("2d", { willReadFrequently: true });
+  } catch {
+    canvasEl.getContext("2d");
+  }
+  return createCanvas(widthPx, heightPx, canvasEl);
+}
+
 function disposeAppCore() {
   if (!appcore || typeof appcore.dispose !== "function") return;
   appcore.dispose();
@@ -30,7 +40,7 @@ async function setup() {
   }
 
   const canvasSize = min(windowWidth, windowHeight);
-  const mainCanvas = createCanvas(canvasSize, canvasSize);
+  const mainCanvas = createReadbackOptimisedCanvas(canvasSize, canvasSize);
 
   setupCanvasProperties(mainCanvas);
 

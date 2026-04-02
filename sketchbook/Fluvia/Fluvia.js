@@ -16,6 +16,16 @@ const metadata = {
   author: "@eanutt1272.v2",
 };
 
+function createReadbackOptimisedCanvas(widthPx, heightPx) {
+  const canvasEl = document.createElement("canvas");
+  try {
+    canvasEl.getContext("2d", { willReadFrequently: true });
+  } catch {
+    canvasEl.getContext("2d");
+  }
+  return createCanvas(widthPx, heightPx, canvasEl);
+}
+
 async function setup() {
   try {
     const [loadedFont, loadedColourMaps, loadedVertLines, loadedFragLines] =
@@ -40,7 +50,7 @@ async function setup() {
   }
 
   const canvasSize = min(windowWidth, windowHeight);
-  mainCanvas = createCanvas(canvasSize, canvasSize);
+  mainCanvas = createReadbackOptimisedCanvas(canvasSize, canvasSize);
 
   setupCanvasProperties(mainCanvas);
 

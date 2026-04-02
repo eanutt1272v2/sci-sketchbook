@@ -42,11 +42,34 @@ class Media extends MediaCore {
             if (!img) throw new Error("[Fluvia] loadImage returned null");
 
             img.resize(size, size);
-            img.loadPixels();
 
-            const { pixels } = img;
-            if (!pixels || pixels.length < area * 4)
+            const sourceCanvas = img.canvas;
+            if (!(sourceCanvas instanceof HTMLCanvasElement)) {
+              throw new Error("[Fluvia] Imported image has no readable canvas");
+            }
+
+            const readbackCanvas = document.createElement("canvas");
+            readbackCanvas.width = size;
+            readbackCanvas.height = size;
+
+            let readCtx = null;
+            try {
+              readCtx = readbackCanvas.getContext("2d", {
+                willReadFrequently: true,
+              });
+            } catch {
+              readCtx = readbackCanvas.getContext("2d");
+            }
+
+            if (!readCtx) {
+              throw new Error("[Fluvia] Could not acquire 2D readback context");
+            }
+
+            readCtx.drawImage(sourceCanvas, 0, 0, size, size);
+            const pixels = readCtx.getImageData(0, 0, size, size).data;
+            if (!pixels || pixels.length < area * 4) {
               throw new Error("[Fluvia] Pixel buffer incomplete");
+            }
 
             for (let i = 0; i < area; i++) {
               const idx = i << 2;
