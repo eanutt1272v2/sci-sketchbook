@@ -2,8 +2,8 @@ class NDCompatibility {
   static SUPPORTED_DIMENSIONS = [2, 3, 4];
   static GRID_SIZE_OPTIONS_BY_DIMENSION = {
     2: [64, 128, 256, 512, 1024, 2048],
-    3: [32, 64, 128, 256],
-    4: [16, 32, 64, 128],
+    3: [32, 64, 128],
+    4: [16, 32],
   };
   static DEFAULT_GRID_SIZE_BY_DIMENSION = {
     2: 128,
@@ -65,10 +65,24 @@ class NDCompatibility {
 
   static gridSizeFromPixelSize(pixelSize, canvasSize, dimension = 2) {
     const px = Math.max(1, Math.round(pixelSize));
-    const raw = Math.floor(canvasSize / px);
-    const log2 = Math.floor(Math.log2(Math.max(1, raw)));
-    const pow2 = 1 << log2;
-    return this.coerceGridSize(pow2, dimension);
+    const options = this.getGridSizeOptions(dimension);
+    const feasible = options.filter((size) => size <= canvasSize);
+    const candidates = feasible.length > 0 ? feasible : options;
+
+    let bestSize = candidates[0];
+    let bestError = Infinity;
+
+    for (const size of candidates) {
+      const derivedPx = this.pixelSizeFromGridSize(size, canvasSize);
+      const err = Math.abs(derivedPx - px);
+
+      if (err < bestError || (err === bestError && size > bestSize)) {
+        bestError = err;
+        bestSize = size;
+      }
+    }
+
+    return bestSize;
   }
 
   static pixelSizeFromGridSize(gridSize, canvasSize) {

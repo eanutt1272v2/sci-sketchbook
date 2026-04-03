@@ -185,7 +185,7 @@ class GUI {
       if (String(params.viewMode) === "slice") {
         this.ndSliceZBinding = world
           .addBinding(params, "ndSliceZ", {
-            label: this.withHint("Slice Z", "sliceZ", "PgUp/PgDn"),
+            label: this.withHint("Slice Z", "sliceZ", "Home/End"),
             min: 0,
             max: depthMax,
             step: 1,
@@ -196,6 +196,24 @@ class GUI {
       }
 
       if (dim >= 4) {
+        world
+          .addBinding(params, "ndActiveAxis", {
+            label: this.withHint(
+              "Depth Axis",
+              "changeZAxis",
+              "Ctrl+Shift+Home",
+            ),
+            options: {
+              Z: "z",
+              W: "w",
+            },
+          })
+          .on("change", (event) =>
+            this._runIfGUIIdle(() =>
+              this.appcore?.setNDActiveAxis(event.value),
+            ),
+          );
+
         this.ndSliceWBinding = world
           .addBinding(params, "ndSliceW", {
             label: this.withHint("Slice W", "sliceW", "Shift+Scroll"),
@@ -258,6 +276,114 @@ class GUI {
     xform
       .addButton({ title: this.withHint("Transpose", "transpose", "-") })
       .on("click", () => this.appcore?.flipWorld(2));
+
+    if (dim > 2) {
+      this.addSeparator(xform);
+
+      xform
+        .addButton({
+          title: this.withHint("Move Front", "moveFront", "PgUp"),
+        })
+        .on("click", () => this.appcore?.shiftNDDepth(10));
+      xform
+        .addButton({
+          title: this.withHint("Move Back", "moveBack", "PgDn"),
+        })
+        .on("click", () => this.appcore?.shiftNDDepth(-10));
+      xform
+        .addButton({
+          title: this.withHint(
+            "Move Front (small)",
+            "moveFrontSmall",
+            "Shift+PgUp",
+          ),
+        })
+        .on("click", () => this.appcore?.shiftNDDepth(1));
+      xform
+        .addButton({
+          title: this.withHint(
+            "Move Back (small)",
+            "moveBackSmall",
+            "Shift+PgDn",
+          ),
+        })
+        .on("click", () => this.appcore?.shiftNDDepth(-1));
+
+      this.addSeparator(xform);
+
+      xform
+        .addButton({
+          title: this.withHint("Slice Front", "sliceFront", "Home"),
+        })
+        .on("click", () => {
+          if (this.appcore?.params?.viewMode !== "slice") {
+            this.appcore?.setViewMode("slice");
+          }
+          this.appcore?.adjustNDSlice(null, 10);
+        });
+      xform
+        .addButton({
+          title: this.withHint("Slice Back", "sliceBack", "End"),
+        })
+        .on("click", () => {
+          if (this.appcore?.params?.viewMode !== "slice") {
+            this.appcore?.setViewMode("slice");
+          }
+          this.appcore?.adjustNDSlice(null, -10);
+        });
+      xform
+        .addButton({
+          title: this.withHint(
+            "Slice Front (small)",
+            "sliceFrontSmall",
+            "Shift+Home",
+          ),
+        })
+        .on("click", () => {
+          if (this.appcore?.params?.viewMode !== "slice") {
+            this.appcore?.setViewMode("slice");
+          }
+          this.appcore?.adjustNDSlice(null, 1);
+        });
+      xform
+        .addButton({
+          title: this.withHint(
+            "Slice Back (small)",
+            "sliceBackSmall",
+            "Shift+End",
+          ),
+        })
+        .on("click", () => {
+          if (this.appcore?.params?.viewMode !== "slice") {
+            this.appcore?.setViewMode("slice");
+          }
+          this.appcore?.adjustNDSlice(null, -1);
+        });
+
+      xform
+        .addButton({
+          title: this.withHint("Centre Slice", "centerSlice", "Ctrl+Home"),
+        })
+        .on("click", () => this.appcore?.centerNDSlices({ allAxes: true }));
+
+      xform
+        .addButton({
+          title: this.withHint("Show Z Slice", "showZSlice", "Ctrl+End"),
+        })
+        .on("click", () => this.appcore?.toggleNDSliceView());
+
+      if (dim >= 4) {
+        xform
+          .addButton({
+            title: this.withHint(
+              "Change Z Axis",
+              "changeZAxis",
+              "Ctrl+Shift+Home",
+            ),
+          })
+          .on("click", () => this.appcore?.cycleNDActiveAxis(1));
+      }
+    }
   }
 
   createParametersTab(page) {

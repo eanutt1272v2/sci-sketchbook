@@ -75,6 +75,7 @@ class AnimalLibrary {
       "T",
       "m",
       "s",
+      "r",
       "kn",
       "gn",
       "h",
@@ -94,6 +95,9 @@ class AnimalLibrary {
 
     if (!Object.prototype.hasOwnProperty.call(sourceParams, "h")) {
       params.h = 1;
+    }
+    if (!Object.prototype.hasOwnProperty.call(sourceParams, "r")) {
+      params.r = 1;
     }
 
     const { b, ...standardParams } = sourceParams;

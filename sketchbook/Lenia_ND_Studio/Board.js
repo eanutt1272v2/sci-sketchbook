@@ -54,6 +54,12 @@ class Board {
     return y * this.size + x;
   }
 
+  _zoomNearestIndex(dstIndex, srcSize, dstSize) {
+    if (srcSize <= 1 || dstSize <= 1) return 0;
+    const srcPos = (dstIndex * (srcSize - 1)) / (dstSize - 1);
+    return Math.max(0, Math.min(srcSize - 1, Math.round(srcPos)));
+  }
+
   _getPatternGrids(pattern) {
     if (!pattern || !pattern.cells) return null;
     if (!pattern._parsedGrids) {
@@ -204,19 +210,6 @@ class Board {
     }
   }
 
-  loadPatternScaled(pattern, scale) {
-    this.clear();
-
-    if (!pattern || !pattern.cells) return;
-    if (Math.abs(scale - 1) < 1e-6) {
-      this.loadPattern(pattern);
-      return;
-    }
-
-    const center = Math.floor(this.size / 2);
-    this.placePatternScaled(pattern, center, center, scale);
-  }
-
   placePattern(pattern, cellX, cellY) {
     const grids = this._getPatternGrids(pattern);
     if (!grids || grids.length === 0) return;
@@ -224,14 +217,18 @@ class Board {
     const grid = grids[0];
     const h = grid.length;
     const w = grid[0].length;
-    const sy = cellY - Math.floor(h / 2);
-    const sx = cellX - Math.floor(w / 2);
+    const copyH = Math.min(this.size, h);
+    const copyW = Math.min(this.size, w);
+    const srcOffY = Math.floor((h - copyH) / 2);
+    const srcOffX = Math.floor((w - copyW) / 2);
+    const sy = cellY - Math.floor(copyH / 2);
+    const sx = cellX - Math.floor(copyW / 2);
 
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
+    for (let y = 0; y < copyH; y++) {
+      for (let x = 0; x < copyW; x++) {
         const ty = (sy + y + this.size) % this.size;
         const tx = (sx + x + this.size) % this.size;
-        this.world[this._index(tx, ty)] = grid[y][x];
+        this.world[this._index(tx, ty)] = grid[srcOffY + y]?.[srcOffX + x] || 0;
       }
     }
   }
@@ -253,28 +250,20 @@ class Board {
     const dstW = Math.max(1, Math.round(srcW * scale));
     const dstH = Math.max(1, Math.round(srcH * scale));
 
-    const sy = cellY - Math.floor(dstH / 2);
-    const sx = cellX - Math.floor(dstW / 2);
+    const copyW = Math.min(this.size, dstW);
+    const copyH = Math.min(this.size, dstH);
+    const dstOffX = Math.floor((dstW - copyW) / 2);
+    const dstOffY = Math.floor((dstH - copyH) / 2);
+    const sy = cellY - Math.floor(copyH / 2);
+    const sx = cellX - Math.floor(copyW / 2);
 
-    for (let dy = 0; dy < dstH; dy++) {
-      for (let dx = 0; dx < dstW; dx++) {
-        const srcXf = dx / scale;
-        const srcYf = dy / scale;
-
-        const x0 = Math.floor(srcXf);
-        const y0 = Math.floor(srcYf);
-        const x1 = Math.min(x0 + 1, srcW - 1);
-        const y1 = Math.min(y0 + 1, srcH - 1);
-        const fx = srcXf - x0;
-        const fy = srcYf - y0;
-
-        const v =
-          x0 < srcW && y0 < srcH
-            ? (grid[y0][x0] || 0) * (1 - fx) * (1 - fy) +
-              (grid[y0][x1] || 0) * fx * (1 - fy) +
-              (grid[y1][x0] || 0) * (1 - fx) * fy +
-              (grid[y1][x1] || 0) * fx * fy
-            : 0;
+    for (let dy = 0; dy < copyH; dy++) {
+      for (let dx = 0; dx < copyW; dx++) {
+        const sampleX = dstOffX + dx;
+        const sampleY = dstOffY + dy;
+        const srcX = this._zoomNearestIndex(sampleX, srcW, dstW);
+        const srcY = this._zoomNearestIndex(sampleY, srcH, dstH);
+        const v = grid[srcY]?.[srcX] || 0;
 
         if (v <= 1e-10) continue;
 
@@ -298,22 +287,11 @@ class Board {
     const oldSize = this.size;
     const src = this.world;
     const dst = new Float32Array(newSize * newSize);
-    const ratio = oldSize / newSize;
     for (let y = 0; y < newSize; y++) {
-      const srcYf = y * ratio;
-      const y0 = Math.floor(srcYf);
-      const y1 = (y0 + 1) % oldSize;
-      const fy = srcYf - y0;
+      const srcY = this._zoomNearestIndex(y, oldSize, newSize);
       for (let x = 0; x < newSize; x++) {
-        const srcXf = x * ratio;
-        const x0 = Math.floor(srcXf);
-        const x1 = (x0 + 1) % oldSize;
-        const fx = srcXf - x0;
-        dst[y * newSize + x] =
-          src[y0 * oldSize + x0] * (1 - fx) * (1 - fy) +
-          src[y0 * oldSize + x1] * fx * (1 - fy) +
-          src[y1 * oldSize + x0] * (1 - fx) * fy +
-          src[y1 * oldSize + x1] * fx * fy;
+        const srcX = this._zoomNearestIndex(x, oldSize, newSize);
+        dst[y * newSize + x] = src[srcY * oldSize + srcX];
       }
     }
     this.size = newSize;
@@ -384,8 +362,8 @@ class Board {
     const zoomed = new Float32Array(newDim * newDim);
     for (let y = 0; y < newDim; y++) {
       for (let x = 0; x < newDim; x++) {
-        const sx = Math.min(Math.floor(x / factor), size - 1);
-        const sy = Math.min(Math.floor(y / factor), size - 1);
+        const sx = this._zoomNearestIndex(x, size, newDim);
+        const sy = this._zoomNearestIndex(y, size, newDim);
         zoomed[y * newDim + x] = this.world[sy * size + sx];
       }
     }

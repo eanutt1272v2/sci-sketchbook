@@ -10,11 +10,19 @@ class InputHandler {
     if ((this.appcore.params.dimension || 2) <= 2) return false;
 
     const delta = event?.deltaY > 0 ? 1 : -1;
-    if (KeyboardUtils.isShiftHeld()) {
-      this.appcore.adjustNDSlice("w", delta);
-    } else {
-      this.appcore.adjustNDSlice("z", delta);
-    }
+    const dim = Number(this.appcore.params.dimension) || 2;
+    const activeAxis =
+      typeof this.appcore.getNDActiveAxis === "function"
+        ? this.appcore.getNDActiveAxis()
+        : "z";
+    const axis =
+      KeyboardUtils.isShiftHeld() && dim >= 4
+        ? activeAxis === "w"
+          ? "z"
+          : "w"
+        : activeAxis;
+
+    this.appcore.adjustNDSlice(axis, delta);
     return false;
   }
 
@@ -290,12 +298,35 @@ class InputHandler {
       this.appcore.shiftWorld(0, shiftHeld ? 1 : 10);
       return false;
     }
+    if (dim > 2 && ctrlHeld && shiftHeld && kCode === 36) {
+      this.appcore.cycleNDActiveAxis(1);
+      return false;
+    }
+    if (dim > 2 && ctrlHeld && kCode === 36) {
+      this.appcore.centerNDSlices({ allAxes: true });
+      return false;
+    }
+
     if (kCode === 33 && !ctrlHeld && dim > 2) {
-      this.appcore.adjustNDSlice("z", shiftHeld ? 1 : 10);
+      this.appcore.shiftNDDepth(shiftHeld ? 1 : 10);
       return false;
     }
     if (kCode === 34 && !ctrlHeld && dim > 2) {
-      this.appcore.adjustNDSlice("z", shiftHeld ? -1 : -10);
+      this.appcore.shiftNDDepth(shiftHeld ? -1 : -10);
+      return false;
+    }
+    if (kCode === 36 && !ctrlHeld && dim > 2) {
+      if (params.viewMode !== "slice") {
+        this.appcore.setViewMode("slice");
+      }
+      this.appcore.adjustNDSlice(null, shiftHeld ? 1 : 10);
+      return false;
+    }
+    if (kCode === 35 && !ctrlHeld && dim > 2) {
+      if (params.viewMode !== "slice") {
+        this.appcore.setViewMode("slice");
+      }
+      this.appcore.adjustNDSlice(null, shiftHeld ? -1 : -10);
       return false;
     }
 
@@ -318,9 +349,7 @@ class InputHandler {
     }
 
     if (dim > 2 && ctrlHeld && kCode === 35) {
-      params.viewMode = params.viewMode === "slice" ? "projection" : "slice";
-      this.appcore.setViewMode(params.viewMode);
-      this.appcore.refreshGUI();
+      this.appcore.toggleNDSliceView();
       return false;
     }
     const quoteKey = keyValue === "'" || keyValue === '"';

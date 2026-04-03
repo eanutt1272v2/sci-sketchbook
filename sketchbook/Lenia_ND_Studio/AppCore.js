@@ -28,18 +28,20 @@ class AppCore {
     this.params = {
       running: true,
       gridSize: 128,
-      pixelSize: 9,
+      pixelSize: 4,
 
       dimension: 2,
       viewMode: "projection",
       ndDepth: 6,
       ndSliceZ: 0,
       ndSliceW: 0,
+      ndActiveAxis: "z",
 
-      R: 13,
+      R: 20,
       T: 10,
-      m: 0.15,
-      s: 0.015,
+      m: 0.1,
+      s: 0.01,
+      r: 1,
       b: [1],
       kn: 1,
       gn: 1,
@@ -78,6 +80,11 @@ class AppCore {
       recordingFPS: 60,
       videoBitrateMbps: 8,
     };
+
+    this.params.R = this.getPythonDefaultRadius(
+      this.params.gridSize,
+      this.params.dimension,
+    );
 
     this.statistics = {
       gen: 0,
@@ -158,6 +165,8 @@ class AppCore {
     );
     this.input = new InputHandler(this);
 
+    this._syncPixelSizeFromGrid();
+
     this._worker = null;
     this._workerBusy = false;
     this._stepPending = false;
@@ -167,6 +176,10 @@ class AppCore {
     this._pendingPlacement = null;
     this._pendingMutations = [];
     this._lastPlacement = { cellX: null, cellY: null, atMs: 0 };
+    this._lastPlacementScale = Math.max(
+      0.25,
+      Math.min(4, Number(this.params.placeScale) || 1),
+    );
     this._skipNextAnimalParamsLoad = false;
     this._lastAnimalParamsSelection = null;
     this._changeRecycleBuffer = null;
@@ -189,12 +202,44 @@ class AppCore {
       this._kernelPending = false;
       this._viewPending = false;
       this._changeRecycleBuffer = null;
+
+      const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
+      if (dim > 2 && typeof NDCompatibility !== "undefined") {
+        const safeSize = NDCompatibility.coerceGridSize(
+          this.params.gridSize,
+          dim,
+        );
+        if (safeSize < this.params.gridSize) {
+          console.warn(
+            `[Lenia] Recovering from worker allocation failure by reducing ${dim}D grid size from ${this.params.gridSize} to ${safeSize}.`,
+          );
+          this.params.gridSize = safeSize;
+          this.changeResolution();
+          return;
+        }
+      }
     };
 
     this._workerSendKernel();
   }
 
   _workerSendKernel() {
+    const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
+    if (dim > 2 && typeof NDCompatibility !== "undefined") {
+      const safeSize = NDCompatibility.coerceGridSize(
+        this.params.gridSize,
+        dim,
+      );
+      if (safeSize !== this.params.gridSize) {
+        console.warn(
+          `[Lenia] Reducing ${dim}D grid size from ${this.params.gridSize} to ${safeSize} to avoid excessive worker memory usage.`,
+        );
+        this.params.gridSize = safeSize;
+        this.changeResolution();
+        return;
+      }
+    }
+
     if (!this._worker) return;
     if (this._workerBusy) {
       this._kernelPending = true;
@@ -768,6 +813,7 @@ class AppCore {
   }
 
   render() {
+    this._syncPixelSizeFromGrid();
     this.input.handleContinuousInput();
 
     const polarMode = Math.max(
@@ -1346,6 +1392,8 @@ class AppCore {
       }
     }
 
+    p.ndActiveAxis = this._coerceNDActiveAxis(p.ndActiveAxis, p.dimension);
+
     this._syncPixelSizeFromGrid();
 
     if (!Array.isArray(p.b) || p.b.length === 0) p.b = [1];
@@ -1391,6 +1439,10 @@ class AppCore {
 
     this._skipNextAnimalParamsLoad = true;
     this._lastAnimalParamsSelection = p.selectedAnimal || "";
+    this._lastPlacementScale = Math.max(
+      0.25,
+      Math.min(4, Number(p.placeScale) || 1),
+    );
 
     this._syncSelectedAnimalForActiveDimension(p.selectedAnimal);
 
@@ -1476,7 +1528,7 @@ class AppCore {
     );
   }
 
-  _packNDSeed(animal) {
+  _packNDSeed(animal, scale = 1) {
     if (!animal || !animal.cells) return null;
     const cellsStr = Array.isArray(animal.cells)
       ? animal.cells[0]
@@ -1517,16 +1569,41 @@ class AppCore {
     const offsetZ = Math.floor((depth - animalDepthZ) / 2);
     const offsetW = extraDims >= 2 ? Math.floor((depth - animalDepthW) / 2) : 0;
 
+    const requestedScale = Number(scale) || 1;
+    const useNativeScale = Math.abs(requestedScale - 1) < 1e-6;
+    const preparedSlices = [];
+
     let maxH = 0,
       maxW_ = 0;
     for (const s of slices) {
-      const h = s.grid.length;
-      const w = s.grid[0]?.length || 0;
-      if (h > maxH) maxH = h;
-      if (w > maxW_) maxW_ = w;
+      const grid = s.grid;
+      const h = grid.length;
+      const w = grid[0]?.length || 0;
+      if (w <= 0 || h <= 0) continue;
+
+      let scaledData = null;
+      let scaledW = w;
+      let scaledH = h;
+
+      if (!useNativeScale) {
+        scaledData = this._scaleGrid(grid, w, h, requestedScale);
+        scaledW = Math.max(1, Math.round(w * requestedScale));
+        scaledH = Math.max(1, Math.round(h * requestedScale));
+      }
+
+      if (scaledH > maxH) maxH = scaledH;
+      if (scaledW > maxW_) maxW_ = scaledW;
+      preparedSlices.push({
+        z: s.z,
+        w: s.w,
+        grid,
+        scaledData,
+        scaledW,
+        scaledH,
+      });
     }
 
-    for (const slice of slices) {
+    for (const slice of preparedSlices) {
       const centeredZ = slice.z + offsetZ;
       const centeredW = slice.w + offsetW;
       if (centeredZ < 0 || centeredZ >= depth) continue;
@@ -1541,8 +1618,8 @@ class AppCore {
       if (plane >= planeCount) continue;
 
       const grid = slice.grid;
-      const h = grid.length;
-      const w = grid[0]?.length || 0;
+      const h = slice.scaledH;
+      const w = slice.scaledW;
       const sy = Math.floor((size - maxH) / 2);
       const sx = Math.floor((size - maxW_) / 2);
       const gy = Math.floor((maxH - h) / 2);
@@ -1554,7 +1631,9 @@ class AppCore {
           const ty = sy + gy + y;
           const tx = sx + gx + x;
           if (ty >= 0 && ty < size && tx >= 0 && tx < size) {
-            packed[planeBase + ty * size + tx] = grid[y][x];
+            packed[planeBase + ty * size + tx] = useNativeScale
+              ? grid[y][x]
+              : slice.scaledData[y * w + x] || 0;
           }
         }
       }
@@ -1612,25 +1691,80 @@ class AppCore {
       this._queueOrRunMutation(() => {
         this._ensureBuffers();
         this.analyser.resetStatistics();
+
+        const sourceParams = this._getAnimalSourceParams(animal) || {};
+        const sourceR = Number(sourceParams.R);
+        const currentKn = Number(this.params.kn) || 1;
+        const nextKn = Number(sourceParams.kn) || currentKn;
+        const isCurrentLife = currentKn === 4;
+        const isNextLife = nextKn === 4;
+        const animalCode = String(animal?.code || "")
+          .trim()
+          .toLowerCase();
+        const forcePartR = animalCode.startsWith("~");
+        const forceNativeBugR = animalCode === "sbug" || animalCode === "bbug";
+        const defaultR = this.getPythonDefaultRadius(
+          this.params.gridSize,
+          this.params.dimension,
+        );
+
+        let baseR = Math.max(2, Number(this.params.R) || defaultR);
+
+        if (isCurrentLife && !isNextLife) {
+          baseR = defaultR;
+        }
+
+        if (
+          (forcePartR || forceNativeBugR) &&
+          Number.isFinite(sourceR) &&
+          sourceR > 0
+        ) {
+          baseR = Math.round(
+            constrain(
+              sourceR,
+              2,
+              this.getMaxKernelRadius(this.params.gridSize),
+            ),
+          );
+        }
+
+        this.params.R = baseR;
         this._applyAnimalSimulationParams(animal);
+
         const requestedScale = this.getEffectivePlacementScale(
           this.params.placeScale,
         );
-        const patternScale = this.applyScaledAnimalParams(animal, requestedScale);
+        const patternScale = this.applyScaledAnimalParams(
+          animal,
+          requestedScale,
+          {
+            baseR: Number.isFinite(sourceR) && sourceR > 0 ? sourceR : baseR,
+          },
+        );
+
+        this.params.R = Math.round(
+          constrain(
+            Number(this.params.R) || baseR,
+            2,
+            this.getMaxKernelRadius(this.params.gridSize),
+          ),
+        );
 
         const dim = Number(this.params.dimension) || 2;
         if (loadPattern && dim <= 2) {
           if (Math.abs(patternScale - 1) < 1e-6) {
             this.board.loadPattern(animal);
           } else {
-            this.board.loadPatternScaled(animal, patternScale);
+            this.board.clear();
+            const center = Math.floor(this.board.size / 2);
+            this.board.placePatternScaled(animal, center, center, patternScale);
           }
         } else if (loadPattern) {
           this.board.clear();
         }
 
         if (loadPattern && dim > 2) {
-          const ndSeed = this._packNDSeed(animal);
+          const ndSeed = this._packNDSeed(animal, patternScale);
           if (ndSeed) {
             this._ndSeedWorld = ndSeed;
           }
@@ -1663,51 +1797,78 @@ class AppCore {
     return true;
   }
 
-  applySelectedAnimalScaledRT(scale, { refreshGUI = false } = {}) {
+  applySelectedAnimalScaledRT(
+    scale,
+    { baseR = null, refreshGUI = false } = {},
+  ) {
     const animal = this.getSelectedAnimal();
     if (!animal) return false;
 
     const effectiveScale = this.getEffectivePlacementScale(scale);
-    this.applyScaledAnimalParams(animal, effectiveScale);
+    this.applyScaledAnimalParams(animal, effectiveScale, { baseR });
     this.updateAutomatonParams();
     if (refreshGUI) this.refreshGUI();
     return true;
   }
 
-  applyScaledAnimalParams(animal, scale = 1) {
+  _getAnimalSourceParams(animal) {
+    if (!animal || !animal.params) return null;
+    return Array.isArray(animal.params)
+      ? animal.params.find((entry) => entry && typeof entry === "object") ||
+          animal.params[0] ||
+          null
+      : animal.params;
+  }
+
+  applyScaledAnimalParams(animal, scale = 1, { baseR = null } = {}) {
     if (!animal || !animal.params) return scale;
 
-    const sourceParams = Array.isArray(animal.params)
-      ? animal.params.find((entry) => entry && typeof entry === "object") ||
-        animal.params[0] ||
-        {}
-      : animal.params;
+    const sourceParams = this._getAnimalSourceParams(animal) || {};
 
-    const baseR = Number(sourceParams.R);
-    const baseT = Number(sourceParams.T);
-    const s = Number(scale) || 1;
+    const sourceR = Number(sourceParams.R);
+    const requestedScale = Number(scale) || 1;
+    const anchorR =
+      Number.isFinite(baseR) && baseR > 0
+        ? baseR
+        : Math.max(
+            2,
+            Number(this.params.R) ||
+              (Number.isFinite(sourceR) && sourceR > 0 ? sourceR : 13),
+          );
 
-    let actualScale = s;
-    if (Number.isFinite(baseR) && baseR > 0) {
-      this.params.R = Math.round(
-        constrain(baseR * s, 2, this.getMaxKernelRadius()),
-      );
-      actualScale = this.params.R / baseR;
+    const targetR = Math.round(
+      constrain(anchorR * requestedScale, 2, this.getMaxKernelRadius()),
+    );
+    this.params.R = targetR;
+
+    if (Number.isFinite(sourceR) && sourceR > 0) {
+      return targetR / sourceR;
     }
 
-    if (Number.isFinite(baseT)) {
-      this.params.T = Math.round(
-        constrain(baseT * actualScale, 1, this.getMaxTimeScale()),
-      );
-    }
-
-    return actualScale;
+    return requestedScale;
   }
 
   updatePlacementScale(scale) {
+    const animal = this.getSelectedAnimal();
+    const sourceParams = this._getAnimalSourceParams(animal) || {};
+    const sourceR = Number(sourceParams.R);
+    const currentR = Math.max(2, Number(this.params.R) || 13);
+    const currentScale = constrain(
+      Number(this._lastPlacementScale) || 1,
+      0.25,
+      4,
+    );
+    const baseR =
+      Number.isFinite(sourceR) && sourceR > 0
+        ? sourceR
+        : Number.isFinite(currentScale) && Math.abs(currentScale) > 1e-9
+          ? currentR / currentScale
+          : currentR;
+
     const next = constrain(Number(scale) || 1, 0.25, 4);
     this.params.placeScale = next;
-    this.applySelectedAnimalScaledRT(next, { refreshGUI: true });
+    this._lastPlacementScale = next;
+    this.applySelectedAnimalScaledRT(next, { baseR, refreshGUI: true });
   }
 
   setPolarMode(mode, { refreshGUI = true } = {}) {
@@ -1773,7 +1934,13 @@ class AppCore {
     const animal = this._resolveAnimalForPlacement(request.selection);
     if (!animal) return;
 
-    const scale = this.getEffectivePlacementScale(request.scale);
+    let scale = this.getEffectivePlacementScale(request.scale);
+    const sourceParams = this._getAnimalSourceParams(animal) || {};
+    const sourceR = Number(sourceParams.R);
+    if (Number.isFinite(sourceR) && sourceR > 0) {
+      const targetR = Math.max(2, Number(this.params.R) || sourceR);
+      scale = targetR / sourceR;
+    }
     this._ensureBuffers();
 
     if ((this.params.dimension || 2) > 2) {
@@ -1944,23 +2111,16 @@ class AppCore {
     const pw = Math.max(1, Math.round(w * scale));
     const ph = Math.max(1, Math.round(h * scale));
     const data = new Float32Array(ph * pw);
+    const mapNearestIndex = (dstIndex, srcSize, dstSize) => {
+      if (srcSize <= 1 || dstSize <= 1) return 0;
+      const srcPos = (dstIndex * (srcSize - 1)) / (dstSize - 1);
+      return Math.max(0, Math.min(srcSize - 1, Math.round(srcPos)));
+    };
     for (let dy = 0; dy < ph; dy++) {
       for (let dx = 0; dx < pw; dx++) {
-        const srcXf = dx / scale;
-        const srcYf = dy / scale;
-        const x0 = Math.floor(srcXf);
-        const y0 = Math.floor(srcYf);
-        const x1 = Math.min(x0 + 1, w - 1);
-        const y1 = Math.min(y0 + 1, h - 1);
-        const fx = srcXf - x0;
-        const fy = srcYf - y0;
-        data[dy * pw + dx] =
-          x0 < w && y0 < h
-            ? (grid[y0][x0] || 0) * (1 - fx) * (1 - fy) +
-              (grid[y0][x1] || 0) * fx * (1 - fy) +
-              (grid[y1][x0] || 0) * (1 - fx) * fy +
-              (grid[y1][x1] || 0) * fx * fy
-            : 0;
+        const srcX = mapNearestIndex(dx, w, pw);
+        const srcY = mapNearestIndex(dy, h, ph);
+        data[dy * pw + dx] = grid[srcY]?.[srcX] || 0;
       }
     }
     return data;
@@ -2104,20 +2264,10 @@ class AppCore {
     );
 
     if (newGrid !== oldGrid) {
-      const scale = newGrid / oldGrid;
-      this.params.R = Math.round(
-        constrain(
-          (Number(this.params.R) || 13) * scale,
-          2,
-          this.getMaxKernelRadius(newGrid),
-        ),
-      );
+      this.params.R = this.getPythonDefaultRadius(newGrid, dim);
+      this._prevR = this.params.R;
       this.params.T = Math.round(
-        constrain(
-          (Number(this.params.T) || 10) * scale,
-          1,
-          this.getMaxTimeScale(),
-        ),
+        constrain(Number(this.params.T) || 10, 1, this.getMaxTimeScale()),
       );
     }
 
@@ -2134,26 +2284,22 @@ class AppCore {
     return 1500;
   }
 
-  getResolutionScale(dimension = this.params.dimension) {
+  getPythonDefaultRadius(
+    gridSize = this.params.gridSize,
+    dimension = this.params.dimension,
+  ) {
+    const size = Math.max(1, Math.floor(Number(gridSize) || 1));
     const dim =
       typeof NDCompatibility !== "undefined"
         ? NDCompatibility.coerceDimension(dimension)
-        : 2;
-    const baseGrid =
-      typeof NDCompatibility !== "undefined"
-        ? NDCompatibility.getDefaultGridSize(dim)
-        : 128;
-    const grid = Math.max(1, Math.floor(Number(this.params.gridSize) || 1));
-    return grid / Math.max(1, baseGrid);
+        : Math.max(2, Math.floor(Number(dimension) || 2));
+    const raw = (size / 64) * dim * 5;
+    return Math.round(constrain(raw, 2, this.getMaxKernelRadius(size)));
   }
 
-  getEffectivePlacementScale(
-    scale = this.params.placeScale,
-    dimension = this.params.dimension,
-  ) {
+  getEffectivePlacementScale(scale = this.params.placeScale) {
     const uiScale = constrain(Number(scale) || 1, 0.25, 4);
-    const resolutionScale = this.getResolutionScale(dimension);
-    return uiScale * resolutionScale;
+    return uiScale;
   }
 
   _syncPixelSizeFromGrid() {
@@ -2169,6 +2315,47 @@ class AppCore {
     const size = Math.max(1, Math.floor(Number(this.params.gridSize) || 1));
     const shape = dim === 2 ? "square" : dim === 3 ? "cube" : "hypercube";
     return `${shape} ${size}^${dim}`;
+  }
+
+  _coerceNDActiveAxis(axis, dimension = this.params.dimension) {
+    const dim =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceDimension(dimension)
+        : Math.max(2, Math.floor(Number(dimension) || 2));
+    if (dim <= 3) return "z";
+    return String(axis || "z").toLowerCase() === "w" ? "w" : "z";
+  }
+
+  getNDActiveAxis() {
+    return this._coerceNDActiveAxis(
+      this.params.ndActiveAxis,
+      this.params.dimension,
+    );
+  }
+
+  setNDActiveAxis(axis, { refreshGUI = true } = {}) {
+    if ((this.params.dimension || 2) <= 2) return "z";
+    const nextAxis = this._coerceNDActiveAxis(axis, this.params.dimension);
+    this.params.ndActiveAxis = nextAxis;
+    if (refreshGUI) this.refreshGUI();
+    return nextAxis;
+  }
+
+  cycleNDActiveAxis(delta = 1, { refreshGUI = true } = {}) {
+    if ((this.params.dimension || 2) < 4) {
+      this.params.ndActiveAxis = "z";
+      if (refreshGUI) this.refreshGUI();
+      return "z";
+    }
+    const step = Math.floor(Number(delta) || 0) || 1;
+    const order = ["z", "w"];
+    const current = this.getNDActiveAxis();
+    const idx = order.indexOf(current);
+    const safeIdx = idx >= 0 ? idx : 0;
+    const next = order[(safeIdx + step + order.length) % order.length];
+    this.params.ndActiveAxis = next;
+    if (refreshGUI) this.refreshGUI();
+    return next;
   }
 
   buildNDConfig() {
@@ -2215,6 +2402,10 @@ class AppCore {
     this.params.ndDepth = ndDepth;
     this.params.ndSliceZ = ndSliceZ;
     this.params.ndSliceW = ndSliceW;
+    this.params.ndActiveAxis = this._coerceNDActiveAxis(
+      this.params.ndActiveAxis,
+      dimension,
+    );
 
     return {
       dimension,
@@ -2222,6 +2413,7 @@ class AppCore {
       depth: ndDepth,
       sliceZ: ndSliceZ,
       sliceW: ndSliceW,
+      activeAxis: this.params.ndActiveAxis,
     };
   }
 
@@ -2238,6 +2430,11 @@ class AppCore {
       const coercedSize = this._normaliseGridSize(this.params.gridSize);
       const sizeChanged = coercedSize !== this.params.gridSize;
       this.params.gridSize = coercedSize;
+      this.params.R = this.getPythonDefaultRadius(
+        this.params.gridSize,
+        nextDimension,
+      );
+      this._prevR = this.params.R;
 
       if ((Number(this.params.dimension) || 2) > 2) {
         this.params.viewMode = "projection";
@@ -2253,11 +2450,17 @@ class AppCore {
               );
         this.params.ndSliceZ = Math.floor(ndDepthForSlice / 2);
         this.params.ndSliceW = Math.floor(ndDepthForSlice / 2);
+        this.params.ndActiveAxis = this._coerceNDActiveAxis(
+          this.params.ndActiveAxis,
+          nextDimension,
+        );
       } else {
         this.params.viewMode = "slice";
+        this.params.ndActiveAxis = "z";
       }
 
       this.params.placeScale = 1;
+      this._lastPlacementScale = 1;
 
       this._applyAnimalSource();
 
@@ -2303,6 +2506,12 @@ class AppCore {
 
   adjustNDSlice(axis, delta) {
     if ((this.params.dimension || 2) <= 2) return;
+    const targetAxis = this._coerceNDActiveAxis(
+      axis || this.params.ndActiveAxis,
+      this.params.dimension,
+    );
+    const step = Math.floor(Number(delta) || 0);
+    if (!Number.isFinite(step) || step === 0) return;
     const depth =
       typeof NDCompatibility !== "undefined"
         ? NDCompatibility.coerceDepth(
@@ -2313,19 +2522,76 @@ class AppCore {
             2,
             Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)),
           );
-    if (axis === "z") {
+    if (targetAxis === "z") {
       this.params.ndSliceZ =
-        (((Math.floor(Number(this.params.ndSliceZ) || 0) + delta) % depth) +
+        (((Math.floor(Number(this.params.ndSliceZ) || 0) + step) % depth) +
           depth) %
         depth;
-    } else if (axis === "w") {
+    } else if (targetAxis === "w") {
       this.params.ndSliceW =
-        (((Math.floor(Number(this.params.ndSliceW) || 0) + delta) % depth) +
+        (((Math.floor(Number(this.params.ndSliceW) || 0) + step) % depth) +
           depth) %
         depth;
     }
     this._workerRequestView();
     this.refreshGUI();
+  }
+
+  centerNDSlices({ allAxes = true } = {}) {
+    if ((this.params.dimension || 2) <= 2) return;
+    const depth =
+      typeof NDCompatibility !== "undefined"
+        ? NDCompatibility.coerceDepth(
+            this.params.ndDepth,
+            this.params.dimension,
+          )
+        : Math.max(
+            2,
+            Math.min(512, Math.floor(Number(this.params.ndDepth) || 6)),
+          );
+    const center = Math.floor(depth / 2);
+
+    if (allAxes || this.getNDActiveAxis() === "z") {
+      this.params.ndSliceZ = center;
+    }
+    if ((this.params.dimension || 2) >= 4) {
+      if (allAxes || this.getNDActiveAxis() === "w") {
+        this.params.ndSliceW = center;
+      }
+    }
+
+    this._workerRequestView();
+    this.refreshGUI();
+  }
+
+  toggleNDSliceView() {
+    if ((this.params.dimension || 2) <= 2) return;
+    const nextMode = this.params.viewMode === "slice" ? "projection" : "slice";
+    this.setViewMode(nextMode);
+  }
+
+  shiftNDDepth(delta, axis = null) {
+    if ((this.params.dimension || 2) <= 2) return;
+    const step = Math.floor(Number(delta) || 0);
+    if (!Number.isFinite(step) || step === 0) return;
+
+    const targetAxis = this._coerceNDActiveAxis(
+      axis || this.params.ndActiveAxis,
+      this.params.dimension,
+    );
+
+    this._queueAction("shiftNDDepth", () =>
+      this._queueOrRunMutation(() => {
+        if (!this.board.world) return;
+        this._ensureBuffers();
+        this._workerTransform({
+          shiftDepth: {
+            axis: targetAxis,
+            delta: step,
+          },
+        });
+      }),
+    );
   }
 
   refreshNDView() {

@@ -42,6 +42,8 @@ let _autoCenterTmp = null;
 let _autoCenterTmpLen = 0;
 let _autoCenterTyLut = null;
 let _autoCenterTyLutSize = 0;
+let _ndDepthShiftTmp = null;
+let _ndDepthShiftTmpLen = 0;
 
 let _mcAnalysisScratch = null;
 let _mcAnalysisScratchLen = 0;
@@ -2282,19 +2284,58 @@ function autoCenterShift(arr, size, shiftX, shiftY, channelCount) {
   arr.set(len === _autoCenterTmpLen ? tmp : tmp.subarray(0, len));
 }
 
+function shiftNDDepth(arr, planeCellCount, depth, dimension, axis, delta) {
+  const d = Math.floor(Number(delta) || 0);
+  if (!Number.isFinite(d) || d === 0) return;
+
+  const dim = Math.max(3, Math.floor(Number(dimension) || 3));
+  const shift = ((d % depth) + depth) % depth;
+  if (shift === 0) return;
+
+  const shiftW = dim >= 4 && String(axis || "z").toLowerCase() === "w";
+  const planeCount = dim >= 4 ? depth * depth : depth;
+  const len = planeCount * planeCellCount;
+
+  if (!_ndDepthShiftTmp || _ndDepthShiftTmpLen < len) {
+    _ndDepthShiftTmp = new Float32Array(len);
+    _ndDepthShiftTmpLen = len;
+  }
+  const tmp = _ndDepthShiftTmp;
+
+  for (let p = 0; p < planeCount; p++) {
+    const z = dim >= 4 ? p % depth : p;
+    const w = dim >= 4 ? Math.floor(p / depth) : 0;
+
+    const nz = shiftW ? z : (z + shift) % depth;
+    const nw = shiftW ? (w + shift) % depth : w;
+    const np = dim >= 4 ? nz + nw * depth : nz;
+
+    const src = p * planeCellCount;
+    const dst = np * planeCellCount;
+    tmp.set(arr.subarray(src, src + planeCellCount), dst);
+  }
+
+  arr.set(len === _ndDepthShiftTmpLen ? tmp : tmp.subarray(0, len));
+}
+
 function zoomPlanes(arr, size, planeCount, factor) {
   const cellCount = size * size;
   const newDim = Math.max(1, Math.round(size * factor));
   const minDim = Math.min(size, newDim);
   const offDst = Math.floor((size - minDim) / 2);
   const offSrc = Math.floor((newDim - minDim) / 2);
+  const mapNearestIndex = (dstIndex, srcSize, dstSize) => {
+    if (srcSize <= 1 || dstSize <= 1) return 0;
+    const srcPos = (dstIndex * (srcSize - 1)) / (dstSize - 1);
+    return Math.max(0, Math.min(srcSize - 1, Math.round(srcPos)));
+  };
   for (let p = 0; p < planeCount; p++) {
     const off = p * cellCount;
     const zoomed = new Float32Array(newDim * newDim);
     for (let y = 0; y < newDim; y++) {
       for (let x = 0; x < newDim; x++) {
-        const sx = Math.min(Math.floor(x / factor), size - 1);
-        const sy = Math.min(Math.floor(y / factor), size - 1);
+        const sx = mapNearestIndex(x, size, newDim);
+        const sy = mapNearestIndex(y, size, newDim);
         zoomed[y * newDim + x] = arr[off + sy * size + sx];
       }
     }
@@ -2339,12 +2380,13 @@ function _sanitiseWorkerParams(rawParams) {
     1,
     Math.max(1, Math.floor(params.size / 2)),
   );
-  params.T = _clamp(_toFiniteNumber(source.T, 10), 0.1, 512);
+  params.T = Math.max(0.1, _toFiniteNumber(source.T, 10));
   params.m = _clamp(_toFiniteNumber(source.m, 0.15), 0, 1);
   params.s = _clamp(_toFiniteNumber(source.s, 0.015), 0.0001, 1);
+  params.r = Math.max(0.0001, _toFiniteNumber(source.r, 1));
   params.kn = _toInteger(source.kn, 1, 1, 4);
   params.gn = _toInteger(source.gn, 1, 1, 3);
-  params.h = _clamp(_toFiniteNumber(source.h, 1), 0.01, 2);
+  params.h = Math.max(0.0001, _toFiniteNumber(source.h, 1));
   params.addNoise = _clamp(_toFiniteNumber(source.addNoise, 0), 0, 10);
   params.maskRate = _clamp(_toFiniteNumber(source.maskRate, 0), 0, 10);
   params.paramP = _toInteger(source.paramP, 0, 0, 64);
@@ -2354,7 +2396,7 @@ function _sanitiseWorkerParams(rawParams) {
   if (Array.isArray(source.b)) {
     const b = source.b
       .slice(0, 8)
-      .map((v) => _clamp(_toFiniteNumber(v, 0), 0, 1))
+      .map((v) => Math.max(0, _toFiniteNumber(v, 0)))
       .filter((v) => Number.isFinite(v));
     params.b = b.length > 0 ? b : [1];
   } else {
@@ -2619,6 +2661,48 @@ self.onmessage = function (e) {
         autoCenterShift(_ndState.growth, size, dx, dy, total / cellCount);
       }
 
+      if (transform.shiftDepth && typeof transform.shiftDepth === "object") {
+        const axis = transform.shiftDepth.axis || "z";
+        const delta = Math.floor(Number(transform.shiftDepth.delta) || 0);
+        if (delta !== 0) {
+          const planeCellCount = cellCount * channelCount;
+          shiftNDDepth(
+            _ndState.world,
+            planeCellCount,
+            _ndState.depth,
+            _ndState.dimension,
+            axis,
+            delta,
+          );
+          shiftNDDepth(
+            _ndState.potential,
+            planeCellCount,
+            _ndState.depth,
+            _ndState.dimension,
+            axis,
+            delta,
+          );
+          shiftNDDepth(
+            _ndState.growth,
+            planeCellCount,
+            _ndState.depth,
+            _ndState.dimension,
+            axis,
+            delta,
+          );
+          if (_ndState.growthOld) {
+            shiftNDDepth(
+              _ndState.growthOld,
+              planeCellCount,
+              _ndState.depth,
+              _ndState.dimension,
+              axis,
+              delta,
+            );
+          }
+        }
+      }
+
       if (typeof transform.rotate === "number" && transform.rotate !== 0) {
         ndRotateState(_ndState, transform.rotate);
       }
@@ -2635,6 +2719,9 @@ self.onmessage = function (e) {
         zoomPlanes(_ndState.potential, size, total / cellCount, transform.zoom);
         zoomPlanes(_ndState.growth, size, total / cellCount, transform.zoom);
       }
+
+      _stepCenterCache.valid = false;
+      _ndStepCache.valid = false;
 
       const display = ndExtractDisplay(
         _ndState,
