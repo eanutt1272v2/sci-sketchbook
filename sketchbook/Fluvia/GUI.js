@@ -35,6 +35,13 @@ class GUI {
     target.addBlade({ view: "separator" });
   }
 
+  withHint(label, id, fallback = "") {
+    if (typeof KeybindCatalogue === "undefined") {
+      return fallback ? `${label} (${fallback})` : label;
+    }
+    return KeybindCatalogue.withHint(label, "fluvia", id, fallback);
+  }
+
   addGraphWithValue(target, objectRef, key, options = {}) {
     const {
       label,
@@ -77,12 +84,14 @@ class GUI {
       title: "Simulation Controls",
       expanded: true,
     });
-    controls.addBinding(params, "running", { label: "Running (Space)" });
+    controls.addBinding(params, "running", {
+      label: this.withHint("Running", "running", "P/Space"),
+    });
     controls
-      .addButton({ title: "Generate Terrain (G)" })
+      .addButton({ title: this.withHint("Generate Terrain", "generate", "G") })
       .on("click", () => this.appcore.generate());
     controls
-      .addButton({ title: "Reset Terrain (R)" })
+      .addButton({ title: this.withHint("Reset Terrain", "reset", "R") })
       .on("click", () => this.appcore.reset());
 
     this.addSeparator(page);
@@ -105,21 +114,21 @@ class GUI {
 
     const droplets = page.addFolder({ title: "Droplets", expanded: true });
     droplets.addBinding(params, "dropletsPerFrame", {
-      label: "Droplets/Frame (I/K)",
+      label: this.withHint("Droplets/Frame", "droplets", "I/K"),
       min: 0,
       max: 512,
       step: 1,
     });
 
     droplets.addBinding(params, "maxAge", {
-      label: "Max Age",
+      label: this.withHint("Max Age", "maxAge", "Ctrl+U/J"),
       min: 128,
       max: 512,
       step: 1,
     });
 
     droplets.addBinding(params, "minVolume", {
-      label: "Min Volume",
+      label: this.withHint("Min Volume", "minVolume", "Ctrl+Y/H"),
       min: 0.001,
       max: 0.1,
       step: 0.001,
@@ -133,18 +142,18 @@ class GUI {
     });
 
     genFolder.addBinding(params, "terrainSize", {
-      label: "Size",
+      label: this.withHint("Size", "terrainSize", "Ctrl+1/2/3"),
       options: { "128×128": 128, "256×256": 256, "512×512": 512 },
     });
 
     genFolder.addBinding(params, "noiseScale", {
-      label: "Scale",
+      label: this.withHint("Scale", "noiseScale", "Ctrl+[/]"),
       min: 0.1,
       max: 5,
     });
 
     genFolder.addBinding(params, "noiseOctaves", {
-      label: "Octaves",
+      label: this.withHint("Octaves", "noiseOctaves", "Ctrl+;/'"),
       min: 1,
       max: 12,
       step: 1,
@@ -203,12 +212,12 @@ class GUI {
     const render = page.addFolder({ title: "Render", expanded: true });
 
     render.addBinding(params, "renderMethod", {
-      label: "Render Method (1/2)",
+      label: this.withHint("Render Method", "renderMethod", "1/2"),
       options: { "3D": "3D", "2D": "2D" },
     });
 
     render.addBinding(params, "surfaceMap", {
-      label: "Surface Map (M)",
+      label: this.withHint("Surface Map", "surfaceMap", "M"),
       options: {
         Composite: "composite",
         "Height Map": "height",
@@ -227,11 +236,11 @@ class GUI {
 
     render.addBinding(params, "colourMap", {
       options: colourMapOptions,
-      label: "Colour Map (C)",
+      label: this.withHint("Colour Map", "colourMap", "C"),
     });
 
     render.addBinding(params, "heightScale", {
-      label: "Height Scale ([/])",
+      label: this.withHint("Height Scale", "heightScale", "[/]"),
       min: 1,
       max: 256,
     });
@@ -263,9 +272,13 @@ class GUI {
 
     const overlay = page.addFolder({ title: "Overlays", expanded: true });
 
-    overlay.addBinding(params, "renderStats", { label: "Statistics (O)" });
+    overlay.addBinding(params, "renderStats", {
+      label: this.withHint("Statistics", "overlayStats", "O"),
+    });
 
-    overlay.addBinding(params, "renderLegend", { label: "Legend (L)" });
+    overlay.addBinding(params, "renderLegend", {
+      label: this.withHint("Legend", "overlayLegend", "L"),
+    });
 
     this.addSeparator(page);
 
@@ -279,7 +292,11 @@ class GUI {
     });
 
     light.addBinding(params, "specularIntensity", {
-      label: "Specular Intensity",
+      label: this.withHint(
+        "Specular Intensity",
+        "specularIntensity",
+        "Ctrl+,/.",
+      ),
       min: 0.01,
       max: 1024,
     });
@@ -553,29 +570,51 @@ class GUI {
 
     const imp = page.addFolder({ title: "Import" });
     imp
-      .addButton({ title: "Import Heightmap (U)" })
+      .addButton({
+        title: this.withHint(
+          "Import Heightmap",
+          "importHeightmap",
+          "Ctrl+Shift+U",
+        ),
+      })
       .on("click", () => media.openImportDialog());
     imp
-      .addButton({ title: "Import Params (Shift+I)" })
+      .addButton({
+        title: this.withHint("Import Params", "importParams", "Ctrl+Shift+I"),
+      })
       .on("click", () => media.importParamsJSON());
     imp
-      .addButton({ title: "Import World (Shift+Q)" })
+      .addButton({
+        title: this.withHint("Import World", "importWorld", "Ctrl+Shift+Q"),
+      })
       .on("click", () => media.importWorldJSON());
 
     this.addSeparator(page);
 
     const exp = page.addFolder({ title: "Export" });
     exp
-      .addButton({ title: "Export Params (Shift+P)" })
+      .addButton({
+        title: this.withHint("Export Params", "exportParams", "Ctrl+Shift+P"),
+      })
       .on("click", () => media.exportParamsJSON());
     exp
-      .addButton({ title: "Export Stats (Shift+J)" })
+      .addButton({
+        title: this.withHint("Export Stats", "exportStats", "Ctrl+Shift+J"),
+      })
       .on("click", () => media.exportStatisticsJSON());
     exp
-      .addButton({ title: "Export Stats CSV (Shift+K)" })
+      .addButton({
+        title: this.withHint(
+          "Export Stats CSV",
+          "exportStatsCsv",
+          "Ctrl+Shift+K",
+        ),
+      })
       .on("click", () => media.exportStatisticsCSV());
     exp
-      .addButton({ title: "Export World (Shift+W)" })
+      .addButton({
+        title: this.withHint("Export World", "exportWorld", "Ctrl+Shift+W"),
+      })
       .on("click", () => media.exportWorldJSON());
     exp
       .addButton({ title: "Export Heightmap (PNG)" })
@@ -600,7 +639,9 @@ class GUI {
     });
 
     const btn = capture.addButton({
-      title: media.isRecording ? "⏹ Stop (V)" : "⏺ Record (V)",
+      title: media.isRecording
+        ? this.withHint("⏹ Stop", "record", "Ctrl+R")
+        : this.withHint("⏺ Record", "record", "Ctrl+R"),
     });
     this.recordButton = btn;
 
@@ -622,15 +663,17 @@ class GUI {
     });
 
     capture
-      .addButton({ title: "Export Image (F)" })
+      .addButton({
+        title: this.withHint("Export Image", "exportImage", "Ctrl+S"),
+      })
       .on("click", () => media.exportImage());
   }
 
   syncMediaControls() {
     if (this.recordButton) {
       this.recordButton.title = this.appcore.media.isRecording
-        ? "⏹ Stop (V)"
-        : "⏺ Record (V)";
+        ? this.withHint("⏹ Stop", "record", "Ctrl+R")
+        : this.withHint("⏺ Record", "record", "Ctrl+R");
     }
   }
 }

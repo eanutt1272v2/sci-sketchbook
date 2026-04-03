@@ -29,8 +29,8 @@ class UIManager {
     }
   }
 
-  onKeyPressed() {
-    this.inputHandler.onKeyPressed();
+  onKeyPressed(event = null) {
+    this.inputHandler.onKeyPressed(event);
   }
 
   toggleVisibility() {

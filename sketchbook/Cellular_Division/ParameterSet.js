@@ -3,13 +3,18 @@ class ParameterSet {
     this.sim = sim;
     this.theme = theme;
 
+    const hint = (id, fallback) =>
+      typeof KeybindCatalogue !== "undefined"
+        ? KeybindCatalogue.getHint("cellular", id, fallback)
+        : fallback;
+
     this.labels = [
-      "Alpha α (1/2)",
-      "Beta β (3/4)",
-      "Gamma γ (5/6)",
-      "Radius r (7/8)",
-      "Trail Alpha τ (9/0)",
-      "Density ρ (−/=)",
+      `Alpha α (${hint("alpha", "1/2")})`,
+      `Beta β (${hint("beta", "3/4")})`,
+      `Gamma γ (${hint("gamma", "5/6")})`,
+      `Radius r (${hint("radius", "7/8")})`,
+      `Trail Alpha τ (${hint("trailAlpha", "9/0")})`,
+      `Density ρ (${hint("density", "-/=")})`,
     ];
     this.mins = [0, 0, 0, 5, 0, 1];
     this.maxes = [360, 90, 50, 50, 255, 60];

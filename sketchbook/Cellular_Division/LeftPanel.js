@@ -2,6 +2,10 @@ class LeftPanel {
   constructor(appcore) {
     this.sim = appcore.sim;
     this.theme = appcore.theme;
+    this._pauseHint =
+      typeof KeybindCatalogue !== "undefined"
+        ? KeybindCatalogue.getHint("cellular", "pause", "P/Space")
+        : "P/Space";
     this.panel = new AccordionPanel(
       15,
       15,
@@ -38,7 +42,7 @@ class LeftPanel {
       this.panel.getY("pause"),
       this.panel.contentW(),
       28,
-      "Pause (Space)",
+      `Pause (${this._pauseHint})`,
       this.theme,
     );
 
@@ -56,8 +60,8 @@ class LeftPanel {
 
   render() {
     this.pauseButton.label = this.sim.isPaused()
-      ? "Play (Space)"
-      : "Pause (Space)";
+      ? `Play (${this._pauseHint})`
+      : `Pause (${this._pauseHint})`;
 
     this.panel.renderBackground();
     const px = this.panel.contentX();
@@ -256,33 +260,30 @@ class LeftPanel {
     line(x, y + 25, width - 50, y + 25);
     y += 40;
 
-    const commands = [
-      ["H", "Toggle UI panels"],
-      ["R", "Restart simulation"],
-      ["P / Space", "Pause or play simulation"],
-      ["#", "Toggle this keymap reference"],
-      ["Shift+I / Shift+P", "Import / export params (JSON)"],
-      ["Shift+J / Shift+K", "Export statistics JSON / CSV"],
-      ["Shift+O / Shift+S", "Import / export state (JSON)"],
-      ["1 / 2", "Alpha \u03b1 - / +"],
-      ["3 / 4", "Beta \u03b2 - / +"],
-      ["5 / 6", "Gamma \u03b3 - / +"],
-      ["7 / 8", "Radius r - / +"],
-      ["9 / 0", "Trail alpha \u03c4 - / +"],
-      ["- / =", "Density \u03c1 - / +"],
-      ["[ / ]", "Particles - / + (restart to apply)"],
-      ["Hold Shift", "Apply 10x change step"],
-      ["Click value", "Start typing numeric input"],
-      ["Enter / Esc", "Apply / cancel typed input"],
-    ];
+    const sections =
+      typeof KeybindCatalogue !== "undefined"
+        ? KeybindCatalogue.getSections("cellular")
+        : [];
 
     noStroke();
-    for (const cmd of commands) {
-      fill(255);
-      text(cmd[0], x, y);
-      fill(255, 150);
-      text(cmd[1], x + 230, y);
+    for (const section of sections) {
+      fill(180, 220, 255);
+      text(section.title.toUpperCase(), x, y);
       y += lineH;
+
+      stroke(255, 30);
+      line(x, y - 6, width - 50, y - 6);
+      noStroke();
+
+      for (const cmd of section.entries) {
+        fill(255);
+        text(cmd[0], x, y);
+        fill(255, 150);
+        text(cmd[1], x + 230, y);
+        y += lineH;
+      }
+
+      y += 10;
     }
 
     pop();

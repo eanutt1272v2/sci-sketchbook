@@ -74,7 +74,8 @@ class Analyser {
     }
 
     const incoming = new TypedArrayCtor(buffer);
-    const targetLength = target && typeof target.length === "number" ? target.length : 0;
+    const targetLength =
+      target && typeof target.length === "number" ? target.length : 0;
     const outputLength = targetLength > 0 ? targetLength : incoming.length;
 
     if (!target || target.length !== outputLength) {

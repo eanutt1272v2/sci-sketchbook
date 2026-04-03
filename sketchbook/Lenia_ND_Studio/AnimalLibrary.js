@@ -70,6 +70,21 @@ class AnimalLibrary {
     if (!animal?.params || !this.params) return;
 
     const params = this.params;
+    const allowedKeys = new Set([
+      "R",
+      "T",
+      "m",
+      "s",
+      "kn",
+      "gn",
+      "h",
+      "addNoise",
+      "maskRate",
+      "paramP",
+      "softClip",
+      "multiStep",
+      "aritaMode",
+    ]);
 
     const sourceParams = Array.isArray(animal.params)
       ? animal.params.find((entry) => entry && typeof entry === "object") ||
@@ -77,15 +92,28 @@ class AnimalLibrary {
         {}
       : animal.params;
 
+    if (!Object.prototype.hasOwnProperty.call(sourceParams, "h")) {
+      params.h = 1;
+    }
+
     const { b, ...standardParams } = sourceParams;
 
-    Object.assign(params, standardParams);
+    for (const [key, value] of Object.entries(standardParams)) {
+      if (!allowedKeys.has(key)) continue;
+      params[key] = value;
+    }
 
     if (b !== undefined) {
-      params.b =
+      const parsedB =
         typeof b === "string"
           ? b.split(",").map((val) => RLECodec.parseFraction(val))
-          : b;
+          : Array.isArray(b)
+            ? b.map((val) => RLECodec.parseFraction(val))
+            : null;
+      if (Array.isArray(parsedB) && parsedB.length > 0) {
+        params.b = parsedB.filter((val) => Number.isFinite(val));
+        if (params.b.length === 0) params.b = [1];
+      }
     }
   }
 }

@@ -66,6 +66,13 @@ class GUI {
     target.addBlade({ view: "separator" });
   }
 
+  withHint(label, id, fallback = "") {
+    if (typeof KeybindCatalogue === "undefined") {
+      return fallback ? `${label} (${fallback})` : label;
+    }
+    return KeybindCatalogue.withHint(label, "lenia", id, fallback);
+  }
+
   _runIfGUIIdle(fn) {
     if (!this.appcore) return;
     if (this.appcore._isRefreshingGUI) return;
@@ -85,18 +92,28 @@ class GUI {
       title: "Simulation Controls",
       expanded: true,
     });
-    run.addBinding(params, "running", { label: "Running (Enter)" });
+    run.addBinding(params, "running", {
+      label: this.withHint("Running", "running", "Space"),
+    });
     run
-      .addButton({ title: "Step Once (Space)" })
+      .addButton({
+        title: this.withHint("Step Once", "stepOnce", "Enter"),
+      })
       .on("click", () => this.appcore?.stepOnce());
     run
-      .addButton({ title: "Clear World (Del)" })
+      .addButton({
+        title: this.withHint("Clear World", "clearWorld", "Del/Bksp"),
+      })
       .on("click", () => this.appcore?.clearWorld());
     run
-      .addButton({ title: "Random Cells (N)" })
+      .addButton({
+        title: this.withHint("Random Cells", "randomCells", "N"),
+      })
       .on("click", () => this.appcore?.randomiseWorld());
     run
-      .addButton({ title: "Random Params (M)" })
+      .addButton({
+        title: this.withHint("Random Params", "randomParams", "M"),
+      })
       .on("click", () => this.appcore?.randomiseParams(false));
     this.addSeparator(page);
 
@@ -117,7 +134,7 @@ class GUI {
     const world = page.addFolder({ title: "World", expanded: true });
     world
       .addBinding(params, "gridSize", {
-        label: "Grid Size (\`)",
+        label: this.withHint("Grid Size", "gridSize", "`"),
         options: sizeOptions,
       })
       .on("change", () =>
@@ -135,7 +152,7 @@ class GUI {
 
     world
       .addBinding(params, "dimension", {
-        label: "Dimension (Ctrl+D)",
+        label: this.withHint("Dimension", "dimension", "Ctrl+D"),
         options: { "2D": 2, "3D": 3, "4D": 4 },
       })
       .on("change", (event) =>
@@ -149,7 +166,7 @@ class GUI {
 
       world
         .addBinding(params, "viewMode", {
-          label: "ND View (Ctrl+End)",
+          label: this.withHint("ND View", "ndView", "Ctrl+End"),
           options: this.appcore
             ? this.appcore.getViewModeOptions()
             : { Slice: "slice", Projection: "projection" },
@@ -168,7 +185,7 @@ class GUI {
       if (String(params.viewMode) === "slice") {
         this.ndSliceZBinding = world
           .addBinding(params, "ndSliceZ", {
-            label: "Slice Z (PgUp/Dn)",
+            label: this.withHint("Slice Z", "sliceZ", "PgUp/PgDn"),
             min: 0,
             max: depthMax,
             step: 1,
@@ -181,7 +198,7 @@ class GUI {
       if (dim >= 4) {
         this.ndSliceWBinding = world
           .addBinding(params, "ndSliceW", {
-            label: "Slice W (Shift+Scroll)",
+            label: this.withHint("Slice W", "sliceW", "Shift+Scroll"),
             min: 0,
             max: depthMax,
             step: 1,
@@ -197,37 +214,49 @@ class GUI {
     const xform = page.addFolder({ title: "Transform" });
 
     xform
-      .addButton({ title: "Shift Left (←)" })
+      .addButton({ title: this.withHint("Shift Left", "shiftLeft", "Left") })
       .on("click", () => this.appcore?.shiftWorld(-10, 0));
     xform
-      .addButton({ title: "Shift Right (→)" })
+      .addButton({
+        title: this.withHint("Shift Right", "shiftRight", "Right"),
+      })
       .on("click", () => this.appcore?.shiftWorld(10, 0));
     xform
-      .addButton({ title: "Shift Up (↑)" })
+      .addButton({ title: this.withHint("Shift Up", "shiftUp", "Up") })
       .on("click", () => this.appcore?.shiftWorld(0, -10));
     xform
-      .addButton({ title: "Shift Down (↓)" })
+      .addButton({
+        title: this.withHint("Shift Down", "shiftDown", "Down"),
+      })
       .on("click", () => this.appcore?.shiftWorld(0, 10));
 
     this.addSeparator(xform);
 
     xform
-      .addButton({ title: "Rotate -90° (Ctrl+←)" })
+      .addButton({
+        title: this.withHint("Rotate -90°", "rotateLeft", "Ctrl+Left"),
+      })
       .on("click", () => this.appcore?.rotateWorld(-90));
     xform
-      .addButton({ title: "Rotate +90° (Ctrl+→)" })
+      .addButton({
+        title: this.withHint("Rotate +90°", "rotateRight", "Ctrl+Right"),
+      })
       .on("click", () => this.appcore?.rotateWorld(90));
 
     this.addSeparator(xform);
 
     xform
-      .addButton({ title: "Flip Horizontal (=)" })
+      .addButton({
+        title: this.withHint("Flip Horizontal", "flipH", "="),
+      })
       .on("click", () => this.appcore?.flipWorld(0));
     xform
-      .addButton({ title: "Flip Vertical (Shift+=)" })
+      .addButton({
+        title: this.withHint("Flip Vertical", "flipV", "Shift+="),
+      })
       .on("click", () => this.appcore?.flipWorld(1));
     xform
-      .addButton({ title: "Transpose (-)" })
+      .addButton({ title: this.withHint("Transpose", "transpose", "-") })
       .on("click", () => this.appcore?.flipWorld(2));
   }
 
@@ -245,18 +274,18 @@ class GUI {
       min: 0,
       max: 1,
       step: 0.001,
-      label: "Centre μ (Q/A)",
+      label: this.withHint("Centre μ", "growthCentre", "Q/A"),
     });
 
     bindAutomaton(growth, "s", {
       min: 0.0001,
       max: 1,
       step: 0.0001,
-      label: "Width σ (W/S)",
+      label: this.withHint("Width σ", "growthWidth", "W/S"),
     });
 
     bindAutomaton(growth, "gn", {
-      label: "Growth Type (Ctrl+U)",
+      label: this.withHint("Growth Type", "growthType", "Ctrl+U"),
       options: {
         Polynomial: 1,
         Exponential: 2,
@@ -276,7 +305,7 @@ class GUI {
         min: 2,
         max: maxR,
         step: 1,
-        label: "Radius R (R/F)",
+        label: this.withHint("Radius R", "radius", "R/F"),
       })
       .on("change", (ev) => {
         this._runIfGUIIdle(() => {
@@ -285,7 +314,7 @@ class GUI {
       });
 
     bindAutomaton(kernel, "kn", {
-      label: "Kernel Type (Ctrl+Y)",
+      label: this.withHint("Kernel Type", "kernelType", "Ctrl+Y"),
       options: {
         Polynomial: 1,
         Exponential: 2,
@@ -302,41 +331,47 @@ class GUI {
       min: 1,
       max: 1500,
       step: 1,
-      label: "Steps T (T/G)",
+      label: this.withHint("Steps T", "steps", "T/G"),
     });
 
-    bindAutomaton(time, "softClip", { label: "Soft Clip (Ctrl+I)" });
+    bindAutomaton(time, "softClip", {
+      label: this.withHint("Soft Clip", "softClip", "Ctrl+I"),
+    });
 
-    bindAutomaton(time, "multiStep", { label: "Multi-Step (Ctrl+M)" });
+    bindAutomaton(time, "multiStep", {
+      label: this.withHint("Multi-Step", "multiStep", "Ctrl+M"),
+    });
 
-    bindAutomaton(time, "aritaMode", { label: "Arita Mode (Ctrl+P)" });
+    bindAutomaton(time, "aritaMode", {
+      label: this.withHint("Arita Mode", "aritaMode", "Ctrl+P"),
+    });
 
     bindAutomaton(time, "h", {
       min: 0.1,
       max: 1.0,
       step: 0.1,
-      label: "Weight h (Ctrl+T/G)",
+      label: this.withHint("Weight h", "weight", "Ctrl+T/G"),
     });
 
     bindAutomaton(time, "addNoise", {
       min: 0,
       max: 10,
       step: 0.1,
-      label: "Noise (Ctrl+O)",
+      label: this.withHint("Noise", "noise", "Ctrl+O"),
     });
 
     bindAutomaton(time, "maskRate", {
       min: 0,
       max: 10,
       step: 0.1,
-      label: "Mask Rate (Ctrl+Shift+I)",
+      label: this.withHint("Mask Rate", "maskRate", "Ctrl+Shift+I"),
     });
 
     bindAutomaton(time, "paramP", {
       min: 0,
       max: 64,
       step: 1,
-      label: "Quantise P (E/D)",
+      label: this.withHint("Quantise P", "quantiseP", "E/D"),
     });
   }
 
@@ -347,7 +382,7 @@ class GUI {
 
     maps
       .addBinding(params, "colourMap", {
-        label: "Colour Map (. ,)",
+        label: this.withHint("Colour Map", "colourMap", "./,"),
         options: this.appcore
           ? this.appcore.getColourMapOptions()
           : { greyscale: "greyscale" },
@@ -357,7 +392,7 @@ class GUI {
       );
 
     maps.addBinding(params, "renderMode", {
-      label: "Render Mode (Tab)",
+      label: this.withHint("Render Mode", "renderMode", "Tab"),
       options: {
         World: "world",
         Potential: "potential",
@@ -370,31 +405,45 @@ class GUI {
 
     const overlay = page.addFolder({ title: "Overlays" });
 
-    overlay.addBinding(params, "renderGrid", { label: "Grid (Shift+G)" });
-    overlay.addBinding(params, "renderScale", { label: "Scale Bar (B)" });
-    overlay.addBinding(params, "renderLegend", { label: "Legend (L)" });
-    overlay.addBinding(params, "renderStats", { label: "Statistics (Ctrl+H)" });
+    overlay.addBinding(params, "renderGrid", {
+      label: this.withHint("Grid", "renderGrid", "Shift+G"),
+    });
+    overlay.addBinding(params, "renderScale", {
+      label: this.withHint("Scale Bar", "renderScale", "B"),
+    });
+    overlay.addBinding(params, "renderLegend", {
+      label: this.withHint("Legend", "renderLegend", "L"),
+    });
+    overlay.addBinding(params, "renderStats", {
+      label: this.withHint("Statistics", "renderStats", "Ctrl+H"),
+    });
     overlay.addBinding(params, "renderMotionOverlay", {
-      label: "Motion (J)",
+      label: this.withHint("Motion", "renderMotion", "J"),
     });
     overlay.addBinding(params, "renderSymmetryOverlay", {
-      label: "Symmetry Overlay (Applies when Polar Mode is on) (Ctrl+J)",
+      label: this.withHint(
+        "Symmetry Overlay (Applies when Polar Mode is on)",
+        "renderSymmetry",
+        "Ctrl+J",
+      ),
     });
     overlay.addBinding(params, "renderCalcPanels", {
-      label: "Calc Panels (K)",
+      label: this.withHint("Calc Panels", "renderCalc", "K"),
     });
     overlay.addBinding(params, "renderAnimalName", {
-      label: "Name (Shift+J)",
+      label: this.withHint("Name", "renderName", "Shift+J"),
     });
     this.addSeparator(page);
 
     const polar = page.addFolder({ title: "Polar & Symmetry" });
 
-    polar.addBinding(params, "autoCenter", { label: "Auto-Centre (')" });
+    polar.addBinding(params, "autoCenter", {
+      label: this.withHint("Auto-Centre", "autoCenter", "'"),
+    });
 
     polar
       .addBinding(params, "polarMode", {
-        label: "Polar (Ctrl+')",
+        label: this.withHint("Polar", "polarMode", "Ctrl+'"),
         options: {
           Off: 0,
           Symmetry: 1,
@@ -410,7 +459,7 @@ class GUI {
       );
 
     polar.addBinding(params, "autoRotateMode", {
-      label: "Auto-Rotate (Shift+')",
+      label: this.withHint("Auto-Rotate", "autoRotate", "Shift+'"),
       options: {
         Off: 0,
         "Arrow (velocity)": 1,
@@ -438,16 +487,24 @@ class GUI {
     );
 
     page
-      .addButton({ title: "◀ Prev (C)" })
+      .addButton({
+        title: this.withHint("◀ Prev", "prevAnimal", "C"),
+      })
       .on("click", () => this.appcore?.cycleAnimal(-1));
     page
-      .addButton({ title: "▶ Next (V)" })
+      .addButton({
+        title: this.withHint("▶ Next", "nextAnimal", "V"),
+      })
       .on("click", () => this.appcore?.cycleAnimal(1));
     page
-      .addButton({ title: "Load Selected (Z)" })
+      .addButton({
+        title: this.withHint("Load Selected", "loadAnimal", "Z"),
+      })
       .on("click", () => this.appcore?.loadSelectedAnimal());
     page
-      .addButton({ title: "Place Random (X)" })
+      .addButton({
+        title: this.withHint("Place Random", "placeRandom", "X"),
+      })
       .on("click", () => this.appcore?.placeAnimalRandom());
 
     this.addSeparator(page);
@@ -458,12 +515,12 @@ class GUI {
     });
 
     placementFolder.addBinding(params, "placeMode", {
-      label: "Click to Place (Shift+X)",
+      label: this.withHint("Click to Place", "placeMode", "Shift+X"),
     });
 
     placementFolder
       .addBinding(params, "placeScale", {
-        label: "Scale (Ctrl+[/])",
+        label: this.withHint("Scale", "placeScale", "Ctrl+[/]"),
         min: 0.25,
         max: 4,
         step: 0.05,
@@ -473,40 +530,17 @@ class GUI {
         this.appcore.updatePlacementScale(params.placeScale);
       });
 
-    this.addSeparator(placementFolder);
-
     placementFolder
-      .addBinding(params, "autoScaleSimParams", {
-        label: "Auto-scale R, T (Ctrl+K)",
+      .addButton({
+        title: this.withHint(
+          "Reset Animal Params",
+          "resetAnimalParams",
+          "Ctrl+Shift+Z",
+        ),
       })
-      .on("change", () => {
-        if (!this.appcore) return;
-        if (params.autoScaleSimParams) {
-          this.appcore.applySelectedAnimalScaledRT(params.placeScale, {
-            refreshGUI: true,
-          });
-        } else {
-          this.appcore.disableAutoScale();
-        }
-      });
-
-    placementFolder
-      .addButton({ title: "Apply Scaled R, T (Ctrl+Shift+K)" })
       .on("click", () => {
         if (!this.appcore) return;
-        this.appcore.applySelectedAnimalScaledRT(params.placeScale, {
-          refreshGUI: true,
-        });
-      });
-
-    placementFolder
-      .addButton({ title: "Reset Animal Params (Ctrl+Shift+Z)" })
-      .on("click", () => {
-        if (!this.appcore) return;
-        this.appcore.applySelectedAnimalParams({
-          respectAutoScale: true,
-          refreshGUI: true,
-        });
+        this.appcore.applySelectedAnimalParams({ refreshGUI: true });
       });
   }
 
@@ -604,26 +638,46 @@ class GUI {
 
     const imp = page.addFolder({ title: "Import" });
     imp
-      .addButton({ title: "Import Params (Ctrl+Shift+I)" })
+      .addButton({
+        title: this.withHint("Import Params", "importParams", "Ctrl+Shift+I"),
+      })
       .on("click", () => media?.importParamsJSON());
     imp
-      .addButton({ title: "Import World (Ctrl+Shift+W)" })
+      .addButton({
+        title: this.withHint("Import World", "importWorld", "Ctrl+Shift+W"),
+      })
       .on("click", () => media?.importWorldJSON());
 
     this.addSeparator(page);
 
     const exp = page.addFolder({ title: "Export" });
     exp
-      .addButton({ title: "Export Params (Ctrl+Shift+P)" })
+      .addButton({
+        title: this.withHint("Export Params", "exportParams", "Ctrl+Shift+P"),
+      })
       .on("click", () => media?.exportParamsJSON());
     exp
-      .addButton({ title: "Export Stats (JSON)" })
+      .addButton({
+        title: this.withHint(
+          "Export Stats (JSON)",
+          "exportStatsJson",
+          "Ctrl+Shift+J",
+        ),
+      })
       .on("click", () => media?.exportStatisticsJSON());
     exp
-      .addButton({ title: "Export Stats (CSV)" })
+      .addButton({
+        title: this.withHint(
+          "Export Stats (CSV)",
+          "exportStatsCsv",
+          "Ctrl+Shift+K",
+        ),
+      })
       .on("click", () => media?.exportStatisticsCSV());
     exp
-      .addButton({ title: "Export World (Ctrl+Shift+E)" })
+      .addButton({
+        title: this.withHint("Export World", "exportWorld", "Ctrl+Shift+E"),
+      })
       .on("click", () => media?.exportWorldJSON());
 
     const capture = exp.addFolder({ title: "Capture" });
@@ -643,7 +697,9 @@ class GUI {
     });
 
     this.recordButton = capture.addButton({
-      title: media?.isRecording ? "⏹ Stop (Ctrl+R)" : "⏺ Record (Ctrl+R)",
+      title: media?.isRecording
+        ? this.withHint("⏹ Stop", "record", "Ctrl+R")
+        : this.withHint("⏺ Record", "record", "Ctrl+R"),
     });
 
     this.recordButton.on("click", () => {
@@ -664,15 +720,17 @@ class GUI {
     });
 
     capture
-      .addButton({ title: "Export Image (Ctrl+S)" })
+      .addButton({
+        title: this.withHint("Export Image", "exportImage", "Ctrl+S"),
+      })
       .on("click", () => media?.exportImage());
   }
 
   syncMediaControls() {
     if (!this.recordButton || !this.appcore || !this.appcore.media) return;
     this.recordButton.title = this.appcore.media.isRecording
-      ? "⏹ Stop (Ctrl+R)"
-      : "⏺ Record (Ctrl+R)";
+      ? this.withHint("⏹ Stop", "record", "Ctrl+R")
+      : this.withHint("⏺ Record", "record", "Ctrl+R");
   }
 
   syncNDSliceBounds() {

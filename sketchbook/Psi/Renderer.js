@@ -565,59 +565,10 @@ class Renderer {
 
   renderKeymapRef() {
     const { name, version } = this.appcore.metadata;
-
-    const sections = [
-      {
-        title: "Quantum",
-        entries: [
-          ["W/S", "Increment/decrement n"],
-          ["D/A", "Increment/decrement l"],
-          ["E/Q", "Increment/decrement m"],
-          ["R/T", "Nuclear charge Z +/- 1"],
-          ["P", "Toggle reduced mass"],
-          ["G/B", "log₁₀ nucleus mass +/- 0.01"],
-        ],
-      },
-      {
-        title: "View",
-        entries: [
-          ["1 / 2 / 3", "Switch plane: XY / XZ / YZ"],
-          ["Z", "Reset view radius"],
-          ["Space", "Reset slice offset"],
-          ["X", "Reset view centre"],
-          ["Arrow Keys", "Slice or zoom radius"],
-          ["Shift + Arrow", "Pan in active plane"],
-          ["Mouse Drag / Touch", "Pan view"],
-          ["Wheel / Pinch", "Zoom radius"],
-        ],
-      },
-      {
-        title: "Rendering",
-        entries: [
-          ["C", "Cycle colour map"],
-          ["M", "Toggle pixel smoothing"],
-          ["O", "Toggle overlay"],
-          ["N", "Toggle detected node overlay"],
-          ["L", "Toggle legend"],
-          ["[ / ]", "Decrease / increase exposure"],
-          ["- / +", "Decrease / increase resolution"],
-          ["H", "Toggle GUI"],
-        ],
-      },
-      {
-        title: "Data",
-        entries: [
-          ["V", "Start / stop recording"],
-          ["F", "Export image"],
-          ["Shift+I / Shift+P", "Import / export params (JSON)"],
-          ["Shift+S / Shift+C", "Export stats JSON / CSV"],
-        ],
-      },
-      {
-        title: "Reference",
-        entries: [["#", "Toggle keymap reference"]],
-      },
-    ];
+    const sections =
+      typeof KeybindCatalogue !== "undefined"
+        ? KeybindCatalogue.getSections("psi")
+        : [];
 
     KeymapRenderer.render(name, version, sections);
   }

@@ -929,101 +929,10 @@ class Renderer {
 
   renderKeymapRef(metadata) {
     const { name, version } = metadata;
-
-    const sections = [
-      {
-        title: "Run Control",
-        entries: [
-          ["Enter", "Pause / Resume"],
-          ["Space", "Step once"],
-          ["Del / Bksp", "Clear world"],
-        ],
-      },
-      {
-        title: "Animals & World",
-        entries: [
-          ["Z", "Reload current animal"],
-          ["C / V", "Previous / next animal (Shift ±10)"],
-          ["X", "Place at random"],
-          ["Shift+X", "Toggle click-to-place mode"],
-          ["Ctrl+[/]", "Place scale -/+"],
-          ["Ctrl+K", "Toggle auto-scale R, T"],
-          ["Ctrl+Shift+K", "Apply scaled R, T"],
-          ["Ctrl+Shift+Z", "Reset R, T from animal"],
-          ["N", "Random cells (Shift=seeded)"],
-          ["M", "Random params (Shift=incremental)"],
-          ["'", "Toggle auto-center"],
-        ],
-      },
-      {
-        title: "Parameters",
-        entries: [
-          ["Q / A", "Growth centre m  +/- 0.001 (Shift ±0.01)"],
-          ["W / S", "Growth width s  +/- 0.0001 (Shift ±0.001)"],
-          ["R / F", "Kernel radius R  +/- 10 (Shift ±1)"],
-          ["T / G", "Time steps T  ×2 / ÷2 (Shift ±1)"],
-          ["E / D", "Quantise paramP  +/- 10 (Shift ±1)"],
-          ["Ctrl+T / Ctrl+G", "Weight h  +/- 0.1"],
-          ["Y/U/I/O/P", "Kernel peaks b[0-4]  +/- 1/12 (Shift -)"],
-          [";", "Add peak (Shift=remove)"],
-        ],
-      },
-      {
-        title: "Options",
-        entries: [
-          ["Ctrl+Y", "Cycle kernel core kn (Shift=reverse)"],
-          ["Ctrl+U", "Cycle growth func gn (Shift=reverse)"],
-          ["Ctrl+I", "Toggle soft clip (Shift=mask rate)"],
-          ["Ctrl+O", "Cycle noise"],
-          ["Ctrl+P", "Toggle Arita mode (Shift=reset mask+noise)"],
-          ["Ctrl+M", "Toggle multi-step"],
-          ["Ctrl+D", "Cycle dimension (2D/3D/4D)"],
-        ],
-      },
-      {
-        title: "Transforms",
-        entries: [
-          ["Arrows", "Shift world ±10 (Shift ±1)"],
-          ["Ctrl+←/→", "Rotate ±90° (Shift ±15°)"],
-          ["= / Shift+=", "Flip horiz / vert"],
-          ["- (minus)", "Transpose"],
-          ["PgUp/PgDn", "Shift Z-slice (3D+)"],
-          ["Home/End", "Shift Z-slice (3D+)"],
-          ["Wheel / Shift+Wheel", "Shift slice Z / W (3D+)"],
-          ["Ctrl+End", "Toggle slice/projection (3D+)"],
-        ],
-      },
-      {
-        title: "Display",
-        entries: [
-          ["Tab", "Cycle render mode (Shift=reverse)"],
-          [". / ,", "Next / prev colour map"],
-          ["Ctrl+'", "Cycle polar mode (Off/Symmetry/Polar/History/Strength)"],
-          ["' / Shift+'", "Toggle auto-center / cycle auto-rotate"],
-          ["H", "Hide / show GUI panel"],
-          ["Ctrl+H", "Toggle stats overlay"],
-          ["Ctrl+J", "Toggle symmetry overlay"],
-          ["J", "Toggle motion overlay"],
-          ["Shift+J", "Toggle animal name"],
-          ["K", "Toggle calc panels"],
-          ["L", "Toggle legend"],
-          ["B", "Toggle scale bar"],
-          ["Shift+G", "Toggle grid (slice view)"],
-          ["` (backtick)", "Cycle grid size"],
-        ],
-      },
-      {
-        title: "Data",
-        entries: [
-          ["Ctrl+R", "Start / stop recording"],
-          ["Ctrl+S", "Export image"],
-          ["Ctrl+Shift+E", "Export world (JSON)"],
-          ["Ctrl+Shift+W", "Import world (JSON)"],
-          ["Ctrl+Shift+P/I", "Export / import params (JSON)"],
-          ["#", "Toggle keymap reference"],
-        ],
-      },
-    ];
+    const sections =
+      typeof KeybindCatalogue !== "undefined"
+        ? KeybindCatalogue.getSections("lenia")
+        : [];
 
     KeymapRenderer.render(name, version, sections);
   }
@@ -1048,9 +957,7 @@ class Renderer {
     let dx = 0;
     let dy = 0;
 
-    // Match Python reference: infer per-step displacement directly from
-    // analysed speed/angle when available.
-    if (Number.isFinite(speed) && speed > 1e-10 && Number.isFinite(angle)) {
+    if (Number.isFinite(speed) && Number.isFinite(angle)) {
       dx = Math.cos(angle) * speed;
       dy = Math.sin(angle) * speed;
     } else if (
@@ -1325,25 +1232,27 @@ class Renderer {
 
     if (cname && latinLabel) {
       if (this.uiFont) textFont(this.uiFont);
-      const latinText = latinLabel + " ";
-      const latinW = textWidth(latinText);
+      const latinW = textWidth(latinLabel);
       textFont(
         "'Noto Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif",
       );
       const cnameW = textWidth(cname);
-      const startX = (width - latinW - cnameW) / 2;
+      const labelGap = 6;
+      const startX = (width - latinW - labelGap - cnameW) / 2;
       if (this.uiFont) textFont(this.uiFont);
       textAlign(LEFT, BOTTOM);
-      text(latinText, startX, y);
+      text(latinLabel, startX, y);
       textFont(
         "'Noto Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif",
       );
-      text(cname, startX + latinW, y);
+      text(cname, startX + latinW + labelGap, y);
     } else if (latinLabel) {
       if (this.uiFont) textFont(this.uiFont);
       text(latinLabel, width / 2, y);
     } else {
-      textFont("'Noto Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif");
+      textFont(
+        "'Noto Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif",
+      );
       text(cname, width / 2, y);
     }
     pop();

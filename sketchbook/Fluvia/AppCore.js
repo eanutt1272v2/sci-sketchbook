@@ -175,12 +175,7 @@ class AppCore {
 
     p.noiseScale = this._clampNumber(p.noiseScale, 0.01, 10, 0.6);
     p.noiseOctaves = Math.round(this._clampNumber(p.noiseOctaves, 1, 12, 8));
-    p.amplitudeFalloff = this._clampNumber(
-      p.amplitudeFalloff,
-      0,
-      1,
-      0.6,
-    );
+    p.amplitudeFalloff = this._clampNumber(p.amplitudeFalloff, 0, 1, 0.6);
 
     p.sedimentErosionRate = this._clampNumber(p.sedimentErosionRate, 0, 1, 0.1);
     p.bedrockErosionRate = this._clampNumber(p.bedrockErosionRate, 0, 1, 0.1);
@@ -198,9 +193,14 @@ class AppCore {
 
     p.renderMethod = p.renderMethod === "2D" ? "2D" : "3D";
     if (
-      !["composite", "height", "slope", "discharge", "sediment", "delta"].includes(
-        p.surfaceMap,
-      )
+      ![
+        "composite",
+        "height",
+        "slope",
+        "discharge",
+        "sediment",
+        "delta",
+      ].includes(p.surfaceMap)
     ) {
       p.surfaceMap = "composite";
     }
@@ -228,19 +228,20 @@ class AppCore {
       y: this._clampNumber(p.lightDir?.y, -1000, 1000, 50),
       z: this._clampNumber(p.lightDir?.z, -1000, 1000, -50),
     };
-    p.specularIntensity = this._clampNumber(
-      p.specularIntensity,
-      0,
-      4096,
-      100,
-    );
+    p.specularIntensity = this._clampNumber(p.specularIntensity, 0, 4096, 100);
 
-    p.skyColour = this._sanitiseColour(p.skyColour, this._defaultColourPalette.skyColour);
+    p.skyColour = this._sanitiseColour(
+      p.skyColour,
+      this._defaultColourPalette.skyColour,
+    );
     p.steepColour = this._sanitiseColour(
       p.steepColour,
       this._defaultColourPalette.steepColour,
     );
-    p.flatColour = this._sanitiseColour(p.flatColour, this._defaultColourPalette.flatColour);
+    p.flatColour = this._sanitiseColour(
+      p.flatColour,
+      this._defaultColourPalette.flatColour,
+    );
     p.sedimentColour = this._sanitiseColour(
       p.sedimentColour,
       this._defaultColourPalette.sedimentColour,
@@ -594,15 +595,15 @@ class AppCore {
     this.renderer.resize();
   }
 
-  handleKeyPressed(k, kCode) {
+  handleKeyPressed(k, kCode, event = null) {
     return KeyboardUtils.safeHandle("Fluvia", "press", () =>
-      this.input.handleKeyPressed(k, kCode),
+      this.input.handleKeyPressed(k, kCode, event),
     );
   }
 
-  handleKeyReleased(k, kCode) {
+  handleKeyReleased(k, kCode, event = null) {
     return KeyboardUtils.safeHandle("Fluvia", "release", () =>
-      this.input.handleKeyReleased(k, kCode),
+      this.input.handleKeyReleased(k, kCode, event),
     );
   }
 

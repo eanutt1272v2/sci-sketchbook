@@ -43,9 +43,9 @@ class AppCore {
     }
   }
 
-  onKeyPressed() {
+  onKeyPressed(event = null) {
     KeyboardUtils.safeHandle("Cellular Division", "press", () =>
-      this.ui.onKeyPressed(),
+      this.ui.onKeyPressed(event),
     );
   }
 

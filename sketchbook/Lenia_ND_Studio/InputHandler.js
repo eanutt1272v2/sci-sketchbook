@@ -37,13 +37,13 @@ class InputHandler {
   // placeholder stub for any continuous input handling (e.g. holding keys) if needed in future
   handleContinuousInput() {}
 
-  handleKeyPressed(k, kCode) {
+  handleKeyPressed(k, kCode, event = null) {
     if (KeyboardUtils.shouldIgnoreKeyboard()) return false;
 
     const keyValue = KeyboardUtils.normaliseKey(k);
     const keyLower = KeyboardUtils.toLower(keyValue);
-    const shiftHeld = KeyboardUtils.isShiftHeld();
-    const ctrlHeld = KeyboardUtils.isCtrlHeld();
+    const shiftHeld = Boolean(event?.shiftKey) || KeyboardUtils.isShiftHeld();
+    const ctrlHeld = Boolean(event?.ctrlKey) || KeyboardUtils.isCtrlHeld();
     const { params } = this.appcore;
     const dim = params.dimension || 2;
     const leftArrow = KeyboardUtils.keyCode("LEFT_ARROW", 37);
@@ -59,12 +59,12 @@ class InputHandler {
     if (params.renderKeymapRef) return false;
 
     if (kCode === 13) {
-      params.running = !params.running;
-      this.appcore.refreshGUI();
+      this.appcore.stepOnce();
       return false;
     }
     if (keyValue === " ") {
-      this.appcore.stepOnce();
+      params.running = !params.running;
+      this.appcore.refreshGUI();
       return false;
     }
 
@@ -201,7 +201,7 @@ class InputHandler {
       this._adjustPeak(4, shiftHeld ? -1 / 12 : 1 / 12);
       return false;
     }
-    if (keyValue === ";" && !ctrlHeld) {
+    if ((keyValue === ";" || keyValue === ":") && !ctrlHeld) {
       if (shiftHeld) {
         if (params.b.length > 1) params.b.pop();
       } else {
@@ -308,41 +308,34 @@ class InputHandler {
       return false;
     }
 
-    if (keyValue === "=" && !ctrlHeld) {
+    if ((keyValue === "=" || keyValue === "+") && !ctrlHeld) {
       this.appcore.flipWorld(shiftHeld ? 1 : 0);
       return false;
     }
-    if (keyValue === "-" && !ctrlHeld) {
+    if ((keyValue === "-" || keyValue === "_") && !ctrlHeld) {
       this.appcore.flipWorld(2);
       return false;
     }
 
-    if (dim > 2 && kCode === 36) {
-      this.appcore.adjustNDSlice("z", shiftHeld ? 1 : 10);
-      return false;
-    }
-    if (dim > 2 && kCode === 35) {
-      this.appcore.adjustNDSlice("z", shiftHeld ? -1 : -10);
-      return false;
-    }
     if (dim > 2 && ctrlHeld && kCode === 35) {
       params.viewMode = params.viewMode === "slice" ? "projection" : "slice";
       this.appcore.setViewMode(params.viewMode);
       this.appcore.refreshGUI();
       return false;
     }
+    const quoteKey = keyValue === "'" || keyValue === '"';
 
-    if (keyValue === "'" && !ctrlHeld && !shiftHeld) {
+    if (quoteKey && !ctrlHeld && !shiftHeld) {
       params.autoCenter = !params.autoCenter;
       this.appcore.refreshGUI();
       return false;
     }
-    if (keyValue === "'" && shiftHeld && !ctrlHeld) {
+    if (quoteKey && shiftHeld && !ctrlHeld) {
       params.autoRotateMode = (params.autoRotateMode + 1) % 3;
       this.appcore.refreshGUI();
       return false;
     }
-    if (keyValue === "'" && ctrlHeld) {
+    if (quoteKey && ctrlHeld) {
       this.appcore.cyclePolarMode(1, { refreshGUI: true });
       return false;
     }
@@ -442,7 +435,7 @@ class InputHandler {
       return false;
     }
 
-    if (keyValue === "G" && shiftHeld && !ctrlHeld) {
+    if (keyLower === "g" && shiftHeld && !ctrlHeld) {
       params.renderGrid = !params.renderGrid;
       this.appcore.refreshGUI();
       return false;
@@ -462,32 +455,12 @@ class InputHandler {
       return false;
     }
 
-    if (ctrlHeld && !shiftHeld && keyLower === "k") {
-      if (params.autoScaleSimParams) {
-        this.appcore.disableAutoScale();
-      } else {
-        params.autoScaleSimParams = true;
-        this.appcore.applySelectedAnimalScaledRT(params.placeScale, {
-          refreshGUI: true,
-        });
-      }
-      return false;
-    }
-    if (ctrlHeld && shiftHeld && keyLower === "k") {
-      this.appcore.applySelectedAnimalScaledRT(params.placeScale, {
-        refreshGUI: true,
-      });
-      return false;
-    }
     if (ctrlHeld && shiftHeld && keyLower === "z") {
-      this.appcore.applySelectedAnimalParams({
-        respectAutoScale: true,
-        refreshGUI: true,
-      });
+      this.appcore.applySelectedAnimalParams({ refreshGUI: true });
       return false;
     }
 
-    if (ctrlHeld && (keyValue === "[" || kCode === 219)) {
+    if (ctrlHeld && (keyValue === "[" || keyValue === "{" || kCode === 219)) {
       params.placeScale = constrain(
         Math.round((params.placeScale - 0.05) * 20) / 20,
         0.25,
@@ -497,7 +470,7 @@ class InputHandler {
       this.appcore.refreshGUI();
       return false;
     }
-    if (ctrlHeld && (keyValue === "]" || kCode === 221)) {
+    if (ctrlHeld && (keyValue === "]" || keyValue === "}" || kCode === 221)) {
       params.placeScale = constrain(
         Math.round((params.placeScale + 0.05) * 20) / 20,
         0.25,
@@ -529,11 +502,19 @@ class InputHandler {
       this.appcore.media.exportParamsJSON();
       return false;
     }
+    if (shiftHeld && ctrlHeld && keyLower === "j") {
+      this.appcore.media.exportStatisticsJSON();
+      return false;
+    }
+    if (shiftHeld && ctrlHeld && keyLower === "k") {
+      this.appcore.media.exportStatisticsCSV();
+      return false;
+    }
 
     return false;
   }
 
-  handleKeyReleased(k, kCode) {
+  handleKeyReleased(k, kCode, event = null) {
     return false;
   }
 
@@ -570,5 +551,4 @@ class InputHandler {
     this.appcore.updateAutomatonParams();
     this.appcore.refreshGUI();
   }
-
 }

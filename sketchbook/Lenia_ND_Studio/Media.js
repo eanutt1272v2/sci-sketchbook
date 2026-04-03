@@ -94,7 +94,9 @@ class Media extends MediaCore {
 
       if (typeof val === "string") {
         if (val.length > this._maxEncodedFieldChars) {
-          throw new Error("[Lenia] Invalid world JSON: encoded field exceeds size limit");
+          throw new Error(
+            "[Lenia] Invalid world JSON: encoded field exceeds size limit",
+          );
         }
         const legacy = RLECodec.decode(val, size, size);
         const arr = new Float32Array(expectedLength);
@@ -184,10 +186,18 @@ class Media extends MediaCore {
 
         if (result.gridSizeChanged) {
           this.appcore.changeResolution();
+        } else {
+          this.appcore.updateAutomatonParams();
+          if (
+            result.dimensionChanged &&
+            this.appcore.gui &&
+            typeof this.appcore.gui.rebuildPane === "function"
+          ) {
+            this.appcore.gui.rebuildPane();
+          } else {
+            this.appcore.refreshGUI();
+          }
         }
-
-        this.appcore.updateAutomatonParams();
-        this.appcore.refreshGUI();
         this._logInfo("Params JSON imported");
       });
     });
@@ -273,7 +283,9 @@ class Media extends MediaCore {
     }
 
     if (source.data.length > this._maxEncodedFieldChars) {
-      throw new Error("[Lenia] Invalid world JSON: encoded float field exceeds size limit");
+      throw new Error(
+        "[Lenia] Invalid world JSON: encoded float field exceeds size limit",
+      );
     }
 
     return RLECodec.decodeFloat32Array(source.data, length);

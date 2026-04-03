@@ -31,7 +31,6 @@ class AppCore {
       pixelSize: 9,
 
       dimension: 2,
-      animalSource: "auto",
       viewMode: "projection",
       ndDepth: 6,
       ndSliceZ: 0,
@@ -72,8 +71,7 @@ class AppCore {
       autoRotateMode: 0,
       selectedAnimal: "",
       placeMode: true,
-      placeScale: 2,
-      autoScaleSimParams: true,
+      placeScale: 1,
       autoCenter: false,
 
       imageFormat: "png",
@@ -292,12 +290,14 @@ class AppCore {
       Float32Array.BYTES_PER_ELEMENT,
     );
 
-    if (!Number.isInteger(kernelFloatLen) || kernelFloatLen !== expectedKernelLen)
+    if (
+      !Number.isInteger(kernelFloatLen) ||
+      kernelFloatLen !== expectedKernelLen
+    )
       return false;
     if (!Number.isInteger(kernelDxLen) || kernelDxLen < 0) return false;
     if (!Number.isInteger(kernelDyLen) || kernelDyLen < 0) return false;
-    if (!Number.isInteger(kernelValuesLen) || kernelValuesLen < 0)
-      return false;
+    if (!Number.isInteger(kernelValuesLen) || kernelValuesLen < 0) return false;
 
     if (kernelDxLen > expectedKernelLen) return false;
     if (kernelDyLen > expectedKernelLen) return false;
@@ -995,9 +995,7 @@ class AppCore {
             randR1 < randR2
               ? randR1 + Math.floor(Math.random() * (randR2 - randR1))
               : randR1;
-          p.R = Math.round(
-            Math.max(2, Math.min(this.getMaxKernelRadius(), R)),
-          );
+          p.R = Math.round(Math.max(2, Math.min(this.getMaxKernelRadius(), R)));
           const B = 1 + Math.floor(Math.random() * 2);
           p.b = Array.from(
             { length: B },
@@ -1190,6 +1188,9 @@ class AppCore {
           this.analyser.reset();
           this.analyser.resetStatistics();
 
+          this.automaton.updateParameters(this.params);
+          this._prevR = this.params.R;
+
           this._workerSendKernel();
 
           if (this.gui && typeof this.gui.rebuildPane === "function") {
@@ -1254,25 +1255,9 @@ class AppCore {
     return this.animalLibrary.getAnimal(idx);
   }
 
-  _resolveAnimalSourceDimension() {
-    return this.params.dimension;
-  }
-
   _applyAnimalSource() {
     if (!this.animalLibrary || !this.animalLibrary.setActiveDimension) return;
-    this.animalLibrary.setActiveDimension(this._resolveAnimalSourceDimension());
-  }
-
-  _findAnimalIndexByCode(code) {
-    if (!code) return null;
-    const animals = Array.isArray(this.animalLibrary?.animals)
-      ? this.animalLibrary.animals
-      : [];
-    if (!animals.length) return null;
-    const idx = animals.findIndex(
-      (animal) => String(animal?.code || "") === code,
-    );
-    return idx >= 0 ? idx : null;
+    this.animalLibrary.setActiveDimension(this.params.dimension);
   }
 
   _applyImportedParams(rawParams, { allowGridSize = true } = {}) {
@@ -1403,8 +1388,6 @@ class AppCore {
         }
       }
     }
-
-    p.animalSource = "auto";
 
     this._skipNextAnimalParamsLoad = true;
     this._lastAnimalParamsSelection = p.selectedAnimal || "";
@@ -1629,23 +1612,18 @@ class AppCore {
       this._queueOrRunMutation(() => {
         this._ensureBuffers();
         this.analyser.resetStatistics();
-        const resolutionScale = this.getResolutionScale();
-        const requestedScale = (this.params.placeScale || 1) * resolutionScale;
-
-        this._applyAnimalSimulationParams(animal, {
-          respectAutoScale: true,
-          forceScale: Math.abs(resolutionScale - 1) > 1e-6,
-          scale: requestedScale,
-        });
-
-        const actualScale = this._getActualAnimalScale(animal, requestedScale);
+        this._applyAnimalSimulationParams(animal);
+        const requestedScale = this.getEffectivePlacementScale(
+          this.params.placeScale,
+        );
+        const patternScale = this.applyScaledAnimalParams(animal, requestedScale);
 
         const dim = Number(this.params.dimension) || 2;
         if (loadPattern && dim <= 2) {
-          if (Math.abs(actualScale - 1) < 1e-6) {
+          if (Math.abs(patternScale - 1) < 1e-6) {
             this.board.loadPattern(animal);
           } else {
-            this.board.loadPatternScaled(animal, actualScale);
+            this.board.loadPatternScaled(animal, patternScale);
           }
         } else if (loadPattern) {
           this.board.clear();
@@ -1667,36 +1645,19 @@ class AppCore {
     );
   }
 
-  _applyAnimalSimulationParams(
-    animal,
-    { respectAutoScale = true, forceScale = false, scale = 1 } = {},
-  ) {
+  _applyAnimalSimulationParams(animal) {
     if (!animal) return false;
 
     this.animalLibrary.applyAnimalParameters(animal);
 
-    if (forceScale || (respectAutoScale && this.params.autoScaleSimParams)) {
-      this.applyScaledAnimalParams(animal, scale);
-    }
-
     return true;
   }
 
-  applySelectedAnimalParams({
-    respectAutoScale = true,
-    forceScale = false,
-    refreshGUI = false,
-  } = {}) {
+  applySelectedAnimalParams({ refreshGUI = false } = {}) {
     const animal = this.getSelectedAnimal();
     if (!animal) return false;
 
-    const resolutionScale = this.getResolutionScale();
-
-    this._applyAnimalSimulationParams(animal, {
-      respectAutoScale,
-      forceScale: forceScale || Math.abs(resolutionScale - 1) > 1e-6,
-      scale: (this.params.placeScale || 1) * resolutionScale,
-    });
+    this._applyAnimalSimulationParams(animal);
     this.updateAutomatonParams();
     if (refreshGUI) this.refreshGUI();
     return true;
@@ -1706,7 +1667,8 @@ class AppCore {
     const animal = this.getSelectedAnimal();
     if (!animal) return false;
 
-    this.applyScaledAnimalParams(animal, scale * this.getResolutionScale());
+    const effectiveScale = this.getEffectivePlacementScale(scale);
+    this.applyScaledAnimalParams(animal, effectiveScale);
     this.updateAutomatonParams();
     if (refreshGUI) this.refreshGUI();
     return true;
@@ -1742,33 +1704,10 @@ class AppCore {
     return actualScale;
   }
 
-  _getActualAnimalScale(animal, requestedScale) {
-    if (!animal || !animal.params) return requestedScale;
-    const sourceParams = Array.isArray(animal.params)
-      ? animal.params.find((e) => e && typeof e === "object") ||
-        animal.params[0] ||
-        {}
-      : animal.params;
-    const baseR = Number(sourceParams.R);
-    if (!Number.isFinite(baseR) || baseR <= 0) return requestedScale;
-    return this.params.R / baseR;
-  }
-
   updatePlacementScale(scale) {
     const next = constrain(Number(scale) || 1, 0.25, 4);
     this.params.placeScale = next;
-
-    if (!this.params.autoScaleSimParams) return;
     this.applySelectedAnimalScaledRT(next, { refreshGUI: true });
-  }
-
-  disableAutoScale() {
-    this.params.autoScaleSimParams = false;
-    this.params.placeScale = 1;
-    this.applySelectedAnimalParams({
-      respectAutoScale: false,
-      refreshGUI: true,
-    });
   }
 
   setPolarMode(mode, { refreshGUI = true } = {}) {
@@ -1834,10 +1773,7 @@ class AppCore {
     const animal = this._resolveAnimalForPlacement(request.selection);
     if (!animal) return;
 
-    const rawScale = Number(request.scale) || 1;
-    const scale = this.params.autoScaleSimParams
-      ? this._getActualAnimalScale(animal, rawScale)
-      : rawScale;
+    const scale = this.getEffectivePlacementScale(request.scale);
     this._ensureBuffers();
 
     if ((this.params.dimension || 2) > 2) {
@@ -1861,12 +1797,16 @@ class AppCore {
 
     const scale = this.params.placeScale || 1;
     const boardSize = this.board?.size || this.params.gridSize;
-    const request = this._normalisePlacementRequest({
-      selection,
-      cellX,
-      cellY,
-      scale,
-    }, boardSize, boardSize);
+    const request = this._normalisePlacementRequest(
+      {
+        selection,
+        cellX,
+        cellY,
+        scale,
+      },
+      boardSize,
+      boardSize,
+    );
     if (!request) return;
 
     if (
@@ -2098,57 +2038,6 @@ class AppCore {
     return this.animalLibrary.getAnimal(idx);
   }
 
-  getAnimalSourceOptions() {
-    const count2D = (this.animalsByDimension[2] || []).length;
-    const count3D = (this.animalsByDimension[3] || []).length;
-    const count4D = (this.animalsByDimension[4] || []).length;
-    return {
-      [`Auto (D${this.params.dimension})`]: "auto",
-      [`2D Library (${count2D})`]: "2d",
-      [`3D Library (${count3D})`]: "3d",
-      [`4D Library (${count4D})`]: "4d",
-    };
-  }
-
-  setAnimalSource(source) {
-    if (this._changingAnimalSource) return;
-    const nextSource = String(source || "auto").toLowerCase();
-    if (!["auto", "2d", "3d", "4d"].includes(nextSource)) return;
-
-    this._changingAnimalSource = true;
-    try {
-      const prevAnimal = this.getSelectedAnimal();
-      const prevCode = prevAnimal?.code || "";
-
-      this.params.animalSource = nextSource;
-      this._applyAnimalSource();
-
-      const matchedIdx = this._findAnimalIndexByCode(prevCode);
-      if (matchedIdx !== null) {
-        this.params.selectedAnimal = String(matchedIdx);
-      } else {
-        this.params.selectedAnimal =
-          this.animalLibrary.animals.length > 0 ? "0" : "";
-      }
-
-      this._skipNextAnimalParamsLoad = true;
-      this._lastAnimalParamsSelection = this.params.selectedAnimal || "";
-
-      if (this.gui && typeof this.gui.rebuildPane === "function") {
-        this.gui.rebuildPane();
-      } else {
-        this.refreshGUI();
-      }
-
-      const animal = this.getSelectedAnimal();
-      if (animal) {
-        this.loadAnimal(animal);
-      }
-    } finally {
-      this._changingAnimalSource = false;
-    }
-  }
-
   getViewModeOptions() {
     const modes =
       typeof NDCompatibility !== "undefined"
@@ -2224,7 +2113,11 @@ class AppCore {
         ),
       );
       this.params.T = Math.round(
-        constrain((Number(this.params.T) || 10) * scale, 1, this.getMaxTimeScale()),
+        constrain(
+          (Number(this.params.T) || 10) * scale,
+          1,
+          this.getMaxTimeScale(),
+        ),
       );
     }
 
@@ -2252,6 +2145,15 @@ class AppCore {
         : 128;
     const grid = Math.max(1, Math.floor(Number(this.params.gridSize) || 1));
     return grid / Math.max(1, baseGrid);
+  }
+
+  getEffectivePlacementScale(
+    scale = this.params.placeScale,
+    dimension = this.params.dimension,
+  ) {
+    const uiScale = constrain(Number(scale) || 1, 0.25, 4);
+    const resolutionScale = this.getResolutionScale(dimension);
+    return uiScale * resolutionScale;
   }
 
   _syncPixelSizeFromGrid() {
@@ -2492,15 +2394,15 @@ class AppCore {
     return;
   }
 
-  handleKeyPressed(k, kCode) {
+  handleKeyPressed(k, kCode, event = null) {
     return KeyboardUtils.safeHandle("Lenia", "press", () =>
-      this.input.handleKeyPressed(k, kCode),
+      this.input.handleKeyPressed(k, kCode, event),
     );
   }
 
-  handleKeyReleased(k, kCode) {
+  handleKeyReleased(k, kCode, event = null) {
     return KeyboardUtils.safeHandle("Lenia", "release", () =>
-      this.input.handleKeyReleased(k, kCode),
+      this.input.handleKeyReleased(k, kCode, event),
     );
   }
 

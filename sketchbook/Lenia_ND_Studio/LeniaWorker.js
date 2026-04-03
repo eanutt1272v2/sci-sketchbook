@@ -2333,7 +2333,12 @@ function _sanitiseWorkerParams(rawParams) {
   const params = { ...source };
 
   params.size = _toInteger(source.size, 128, 16, 2048);
-  params.R = _toInteger(source.R, 13, 1, Math.max(1, Math.floor(params.size / 2)));
+  params.R = _toInteger(
+    source.R,
+    13,
+    1,
+    Math.max(1, Math.floor(params.size / 2)),
+  );
   params.T = _clamp(_toFiniteNumber(source.T, 10), 0.1, 512);
   params.m = _clamp(_toFiniteNumber(source.m, 0.15), 0, 1);
   params.s = _clamp(_toFiniteNumber(source.s, 0.015), 0.0001, 1);
@@ -2679,7 +2684,9 @@ self.onmessage = function (e) {
     };
 
     let world = ensureLength(_toFloat32Array(msg.world, expectedLength));
-    let potential = ensureLength(_toFloat32Array(msg.potential, expectedLength));
+    let potential = ensureLength(
+      _toFloat32Array(msg.potential, expectedLength),
+    );
     let growth = ensureLength(_toFloat32Array(msg.growth, expectedLength));
     let growthOld = msg.growthOld
       ? ensureLength(_toFloat32Array(msg.growthOld, expectedLength))

@@ -28,52 +28,10 @@ class Renderer {
       { l: "Flat", cKey: "flatColour" },
       { l: "Steep", cKey: "steepColour" },
     ];
-    this.keymapSections = [
-      {
-        title: "Simulation",
-        entries: [
-          ["P / Space", "Pause / Resume simulation"],
-          ["G / R", "Generate / Reset terrain"],
-          ["I / K", "Droplets per frame + / -"],
-        ],
-      },
-      {
-        title: "Rendering",
-        entries: [
-          ["1 / 2", "Switch render method: 2D / 3D"],
-          ["O / L", "Toggle statistics / legend overlays"],
-          ["C", "Cycle colour map (Shift reverse)"],
-          ["M", "Cycle surface map (Shift reverse)"],
-          ["[ / ]", "Height scale -/+ (Shift large)"],
-        ],
-      },
-      {
-        title: "Camera",
-        entries: [
-          ["WASD / Arrow", "Orbit camera (3D mode)"],
-          ["Q / E / - / +", "Zoom camera out / in (3D mode)"],
-          ["Mouse Drag / Wheel", "Orbit / zoom camera"],
-        ],
-      },
-      {
-        title: "Media",
-        entries: [
-          ["V", "Start/stop recording"],
-          ["F", "Export image"],
-          ["U", "Import heightmap"],
-          ["Shift+I / Shift+P", "Import / export params (JSON)"],
-          ["Shift+J / Shift+K", "Export stats JSON / CSV"],
-          ["Shift+W / Shift+Q", "Export / import world state"],
-        ],
-      },
-      {
-        title: "Reference",
-        entries: [
-          ["H", "Toggle GUI panel"],
-          ["#", "Toggle keymap reference"],
-        ],
-      },
-    ];
+    this.keymapSections =
+      typeof KeybindCatalogue !== "undefined"
+        ? KeybindCatalogue.getSections("fluvia")
+        : [];
   }
 
   _createReadbackBuffer(widthPx, heightPx) {

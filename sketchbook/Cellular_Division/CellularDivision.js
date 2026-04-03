@@ -77,9 +77,9 @@ function draw() {
   appcore.render();
 }
 
-function keyPressed() {
+function keyPressed(event) {
   if (!appcore) return false;
-  appcore.onKeyPressed();
+  appcore.onKeyPressed(event);
   return false;
 }
 

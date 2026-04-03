@@ -38,14 +38,15 @@ class InputHandler {
     return false;
   }
 
-  handleKeyPressed(k, kCode) {
+  handleKeyPressed(k, kCode, event = null) {
     if (KeyboardUtils.shouldIgnoreKeyboard()) {
       return false;
     }
 
     const keyValue = KeyboardUtils.normaliseKey(k);
-    const keyLower = KeyboardUtils.toLower(k);
-    const shiftHeld = KeyboardUtils.isShiftHeld();
+    const keyLower = KeyboardUtils.toLower(keyValue);
+    const shiftHeld = Boolean(event?.shiftKey) || KeyboardUtils.isShiftHeld();
+    const ctrlHeld = Boolean(event?.ctrlKey) || KeyboardUtils.isCtrlHeld();
 
     if (keyValue === "#") {
       this.appcore.params.renderKeymapRef =
@@ -58,82 +59,55 @@ class InputHandler {
       return false;
     }
 
-    if (shiftHeld && keyLower === "i") {
+    if (shiftHeld && ctrlHeld && keyLower === "i") {
       this.appcore.media.importParamsJSON();
       return false;
     }
 
-    if (shiftHeld && keyLower === "p") {
+    if (shiftHeld && ctrlHeld && keyLower === "p") {
       this.appcore.media.exportParamsJSON();
       return false;
     }
 
-    if (shiftHeld && keyLower === "j") {
+    if (shiftHeld && ctrlHeld && keyLower === "j") {
       this.appcore.media.exportStatisticsJSON();
       return false;
     }
 
-    if (shiftHeld && keyLower === "k") {
+    if (shiftHeld && ctrlHeld && keyLower === "k") {
       this.appcore.media.exportStatisticsCSV();
       return false;
     }
 
-    if (keyLower === "h") {
+    if (shiftHeld && ctrlHeld && keyLower === "u") {
+      try {
+        this.appcore.media.openImportDialog();
+      } catch (error) {
+        console.error("[Fluvia] Import heightmap failed:", error);
+      }
+      return false;
+    }
+
+    if (keyLower === "h" && !ctrlHeld) {
       if (this.appcore.gui && this.appcore.gui.pane) {
         this.appcore.gui.pane.hidden = !this.appcore.gui.pane.hidden;
       }
       return false;
     }
 
-    if (keyLower === " ") {
+    if (keyLower === " " || KeyboardUtils.isEnterOrReturn(kCode)) {
       this.appcore.params.running = !this.appcore.params.running;
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "p") {
+    if (keyLower === "p" && !ctrlHeld) {
       this.appcore.params.running = !this.appcore.params.running;
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "g") {
-      this.appcore.generate();
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "r") {
-      this.appcore.reset();
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "1") {
-      this.appcore.params.renderMethod = "2D";
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "2") {
-      this.appcore.params.renderMethod = "3D";
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "o") {
-      this.appcore.params.renderStats = !this.appcore.params.renderStats;
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "l") {
-      this.appcore.params.renderLegend = !this.appcore.params.renderLegend;
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "v") {
+    if (ctrlHeld && keyLower === "r" && !shiftHeld) {
       try {
         if (this.appcore.media.isRecording) {
           this.appcore.media.stopRecording();
@@ -147,7 +121,7 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "f") {
+    if (ctrlHeld && keyLower === "s" && !shiftHeld) {
       try {
         this.appcore.media.exportImage();
       } catch (error) {
@@ -156,28 +130,161 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "u") {
-      try {
-        this.appcore.media.openImportDialog();
-      } catch (error) {
-        console.error("[Fluvia] Import heightmap failed:", error);
-      }
-      return false;
-    }
-
-    if (keyLower === "c") {
-      this.appcore.cycleColourMap(KeyboardUtils.isShiftHeld() ? -1 : 1);
+    if (ctrlHeld && keyLower === "u" && !shiftHeld) {
+      this.appcore.params.maxAge = constrain(
+        this.appcore.params.maxAge + 16,
+        8,
+        2048,
+      );
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "m") {
-      this.appcore.cycleSurfaceMap(KeyboardUtils.isShiftHeld() ? -1 : 1);
+    if (ctrlHeld && keyLower === "j" && !shiftHeld) {
+      this.appcore.params.maxAge = constrain(
+        this.appcore.params.maxAge - 16,
+        8,
+        2048,
+      );
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "[" || keyLower === "{") {
+    if (ctrlHeld && keyLower === "y" && !shiftHeld) {
+      this.appcore.params.minVolume = constrain(
+        this.appcore.params.minVolume + 0.001,
+        1e-5,
+        1,
+      );
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (ctrlHeld && keyLower === "h" && !shiftHeld) {
+      this.appcore.params.minVolume = constrain(
+        this.appcore.params.minVolume - 0.001,
+        1e-5,
+        1,
+      );
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (ctrlHeld && !shiftHeld && ["1", "2", "3"].includes(keyLower)) {
+      const terrainSizeByKey = { 1: 128, 2: 256, 3: 512 };
+      this.appcore.params.terrainSize = terrainSizeByKey[keyLower];
+      this.appcore.generate();
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (
+      ctrlHeld &&
+      (keyValue === "[" ||
+        keyValue === "{" ||
+        keyValue === "]" ||
+        keyValue === "}")
+    ) {
+      const baseStep = shiftHeld ? 0.25 : 0.05;
+      const delta = keyValue === "[" || keyValue === "{" ? -baseStep : baseStep;
+      this.appcore.params.noiseScale = constrain(
+        this.appcore.params.noiseScale + delta,
+        0.01,
+        10,
+      );
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (ctrlHeld && (keyValue === ";" || keyValue === ":")) {
+      this.appcore.params.noiseOctaves = constrain(
+        this.appcore.params.noiseOctaves - 1,
+        1,
+        12,
+      );
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (ctrlHeld && (keyValue === "'" || keyValue === '"')) {
+      this.appcore.params.noiseOctaves = constrain(
+        this.appcore.params.noiseOctaves + 1,
+        1,
+        12,
+      );
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (ctrlHeld && (keyValue === "," || keyValue === "<")) {
+      this.appcore.params.specularIntensity = constrain(
+        this.appcore.params.specularIntensity - 10,
+        0,
+        4096,
+      );
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (ctrlHeld && (keyValue === "." || keyValue === ">")) {
+      this.appcore.params.specularIntensity = constrain(
+        this.appcore.params.specularIntensity + 10,
+        0,
+        4096,
+      );
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (keyLower === "g" && !ctrlHeld) {
+      this.appcore.generate();
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (keyLower === "r" && !ctrlHeld) {
+      this.appcore.reset();
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (keyLower === "1" && !ctrlHeld) {
+      this.appcore.params.renderMethod = "2D";
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (keyLower === "2" && !ctrlHeld) {
+      this.appcore.params.renderMethod = "3D";
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (keyLower === "o" && !ctrlHeld) {
+      this.appcore.params.renderStats = !this.appcore.params.renderStats;
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (keyLower === "l" && !ctrlHeld) {
+      this.appcore.params.renderLegend = !this.appcore.params.renderLegend;
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (keyLower === "c" && !ctrlHeld) {
+      this.appcore.cycleColourMap(shiftHeld ? -1 : 1);
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if (keyLower === "m" && !ctrlHeld) {
+      this.appcore.cycleSurfaceMap(shiftHeld ? -1 : 1);
+      this.appcore.refreshGUI();
+      return false;
+    }
+
+    if ((keyLower === "[" || keyLower === "{") && !ctrlHeld) {
       const delta = keyLower === "{" ? -16 : -4;
       this.appcore.params.heightScale = constrain(
         this.appcore.params.heightScale + delta,
@@ -188,7 +295,7 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "]" || keyLower === "}") {
+    if ((keyLower === "]" || keyLower === "}") && !ctrlHeld) {
       const delta = keyLower === "}" ? 16 : 4;
       this.appcore.params.heightScale = constrain(
         this.appcore.params.heightScale + delta,
@@ -199,7 +306,7 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "i") {
+    if (keyLower === "i" && !ctrlHeld) {
       this.appcore.params.dropletsPerFrame = constrain(
         this.appcore.params.dropletsPerFrame + 16,
         0,
@@ -209,7 +316,7 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "k") {
+    if (keyLower === "k" && !ctrlHeld) {
       this.appcore.params.dropletsPerFrame = constrain(
         this.appcore.params.dropletsPerFrame - 16,
         0,
@@ -219,7 +326,7 @@ class InputHandler {
       return false;
     }
 
-    if (keyValue === "W") {
+    if (shiftHeld && ctrlHeld && keyLower === "w") {
       try {
         this.appcore.media.exportWorldJSON();
       } catch (error) {
@@ -228,7 +335,7 @@ class InputHandler {
       return false;
     }
 
-    if (keyValue === "Q") {
+    if (shiftHeld && ctrlHeld && keyLower === "q") {
       try {
         this.appcore.media.importWorldJSON();
       } catch (error) {
@@ -236,12 +343,26 @@ class InputHandler {
       }
       return false;
     }
-    if (keyLower === "e" || kCode === 187 || kCode === 107) {
+    if (
+      (!ctrlHeld && keyLower === "e") ||
+      keyValue === "=" ||
+      keyValue === "+" ||
+      kCode === 187 ||
+      kCode === 61 ||
+      kCode === 107
+    ) {
       this.keys.zoomIn = true;
       return false;
     }
 
-    if (keyLower === "q" || kCode === 189 || kCode === 109) {
+    if (
+      (!ctrlHeld && keyLower === "q") ||
+      keyValue === "-" ||
+      keyValue === "_" ||
+      kCode === 189 ||
+      kCode === 173 ||
+      kCode === 109
+    ) {
       this.keys.zoomOut = true;
       return false;
     }
@@ -251,22 +372,28 @@ class InputHandler {
     const leftArrow = KeyboardUtils.keyCode("LEFT_ARROW", 37);
     const rightArrow = KeyboardUtils.keyCode("RIGHT_ARROW", 39);
 
-    if (keyLower === "w" || kCode === upArrow) this.keys.up = true;
-    if (keyLower === "s" || kCode === downArrow) this.keys.down = true;
-    if (keyLower === "a" || kCode === leftArrow) this.keys.left = true;
-    if (keyLower === "d" || kCode === rightArrow) this.keys.right = true;
+    if (!ctrlHeld && (keyLower === "w" || kCode === upArrow))
+      this.keys.up = true;
+    if (!ctrlHeld && (keyLower === "s" || kCode === downArrow))
+      this.keys.down = true;
+    if (!ctrlHeld && (keyLower === "a" || kCode === leftArrow))
+      this.keys.left = true;
+    if (!ctrlHeld && (keyLower === "d" || kCode === rightArrow))
+      this.keys.right = true;
 
     return false;
   }
 
-  handleKeyReleased(k, kCode) {
-    const keyLower = KeyboardUtils.toLower(k);
+  handleKeyReleased(k, kCode, event = null) {
+    const keyValue = KeyboardUtils.normaliseKey(k);
+    const keyLower = KeyboardUtils.toLower(keyValue);
 
     if (
       keyLower === "e" ||
-      keyLower === "=" ||
-      keyLower === "+" ||
+      keyValue === "=" ||
+      keyValue === "+" ||
       kCode === 187 ||
+      kCode === 61 ||
       kCode === 107
     ) {
       this.keys.zoomIn = false;
@@ -274,8 +401,10 @@ class InputHandler {
 
     if (
       keyLower === "q" ||
-      keyLower === "-" ||
+      keyValue === "-" ||
+      keyValue === "_" ||
       kCode === 189 ||
+      kCode === 173 ||
       kCode === 109
     ) {
       this.keys.zoomOut = false;
@@ -347,5 +476,4 @@ class InputHandler {
 
     return is3D && !isUI && isCanvas;
   }
-
 }

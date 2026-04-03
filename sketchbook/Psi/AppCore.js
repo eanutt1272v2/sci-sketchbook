@@ -228,15 +228,15 @@ class AppCore {
     return this.input.handlePointerEnd(event);
   }
 
-  handleKeyPressed(k, kCode) {
+  handleKeyPressed(k, kCode, event = null) {
     return KeyboardUtils.safeHandle("Psi", "press", () =>
-      this.input.handleKeyPressed(k, kCode),
+      this.input.handleKeyPressed(k, kCode, event),
     );
   }
 
-  handleKeyReleased(k, kCode) {
+  handleKeyReleased(k, kCode, event = null) {
     return KeyboardUtils.safeHandle("Psi", "release", () =>
-      this.input.handleKeyReleased(k, kCode),
+      this.input.handleKeyReleased(k, kCode, event),
     );
   }
 
@@ -390,9 +390,10 @@ class AppCore {
       0,
     );
 
-    const vc = params.viewCentre && typeof params.viewCentre === "object"
-      ? params.viewCentre
-      : { x: 0, y: 0, z: 0 };
+    const vc =
+      params.viewCentre && typeof params.viewCentre === "object"
+        ? params.viewCentre
+        : { x: 0, y: 0, z: 0 };
     params.viewCentre = {
       x: clampNumber(vc.x, -1024, 1024, 0),
       y: clampNumber(vc.y, -1024, 1024, 0),
@@ -480,7 +481,9 @@ class AppCore {
     this._workerBusy = true;
     this._renderPending = false;
     const reuseGridBuffer =
-      this._gridRecycleBuffer instanceof ArrayBuffer ? this._gridRecycleBuffer : null;
+      this._gridRecycleBuffer instanceof ArrayBuffer
+        ? this._gridRecycleBuffer
+        : null;
     const msg = {
       type: "render",
       requestId,
@@ -553,9 +556,13 @@ class AppCore {
 
     const safeResolution = Math.max(
       64,
-      Math.min(512, Math.round(Number(data.resolution) || this.params.resolution)),
+      Math.min(
+        512,
+        Math.round(Number(data.resolution) || this.params.resolution),
+      ),
     );
-    const expectedBytes = safeResolution * safeResolution * Float32Array.BYTES_PER_ELEMENT;
+    const expectedBytes =
+      safeResolution * safeResolution * Float32Array.BYTES_PER_ELEMENT;
     if (data.grid.byteLength !== expectedBytes) {
       this._workerBusy = false;
       return;

@@ -28,11 +28,11 @@ class InputHandler {
     this.wasPressed = isPressed;
   }
 
-  onKeyPressed() {
+  onKeyPressed(event = null) {
     if (this.isTyping()) {
-      this.handleTypingKey();
+      this.handleTypingKey(event);
     } else {
-      this.handleShortcutKey();
+      this.handleShortcutKey(event);
     }
   }
 
@@ -111,8 +111,8 @@ class InputHandler {
     this.rightPanel.releaseSliders();
   }
 
-  handleTypingKey() {
-    const keyValue = KeyboardUtils.normaliseKey(key);
+  handleTypingKey(event = null) {
+    const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
 
     if (keyValue >= "0" && keyValue <= "9") {
       this.typingBuffer += keyValue;
@@ -130,10 +130,11 @@ class InputHandler {
     }
   }
 
-  handleShortcutKey() {
-    const keyValue = KeyboardUtils.normaliseKey(key);
+  handleShortcutKey(event = null) {
+    const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
     const keyLower = KeyboardUtils.toLower(keyValue);
-    const shiftHeld = KeyboardUtils.isShiftHeld();
+    const shiftHeld = Boolean(event?.shiftKey) || KeyboardUtils.isShiftHeld();
+    const ctrlHeld = Boolean(event?.ctrlKey) || KeyboardUtils.isCtrlHeld();
 
     if (this.ui.renderKeymapRef && keyValue !== "#") {
       return;
@@ -144,50 +145,78 @@ class InputHandler {
       return;
     }
 
-    if (shiftHeld && keyLower === "i") {
+    if (shiftHeld && ctrlHeld && keyLower === "i") {
       this.ui.appcore.importParamsJSON();
       return;
     }
 
-    if (shiftHeld && keyLower === "p") {
+    if (shiftHeld && ctrlHeld && keyLower === "p") {
       this.ui.appcore.exportParamsJSON();
       return;
     }
 
-    if (shiftHeld && keyLower === "j") {
+    if (shiftHeld && ctrlHeld && keyLower === "j") {
       this.ui.appcore.exportStatisticsJSON();
       return;
     }
 
-    if (shiftHeld && keyLower === "k") {
+    if (shiftHeld && ctrlHeld && keyLower === "k") {
       this.ui.appcore.exportStatisticsCSV();
       return;
     }
 
-    if (shiftHeld && keyLower === "s") {
+    if (shiftHeld && ctrlHeld && keyLower === "s") {
       this.ui.appcore.exportStateJSON();
       return;
     }
 
-    if (shiftHeld && keyLower === "o") {
+    if (shiftHeld && ctrlHeld && keyLower === "o") {
       this.ui.appcore.importStateJSON();
       return;
     }
 
-    if (keyLower === "h") {
+    if (ctrlHeld && keyLower === "s" && !shiftHeld) {
+      this.ui.appcore.exportImage();
+      return;
+    }
+
+    if (ctrlHeld && keyLower === "r" && !shiftHeld) {
+      try {
+        if (this.ui.appcore.media.isRecording) {
+          this.ui.appcore.media.stopRecording();
+        } else {
+          this.ui.appcore.media.startRecording();
+        }
+      } catch (error) {
+        console.error("[Cellular Division] Recording toggle failed:", error);
+      }
+      return;
+    }
+
+    if (keyLower === "h" && !ctrlHeld) {
       this.ui.toggleVisibility();
       return;
     }
 
-    if (keyLower === "r") {
+    if (keyLower === "r" && !ctrlHeld) {
       this.ui.requestRestart();
       return;
     }
 
-    if (keyLower === "p" || keyValue === " ") {
+    if (
+      !ctrlHeld &&
+      (keyLower === "p" ||
+        keyValue === " " ||
+        KeyboardUtils.isEnterOrReturn(keyCode))
+    ) {
       this.ui.toggleSimulationPause();
       return;
     }
+
+    if (ctrlHeld) {
+      return;
+    }
+
     const stepBoost = shiftHeld ? 10 : 1;
     switch (keyValue) {
       case "1":

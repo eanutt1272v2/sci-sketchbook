@@ -150,7 +150,8 @@ function coerceFloatMap(buffer, length) {
 function sanitiseStepPayload(data) {
   const size = toInteger(data.size, 256, 8, 2048);
   const area = size * size;
-  const params = data.params && typeof data.params === "object" ? data.params : {};
+  const params =
+    data.params && typeof data.params === "object" ? data.params : {};
 
   return {
     requestId: toInteger(data.requestId, 0, 0, 0x7fffffff),
@@ -189,11 +190,7 @@ function sanitiseStepPayload(data) {
         0,
         1,
       ),
-      maxHeightDiff: clamp(
-        toFiniteNumber(params.maxHeightDiff, 0.01),
-        1e-5,
-        4,
-      ),
+      maxHeightDiff: clamp(toFiniteNumber(params.maxHeightDiff, 0.01), 1e-5, 4),
       settlingRate: clamp(toFiniteNumber(params.settlingRate, 0.8), 0, 1),
       learningRate: clamp(toFiniteNumber(params.learningRate, 0.1), 0, 1),
       heightScale: clamp(toFiniteNumber(params.heightScale, 100), 1, 4096),

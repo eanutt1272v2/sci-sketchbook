@@ -82,12 +82,12 @@ function windowResized() {
 
 function keyPressed(event) {
   const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
-  return appcore ? appcore.handleKeyPressed(keyValue, keyCode) : false;
+  return appcore ? appcore.handleKeyPressed(keyValue, keyCode, event) : false;
 }
 
 function keyReleased(event) {
   const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
-  return appcore ? appcore.handleKeyReleased(keyValue, keyCode) : false;
+  return appcore ? appcore.handleKeyReleased(keyValue, keyCode, event) : false;
 }
 
 function mouseWheel(event) {

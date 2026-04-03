@@ -45,7 +45,7 @@ class KeymapRenderer {
         textSize(13);
         text(k, cx, cy);
         fill(200);
-        text(desc, cx + 130, cy);
+        text(desc, cx + 200, cy);
         cy += lh;
       }
 

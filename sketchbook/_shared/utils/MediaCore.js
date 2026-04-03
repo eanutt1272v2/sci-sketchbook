@@ -183,9 +183,10 @@ class MediaCore {
       const filename = this._getFilename(this.appcore.params.imageFormat);
       const dot = filename.lastIndexOf(".");
       const basename = dot > 0 ? filename.slice(0, dot) : filename;
-      const extension = dot > 0
-        ? filename.slice(dot + 1)
-        : String(this.appcore.params.imageFormat || "png");
+      const extension =
+        dot > 0
+          ? filename.slice(dot + 1)
+          : String(this.appcore.params.imageFormat || "png");
 
       if (typeof saveCanvas === "function") {
         saveCanvas(sourceCanvas, basename, extension);
@@ -314,7 +315,9 @@ class MediaCore {
       if (Array.isArray(targetValue)) {
         if (Array.isArray(sourceValue)) {
           const maxLength = targetValue.length > 0 ? targetValue.length : 1024;
-          target[key] = this._cloneJSONCompatible(sourceValue.slice(0, maxLength));
+          target[key] = this._cloneJSONCompatible(
+            sourceValue.slice(0, maxLength),
+          );
         }
         continue;
       }

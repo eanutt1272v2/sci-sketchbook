@@ -1,6 +1,6 @@
 # Lenia ND Studio
 
-FFT-accelerated continuous cellular automaton studio implementing Lenia with configurable kernel and growth function families, multi-shell convolution, and full 2D, 3D, and 4D support. Includes a curated organism catalogue with taxonomic classification and tools for exploring the parameter space of smooth life-like dynamics.
+FFT-accelerated continuous cellular automaton studio implementing Lenia with configurable kernel and growth function families, multi-shell convolution, and full 2D, 3D, and 4D support. Includes a curated organism catalogueue with taxonomic classification and tools for exploring the parameter space of smooth life-like dynamics.
 
 * p5.js 2.2.3
 * Web Worker (FFT convolution, kernel construction, analysis)
@@ -258,7 +258,7 @@ The worker implements a Cooley–Tukey radix-2 FFT algorithm with cached twiddle
 
 Buffers are transferred with ownership (zero-copy `ArrayBuffer` transfer) between main thread and worker.
 
-#### 8.2 Organism Catalogue
+#### 8.2 Organism Catalogueue
 
 Three JSON libraries contain presets organised by biological-style taxonomy:
 
@@ -324,7 +324,7 @@ Symmetry detection decomposes polar samples from the centroid into Fourier harmo
 | `Ctrl+P` | Arita mode | Toggle | — |
 | `Ctrl+M` | Multi-step | Toggle | — |
 
-#### 9.3 Organism Catalogue
+#### 9.3 Organism Catalogueue
 
 | Key | Action |
 | :-- | :-- |

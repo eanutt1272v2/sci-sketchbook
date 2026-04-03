@@ -105,7 +105,10 @@ class Camera {
 
     if (touchCount === 2) {
       gesture.pinch = {
-        distance: max(1, dist(touches[0].x, touches[0].y, touches[1].x, touches[1].y)),
+        distance: max(
+          1,
+          dist(touches[0].x, touches[0].y, touches[1].x, touches[1].y),
+        ),
       };
       gesture.orbit = null;
       return;
