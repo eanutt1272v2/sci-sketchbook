@@ -23,12 +23,12 @@ class GUI {
       ],
     });
 
-    const [general, erosion, visuals, stats, media] = tabs.pages;
-    this.createGeneralTab(general);
-    this.createErosionTab(erosion);
-    this.createRenderTab(visuals);
-    this.createStatsTab(stats);
-    this.createMediaTab(media);
+    const [sim, paramsPage, renderPage, statsPage, mediaPage] = tabs.pages;
+    this.createSimulationTab(sim);
+    this.createParametersTab(paramsPage);
+    this.createRenderTab(renderPage);
+    this.createStatisticsTab(statsPage);
+    this.createMediaTab(mediaPage);
   }
 
   addSeparator(target) {
@@ -77,7 +77,7 @@ class GUI {
     target.addBinding(objectRef, key, valueBinding);
   }
 
-  createGeneralTab(page) {
+  createSimulationTab(page) {
     const { params, statistics } = this.appcore;
 
     const controls = page.addFolder({
@@ -96,7 +96,10 @@ class GUI {
 
     this.addSeparator(page);
 
-    const perf = page.addFolder({ title: "Performance", expanded: true });
+    const perf = page.addFolder({
+      title: "Performance Metrics",
+      expanded: true,
+    });
     perf.addBinding(statistics, "fps", {
       readonly: true,
       label: "FPS [Hz]",
@@ -112,7 +115,10 @@ class GUI {
 
     this.addSeparator(page);
 
-    const droplets = page.addFolder({ title: "Droplets", expanded: true });
+    const droplets = page.addFolder({
+      title: "Droplet Settings",
+      expanded: true,
+    });
     droplets.addBinding(params, "dropletsPerFrame", {
       label: this.withHint("Droplets/Frame", "droplets", "I/K"),
       min: 0,
@@ -160,9 +166,12 @@ class GUI {
     });
   }
 
-  createErosionTab(page) {
+  createParametersTab(page) {
     const { params } = this.appcore;
-    const hydraulic = page.addFolder({ title: "Hydraulic" });
+    const hydraulic = page.addFolder({
+      title: "Hydraulic Erosion",
+      expanded: true,
+    });
 
     const hydraulicSettings = [
       {
@@ -191,7 +200,10 @@ class GUI {
 
     this.addSeparator(page);
 
-    const thermal = page.addFolder({ title: "Thermal" });
+    const thermal = page.addFolder({
+      title: "Thermal Erosion",
+      expanded: true,
+    });
 
     thermal.addBinding(params, "maxHeightDiff", {
       label: "Max Δ Height",
@@ -209,7 +221,7 @@ class GUI {
   createRenderTab(page) {
     const { params, colourMaps } = this.appcore;
 
-    const render = page.addFolder({ title: "Render", expanded: true });
+    const render = page.addFolder({ title: "Map View", expanded: true });
 
     render.addBinding(params, "renderMethod", {
       label: this.withHint("Render Method", "renderMethod", "1/2"),
@@ -276,7 +288,7 @@ class GUI {
     });
 
     overlay.addBinding(params, "renderLegend", {
-      label: this.withHint("Legend", "overlayLegend", "L"),
+      label: this.withHint("Toggle Legend", "overlayLegend", "L"),
     });
 
     this.addSeparator(page);
@@ -311,18 +323,18 @@ class GUI {
     });
   }
 
-  createStatsTab(page) {
+  createStatisticsTab(page) {
     const { statistics, params } = this.appcore;
     const fmt = FormatUtils.formatFixed;
     const fmtInt = FormatUtils.formatInt;
 
     const display = page.addFolder({
-      title: "Display & Analysis Overlays",
+      title: "Statistics Overlay",
       expanded: true,
     });
 
     display.addBinding(params, "renderStats", {
-      label: this.withHint("Statistics Overlay", "overlayStats", "O"),
+      label: this.withHint("Toggle Statistics Overlay", "overlayStats", "O"),
     });
 
     this.addSeparator(page);

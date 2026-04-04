@@ -16,17 +16,19 @@ class GUI {
   setupTabs() {
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Simulation" },
-        { title: "Rendering" },
-        { title: "Statistics" },
+        { title: "Sim" },
+        { title: "Params" },
+        { title: "Render" },
+        { title: "Stats" },
         { title: "Media" },
       ],
     });
 
-    this.createGeneralTab(tabs.pages[0]);
-    this.createRenderTab(tabs.pages[1]);
-    this.createStatisticsTab(tabs.pages[2]);
-    this.createMediaTab(tabs.pages[3]);
+    this.createSimulationTab(tabs.pages[0]);
+    this.createParametersTab(tabs.pages[1]);
+    this.createRenderTab(tabs.pages[2]);
+    this.createStatisticsTab(tabs.pages[3]);
+    this.createMediaTab(tabs.pages[4]);
 
     this.enforceConstraints();
   }
@@ -72,8 +74,11 @@ class GUI {
     return `l${l}`;
   }
 
-  createGeneralTab(page) {
-    const perf = page.addFolder({ title: "Performance", expanded: true });
+  createSimulationTab(page) {
+    const perf = page.addFolder({
+      title: "Performance Metrics",
+      expanded: true,
+    });
 
     perf.addBinding(this.appcore.statistics, "fps", {
       readonly: true,
@@ -88,9 +93,9 @@ class GUI {
       label: "",
       readonly: true,
     });
+  }
 
-    this.addSeparator(page);
-
+  createParametersTab(page) {
     const quantum = page.addFolder({ title: "Quantum State", expanded: true });
 
     quantum.addBinding(this.appcore.params, "orbitalNotation", {
@@ -99,21 +104,21 @@ class GUI {
     });
 
     this.bindings.n = quantum.addBinding(this.appcore.params, "n", {
-      label: this.withHint("n principal", "quantumN", "W/S"),
+      label: this.withHint("Principal n", "quantumN", "W/S"),
       min: AppCore.QUANTUM_LIMITS.minN,
       max: AppCore.QUANTUM_LIMITS.maxN,
       step: 1,
     });
 
     this.bindings.l = quantum.addBinding(this.appcore.params, "l", {
-      label: this.withHint("l angular", "quantumL", "D/A"),
+      label: this.withHint("Angular l", "quantumL", "D/A"),
       min: 0,
       max: 0,
       step: 1,
     });
 
     this.bindings.m = quantum.addBinding(this.appcore.params, "m", {
-      label: this.withHint("m magnetic", "quantumM", "E/Q"),
+      label: this.withHint("Magnetic m", "quantumM", "E/Q"),
       min: 0,
       max: 0,
       step: 1,
@@ -121,7 +126,7 @@ class GUI {
 
     this.bindings.nuclearCharge = quantum
       .addBinding(this.appcore.params, "nuclearCharge", {
-        label: this.withHint("Z charge", "nuclearCharge", "R/T"),
+        label: this.withHint("Nuclear Charge Z", "nuclearCharge", "R/T"),
         min: 1,
         max: 20,
         step: 1,
@@ -139,7 +144,7 @@ class GUI {
 
     quantum
       .addBinding(this.appcore.params, "useReducedMass", {
-        label: this.withHint("Reduced mass", "reducedMass", "P"),
+        label: this.withHint("Toggle Reduced Mass", "reducedMass", "P"),
       })
       .on("change", () => {
         this.appcore.requestRender();
@@ -149,7 +154,7 @@ class GUI {
 
     this.bindings.nucleusMassLog10 = quantum
       .addBinding(this.massControl, "nucleusMassLog10", {
-        label: this.withHint("log₁₀ mass", "nucleusMass", "G/B"),
+        label: this.withHint("log₁₀ Nucleus Mass", "nucleusMass", "G/B"),
         min: -30,
         max: -24,
         step: 0.01,
@@ -164,7 +169,7 @@ class GUI {
       });
 
     quantum.addBinding(this.appcore.params, "nucleusMassKg", {
-      label: "Nucleus mass [kg]",
+      label: "Nucleus Mass [kg]",
       readonly: true,
       format: (v) => {
         const numeric = Number(v);
@@ -333,7 +338,7 @@ class GUI {
     const formatInt = FormatUtils.formatInt;
 
     const display = page.addFolder({
-      title: "Display and Analysis Overlays",
+      title: "Statistics Overlay",
       expanded: true,
     });
 
@@ -345,7 +350,11 @@ class GUI {
 
     display
       .addBinding(params, "renderNodeOverlay", {
-        label: this.withHint("Toggle Detected Nodes Overlay", "nodeOverlay", "N"),
+        label: this.withHint(
+          "Toggle Detected Nodes Overlay",
+          "nodeOverlay",
+          "N",
+        ),
       })
       .on("change", () => this.appcore.requestRender());
 
