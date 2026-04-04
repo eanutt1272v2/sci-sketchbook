@@ -470,19 +470,19 @@ class OverlayPanelMethods {
 
     this.lastCalcPanelsFrame = panelCanvas;
 
-    const drawX = Math.round(baseX);
-    const drawY = Math.round(baseY);
+    const renderX = Math.round(baseX);
+    const renderY = Math.round(baseY);
     const prevSmooth = drawingContext?.imageSmoothingEnabled;
     if (typeof noSmooth === "function") noSmooth();
     if (drawingContext) drawingContext.imageSmoothingEnabled = false;
-    image(panelCanvas, drawX, drawY);
+    image(panelCanvas, renderX, renderY);
     if (drawingContext && typeof prevSmooth === "boolean") {
       drawingContext.imageSmoothingEnabled = prevSmooth;
     }
 
     this._renderCalcPanelBorders(
-      drawX,
-      drawY,
+      renderX,
+      renderY,
       panelSize,
       gap,
       cols,
@@ -565,14 +565,14 @@ class OverlayPanelMethods {
     target = null,
   ) {
     const hasTarget = target && typeof target.push === "function";
-    const draw = hasTarget ? target : null;
+    const render = hasTarget ? target : null;
 
-    if (draw) draw.push();
+    if (render) render.push();
     else push();
 
-    if (draw) {
-      draw.noStroke();
-      draw.fill(210, 145);
+    if (render) {
+      render.noStroke();
+      render.fill(210, 145);
     } else {
       noStroke();
       fill(210, 145);
@@ -583,12 +583,12 @@ class OverlayPanelMethods {
         const x = Math.round(baseX + col * (panelSize + gap));
         const y = Math.round(baseY + row * (panelSize + gap));
 
-        if (draw) {
-          draw.rect(x, y, panelSize, 1);
-          draw.rect(x, y + panelSize - 1, panelSize, 1);
+        if (render) {
+          render.rect(x, y, panelSize, 1);
+          render.rect(x, y + panelSize - 1, panelSize, 1);
           if (panelSize > 2) {
-            draw.rect(x, y + 1, 1, panelSize - 2);
-            draw.rect(x + panelSize - 1, y + 1, 1, panelSize - 2);
+            render.rect(x, y + 1, 1, panelSize - 2);
+            renderer.rect(x + panelSize - 1, y + 1, 1, panelSize - 2);
           }
         } else {
           rect(x, y, panelSize, 1);
@@ -601,7 +601,7 @@ class OverlayPanelMethods {
       }
     }
 
-    if (draw) draw.pop();
+    if (render) render.pop();
     else pop();
   }
 

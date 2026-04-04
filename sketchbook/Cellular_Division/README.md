@@ -246,7 +246,7 @@ Heavy per-particle computation is offloaded to a dedicated Web Worker:
    updates headings and positions, runs cell tracking, and packs results into a
    `Float32Array` (4 floats per particle: $x$, $y$, close count, neighbour count).
 4. The buffer is transferred back with ownership (zero-copy).
-5. The main thread renders particles from the buffer and draws the motion trail.
+5. The main thread renders particles from the buffer and renders the motion trail.
 
 Adaptive frame-pacing adjusts the step interval (22–30 ms base) by ±2 ms to
 maintain ≈60 FPS.
@@ -263,7 +263,7 @@ Particles are coloured by neighbourhood density:
 | $N \geq 13$ | Orange $(180, 100, 50)$ |
 | Default | Green $(80, 255, 80)$ |
 
-A translucent rectangle with alpha $\tau$ is drawn each frame to produce a
+A translucent rectangle with alpha $\tau$ is rendered each frame to produce a
 configurable motion trail.
 
 #### 6.4 UI Panels

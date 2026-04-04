@@ -1,4 +1,4 @@
-class StatsGraphComponentMethods {
+class StatsGraphComponent {
   _mountStatsGraph(graphsFolder) {
     this._teardownStatsGraph();
 
@@ -198,7 +198,7 @@ class StatsGraphComponentMethods {
     };
   }
 
-  _drawPlotAxes(ctx, plot, theme) {
+  _renderPlotAxes(ctx, plot, theme) {
     ctx.strokeStyle = theme?.grooveForeground || "rgba(220,220,220,0.8)";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -407,7 +407,7 @@ class StatsGraphComponentMethods {
       .replace(/(\.\d*?)0+$/, "$1");
   }
 
-  _drawPlotTicks(ctx, plot, theme, axis) {
+  _renderPlotTicks(ctx, plot, theme, axis) {
     const xMin = Number(axis?.xMin);
     const xMax = Number(axis?.xMax);
     const yMin = Number(axis?.yMin);
@@ -457,8 +457,8 @@ class StatsGraphComponentMethods {
       ctx.restore();
     });
 
-    const drawnXTicks = [];
-    const drawnYTicks = [];
+    const renderedXTicks = [];
+    const renderedYTicks = [];
 
     ctx.save();
     ctx.strokeStyle = theme?.monitorForeground || "rgba(220,220,220,0.75)";
@@ -474,7 +474,7 @@ class StatsGraphComponentMethods {
       if (px - lastXPx < 26) continue;
       ctx.moveTo(px + 0.5, plot.y + plot.h + 0.5);
       ctx.lineTo(px + 0.5, plot.y + plot.h + 4.5);
-      drawnXTicks.push(value);
+      renderedXTicks.push(value);
       lastXPx = px;
     }
 
@@ -488,7 +488,7 @@ class StatsGraphComponentMethods {
       if (py - lastYPx < minYLabelGap) continue;
       ctx.moveTo(plot.x - 3.5, py + 0.5);
       ctx.lineTo(plot.x + 0.5, py + 0.5);
-      drawnYTicks.push(value);
+      renderedYTicks.push(value);
       lastYPx = py;
     }
 
@@ -499,8 +499,8 @@ class StatsGraphComponentMethods {
 
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    for (let i = 0; i < drawnXTicks.length; i++) {
-      const value = drawnXTicks[i];
+    for (let i = 0; i < renderedXTicks.length; i++) {
+      const value = renderedXTicks[i];
       const px = xToPx(value);
       if (!Number.isFinite(px)) continue;
       ctx.fillText(
@@ -512,8 +512,8 @@ class StatsGraphComponentMethods {
 
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
-    for (let i = 0; i < drawnYTicks.length; i++) {
-      const value = drawnYTicks[i];
+    for (let i = 0; i < renderedYTicks.length; i++) {
+      const value = renderedYTicks[i];
       const py = yToPx(value);
       if (!Number.isFinite(py)) continue;
       ctx.fillText(
@@ -526,12 +526,12 @@ class StatsGraphComponentMethods {
     ctx.restore();
   }
 
-  _withPlotClip(ctx, plot, drawFn) {
+  _withPlotClip(ctx, plot, renderFn) {
     ctx.save();
     ctx.beginPath();
     ctx.rect(plot.x, plot.y, Math.max(1, plot.w), Math.max(1, plot.h));
     ctx.clip();
-    drawFn();
+    renderFn();
     ctx.restore();
   }
 
@@ -590,7 +590,7 @@ class StatsGraphComponentMethods {
 
     this.appcore?.analyser?.updatePeriodogram?.(params, 10);
 
-    const renderLayer = (layerMode, drawGraph) => {
+    const renderLayer = (layerMode, renderGraph) => {
       const layerCanvas = this._getGraphLayerCanvas(
         layerMode,
         pxWidth,
@@ -612,13 +612,13 @@ class StatsGraphComponentMethods {
 
       return {
         canvas: layerCanvas,
-        caption: drawGraph(layerCtx),
+        caption: renderGraph(layerCtx),
       };
     };
 
     const layers = {
       1: renderLayer(1, (layerCtx) =>
-        this._drawComparativeGraph(
+        this._renderComparativeGraph(
           layerCtx,
           cssWidth,
           cssHeight,
@@ -628,7 +628,7 @@ class StatsGraphComponentMethods {
         ),
       ),
       5: renderLayer(5, (layerCtx) =>
-        this._drawPeriodogramGraph(
+        this._renderPeriodogramGraph(
           layerCtx,
           cssWidth,
           cssHeight,
@@ -638,7 +638,7 @@ class StatsGraphComponentMethods {
         ),
       ),
       6: renderLayer(6, (layerCtx) =>
-        this._drawRecurrenceGraph(
+        this._renderRecurrenceGraph(
           layerCtx,
           cssWidth,
           cssHeight,
@@ -685,7 +685,7 @@ class StatsGraphComponentMethods {
     }
   }
 
-  _drawComparativeGraph(ctx, w, h, statistics, params, theme) {
+  _renderComparativeGraph(ctx, w, h, statistics, params, theme) {
     const analyser = this.appcore?.analyser;
     const rows =
       analyser?.getActiveSegment?.() ||
@@ -745,7 +745,7 @@ class StatsGraphComponentMethods {
     const xToPx = (v) => plot.x + ((v - xMin) / xDen) * plot.w;
     const yToPx = (v) => plot.y + (1 - (v - yMin) / yDen) * plot.h;
 
-    this._drawPlotTicks(ctx, plot, theme, {
+    this._renderPlotTicks(ctx, plot, theme, {
       xMin,
       xMax,
       yMin,
@@ -755,7 +755,7 @@ class StatsGraphComponentMethods {
       xTickTarget: 5,
       yTickTarget: 4,
     });
-    this._drawPlotAxes(ctx, plot, theme);
+    this._renderPlotAxes(ctx, plot, theme);
 
     this._withPlotClip(ctx, plot, () => {
       ctx.strokeStyle = theme.inputForeground;
@@ -799,7 +799,7 @@ class StatsGraphComponentMethods {
     return `Comparative Graph | ${xKey} vs ${yKey} | samples=${pairs.length}${xRange.scrolled ? " | scrolling" : " | auto-fit"}`;
   }
 
-  _drawPeriodogramGraph(ctx, w, h, statistics, params, theme) {
+  _renderPeriodogramGraph(ctx, w, h, statistics, params, theme) {
     const freq = statistics?.psdFreq;
     const psdPrimary = statistics?.psdPrimary;
     const psdSecondary = statistics?.psdSecondary;
@@ -872,7 +872,7 @@ class StatsGraphComponentMethods {
     const xToPx = (v) => plot.x + ((v - xMin) / (xMax - xMin)) * plot.w;
     const yToPx = (v) => plot.y + (1 - (v - yMin) / (yMax - yMin)) * plot.h;
 
-    this._drawPlotTicks(ctx, plot, theme, {
+    this._renderPlotTicks(ctx, plot, theme, {
       xMin,
       xMax,
       yMin,
@@ -882,9 +882,9 @@ class StatsGraphComponentMethods {
       xTickTarget: 4,
       yTickTarget: 4,
     });
-    this._drawPlotAxes(ctx, plot, theme);
+    this._renderPlotAxes(ctx, plot, theme);
 
-    const drawCurve = (series, colour) => {
+    const renderCurve = (series, colour) => {
       if (!series) return;
       ctx.strokeStyle = colour;
       ctx.lineWidth = 1;
@@ -907,8 +907,8 @@ class StatsGraphComponentMethods {
     };
 
     this._withPlotClip(ctx, plot, () => {
-      drawCurve(psdSecondary, theme.labelForeground);
-      drawCurve(psdPrimary, theme.inputForeground);
+      renderCurve(psdSecondary, theme.labelForeground);
+      renderCurve(psdPrimary, theme.inputForeground);
     });
 
     ctx.fillStyle = theme.monitorForeground;
@@ -938,7 +938,7 @@ class StatsGraphComponentMethods {
     return useWelch ? "Periodogram (Welch)" : "Periodogram";
   }
 
-  _drawRecurrenceGraph(ctx, w, h, statistics, params, theme) {
+  _renderRecurrenceGraph(ctx, w, h, statistics, params, theme) {
     const analyser = this.appcore?.analyser;
     const rows =
       analyser?.getActiveSegment?.() ||
@@ -1052,22 +1052,22 @@ class StatsGraphComponentMethods {
       }
     }
 
-    const drawSize = Math.max(8, Math.min(plot.w, plot.h));
-    const drawX = Math.floor(plot.x + (plot.w - drawSize) * 0.5);
-    const drawY = Math.floor(plot.y + (plot.h - drawSize) * 0.5);
+    const renderSize = Math.max(8, Math.min(plot.w, plot.h));
+    const renderX = Math.floor(plot.x + (plot.w - renderSize) * 0.5);
+    const renderY = Math.floor(plot.y + (plot.h - renderSize) * 0.5);
     const scratch = this._getGraphScratchCanvas(n, n);
     const scratchCtx = scratch.getContext("2d");
     if (scratchCtx) {
       scratchCtx.putImageData(imageData, 0, 0);
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(scratch, drawX, drawY, drawSize, drawSize);
+      ctx.drawImage(scratch, renderX, renderY, renderSize, renderSize);
       ctx.restore();
     }
 
     ctx.strokeStyle = theme.grooveForeground;
     ctx.lineWidth = 1;
-    ctx.strokeRect(drawX + 0.5, drawY + 0.5, drawSize, drawSize);
+    ctx.strokeRect(renderX + 0.5, renderY + 0.5, renderSize, renderSize);
 
     ctx.fillStyle = theme.monitorForeground;
     ctx.font = this._graphFont(10);
@@ -1086,9 +1086,9 @@ window.StatsGraphComponent.install = function installStatsGraphComponent(
 ) {
   if (!targetClass || !targetClass.prototype) return;
   for (const name of Object.getOwnPropertyNames(
-    StatsGraphComponentMethods.prototype,
+    StatsGraphComponent.prototype,
   )) {
     if (name === "constructor") continue;
-    targetClass.prototype[name] = StatsGraphComponentMethods.prototype[name];
+    targetClass.prototype[name] = StatsGraphComponent.prototype[name];
   }
 };

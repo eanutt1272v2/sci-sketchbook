@@ -16,9 +16,9 @@ class GUI {
   setupTabs() {
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Sim" },
-        { title: "Render" },
-        { title: "Stats" },
+        { title: "Simulation" },
+        { title: "Rendering" },
+        { title: "Statistics" },
         { title: "Media" },
       ],
     });
@@ -235,7 +235,7 @@ class GUI {
 
     overlay
       .addBinding(this.appcore.params, "renderLegend", {
-        label: this.withHint("Legend", "legend", "L"),
+        label: this.withHint("Toggle Legend", "legend", "L"),
       })
       .on("change", () => this.appcore.requestRender());
 
@@ -261,7 +261,7 @@ class GUI {
 
     slice
       .addBinding(this.appcore.params, "slicePlane", {
-        label: this.withHint("Slice Plane", "slicePlane", "1/2/3"),
+        label: this.withHint("Selected Slice Plane", "slicePlane", "1/2/3"),
         options: {
           "XY Plane (Slice Z)": "xy",
           "XZ Plane (Slice Y)": "xz",
@@ -333,19 +333,19 @@ class GUI {
     const formatInt = FormatUtils.formatInt;
 
     const display = page.addFolder({
-      title: "Display & Analysis Overlays",
+      title: "Display and Analysis Overlays",
       expanded: true,
     });
 
     display
       .addBinding(params, "renderOverlay", {
-        label: this.withHint("Statistics Overlay", "overlay", "O"),
+        label: this.withHint("Toggle Statistics Overlay", "overlay", "O"),
       })
       .on("change", () => this.appcore.requestRender());
 
     display
       .addBinding(params, "renderNodeOverlay", {
-        label: this.withHint("Detected Nodes Overlay", "nodeOverlay", "N"),
+        label: this.withHint("Toggle Detected Nodes Overlay", "nodeOverlay", "N"),
       })
       .on("change", () => this.appcore.requestRender());
 

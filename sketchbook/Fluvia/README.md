@@ -194,7 +194,7 @@ If $\text{excess} > 0$:
 
 $$\text{transfer} = \frac{\sigma \cdot \text{excess}}{2}$$
 
-The transfer amount is subtracted from the higher cell and added to the lower, drawing first from the sediment layer and then from bedrock. This mitigates the formation of unrealistically vertical and exaggerated cliffs.
+The transfer amount is subtracted from the higher cell and added to the lower, rendering first from the sediment layer and then from bedrock. This mitigates the formation of unrealistically vertical and exaggerated cliffs.
 
 ---
 
