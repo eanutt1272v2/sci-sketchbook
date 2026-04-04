@@ -20,17 +20,44 @@ Lagrangian particle-based hydraulic erosion simulation with momentum-coupled mea
 ## Project Files
 
 * [Fluvia.js — p5.js lifecycle and configuration](Fluvia.js)
-* [AppCore.js — Simulation lifecycle, worker management, and state coordination](AppCore.js)
-* [FluviaWorker.js — Worker-side hydraulic and thermal erosion solver](FluviaWorker.js)
-* [Terrain.js — Typed-array terrain field storage and noise generation](Terrain.js)
-* [Renderer.js — 2D pixel rendering and 3D shader-based terrain mesh](Renderer.js)
-* [Camera.js — Quaternion-based 3D orbit camera](Camera.js)
-* [Quaternion.js — Quaternion algebra for camera rotation](Quaternion.js)
-* [Analyser.js — Topographic, hydrological, and mass-balance statistics](Analyser.js)
-* [GUI.js — Tweakpane parameter interface (5 tabs)](GUI.js)
-* [InputHandler.js — Keyboard, mouse, and touch input](InputHandler.js)
-* [Media.js — Image, video, heightmap, and world-state import/export](Media.js)
-* [RLECodec.js — Run-length encoding for Float32Array map serialisation](RLECodec.js)
+* [core/AppCore.js — Simulation lifecycle, worker management, and state coordination](core/AppCore.js)
+* [worker/FluviaWorker.js — Worker-side hydraulic and thermal erosion solver](worker/FluviaWorker.js)
+* [model/Terrain.js — Typed-array terrain field storage and noise generation](model/Terrain.js)
+* [render/Renderer.js — 2D pixel rendering and 3D shader-based terrain mesh](render/Renderer.js)
+* [render/Camera.js — Quaternion-based 3D orbit camera](render/Camera.js)
+* [math/Quaternion.js — Quaternion algebra for camera rotation](math/Quaternion.js)
+* [analysis/Analyser.js — Topographic, hydrological, and mass-balance statistics](analysis/Analyser.js)
+* [ui/GUI.js — Tweakpane parameter interface (5 tabs)](ui/GUI.js)
+* [ui/InputHandler.js — Keyboard, mouse, and touch input](ui/InputHandler.js)
+* [media/Media.js — Image, video, heightmap, and world-state import/export](media/Media.js)
+* [model/RLECodec.js — Run-length encoding for Float32Array map serialisation](model/RLECodec.js)
+
+### Folder Structure
+
+```text
+Fluvia/
+├─ index.html
+├─ Fluvia.js
+├─ core/
+│  └─ AppCore.js
+├─ model/
+│  ├─ Terrain.js
+│  └─ RLECodec.js
+├─ render/
+│  ├─ Camera.js
+│  └─ Renderer.js
+├─ ui/
+│  ├─ GUI.js
+│  └─ InputHandler.js
+├─ analysis/
+│  └─ Analyser.js
+├─ media/
+│  └─ Media.js
+├─ worker/
+│  └─ FluviaWorker.js
+└─ math/
+  └─ Quaternion.js
+```
 
 ---
 

@@ -22,13 +22,34 @@ Real-time numerical visualiser of hydrogenic bound-state probability densities. 
 ## Project Files
 
 * [Psi.js — p5.js lifecycle and configuration](Psi.js)
-* [AppCore.js — State management, worker dispatch, and parameter validation](AppCore.js)
-* [PsiWorker.js — Density-grid computation kernel (wavefunctions, special functions)](PsiWorker.js)
-* [Renderer.js — LUT rendering, overlays, legend, and node visualisation](Renderer.js)
-* [Analyser.js — Density statistics, radial probability moments, and node detection](Analyser.js)
-* [GUI.js — Tweakpane interface (4 tabs: Sim, Render, Stats, Media)](GUI.js)
-* [InputHandler.js — Keyboard, mouse, and touch input](InputHandler.js)
-* [Media.js — Parameter/statistics import and export, image/video capture](Media.js)
+* [core/AppCore.js — State management, worker dispatch, and parameter validation](core/AppCore.js)
+* [worker/PsiWorker.js — Density-grid computation kernel (wavefunctions, special functions)](worker/PsiWorker.js)
+* [render/Renderer.js — LUT rendering, overlays, legend, and node visualisation](render/Renderer.js)
+* [analysis/Analyser.js — Density statistics, radial probability moments, and node detection](analysis/Analyser.js)
+* [ui/GUI.js — Tweakpane interface (4 tabs: Sim, Render, Stats, Media)](ui/GUI.js)
+* [ui/InputHandler.js — Keyboard, mouse, and touch input](ui/InputHandler.js)
+* [media/Media.js — Parameter/statistics import and export, image/video capture](media/Media.js)
+
+### Folder Structure
+
+```text
+Psi/
+├─ index.html
+├─ Psi.js
+├─ core/
+│  └─ AppCore.js
+├─ render/
+│  └─ Renderer.js
+├─ ui/
+│  ├─ GUI.js
+│  └─ InputHandler.js
+├─ analysis/
+│  └─ Analyser.js
+├─ media/
+│  └─ Media.js
+└─ worker/
+    └─ PsiWorker.js
+```
 
 ---
 

@@ -18,16 +18,46 @@ Worker-accelerated implementation of the Primordial Particle System (PPS), an ar
 ## Project Files
 
 * [CellularDivision.js — Configuration constants and metadata](CellularDivision.js)
-* [Simulation.js — Main simulation loop, rendering, and worker management](Simulation.js)
-* [SimulationWorker.js — Worker-side particle stepping and population analysis](SimulationWorker.js)
-* [Particle.js — Particle data structure and per-particle state](Particle.js)
-* [Species.js — Parameter transformation and velocity computation](Species.js)
-* [Grid.js — Spatial hash grid for efficient neighbourhood queries](Grid.js)
-* [CellTracker.js — Connected-component cell population counter](CellTracker.js)
-* [ParameterSet.js — Parameter definitions, ranges, and defaults](ParameterSet.js)
-* [AppCore.js — Application lifecycle and theme management](AppCore.js)
-* [UIManager.js — UI orchestration and panel layout](UIManager.js)
-* [InputHandler.js — Keyboard, slider, and text-input handling](InputHandler.js)
+* [sim/Simulation.js — Main simulation loop, rendering, and worker management](sim/Simulation.js)
+* [worker/SimulationWorker.js — Worker-side particle stepping and population analysis](worker/SimulationWorker.js)
+* [sim/Particle.js — Particle data structure and per-particle state](sim/Particle.js)
+* [sim/Species.js — Parameter transformation and velocity computation](sim/Species.js)
+* [sim/Grid.js — Spatial hash grid for efficient neighbourhood queries](sim/Grid.js)
+* [sim/CellTracker.js — Connected-component cell population counter](sim/CellTracker.js)
+* [core/ParameterSet.js — Parameter definitions, ranges, and defaults](core/ParameterSet.js)
+* [core/AppCore.js — Application lifecycle and theme management](core/AppCore.js)
+* [ui/UIManager.js — UI orchestration and panel layout](ui/UIManager.js)
+* [ui/InputHandler.js — Keyboard, slider, and text-input handling](ui/InputHandler.js)
+
+### Folder Structure
+
+```text
+Cellular_Division/
+├─ index.html
+├─ CellularDivision.js
+├─ core/
+│  ├─ AppCore.js
+│  └─ ParameterSet.js
+├─ sim/
+│  ├─ Simulation.js
+│  ├─ Species.js
+│  ├─ Particle.js
+│  ├─ Grid.js
+│  └─ CellTracker.js
+├─ ui/
+│  ├─ Theme.js
+│  ├─ UIManager.js
+│  ├─ LeftPanel.js
+│  ├─ RightPanel.js
+│  ├─ InputHandler.js
+│  └─ components/
+│     ├─ Button.js
+│     ├─ Slider.js
+│     ├─ AccordionPanel.js
+│     └─ AccordionGroup.js
+└─ worker/
+    └─ SimulationWorker.js
+```
 
 ---
 

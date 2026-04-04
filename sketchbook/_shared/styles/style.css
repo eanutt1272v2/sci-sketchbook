@@ -76,7 +76,7 @@ body {
   background-color: var(--sk-bg);
   color: var(--sk-fg);
   overflow: hidden;
-  align-items: center;
+  align-items: centre;
 }
 
 canvas {

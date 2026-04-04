@@ -21,17 +21,64 @@ FFT-accelerated continuous cellular automaton studio implementing Lenia with con
 ## Project Files
 
 * [LeniaNDStudio.js — p5.js lifecycle and asset loading](LeniaNDStudio.js)
-* [AppCore.js — Application controller, worker orchestration, and parameter management](AppCore.js)
-* [LeniaWorker.js — FFT solver, kernel builder, growth LUTs, and analysis pipeline](LeniaWorker.js)
-* [Automaton.js — Kernel state container and sparse representation](Automaton.js)
-* [Board.js — Grid storage, pattern loading, scaling, and transformation](Board.js)
-* [Renderer.js — World/potential/growth/kernel rendering with LUT, overlays, and polar modes](Renderer.js)
-* [AnimalLibrary.js — Organism preset manager and parameter application](AnimalLibrary.js)
-* [GUI.js — Tweakpane interface (6 tabs)](GUI.js)
-* [InputHandler.js — Keyboard, mouse, and touch controls](InputHandler.js)
-* [Analyser.js — Statistics, symmetry detection, moment invariants, periodicity](Analyser.js)
-* [Media.js — World/parameter/statistics import and export, image/video capture](Media.js)
-* [NDCompatibility.js — N-dimensional configuration and grid-size constraints](NDCompatibility.js)
+* [core/AppCore.js — Application controller, worker orchestration, and parameter management](core/AppCore.js)
+* [worker/LeniaWorker.js — FFT solver, kernel builder, growth LUTs, and analysis pipeline](worker/LeniaWorker.js)
+* [model/Automaton.js — Kernel state container and sparse representation](model/Automaton.js)
+* [model/Board.js — Grid storage, pattern loading, scaling, and transformation](model/Board.js)
+* [render/Renderer.js — World/potential/growth/kernel rendering with LUT, overlays, and polar modes](render/Renderer.js)
+* [model/AnimalLibrary.js — Organism preset manager and parameter application](model/AnimalLibrary.js)
+* [ui/GUI.js — Tweakpane interface (6 tabs)](ui/GUI.js)
+* [ui/InputHandler.js — Keyboard, mouse, and touch controls](ui/InputHandler.js)
+* [analysis/Analyser.js — Statistics, symmetry detection, moment invariants, periodicity](analysis/Analyser.js)
+* [media/Media.js — World/parameter/statistics import and export, image/video capture](media/Media.js)
+* [model/NDCompatibility.js — N-dimensional configuration and grid-size constraints](model/NDCompatibility.js)
+
+### Folder Structure
+
+```text
+Lenia_ND_Studio/
+├─ index.html
+├─ LeniaNDStudio.js
+├─ LeniaNDKC.py
+├─ core/
+│  ├─ AppCore.js
+│  └─ methods/
+│     ├─ AnimalMethods.js
+│     ├─ CoreControls.js
+│     ├─ CoreMutations.js
+│     ├─ CoreWorkerPipeline.js
+│     ├─ ImportExportMethods.js
+│     └─ RenderLoopMethods.js
+├─ model/
+│  ├─ AnimalLibrary.js
+│  ├─ Automaton.js
+│  ├─ Board.js
+│  ├─ NDCompat.js
+│  ├─ NDCompatibility.js
+│  └─ RLECodec.js
+├─ render/
+│  ├─ Renderer.js
+│  └─ methods/
+│     ├─ OverlayPanelMethods.js
+│     └─ StatsTrajectoryMethods.js
+├─ ui/
+│  ├─ GUI.js
+│  ├─ InputHandler.js
+│  └─ methods/
+│     ├─ UIStatsMediaMethods.js
+│     └─ UITabMethods.js
+├─ analysis/
+│  └─ Analyser.js
+├─ media/
+│  └─ Media.js
+└─ worker/
+   ├─ LeniaWorker.js
+   ├─ WorkerAnalysis.js
+   ├─ WorkerMainHandler.js
+   ├─ WorkerND.js
+   ├─ WorkerShared.js
+   └─ WorkerStep.js
+```
 
 ---
 
@@ -258,7 +305,7 @@ The worker implements a Cooley–Tukey radix-2 FFT algorithm with cached twiddle
 
 Buffers are transferred with ownership (zero-copy `ArrayBuffer` transfer) between main thread and worker.
 
-#### 8.2 Organism Catalogueue
+#### 8.2 Organism Catalogueueue
 
 Three JSON libraries contain presets organised by biological-style taxonomy:
 
@@ -324,7 +371,7 @@ Symmetry detection decomposes polar samples from the centroid into Fourier harmo
 | `Ctrl+P` | Arita mode | Toggle | — |
 | `Ctrl+M` | Multi-step | Toggle | — |
 
-#### 9.3 Organism Catalogueue
+#### 9.3 Organism Catalogueueue
 
 | Key | Action |
 | :-- | :-- |
