@@ -238,7 +238,7 @@ The same algorithm generalises to arbitrary dimension $d$ by replacing the 2D FF
 
 $$\hat{A} = \text{FFT}_{d}\!(A): \quad \text{apply 1D FFT along each axis sequentially}$$
 
-| Dimension | Supported Grid Sizes | Default |
+| Dimension | Supported Lattice Sizes | Default |
 | :--: | :-- | :--: |
 | 2D | 64, 128, 256, 512, 1024, 2048 | 128 |
 | 3D | 32, 64, 128, 256 | 64 |
@@ -283,7 +283,6 @@ For $d > 2$, two viewing modes are available:
 | Parameter | Default | Range |
 | :-- | :--: | :--: |
 | Grid size | 256 (2D) | 64–2048 |
-| Pixel size | 4 (2D) | 1–128 |
 | Dimension | 2 | 2, 3, 4 |
 
 ---

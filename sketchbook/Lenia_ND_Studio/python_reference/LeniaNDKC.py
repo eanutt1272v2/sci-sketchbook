@@ -28,13 +28,12 @@ warnings.filterwarnings('ignore', '.*nperseg.*') # suppress warning from scipy.s
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, 
 description='''Lenia in n-Dimensions   originally by Bert Chan 2020
 
-recommended settings: (2D) -d2 -p2, (wide) -d2 -p0 -w 10 9, (3D) -d3 -p3, (4D) -d4 -p4''')
+recommended settings: (2D) -d2, (wide) -d2 -w 10 9, (3D) -d3, (4D) -d4''')
 parser.add_argument('-g', '--gpu', dest='G', action='store_true', help='interactive choose GPU')
 group = parser.add_mutually_exclusive_group(required=False)
-group.add_argument('-s', '--size', dest='S', default=None, action='store', type=int, nargs='+', help='array size = 2^S (apply to all sides if only one value, default 2^(W-P))')
+group.add_argument('-s', '--size', dest='S', default=None, action='store', type=int, nargs='+', help='array size = 2^S (apply to all sides if only one value, default 2^(W-D))')
 group.add_argument('-w', '--win', dest='W', default=[9], action='store', type=int, nargs='+', help='window size = 2^W (apply to all sides if only one value, default 2^9 = 512)')
 group.add_argument('--wide', action="store_true", help='wide window (i.e. -w 10 9)')
-parser.add_argument('-p', '--pixel', dest='P', default=None, action='store', type=int, help='pixel size = 2^P (default 2^D)')
 parser.add_argument('-b', '--border', dest='B', default=0, action='store', type=int, help='pixel border (default 0)')
 parser.add_argument('-d', '--dim', dest='D', default=2, action='store', type=int, help='number of dimensions (default 2)')
 parser.add_argument('-c', '--channel', dest='C', default=1, action='store', type=int, help='number of channels (default 1)')
@@ -47,7 +46,7 @@ DIM = args.D
 DIM_DELIM = {0:'', 1:'$', 2:'%', 3:'#', 4:'@A', 5:'@B', 6:'@C', 7:'@D', 8:'@E', 9:'@F'}
 X_AXIS, Y_AXIS, Z_AXIS = -1, -2, -3
 
-PIXEL_2 = args.P if args.P is not None else args.D
+PIXEL_2 = args.D
 PIXEL_BORDER = args.B
 if args.wide:
     SIZE_2 = [win_2 - PIXEL_2 for win_2 in (10, 9)]

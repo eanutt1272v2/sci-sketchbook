@@ -43,7 +43,7 @@ class InputHandler {
   }
 
   handleKeyPressed(k, kCode, event = null) {
-    if (KeyboardUtils.shouldIgnoreKeyboard()) return false;
+    if (KeyboardUtils.shouldIgnoreKeyboard(event)) return false;
 
     const keyValue = KeyboardUtils.normaliseKey(k);
     const keyLower = KeyboardUtils.toLower(keyValue);
@@ -354,8 +354,13 @@ class InputHandler {
       return false;
     }
     if (quoteKey && shiftHeld && !ctrlHeld) {
-      params.autoRotateMode = (params.autoRotateMode + 1) % 3;
-      this.appcore.refreshGUI();
+      if (this.appcore?.cycleAutoRotateMode) {
+        this.appcore.cycleAutoRotateMode(1, { refreshGUI: true });
+      } else {
+        params.autoRotateMode =
+          ((((Number(params.autoRotateMode) || 0) + 1) % 3) + 3) % 3;
+        this.appcore.refreshGUI();
+      }
       return false;
     }
     if (quoteKey && ctrlHeld) {
@@ -457,9 +462,9 @@ class InputHandler {
     if (ctrlHeld && keyLower === "k" && !shiftHeld && !altHeld) {
       const currentMode = Math.max(
         0,
-        Math.min(6, Math.floor(Number(params.statsMode) || 0)),
+        Math.min(6, Math.floor(Number(params.statsMode) || 1)),
       );
-      params.statsMode = currentMode === 5 ? 0 : 5;
+      params.statsMode = currentMode === 5 ? 1 : 5;
       this.appcore.analyser?.updatePeriodogram?.(params, 10, true);
       this.appcore.refreshGUI();
       return false;
@@ -600,10 +605,10 @@ class InputHandler {
           this.appcore.getGridSizeOptions(this.appcore.params.dimension),
         )
       : [64, 128, 256];
-    const current = this.appcore.params.gridSize;
+    const current = this.appcore.params.latticeExtent;
     const idx = sizes.indexOf(current);
     const safeIdx = idx >= 0 ? idx : 0;
-    this.appcore.params.gridSize = sizes[(safeIdx + 1) % sizes.length];
+    this.appcore.params.latticeExtent = sizes[(safeIdx + 1) % sizes.length];
     this.appcore.changeResolution();
     this.appcore.refreshGUI();
   }

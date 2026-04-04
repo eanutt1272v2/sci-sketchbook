@@ -119,7 +119,7 @@ class InputHandler {
       return false;
     }
 
-    if (KeyboardUtils.shouldIgnoreKeyboard()) {
+    if (KeyboardUtils.shouldIgnoreKeyboard(event)) {
       return false;
     }
 

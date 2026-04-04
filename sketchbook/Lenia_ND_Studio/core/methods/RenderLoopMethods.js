@@ -1,9 +1,22 @@
 class RenderLoopMethods {
   render() {
-    const polarMode = Math.max(
-      0,
-      Math.min(4, Math.floor(Number(this.params.polarMode) || 0)),
-    );
+    this.renderer.setColourMap(this.params.colourMap);
+    const bg = this.renderer.getColourMapLowColour();
+    background(bg.r, bg.g, bg.b);
+
+    const polarMode =
+      typeof this._coercePolarModeValue === "function"
+        ? this._coercePolarModeValue(this.params.polarMode)
+        : Math.max(
+            0,
+            Math.min(4, Math.floor(Number(this.params.polarMode) || 0)),
+          );
+    this.params.polarMode = polarMode;
+
+    if (typeof this.getAutoRotateMode === "function") {
+      this.params.autoRotateMode = this.getAutoRotateMode();
+    }
+
     const isKernel = this.params.renderMode === "kernel";
 
     this._prepareViewTransform(isKernel);
@@ -83,11 +96,6 @@ class RenderLoopMethods {
   }
 
   _renderHudLayers(polarMode) {
-    const statsMode = Math.max(
-      0,
-      Math.min(6, Math.floor(Number(this.params.statsMode) || 0)),
-    );
-
     if (this.params.renderSymmetryOverlay) {
       this.renderer.renderSymmetryTitle(this.statistics, this.params);
     }
@@ -102,18 +110,6 @@ class RenderLoopMethods {
 
     if (this.params.renderStats) {
       this.renderer.renderStats(this.statistics, this.params);
-    }
-
-    if (statsMode >= 1 && statsMode <= 4) {
-      this.renderer.renderStatsGraphOverlay(this.statistics, this.params);
-    }
-
-    if (statsMode === 5) {
-      this.renderer.renderPeriodogramOverlay(this.statistics, this.params);
-    }
-
-    if (statsMode === 6) {
-      this.renderer.renderRecurrenceOverlay(this.statistics, this.params);
     }
 
     if (this.params.renderAnimalName) {
@@ -141,8 +137,18 @@ class RenderLoopMethods {
   _computeAutoRotationAngle() {
     const dim = this.params.dimension || 2;
     if (dim !== 2) return 0;
-    if ((Number(this.params.polarMode) || 0) > 1) return 0;
-    const mode = this.params.autoRotateMode || 0;
+    const polarMode =
+      typeof this._coercePolarModeValue === "function"
+        ? this._coercePolarModeValue(this.params.polarMode)
+        : Math.max(
+            0,
+            Math.min(4, Math.floor(Number(this.params.polarMode) || 0)),
+          );
+    if (polarMode > 1) return 0;
+    const mode =
+      typeof this.getAutoRotateMode === "function"
+        ? this.getAutoRotateMode()
+        : Number(this.params.autoRotateMode) || 0;
     if (mode === 0) return 0;
     if (mode === 1) {
       const angleRad = this.statistics.angle || 0;

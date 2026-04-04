@@ -608,7 +608,7 @@ function analyseStep(cells, potential, field, change, params, state) {
   if (renderMode === "potential" && potential) polarSource = potential;
   else if (renderMode === "growth" && field) polarSource = field;
   else polarSource = cells;
-  detectSymmetry(cells, polarSource, size, stats, state, params);
+  detectSymmetry(polarSource, size, stats, state, params);
   detectPeriodicity(stats, params, state);
 
   if (state.lastCentreX !== null) {

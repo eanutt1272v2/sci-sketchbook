@@ -213,7 +213,6 @@ class Renderer {
   beginAutoRotation() {
     const a = this._autoRotationAngle;
     if (Math.abs(a) < 1e-6) return;
-    background(0);
     push();
     translate(width / 2, height / 2);
     rotate(-a);
@@ -704,8 +703,20 @@ class Renderer {
       return true;
     }
 
-    background(0);
+    const bg = this.getColourMapLowColour();
+    background(bg.r, bg.g, bg.b);
     return false;
+  }
+
+  getColourMapLowColour(name = null) {
+    if (name !== null && typeof name !== "undefined") {
+      this.setColourMap(name);
+    }
+    return {
+      r: Number(this.lut[0]) || 0,
+      g: Number(this.lut[1]) || 0,
+      b: Number(this.lut[2]) || 0,
+    };
   }
 
   setColourMap(name) {

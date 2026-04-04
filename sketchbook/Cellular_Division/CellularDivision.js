@@ -65,6 +65,10 @@ function setupCanvasProperties(canvas) {
     canvasEl.focus();
   }, 100);
 
+  if (typeof KeyboardUtils?.installCanvasFocusBridge === "function") {
+    KeyboardUtils.installCanvasFocusBridge(canvasEl);
+  }
+
   noSmooth();
   textFont(font || "monospace");
   pixelDensity(1);

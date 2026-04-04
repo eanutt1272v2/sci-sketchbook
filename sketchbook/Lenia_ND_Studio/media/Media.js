@@ -174,7 +174,7 @@ class Media extends MediaCore {
           allowGridSize: true,
         });
 
-        if (result.gridSizeChanged) {
+        if (result.latticeExtentChanged) {
           this.appcore.changeResolution();
         } else {
           this.appcore.updateAutomatonParams();
@@ -283,8 +283,8 @@ class Media extends MediaCore {
 
   _getFilename(extension) {
     const { name, version } = this.appcore.metadata;
-    const { renderMode, gridSize } = this.appcore.params;
+    const { renderMode, latticeExtent } = this.appcore.params;
     const ts = Date.now();
-    return `${name}_${version}_${renderMode}_${gridSize}_${ts}.${extension}`;
+    return `${name}_${version}_${renderMode}_${latticeExtent}_${ts}.${extension}`;
   }
 }

@@ -17,12 +17,15 @@ class WorkerPipelineMethods {
 
       const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
       if (dim > 2) {
-        const safeSize = NDCompat.coerceGridSize(this.params.gridSize, dim);
-        if (safeSize < this.params.gridSize) {
+        const safeSize = NDCompat.coerceGridSize(
+          this.params.latticeExtent,
+          dim,
+        );
+        if (safeSize < this.params.latticeExtent) {
           console.warn(
-            `[Lenia] Recovering from worker allocation failure by reducing ${dim}D grid size from ${this.params.gridSize} to ${safeSize}.`,
+            `[Lenia] Recovering from worker allocation failure by reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize}.`,
           );
-          this.params.gridSize = safeSize;
+          this.params.latticeExtent = safeSize;
           this.changeResolution();
           return;
         }
@@ -35,12 +38,12 @@ class WorkerPipelineMethods {
   _workerSendKernel() {
     const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
     if (dim > 2) {
-      const safeSize = NDCompat.coerceGridSize(this.params.gridSize, dim);
-      if (safeSize !== this.params.gridSize) {
+      const safeSize = NDCompat.coerceGridSize(this.params.latticeExtent, dim);
+      if (safeSize !== this.params.latticeExtent) {
         console.warn(
-          `[Lenia] Reducing ${dim}D grid size from ${this.params.gridSize} to ${safeSize} to avoid excessive worker memory usage.`,
+          `[Lenia] Reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize} to avoid excessive worker memory usage.`,
         );
-        this.params.gridSize = safeSize;
+        this.params.latticeExtent = safeSize;
         this.changeResolution();
         return;
       }
@@ -56,7 +59,7 @@ class WorkerPipelineMethods {
     const ndConfig = this.buildNDConfig();
     this._worker.postMessage({
       type: "kernel",
-      params: { ...this.params, size: this.params.gridSize },
+      params: { ...this.params, size: this.params.latticeExtent },
       ndConfig,
     });
   }
@@ -176,8 +179,8 @@ class WorkerPipelineMethods {
 
   _normalisePlacementRequest(
     request,
-    fromSize = this.params.gridSize,
-    toSize = this.params.gridSize,
+    fromSize = this.params.latticeExtent,
+    toSize = this.params.latticeExtent,
   ) {
     if (!request || typeof request !== "object") return null;
 
@@ -219,7 +222,7 @@ class WorkerPipelineMethods {
     if (this._hasQueuedAction("changeResolution")) return;
     if (!this.board.world) return;
 
-    const boardSize = this.board?.size || this.params.gridSize;
+    const boardSize = this.board?.size || this.params.latticeExtent;
     const pp = this._normalisePlacementRequest(
       this._pendingPlacement,
       boardSize,
@@ -262,7 +265,7 @@ class WorkerPipelineMethods {
       return;
     }
 
-    const expectedSize = this.board?.size || this.params.gridSize;
+    const expectedSize = this.board?.size || this.params.latticeExtent;
     const expectedLength = expectedSize * expectedSize;
 
     if (data.type === "kernelReady") {
@@ -495,7 +498,7 @@ class WorkerPipelineMethods {
       type: "step",
       params: {
         ...this.params,
-        size: this.params.gridSize,
+        size: this.params.latticeExtent,
         gn: this.params.gn,
         kn: this.params.kn,
       },
@@ -543,7 +546,7 @@ class WorkerPipelineMethods {
       type: "view",
       params: {
         ...this.params,
-        size: this.params.gridSize,
+        size: this.params.latticeExtent,
       },
       ndConfig,
       world: b.world.buffer,
@@ -574,7 +577,7 @@ class WorkerPipelineMethods {
   }
 
   _ensureBuffers() {
-    const size = this.params.gridSize;
+    const size = this.params.latticeExtent;
     const count = size * size;
     if (!this.board.world || this.board.world.length !== count)
       this.board.world = new Float32Array(count);

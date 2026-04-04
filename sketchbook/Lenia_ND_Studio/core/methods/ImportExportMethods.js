@@ -57,7 +57,7 @@ class ImportExportMethods {
     }
 
     if (!allowGridSize) {
-      delete sanitised.gridSize;
+      delete sanitised.latticeExtent;
     }
 
     return sanitised;
@@ -65,7 +65,7 @@ class ImportExportMethods {
 
   _applyImportedNumericConstraints(rawParams) {
     const p = this.params;
-    const maxR = this.getMaxKernelRadius(p.gridSize);
+    const maxR = this.getMaxKernelRadius(p.latticeExtent);
     const maxT = this.getMaxTimeScale();
 
     const numericConstraints = {
@@ -111,8 +111,8 @@ class ImportExportMethods {
     if ("ndSliceW" in rawParams) {
       p.ndSliceW = NDCompat.coerceSliceIndex(p.ndSliceW, p.ndDepth);
     }
-    if (!(allowGridSize && "gridSize" in rawParams)) {
-      p.gridSize = NDCompat.coerceGridSize(p.gridSize, p.dimension);
+    if (!(allowGridSize && "latticeExtent" in rawParams)) {
+      p.latticeExtent = NDCompat.coerceGridSize(p.latticeExtent, p.dimension);
     }
 
     p.ndActiveAxis = this._coerceNDActiveAxis(p.ndActiveAxis, p.dimension);
@@ -175,11 +175,11 @@ class ImportExportMethods {
 
   _applyImportedParams(rawParams, { allowGridSize = true } = {}) {
     if (!rawParams || typeof rawParams !== "object") {
-      return { gridSizeChanged: false, dimensionChanged: false };
+      return { latticeExtentChanged: false, dimensionChanged: false };
     }
 
     const p = this.params;
-    const beforeGridSize = p.gridSize;
+    const beforeGridSize = p.latticeExtent;
     const beforeDimension = p.dimension;
     const prevColourMap = p.colourMap;
     const prevRenderMode = p.renderMode;
@@ -191,8 +191,8 @@ class ImportExportMethods {
 
     this._mergeByTargetSchema(p, sanitised);
 
-    if (allowGridSize && "gridSize" in rawParams) {
-      p.gridSize = this._normaliseGridSize(p.gridSize);
+    if (allowGridSize && "latticeExtent" in rawParams) {
+      p.latticeExtent = this._normaliseGridSize(p.latticeExtent);
     }
 
     this._applyImportedNumericConstraints(rawParams);
@@ -214,7 +214,7 @@ class ImportExportMethods {
     this._syncSelectedAnimalForActiveDimension(p.selectedAnimal);
 
     return {
-      gridSizeChanged: p.gridSize !== beforeGridSize,
+      latticeExtentChanged: p.latticeExtent !== beforeGridSize,
       dimensionChanged: p.dimension !== beforeDimension,
     };
   }
@@ -229,12 +229,12 @@ class ImportExportMethods {
         });
 
         const nextSize = this._normaliseGridSize(
-          payload.size || this.params.gridSize,
+          payload.size || this.params.latticeExtent,
         );
-        const sizeChanged = nextSize !== this.params.gridSize;
+        const sizeChanged = nextSize !== this.params.latticeExtent;
 
         if (sizeChanged) {
-          this.params.gridSize = nextSize;
+          this.params.latticeExtent = nextSize;
           this._restartWorker();
 
           const canvasSize = min(windowWidth, windowHeight);
@@ -293,7 +293,7 @@ class ImportExportMethods {
 
         const fieldKeys = Object.keys(payload.fields);
         console.log(
-          `[Lenia] Imported world: size=${this.params.gridSize}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}, fields=[${fieldKeys.join(",")}], selectedAnimal=${this.params.selectedAnimal || "none"}, placeScale=${this.params.placeScale || 1}`,
+          `[Lenia] Imported world: size=${this.params.latticeExtent}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}, fields=[${fieldKeys.join(",")}], selectedAnimal=${this.params.selectedAnimal || "none"}, placeScale=${this.params.placeScale || 1}`,
         );
       }),
     );

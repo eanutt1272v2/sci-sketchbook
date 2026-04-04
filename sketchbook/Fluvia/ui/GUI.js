@@ -236,7 +236,7 @@ class GUI {
 
     render.addBinding(params, "colourMap", {
       options: colourMapOptions,
-      label: this.withHint("Colour Map", "colourMap", "C"),
+      label: this.withHint("Selected Colour Map", "colourMap", "C"),
     });
 
     render.addBinding(params, "heightScale", {
@@ -578,7 +578,7 @@ class GUI {
   createMediaTab(page) {
     const { media, params } = this.appcore;
 
-    const imp = page.addFolder({ title: "Import" });
+    const imp = page.addFolder({ title: "Import Data" });
     imp
       .addButton({
         title: this.withHint(
@@ -590,7 +590,11 @@ class GUI {
       .on("click", () => media.openImportDialog());
     imp
       .addButton({
-        title: this.withHint("Import Params", "importParams", "Ctrl+Shift+I"),
+        title: this.withHint(
+          "Import Parameters",
+          "importParams",
+          "Ctrl+Shift+I",
+        ),
       })
       .on("click", () => media.importParamsJSON());
     imp
@@ -601,10 +605,14 @@ class GUI {
 
     this.addSeparator(page);
 
-    const exp = page.addFolder({ title: "Export" });
+    const exp = page.addFolder({ title: "Export Data" });
     exp
       .addButton({
-        title: this.withHint("Export Params", "exportParams", "Ctrl+Shift+P"),
+        title: this.withHint(
+          "Export Parameters",
+          "exportParams",
+          "Ctrl+Shift+P",
+        ),
       })
       .on("click", () => media.exportParamsJSON());
     exp
@@ -632,17 +640,17 @@ class GUI {
 
     this.addSeparator(exp);
 
-    const capture = exp.addFolder({ title: "Capture" });
+    const capture = exp.addFolder({ title: "Video Capture" });
 
     capture.addBinding(params, "recordingFPS", {
-      label: "Record FPS [Hz]",
+      label: "Recording FPS [Hz]",
       min: 12,
       max: 120,
       step: 1,
     });
 
     capture.addBinding(params, "videoBitrateMbps", {
-      label: "Bitrate [Mbps]",
+      label: "Video Bitrate [Mbps]",
       min: 1,
       max: 64,
       step: 0.5,
@@ -650,8 +658,8 @@ class GUI {
 
     const btn = capture.addButton({
       title: media.isRecording
-        ? this.withHint("⏹ Stop", "record", "Ctrl+R")
-        : this.withHint("⏺ Record", "record", "Ctrl+R"),
+        ? this.withHint("⏹ Stop Recording", "record", "Ctrl+R")
+        : this.withHint("⏺ Start Recording", "record", "Ctrl+R"),
     });
     this.recordButton = btn;
 
@@ -682,8 +690,8 @@ class GUI {
   syncMediaControls() {
     if (this.recordButton) {
       this.recordButton.title = this.appcore.media.isRecording
-        ? this.withHint("⏹ Stop", "record", "Ctrl+R")
-        : this.withHint("⏺ Record", "record", "Ctrl+R");
+        ? this.withHint("⏹ Stop Recording", "record", "Ctrl+R")
+        : this.withHint("⏺ Start Recording", "record", "Ctrl+R");
     }
   }
 }

@@ -341,64 +341,85 @@ class OverlayPanelMethods {
     pg.clear();
 
     const dt = 1 / params.T;
-    const RN = Math.pow(params.R, 2);
     const dim = Math.max(2, Math.floor(Number(params.dimension) || 2));
+    const RN = Math.pow(params.R, dim);
+    const superscriptDigits = {
+      0: "⁰",
+      1: "¹",
+      2: "²",
+      3: "³",
+      4: "⁴",
+      5: "⁵",
+      6: "⁶",
+      7: "⁷",
+      8: "⁸",
+      9: "⁹",
+      "-": "⁻",
+    };
+    const dimPower = String(dim)
+      .split("")
+      .map((char) => superscriptDigits[char] || char)
+      .join("");
+    const microMeterPower = `μm${dimPower}`;
+    const cellPower = `cell${dimPower}`;
+    const radiusPower = `R${dimPower}`;
     const worldSize = this.size;
-    const worldShape =
-      dim === 2 ? `${worldSize}x${worldSize}` : `${worldSize}^${dim}`;
+    const worldShape = `${worldSize}${dimPower}`;
     const fmt = FormatUtils.formatFixed;
 
     const stats = [
       `FPS=${(Number(statistics.fps) || 0).toFixed(1)} [Hz]`,
       `Generation=${String(statistics.gen)} [gen]`,
-      `Simulation Time=${fmt(statistics.time, 3)} [μs]`,
+      `Time=${fmt(statistics.time, 3)} [μs]`,
       `Time Step: dt=1/T=${fmt(dt, 3)} [μs/gen]`,
       `Running=${params.running ? "true" : "false"} (bool)`,
       `Dimension: D=${dim} (2D/3D/4D)`,
-      `Grid Size=${worldShape} [cells]`,
+      `Lattice Size=${worldShape} [cells]`,
       `Render Mode=${params.renderMode} (mode id)`,
       `Colour Map=${this.currentColourMap || params.colourMap} (palette id)`,
       `Kernel Radius: R=${fmt(params.R, 2)} [cells]`,
       `Time Scale: T=${fmt(params.T, 2)} [gen/μs]`,
       `Growth Mean: m=${fmt(params.m, 3)} [cell-state]`,
       `Growth Std Dev: s=${fmt(params.s, 3)} [cell-state]`,
-      `Centre μ=${fmt(params.m, 3)} | Width σ=${fmt(params.s, 3)} (growth function)`,
+      `Centre μ=${fmt(params.m, 3)} | Width σ=${fmt(params.s, 3)} (growth func)`,
       `Functions: kn=${params.kn} | gn=${params.gn} (family ids)`,
-      `Mass/R²=${fmt(statistics.mass / RN, 3)} [μg/cell²]`,
-      `Growth/R²=${fmt(statistics.growth / RN, 4)} [μg/(μs·cell²)]`,
-      `Mass (log)=${fmt(statistics.massLog || 0, 4)} [μg]`,
-      `Growth (log)=${fmt(statistics.growthLog || 0, 4)} [μg/μs]`,
-      `Mass Volume (log)=${fmt(statistics.massVolumeLog || 0, 4)} [μm²]`,
-      `Growth Volume (log)=${fmt(statistics.growthVolumeLog || 0, 4)} [μm²]`,
-      `Mass Density=${fmt(statistics.massDensity || 0, 6)} [μg/μm²]`,
-      `Growth Density=${fmt(statistics.growthDensity || 0, 6)} [μg/(μm²·μs)]`,
-      `Peak Value=${fmt(statistics.maxValue, 3)} [cell-state]`,
+      `Mass/${radiusPower}=${fmt(statistics.mass / RN, 3)} [μg/${cellPower}]`,
+      `Growth/${radiusPower}=${fmt(statistics.growth / RN, 4)} [μg/(μs·${cellPower})]`,
+      `Mass (log scale)=${fmt(statistics.massLog || 0, 4)} [μg]`,
+      `Growth (log scale)=${fmt(statistics.growthLog || 0, 4)} [μg/μs]`,
+      `Mass volume (log scale)=${fmt(statistics.massVolumeLog || 0, 4)} [${microMeterPower}]`,
+      `Growth volume (log scale)=${fmt(statistics.growthVolumeLog || 0, 4)} [${microMeterPower}]`,
+      `Mass density=${fmt(statistics.massDensity || 0, 6)} [μg/${microMeterPower}]`,
+      `Growth density=${fmt(statistics.growthDensity || 0, 6)} [μg/(${microMeterPower}·μs)]`,
+      `Peak value=${fmt(statistics.maxValue, 3)} [cell-state]`,
       `Gyradius=${fmt(statistics.gyradius, 2)} [μm]`,
-      `Centroid=(${fmt(statistics.centreX, 1)}, ${fmt(statistics.centreY, 1)}) [μm]`,
-      `Growth Centre=(${fmt(statistics.growthCentreX, 1)}, ${fmt(statistics.growthCentreY, 1)}) [μm]`,
-      `Mass-Growth Dist=${fmt(statistics.massGrowthDist || 0, 3)} [μm]`,
+      `Centroid X=${fmt(statistics.centreX, 1)} [μm]`,
+      `Centroid Y=${fmt(statistics.centreY, 1)} [μm]`,
+      `Growth centroid X=${fmt(statistics.growthCentreX, 1)} [μm]`,
+      `Growth centroid Y=${fmt(statistics.growthCentreY, 1)} [μm]`,
+      `Mass-growth distance=${fmt(statistics.massGrowthDist || 0, 3)} [μm]`,
       `Speed=${fmt(statistics.speed || 0, 3)} [μm/μs]`,
-      `Centroid Speed=${fmt(statistics.centroidSpeed || 0, 4)} [μm/μs]`,
-      `Angle=${fmt(statistics.angle || 0, 3)} [rad]`,
-      `Centroid Rot Speed=${fmt(statistics.centroidRotateSpeed || 0, 5)} [rad/μs]`,
-      `Growth Rot Speed=${fmt(statistics.growthRotateSpeed || 0, 5)} [rad/μs]`,
-      `Major Axis Rot Speed=${fmt(statistics.majorAxisRotateSpeed || 0, 5)} [rad/μs]`,
-      `Mass Asymmetry=${fmt(statistics.massAsym || 0, 3)} [μg]`,
-      `Symmetry Order=${statistics.symmSides || "?"}`,
-      `Symmetry Strength=${fmt((statistics.symmStrength || 0) * 100, 1)} [%]`,
-      `Rotation Speed=${fmt(statistics.rotationSpeed || 0, 3)} [rad/μs]`,
-      `Lyapunov=${fmt(statistics.lyapunov || 0, 6)} [gen⁻¹]`,
-      `Hu1 (log)=${fmt(statistics.hu1Log || 0, 6)}`,
-      `Hu4 (log)=${fmt(statistics.hu4Log || 0, 6)}`,
-      `Hu5 (log)=${fmt(statistics.hu5Log || 0, 6)}`,
-      `Hu6 (log)=${fmt(statistics.hu6Log || 0, 6)}`,
-      `Hu7 (log)=${fmt(statistics.hu7Log || 0, 6)}`,
-      `Flusser7=${fmt(statistics.flusser7 || 0, 6)}`,
-      `Flusser8 (log)=${fmt(statistics.flusser8Log || 0, 6)}`,
-      `Flusser9 (log)=${fmt(statistics.flusser9Log || 0, 6)}`,
-      `Flusser10 (log)=${fmt(statistics.flusser10Log || 0, 6)}`,
+      `Centroid speed=${fmt(statistics.centroidSpeed || 0, 4)} [μm/μs]`,
+      `Direction angle=${fmt(statistics.angle || 0, 3)} [rad]`,
+      `Centroid rotate speed=${fmt(statistics.centroidRotateSpeed || 0, 5)} [rad/μs]`,
+      `Growth-centroid rotate speed=${fmt(statistics.growthRotateSpeed || 0, 5)} [rad/μs]`,
+      `Major axis rotate speed=${fmt(statistics.majorAxisRotateSpeed || 0, 5)} [rad/μs]`,
+      `Mass asymmetry=${fmt(statistics.massAsym || 0, 3)} [μg]`,
+      `Symmetry order=${statistics.symmSides || "?"}`,
+      `Symmetry strength=${fmt((statistics.symmStrength || 0) * 100, 1)} [%]`,
+      `Rotation speed=${fmt(statistics.rotationSpeed || 0, 3)} [rad/μs]`,
+      `Lyapunov exponent=${fmt(statistics.lyapunov || 0, 6)} [gen⁻¹]`,
+      `Moment of inertia - Hu's moment invariant 1 (log scale)=${fmt(statistics.hu1Log || 0, 6)}`,
+      `Skewness - Hu's moment invariant 4 (log scale)=${fmt(statistics.hu4Log || 0, 6)}`,
+      `Hu's 5 (log scale)=${fmt(statistics.hu5Log || 0, 6)}`,
+      `Hu's 6 (log scale)=${fmt(statistics.hu6Log || 0, 6)}`,
+      `Hu's 7 (log scale)=${fmt(statistics.hu7Log || 0, 6)}`,
+      `Kurtosis - Flusser's moment invariant 7=${fmt(statistics.flusser7 || 0, 6)}`,
+      `Flusser's 8 (log scale)=${fmt(statistics.flusser8Log || 0, 6)}`,
+      `Flusser's 9 (log scale)=${fmt(statistics.flusser9Log || 0, 6)}`,
+      `Flusser's 10 (log scale)=${fmt(statistics.flusser10Log || 0, 6)}`,
       `Period=${fmt(statistics.period || 0, 3)} [μs]`,
-      `Period Confidence=${fmt((statistics.periodConfidence || 0) * 100, 2)} [%]`,
+      `Period confidence=${fmt((statistics.periodConfidence || 0) * 100, 2)} [%]`,
     ];
 
     this._applyTextFont(pg);

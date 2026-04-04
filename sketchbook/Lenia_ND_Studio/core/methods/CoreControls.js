@@ -27,51 +27,37 @@ class ControlMethods {
     const dim = NDCompat.coerceDimension(dimension);
     const sizes = NDCompat.getGridSizeOptions(dim);
     const canvasSize = min(windowWidth, windowHeight);
+    const superscriptDigits = {
+      0: "⁰",
+      1: "¹",
+      2: "²",
+      3: "³",
+      4: "⁴",
+      5: "⁵",
+      6: "⁶",
+      7: "⁷",
+      8: "⁸",
+      9: "⁹",
+      "-": "⁻",
+    };
+    const dimPower = String(dim)
+      .split("")
+      .map((char) => superscriptDigits[char] || char)
+      .join("");
     const options = {};
     for (const size of sizes) {
       if (size <= canvasSize) {
-        options[`${size}^${dim}`] = size;
+        options[`${size}${dimPower}`] = size;
       }
     }
     if (Object.keys(options).length === 0) {
-      options[`${sizes[0]}^${dim}`] = sizes[0];
+      options[`${sizes[0]}${dimPower}`] = sizes[0];
     }
     return options;
   }
 
-  getPixelSizeOptions(dimension = this.params.dimension) {
-    const dim = NDCompat.coerceDimension(dimension);
-    const canvasSize = min(windowWidth, windowHeight);
-    return NDCompat.getPixelSizeOptions(canvasSize, dim);
-  }
-
-  applyPixelSize(pixelSize) {
-    const canvasSize = min(windowWidth, windowHeight);
-    const oldGrid = Math.max(1, Math.floor(Number(this.params.gridSize) || 1));
-    const dim = NDCompat.coerceDimension(this.params.dimension);
-    const newGrid = NDCompat.gridSizeFromPixelSize(pixelSize, canvasSize, dim);
-
-    if (!Number.isFinite(newGrid) || newGrid <= 0) return;
-
-    this.params.pixelSize = Math.max(
-      1,
-      Math.floor(canvasSize / Math.max(1, newGrid)),
-    );
-
-    if (newGrid !== oldGrid) {
-      this.params.R = this.getPythonDefaultRadius(newGrid, dim);
-      this._prevR = this.params.R;
-      this.params.T = Math.round(
-        constrain(Number(this.params.T) || 10, 1, this.getMaxTimeScale()),
-      );
-    }
-
-    this.params.gridSize = newGrid;
-    this.changeResolution();
-  }
-
-  getMaxKernelRadius(gridSize = this.params.gridSize) {
-    const size = Math.max(1, Math.floor(Number(gridSize) || 1));
+  getMaxKernelRadius(latticeExtent = this.params.latticeExtent) {
+    const size = Math.max(1, Math.floor(Number(latticeExtent) || 1));
     return Math.max(2, Math.floor(size / 2));
   }
 
@@ -91,11 +77,11 @@ class ControlMethods {
     this.zoomWorld(nextR);
   }
 
-  getPythonDefaultRadius(
-    gridSize = this.params.gridSize,
+  getDefaultRadius(
+    latticeExtent = this.params.latticeExtent,
     dimension = this.params.dimension,
   ) {
-    const size = Math.max(1, Math.floor(Number(gridSize) || 1));
+    const size = Math.max(1, Math.floor(Number(latticeExtent) || 1));
     const dim = NDCompat.coerceDimension(dimension);
     const raw = (size / 64) * dim * 5;
     return Math.round(constrain(raw, 2, this.getMaxKernelRadius(size)));
@@ -106,17 +92,43 @@ class ControlMethods {
     return uiScale;
   }
 
-  _syncPixelSizeFromGrid() {
-    const canvasSize = min(windowWidth, windowHeight);
-    this.params.pixelSize = Math.max(
-      1,
-      Math.floor(canvasSize / Math.max(1, this.params.gridSize)),
-    );
+  _coerceAutoRotateModeValue(mode = this.params.autoRotateMode) {
+    if (typeof mode === "string") {
+      const key = mode.trim().toLowerCase();
+      if (key === "off") return 0;
+      if (key === "arrow" || key === "arrow (velocity)" || key === "velocity") {
+        return 1;
+      }
+      if (key === "symmetry" || key === "symm") return 2;
+    }
+    const numeric = Math.floor(Number(mode) || 0);
+    return Math.max(0, Math.min(2, numeric));
+  }
+
+  getAutoRotateMode() {
+    return this._coerceAutoRotateModeValue(this.params.autoRotateMode);
+  }
+
+  setAutoRotateMode(mode, { refreshGUI = true } = {}) {
+    const nextMode = this._coerceAutoRotateModeValue(mode);
+    this.params.autoRotateMode = nextMode;
+    if (refreshGUI) this.refreshGUI();
+    return nextMode;
+  }
+
+  cycleAutoRotateMode(delta = 1, { refreshGUI = true } = {}) {
+    const current = this.getAutoRotateMode();
+    const step = Math.floor(Number(delta) || 0) || 1;
+    const next = (((current + step) % 3) + 3) % 3;
+    return this.setAutoRotateMode(next, { refreshGUI });
   }
 
   getWorldShapeLabel() {
     const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
-    const size = Math.max(1, Math.floor(Number(this.params.gridSize) || 1));
+    const size = Math.max(
+      1,
+      Math.floor(Number(this.params.latticeExtent) || 1),
+    );
     const shape = dim === 2 ? "square" : dim === 3 ? "cube" : "hypercube";
     return `${shape} ${size}^${dim}`;
   }
@@ -163,7 +175,7 @@ class ControlMethods {
     const dimension = NDCompat.coerceDimension(this.params.dimension);
     const viewMode = NDCompat.coerceViewMode(dimension, this.params.viewMode);
     const ndDepth = NDCompat.getWorldDepthForDimension(
-      this.params.gridSize,
+      this.params.latticeExtent,
       dimension,
     );
     const ndSliceZ = NDCompat.coerceSliceIndex(this.params.ndSliceZ, ndDepth);
@@ -195,12 +207,11 @@ class ControlMethods {
     this._changingDimension = true;
     try {
       this.params.dimension = nextDimension;
-      const coercedSize = this._normaliseGridSize(this.params.gridSize);
-      const sizeChanged = coercedSize !== this.params.gridSize;
-      this.params.gridSize = coercedSize;
-      this._syncPixelSizeFromGrid();
-      this.params.R = this.getPythonDefaultRadius(
-        this.params.gridSize,
+      const coercedSize = this._normaliseGridSize(this.params.latticeExtent);
+      const sizeChanged = coercedSize !== this.params.latticeExtent;
+      this.params.latticeExtent = coercedSize;
+      this.params.R = this.getDefaultRadius(
+        this.params.latticeExtent,
         nextDimension,
       );
       this._prevR = this.params.R;
@@ -208,7 +219,7 @@ class ControlMethods {
       if ((Number(this.params.dimension) || 2) > 2) {
         this.params.viewMode = "projection";
         const ndDepthForSlice = NDCompat.getWorldDepthForDimension(
-          this.params.gridSize,
+          this.params.latticeExtent,
           nextDimension,
         );
         this.params.ndSliceZ = Math.floor(ndDepthForSlice / 2);
@@ -240,7 +251,7 @@ class ControlMethods {
       }
 
       console.log(
-        `[Lenia] ${nextDimension}D mode enabled with ${this.params.gridSize}^${nextDimension} world shape and ND tensor stepping.`,
+        `[Lenia] ${nextDimension}D mode enabled with ${this.params.latticeExtent}^${nextDimension} world shape and ND tensor stepping.`,
       );
 
       if (this.gui && typeof this.gui.rebuildPane === "function") {
@@ -473,12 +484,14 @@ class ControlMethods {
   }
 
   cycleStatsMode(delta = 1, { refreshGUI = true } = {}) {
-    const current = Math.max(
-      0,
-      Math.min(6, Math.floor(Number(this.params.statsMode) || 0)),
-    );
+    const modes = [0, 1, 5, 6];
+    const currentRaw = Math.floor(Number(this.params.statsMode) || 1);
+    const currentIndex = modes.indexOf(currentRaw);
+    const current = currentIndex >= 0 ? currentIndex : 0;
     const step = Math.floor(Number(delta) || 0) || 1;
-    const next = (((current + step) % 7) + 7) % 7;
+    const nextIndex =
+      (((current + step) % modes.length) + modes.length) % modes.length;
+    const next = modes[nextIndex];
     this.params.statsMode = next;
 
     if (next === 5) {
@@ -490,7 +503,7 @@ class ControlMethods {
   }
 
   cycleStatsAxis(axis = "x", delta = 1, { refreshGUI = true } = {}) {
-    const key = String(axis).toLowerCase() === "y" ? "statsY" : "statsX";
+    const key = String(axis).toLowerCase() === "y" ? "graphY" : "graphX";
     const headers = this.getStatAxisHeaders();
     if (!headers.length) return this.params[key];
 

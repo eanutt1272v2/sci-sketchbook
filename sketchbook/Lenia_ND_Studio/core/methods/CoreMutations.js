@@ -54,7 +54,7 @@ class StateMutationMethods {
     this._queueAction("randomiseParams", () =>
       this._queueOrRunMutation(() => {
         const p = this.params;
-        const size2 = Math.log2(p.gridSize);
+        const size2 = Math.log2(p.latticeExtent);
         const dim = p.dimension || 2;
         const randR1 = Math.floor(Math.pow(2, size2 - 7) * dim * 5);
         const randR2 = Math.floor(Math.pow(2, size2 - 5) * dim * 5);
@@ -198,7 +198,7 @@ class StateMutationMethods {
     const transfers = [b.world.buffer, b.potential.buffer, b.growth.buffer];
     const msg = {
       type: "transform",
-      params: { ...this.params, size: this.params.gridSize },
+      params: { ...this.params, size: this.params.latticeExtent },
       ndConfig,
       world: b.world.buffer,
       potential: b.potential.buffer,
@@ -224,7 +224,7 @@ class StateMutationMethods {
     const transfers = [b.world.buffer, b.potential.buffer, b.growth.buffer];
     const msg = {
       type: "ndMutation",
-      params: { ...this.params, size: this.params.gridSize },
+      params: { ...this.params, size: this.params.latticeExtent },
       ndConfig,
       world: b.world.buffer,
       potential: b.potential.buffer,
@@ -262,7 +262,7 @@ class StateMutationMethods {
           this._restartWorker();
 
           const canvasSize = min(windowWidth, windowHeight);
-          const prevSize = this.board?.size || this.params.gridSize;
+          const prevSize = this.board?.size || this.params.latticeExtent;
           const dim = Math.max(
             2,
             Math.floor(Number(this.params.dimension) || 2),
@@ -270,24 +270,20 @@ class StateMutationMethods {
           const pendingPlacement = this._normalisePlacementRequest(
             this._pendingPlacement,
             prevSize,
-            this.params.gridSize,
+            this.params.latticeExtent,
           );
           resizeCanvas(canvasSize, canvasSize);
           if (
             dim <= 2 &&
             this.board?.world &&
             prevSize > 0 &&
-            prevSize !== this.params.gridSize
+            prevSize !== this.params.latticeExtent
           ) {
-            this.board.resample(this.params.gridSize);
+            this.board.resample(this.params.latticeExtent);
           } else {
-            this.board.resize(this.params.gridSize);
+            this.board.resize(this.params.latticeExtent);
           }
-          this.renderer.resize(this.params.gridSize);
-
-          if (typeof this._syncPixelSizeFromGrid === "function") {
-            this._syncPixelSizeFromGrid();
-          }
+          this.renderer.resize(this.params.latticeExtent);
 
           this._pendingPlacement = pendingPlacement;
           this.analyser.reset();

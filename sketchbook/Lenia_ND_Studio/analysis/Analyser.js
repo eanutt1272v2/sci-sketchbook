@@ -305,8 +305,8 @@ class Analyser {
     const stride = Math.max(1, Math.floor(Number(sampleStride) || 1));
     const T = Math.max(1e-6, Number(params?.T) || 10);
     const sampleRateHz = T / stride;
-    const xKey = String(params?.statsX || "m");
-    const yKey = String(params?.statsY || "g");
+    const xKey = String(params?.graphX || "m");
+    const yKey = String(params?.graphY || "g");
     const activeRows = this.getActiveSegment();
     const primarySeries = this._extractStatSeries(activeRows, xKey);
     const secondarySeries = this._extractStatSeries(activeRows, yKey);

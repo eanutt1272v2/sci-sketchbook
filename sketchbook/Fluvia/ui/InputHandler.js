@@ -39,7 +39,7 @@ class InputHandler {
   }
 
   handleKeyPressed(k, kCode, event = null) {
-    if (KeyboardUtils.shouldIgnoreKeyboard()) {
+    if (KeyboardUtils.shouldIgnoreKeyboard(event)) {
       return false;
     }
 
@@ -243,6 +243,9 @@ class InputHandler {
     }
 
     if (keyLower === "r" && !ctrlHeld) {
+      if (Boolean(event?.repeat)) {
+        return false;
+      }
       this.appcore.reset();
       this.appcore.refreshGUI();
       return false;

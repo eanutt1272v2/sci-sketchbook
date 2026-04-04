@@ -486,7 +486,7 @@ class Renderer {
       `Simulation Time=${fmt(statistics.simulationTime, 1)} [s]`,
       `Frame=${Math.round(statistics.frameCounter)} [frame]`,
       `Running: ${params.running ? "true" : "false"}`,
-      `Grid Size=${Math.round(params.terrainSize)}² [cells]`,
+      `Terrain Size=${Math.round(params.terrainSize)}² [cells]`,
       `Droplets/Frame=${Math.round(params.dropletsPerFrame)} [drops/frame]`,
       `Render Mode: ${params.renderMethod} (mode id)`,
       `Surface Map: ${params.surfaceMap} (surface id)`,

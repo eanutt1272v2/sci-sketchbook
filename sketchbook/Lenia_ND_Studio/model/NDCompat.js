@@ -14,12 +14,6 @@ class NDCompat {
     4: 32,
   });
 
-  static _fallbackPixelDefaults = Object.freeze({
-    2: 4,
-    3: 8,
-    4: 16,
-  });
-
   static _fallbackViewModes = Object.freeze({
     2: Object.freeze(["slice"]),
     3: Object.freeze(["slice", "projection"]),
@@ -65,70 +59,6 @@ class NDCompat {
     return this._fallbackGridDefaults[dim] || 128;
   }
 
-  static getDefaultPixelSize(dimension = 2) {
-    if (this._impl && typeof this._impl.getDefaultPixelSize === "function") {
-      return this._impl.getDefaultPixelSize(dimension);
-    }
-    const dim = this.coerceDimension(dimension);
-    return this._fallbackPixelDefaults[dim] || 4;
-  }
-
-  static gridSizeFromPixelSize(pixelSize, canvasSize, dimension = 2) {
-    if (this._impl && typeof this._impl.gridSizeFromPixelSize === "function") {
-      return this._impl.gridSizeFromPixelSize(pixelSize, canvasSize, dimension);
-    }
-
-    const px = Math.max(1, Math.round(pixelSize));
-    const options = this.getGridSizeOptions(dimension);
-    const feasible = options.filter((size) => size <= canvasSize);
-    const candidates = feasible.length > 0 ? feasible : options;
-
-    let bestSize = candidates[0];
-    let bestError = Infinity;
-
-    for (const size of candidates) {
-      const derivedPx = this.pixelSizeFromGridSize(size, canvasSize);
-      const err = Math.abs(derivedPx - px);
-      if (err < bestError || (err === bestError && size > bestSize)) {
-        bestError = err;
-        bestSize = size;
-      }
-    }
-
-    return bestSize;
-  }
-
-  static pixelSizeFromGridSize(gridSize, canvasSize) {
-    if (this._impl && typeof this._impl.pixelSizeFromGridSize === "function") {
-      return this._impl.pixelSizeFromGridSize(gridSize, canvasSize);
-    }
-    return Math.max(1, Math.floor(canvasSize / Math.max(1, gridSize)));
-  }
-
-  static getPixelSizeOptions(canvasSize, dimension = 2) {
-    if (this._impl && typeof this._impl.getPixelSizeOptions === "function") {
-      return this._impl.getPixelSizeOptions(canvasSize, dimension);
-    }
-
-    const options = this.getGridSizeOptions(dimension);
-    const result = {};
-    const seen = new Set();
-
-    for (const size of options) {
-      if (size > canvasSize) continue;
-      const px = Math.max(1, Math.floor(canvasSize / size));
-      if (seen.has(px)) continue;
-      seen.add(px);
-      result[`${px}px (${size})`] = px;
-    }
-
-    if (Object.keys(result).length === 0) {
-      result["1px"] = 1;
-    }
-
-    return result;
-  }
-
   static coerceGridSize(value, dimension = 2) {
     if (this._impl) return this._impl.coerceGridSize(value, dimension);
     const options = this.getGridSizeOptions(dimension);
@@ -149,12 +79,12 @@ class NDCompat {
     return closest;
   }
 
-  static getWorldDepthForDimension(gridSize, dimension = 2) {
+  static getWorldDepthForDimension(latticeExtent, dimension = 2) {
     if (this._impl)
-      return this._impl.getWorldDepthForDimension(gridSize, dimension);
+      return this._impl.getWorldDepthForDimension(latticeExtent, dimension);
     const dim = this.coerceDimension(dimension);
     if (dim <= 2) return 1;
-    return this.coerceGridSize(gridSize, dim);
+    return this.coerceGridSize(latticeExtent, dim);
   }
 
   static coerceSliceIndex(value, depth) {

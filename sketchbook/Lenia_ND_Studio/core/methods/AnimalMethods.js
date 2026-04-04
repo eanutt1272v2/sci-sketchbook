@@ -13,7 +13,7 @@ class AnimalMethods {
     const dimension = Number(this.params.dimension) || 2;
     if (dimension <= 2) return null;
 
-    const size = this.params.gridSize;
+    const size = this.params.latticeExtent;
     const depth = NDCompat.getWorldDepthForDimension(size, dimension);
     const extraDims = Math.max(0, dimension - 2);
     const planeCount = Math.pow(depth, extraDims);
@@ -107,26 +107,53 @@ class AnimalMethods {
     return packed;
   }
 
-  loadAnimal(animal) {
+  loadAnimal(animal, options = {}) {
     if (!animal) return;
 
     this._pendingActions = this._pendingActions.filter(
       (action) => action.name !== "loadAnimalParams",
     );
 
-    this._queueAnimalLoad(animal, { loadPattern: true });
+    this._queueAnimalLoad(animal, { loadPattern: true, ...options });
   }
 
   loadSelectedAnimal() {
-    const animal = this.getSelectedAnimal();
-    if (animal) {
-      this.loadAnimal(animal);
-    }
+    const selection = this.params.selectedAnimal || "";
+    const animal = this._resolveAnimalForPlacement(selection);
+    if (!animal) return;
+
+    const boardSize = this.board?.size || this.params.latticeExtent;
+    const centre = Math.floor(boardSize / 2);
+    const request = this._normalisePlacementRequest(
+      {
+        selection,
+        cellX: centre,
+        cellY: centre,
+        scale: this.params.placeScale || 1,
+      },
+      boardSize,
+      boardSize,
+    );
+    if (!request) return;
+
+    this._queueAction("reloadAnimalAtCentre", () =>
+      this._queueOrRunMutation(() => {
+        this._ensureBuffers();
+        this.board.clear();
+        this.analyser.resetStatistics();
+        this.analyser.reset();
+        this._executePlacementRequest(request);
+      }),
+    );
   }
 
   cycleAnimal(delta) {
     const lib = this.animalLibrary;
     if (!lib || !lib.animals || lib.animals.length === 0) return;
+
+    const currentSelection = this.params.selectedAnimal || "";
+    const preservedScaleFactor =
+      this._getScaleFactorForSelection(currentSelection);
 
     const total = lib.animals.length;
     const current = this.getSelectedAnimalIndex();
@@ -139,17 +166,60 @@ class AnimalMethods {
     this.params.selectedAnimal = nextSelection;
 
     const animal = lib.getAnimal(next);
-    if (animal) this.loadAnimal(animal);
+    if (animal) {
+      this.loadAnimal(animal, {
+        preserveScaleFactor: true,
+        preservedScaleFactor,
+      });
+    }
     this.refreshGUI();
   }
 
-  loadAnimalParams(animal) {
-    if (!animal) return;
+  selectAnimalByIndex(index, { preserveScaleFactor = true } = {}) {
+    const lib = this.animalLibrary;
+    if (!lib || !Array.isArray(lib.animals) || lib.animals.length === 0) {
+      return false;
+    }
 
-    this._queueAnimalLoad(animal, { loadPattern: false });
+    const idx = Math.floor(Number(index));
+    if (!Number.isFinite(idx) || idx < 0 || idx >= lib.animals.length) {
+      return false;
+    }
+
+    const currentSelection = this.params.selectedAnimal || "";
+    const nextSelection = String(idx);
+    const preservedScaleFactor = preserveScaleFactor
+      ? this._getScaleFactorForSelection(currentSelection, 1)
+      : 1;
+
+    this._skipNextAnimalParamsLoad = true;
+    this._lastAnimalParamsSelection = nextSelection;
+    this.params.selectedAnimal = nextSelection;
+
+    const animal = lib.getAnimal(idx);
+    if (!animal) return false;
+
+    this.loadAnimal(animal, {
+      preserveScaleFactor,
+      preservedScaleFactor,
+    });
+    return true;
   }
 
-  _queueAnimalLoad(animal, { loadPattern = true } = {}) {
+  loadAnimalParams(animal, options = {}) {
+    if (!animal) return;
+
+    this._queueAnimalLoad(animal, { loadPattern: false, ...options });
+  }
+
+  _queueAnimalLoad(
+    animal,
+    {
+      loadPattern = true,
+      preserveScaleFactor = false,
+      preservedScaleFactor = null,
+    } = {},
+  ) {
     const actionName = loadPattern ? "loadAnimal" : "loadAnimalParams";
 
     this._queueAction(actionName, () =>
@@ -168,10 +238,15 @@ class AnimalMethods {
           .toLowerCase();
         const forcePartR = animalCode.startsWith("~");
         const forceNativeBugR = animalCode === "sbug" || animalCode === "bbug";
-        const defaultR = this.getPythonDefaultRadius(
-          this.params.gridSize,
+        const defaultR = this.getDefaultRadius(
+          this.params.latticeExtent,
           this.params.dimension,
         );
+        const maxR = this.getMaxKernelRadius(this.params.latticeExtent);
+        const preservedFactorValue =
+          preserveScaleFactor && Number.isFinite(Number(preservedScaleFactor))
+            ? Math.max(0.01, Number(preservedScaleFactor))
+            : null;
 
         let baseR = Math.max(2, Number(this.params.R) || defaultR);
 
@@ -184,13 +259,7 @@ class AnimalMethods {
           Number.isFinite(sourceR) &&
           sourceR > 0
         ) {
-          baseR = Math.round(
-            constrain(
-              sourceR,
-              2,
-              this.getMaxKernelRadius(this.params.gridSize),
-            ),
-          );
+          baseR = Math.round(constrain(sourceR, 2, maxR));
         }
 
         this.params.R = baseR;
@@ -199,20 +268,27 @@ class AnimalMethods {
         const requestedScale = this.getEffectivePlacementScale(
           this.params.placeScale,
         );
-        const patternScale = this.applyScaledAnimalParams(
-          animal,
-          requestedScale,
-          {
+        let patternScale = requestedScale;
+
+        if (
+          Number.isFinite(preservedFactorValue) &&
+          Number.isFinite(sourceR) &&
+          sourceR > 0
+        ) {
+          this.params.R = Math.round(
+            constrain(sourceR * preservedFactorValue, 2, maxR),
+          );
+          if (Number.isFinite(sourceR) && sourceR > 0) {
+            patternScale = this.params.R / sourceR;
+          }
+        } else {
+          patternScale = this.applyScaledAnimalParams(animal, requestedScale, {
             baseR: Number.isFinite(sourceR) && sourceR > 0 ? sourceR : baseR,
-          },
-        );
+          });
+        }
 
         this.params.R = Math.round(
-          constrain(
-            Number(this.params.R) || baseR,
-            2,
-            this.getMaxKernelRadius(this.params.gridSize),
-          ),
+          constrain(Number(this.params.R) || baseR, 2, maxR),
         );
 
         const dim = Number(this.params.dimension) || 2;
@@ -285,6 +361,34 @@ class AnimalMethods {
       : animal.params;
   }
 
+  _getScaleFactorForSelection(selection, fallback = 1) {
+    if (
+      selection === null ||
+      typeof selection === "undefined" ||
+      String(selection).trim() === ""
+    ) {
+      return fallback;
+    }
+
+    const animal = this._resolveAnimalForPlacement(selection);
+    if (!animal) return fallback;
+
+    const sourceParams = this._getAnimalSourceParams(animal) || {};
+    const sourceR = Number(sourceParams.R);
+    const currentR = Number(this.params.R);
+
+    if (
+      Number.isFinite(sourceR) &&
+      sourceR > 0 &&
+      Number.isFinite(currentR) &&
+      currentR > 0
+    ) {
+      return currentR / sourceR;
+    }
+
+    return fallback;
+  }
+
   applyScaledAnimalParams(animal, scale = 1, { baseR = null } = {}) {
     if (!animal || !animal.params) return scale;
 
@@ -336,21 +440,34 @@ class AnimalMethods {
     this.applySelectedAnimalScaledRT(next, { baseR, refreshGUI: true });
   }
 
+  _coercePolarModeValue(mode = this.params.polarMode) {
+    if (typeof mode === "string") {
+      const key = mode.trim().toLowerCase();
+      if (key === "off") return 0;
+      if (key === "symmetry" || key === "symm") return 1;
+      if (key === "polar") return 2;
+      if (key === "history") return 3;
+      if (key === "strength") return 4;
+    }
+    const numeric = Math.floor(Number(mode) || 0);
+    return Math.max(0, Math.min(4, numeric));
+  }
+
   setPolarMode(mode, { refreshGUI = true } = {}) {
-    const nextMode = Math.max(0, Math.min(4, Math.floor(Number(mode) || 0)));
+    const nextMode = this._coercePolarModeValue(mode);
     this.params.polarMode = nextMode;
     if (nextMode > 0) {
       this.params.renderSymmetryOverlay = true;
+    }
+    if (typeof this._workerRequestView === "function") {
+      this._workerRequestView();
     }
     if (refreshGUI) this.refreshGUI();
     return nextMode;
   }
 
   cyclePolarMode(delta = 1, { refreshGUI = true } = {}) {
-    const current = Math.max(
-      0,
-      Math.min(4, Math.floor(Number(this.params.polarMode) || 0)),
-    );
+    const current = this._coercePolarModeValue(this.params.polarMode);
     const step = Math.floor(Number(delta) || 0) || 1;
     const next = (((current + step) % 5) + 5) % 5;
     return this.setPolarMode(next, { refreshGUI });
@@ -358,6 +475,7 @@ class AnimalMethods {
 
   loadSelectedAnimalParams() {
     const currentSelection = this.params.selectedAnimal || "";
+    const previousSelection = this._lastAnimalParamsSelection;
 
     if (this._skipNextAnimalParamsLoad) {
       this._skipNextAnimalParamsLoad = false;
@@ -372,7 +490,13 @@ class AnimalMethods {
     this._lastAnimalParamsSelection = currentSelection;
     const animal = this.getSelectedAnimal();
     if (animal) {
-      this.loadAnimalParams(animal);
+      this.loadAnimalParams(animal, {
+        preserveScaleFactor: true,
+        preservedScaleFactor: this._getScaleFactorForSelection(
+          previousSelection,
+          1,
+        ),
+      });
     }
   }
 
@@ -428,7 +552,7 @@ class AnimalMethods {
     if (!animal) return;
 
     const scale = this.params.placeScale || 1;
-    const boardSize = this.board?.size || this.params.gridSize;
+    const boardSize = this.board?.size || this.params.latticeExtent;
     const request = this._normalisePlacementRequest(
       {
         selection,
@@ -480,7 +604,7 @@ class AnimalMethods {
       (cellsStr.includes("%") || cellsStr.includes("#"));
 
     const dimension = Number(this.params.dimension) || 2;
-    const size = this.params.gridSize;
+    const size = this.params.latticeExtent;
     const depth = NDCompat.getWorldDepthForDimension(size, dimension);
     const extraDims = Math.max(0, dimension - 2);
 
@@ -590,7 +714,7 @@ class AnimalMethods {
     const animal = this._resolveAnimalForPlacement(selection);
     if (!animal) return;
 
-    const size = this.params.gridSize;
+    const size = this.params.latticeExtent;
     const cellX = Math.floor(Math.random() * size);
     const cellY = Math.floor(Math.random() * size);
     const scale = this.params.placeScale || 1;

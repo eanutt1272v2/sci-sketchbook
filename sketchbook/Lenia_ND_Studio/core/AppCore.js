@@ -33,8 +33,7 @@ class AppCore {
 
     this.params = {
       running: true,
-      gridSize: 128,
-      pixelSize: 4,
+      latticeExtent: 128,
 
       dimension: 2,
       viewMode: "projection",
@@ -74,9 +73,9 @@ class AppCore {
       renderMassGrowthOverlay: false,
       renderSymmetryOverlay: false,
       periodogramUseWelch: true,
-      statsMode: 0,
-      statsX: "m",
-      statsY: "g",
+      statsMode: 1,
+      graphX: "m",
+      graphY: "g",
       statsTrimSegment: 1,
       statsGroupByParams: false,
       recurrenceThreshold: 0.2,
@@ -96,8 +95,8 @@ class AppCore {
       videoBitrateMbps: 8,
     };
 
-    this.params.R = this.getPythonDefaultRadius(
-      this.params.gridSize,
+    this.params.R = this.getDefaultRadius(
+      this.params.latticeExtent,
       this.params.dimension,
     );
 
@@ -160,11 +159,11 @@ class AppCore {
     } else {
       this.animalLibrary.loadFromData(this.animalDatasetByDimension[2] || []);
     }
-    this.board = new Board(this.params.gridSize);
+    this.board = new Board(this.params.latticeExtent);
     this.automaton = new Automaton(this.params);
     this.analyser = new Analyser(this.statistics, this.renderData);
     this.renderer = new Renderer(
-      this.params.gridSize,
+      this.params.latticeExtent,
       this.colourMaps,
       this.params.colourMap,
       this.font,
@@ -226,9 +225,6 @@ class AppCore {
     }
 
     resizeCanvas(canvasSize, canvasSize, true);
-    if (typeof this._syncPixelSizeFromGrid === "function") {
-      this._syncPixelSizeFromGrid();
-    }
     this.refreshGUI();
     return false;
   }

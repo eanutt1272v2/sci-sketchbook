@@ -168,14 +168,14 @@ class AnimalLibrary {
         if (seenHeaders.has(headerKey)) continue;
         seenHeaders.add(headerKey);
 
-        const rank = this.getTaxonomyLevelLabel(level);
-        const label = `${"| ".repeat(level)}${rank}: ${this._truncate(branchPath[level], 36)}`;
+        const rank = this.getTaxonomyLevelLabel(level).toLowerCase();
+        const label = `${"| ".repeat(level)}${rank}: ${this._truncate(branchPath[level], 64)}`;
         const token = `__header__:${level}:${headerKey}`;
         this._addUniqueMenuOption(options, label, token);
       }
 
-      const prefix = `${"| ".repeat(path.length)}${path.length > 0 ? "- " : ""}`;
-      const animalLabel = `${prefix}${this._formatAnimalLabel(animal, 56)}`;
+      const prefix = `${"| ".repeat(path.length)}`;
+      const animalLabel = `${prefix}${this._formatAnimalLabel(animal, 88)}`;
       this._addUniqueMenuOption(
         options,
         animalLabel,
@@ -339,7 +339,13 @@ class AnimalLibrary {
     const latin = rawName.includes(":")
       ? this._normaliseSpaces(rawName.slice(rawName.indexOf(":") + 1))
       : rawName;
-    return this._truncate(latin || rawCName, 36);
+
+    let combined = latin || rawCName;
+    if (latin && rawCName) {
+      combined = `${latin} (${rawCName})`;
+    }
+
+    return this._truncate(combined, 64);
   }
 
   _formatAnimalLabel(animal, maxLength = 56) {
