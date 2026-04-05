@@ -74,7 +74,10 @@ class AssetLoader {
     return safeFamily;
   }
 
-  static async loadJSONAsset(path, { logger = null, label = "JSON asset" } = {}) {
+  static async loadJSONAsset(
+    path,
+    { logger = null, label = "JSON asset" } = {},
+  ) {
     const safeLogger = AssetLoader._resolveLogger(logger);
 
     if (typeof loadJSON !== "function") {
