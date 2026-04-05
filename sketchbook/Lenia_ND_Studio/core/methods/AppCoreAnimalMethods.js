@@ -1,4 +1,4 @@
-class AnimalMethods {
+class AppCoreAnimalMethods {
   _packNDSeed(animal, scale = 1) {
     if (!animal || !animal.cells) return null;
     const cellsStr = Array.isArray(animal.cells)
@@ -526,13 +526,14 @@ class AnimalMethods {
     let scale = this.getEffectivePlacementScale(request.scale);
     const sourceParams = this._getAnimalSourceParams(animal) || {};
     const sourceR = Number(sourceParams.R);
-    if (Number.isFinite(sourceR) && sourceR > 0) {
+    const dim = Number(this.params.dimension) || 2;
+    if (dim <= 2 && Number.isFinite(sourceR) && sourceR > 0) {
       const targetR = Math.max(2, Number(this.params.R) || sourceR);
       scale = targetR / sourceR;
     }
     this._ensureBuffers();
 
-    if ((this.params.dimension || 2) > 2) {
+    if (dim > 2) {
       this._placeAnimalND(animal, request.cellX, request.cellY, scale);
     } else {
       this._applyPlacement({
@@ -728,7 +729,4 @@ class AnimalMethods {
   }
 }
 
-for (const name of Object.getOwnPropertyNames(AnimalMethods.prototype)) {
-  if (name === "constructor") continue;
-  AppCore.prototype[name] = AnimalMethods.prototype[name];
-}
+AppCore.installMethodsFrom(AppCoreAnimalMethods);

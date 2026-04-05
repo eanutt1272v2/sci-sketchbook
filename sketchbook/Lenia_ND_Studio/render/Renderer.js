@@ -1,4 +1,12 @@
 class Renderer {
+  static installMethodsFrom(sourceClass) {
+    if (!sourceClass || !sourceClass.prototype) return;
+    for (const name of Object.getOwnPropertyNames(sourceClass.prototype)) {
+      if (name === "constructor") continue;
+      Renderer.prototype[name] = sourceClass.prototype[name];
+    }
+  }
+
   constructor(
     size,
     colourMaps = {},

@@ -1,4 +1,4 @@
-class WorkerPipelineMethods {
+class AppCoreWorkerPipelineMethods {
   _initWorker() {
     try {
       this._worker = new Worker("worker/LeniaWorker.js");
@@ -606,9 +606,4 @@ class WorkerPipelineMethods {
   }
 }
 
-for (const name of Object.getOwnPropertyNames(
-  WorkerPipelineMethods.prototype,
-)) {
-  if (name === "constructor") continue;
-  AppCore.prototype[name] = WorkerPipelineMethods.prototype[name];
-}
+AppCore.installMethodsFrom(AppCoreWorkerPipelineMethods);

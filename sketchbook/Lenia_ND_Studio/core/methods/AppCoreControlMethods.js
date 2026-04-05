@@ -1,4 +1,4 @@
-class ControlMethods {
+class AppCoreControlMethods {
   getSelectedAnimalIndex() {
     const value = this.params.selectedAnimal;
     if (!value || value === "") return null;
@@ -559,7 +559,4 @@ class ControlMethods {
   }
 }
 
-for (const name of Object.getOwnPropertyNames(ControlMethods.prototype)) {
-  if (name === "constructor") continue;
-  AppCore.prototype[name] = ControlMethods.prototype[name];
-}
+AppCore.installMethodsFrom(AppCoreControlMethods);

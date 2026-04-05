@@ -1,4 +1,4 @@
-class StatsTrajectoryMethods {
+class RendererStatsTrajectoryMethods {
   _renderTrajectoryPath(history, colour, cellPx, viewShiftX, viewShiftY) {
     if (!Array.isArray(history) || history.length < 2) return;
 
@@ -169,9 +169,4 @@ class StatsTrajectoryMethods {
   }
 }
 
-for (const name of Object.getOwnPropertyNames(
-  StatsTrajectoryMethods.prototype,
-)) {
-  if (name === "constructor") continue;
-  Renderer.prototype[name] = StatsTrajectoryMethods.prototype[name];
-}
+Renderer.installMethodsFrom(RendererStatsTrajectoryMethods);

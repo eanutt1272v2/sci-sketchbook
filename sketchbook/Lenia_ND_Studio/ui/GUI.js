@@ -57,11 +57,11 @@ class GUI {
 
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Sim" },
-        { title: "Params" },
-        { title: "Render" },
+        { title: "Simulation" },
+        { title: "Parameters" },
+        { title: "Rendering" },
         { title: "Animals" },
-        { title: "Stats" },
+        { title: "Statistics" },
         { title: "Media" },
       ],
     });
@@ -253,6 +253,19 @@ class GUI {
         title: this.withHint("Shift Down", "shiftDown", "↓"),
       })
       .on("click", () => this.appcore?.shiftWorld(0, 10));
+
+    this.addSeparator(xform);
+
+    xform
+      .addButton({
+        title: this.withHint("Zoom In", "zoomInTransform", "R"),
+      })
+      .on("click", () => this.appcore?.nudgeRadius(10));
+    xform
+      .addButton({
+        title: this.withHint("Zoom Out", "zoomOutTransform", "F"),
+      })
+      .on("click", () => this.appcore?.nudgeRadius(-10));
 
     this.addSeparator(xform);
 

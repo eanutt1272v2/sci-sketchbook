@@ -1,4 +1,12 @@
 class AppCore {
+  static installMethodsFrom(sourceClass) {
+    if (!sourceClass || !sourceClass.prototype) return;
+    for (const name of Object.getOwnPropertyNames(sourceClass.prototype)) {
+      if (name === "constructor") continue;
+      AppCore.prototype[name] = sourceClass.prototype[name];
+    }
+  }
+
   constructor(assets) {
     const {
       metadata,

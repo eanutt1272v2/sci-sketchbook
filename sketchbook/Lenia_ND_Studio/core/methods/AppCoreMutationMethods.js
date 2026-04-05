@@ -1,4 +1,4 @@
-class StateMutationMethods {
+class AppCoreMutationMethods {
   clearWorld() {
     this._queueAction("clearWorld", () =>
       this._queueOrRunMutation(() => {
@@ -346,7 +346,4 @@ class StateMutationMethods {
   }
 }
 
-for (const name of Object.getOwnPropertyNames(StateMutationMethods.prototype)) {
-  if (name === "constructor") continue;
-  AppCore.prototype[name] = StateMutationMethods.prototype[name];
-}
+AppCore.installMethodsFrom(AppCoreMutationMethods);

@@ -1,4 +1,4 @@
-class ImportExportMethods {
+class AppCoreImportExportMethods {
   _normaliseGridSize(size) {
     return NDCompat.coerceGridSize(size, this.params.dimension);
   }
@@ -300,7 +300,4 @@ class ImportExportMethods {
   }
 }
 
-for (const name of Object.getOwnPropertyNames(ImportExportMethods.prototype)) {
-  if (name === "constructor") continue;
-  AppCore.prototype[name] = ImportExportMethods.prototype[name];
-}
+AppCore.installMethodsFrom(AppCoreImportExportMethods);

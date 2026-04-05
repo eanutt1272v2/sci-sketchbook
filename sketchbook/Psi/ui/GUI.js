@@ -16,10 +16,10 @@ class GUI {
   setupTabs() {
     const tabs = this.pane.addTab({
       pages: [
-        { title: "Sim" },
-        { title: "Params" },
-        { title: "Render" },
-        { title: "Stats" },
+        { title: "Simulation" },
+        { title: "Parameters" },
+        { title: "Rendering" },
+        { title: "Statistics" },
         { title: "Media" },
       ],
     });

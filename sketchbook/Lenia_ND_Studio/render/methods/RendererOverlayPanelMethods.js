@@ -1,4 +1,4 @@
-class OverlayPanelMethods {
+class RendererOverlayPanelMethods {
   renderMotionOverlay(statistics, params = {}) {
     const { mass, centreX, centreY, speed, angle } = statistics;
 
@@ -743,7 +743,4 @@ class OverlayPanelMethods {
   }
 }
 
-for (const name of Object.getOwnPropertyNames(OverlayPanelMethods.prototype)) {
-  if (name === "constructor") continue;
-  Renderer.prototype[name] = OverlayPanelMethods.prototype[name];
-}
+Renderer.installMethodsFrom(RendererOverlayPanelMethods);

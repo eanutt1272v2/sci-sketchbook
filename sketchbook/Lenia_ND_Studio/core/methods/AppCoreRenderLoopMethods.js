@@ -1,4 +1,4 @@
-class RenderLoopMethods {
+class AppCoreRenderLoopMethods {
   render() {
     this.renderer.setColourMap(this.params.colourMap);
     const bg = this.renderer.getColourMapLowColour();
@@ -161,7 +161,4 @@ class RenderLoopMethods {
   }
 }
 
-for (const name of Object.getOwnPropertyNames(RenderLoopMethods.prototype)) {
-  if (name === "constructor") continue;
-  AppCore.prototype[name] = RenderLoopMethods.prototype[name];
-}
+AppCore.installMethodsFrom(AppCoreRenderLoopMethods);
