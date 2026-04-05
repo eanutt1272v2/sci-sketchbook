@@ -25,6 +25,32 @@ function disposeAppCore() {
   appcore = null;
 }
 
+function scheduleStartupInitialisation(task) {
+  if (typeof task !== "function") return;
+
+  if (
+    typeof AppDiagnostics !== "undefined" &&
+    typeof AppDiagnostics.scheduleFrameFriendlyTask === "function"
+  ) {
+    AppDiagnostics.scheduleFrameFriendlyTask(task, {
+      logger: diagnosticsLogger,
+      label: "Fluvia AppCore initialisation",
+      timeoutMs: 200,
+      useIdle: true,
+    });
+    return;
+  }
+
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => {
+      setTimeout(task, 0);
+    });
+    return;
+  }
+
+  setTimeout(task, 0);
+}
+
 const metadata = {
   name: "Fluvia",
   version: "v5.4.7-dev",
@@ -43,22 +69,32 @@ function createReadbackOptimisedCanvas(widthPx, heightPx) {
 
 async function setup() {
   try {
-    const [loadedFont, loadedColourMaps, loadedVertLines, loadedFragLines] =
+    const [loadedFont, loadedColourMaps, loadedVertShader, loadedFragShader] =
       await Promise.all([
-        loadFont("../../_shared/fonts/Iosevka-Regular.ttf"),
-        loadJSON("../../_shared/data/colour-maps.json"),
-        loadStrings("../../_shared/shaders/vert.glsl"),
-        loadStrings("../../_shared/shaders/frag.glsl"),
+        AssetLoader.loadPreferredFont({
+          family: "Iosevka",
+          woff2Path: "../../_shared/fonts/Iosevka-Regular.woff2",
+          ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
+          logger: diagnosticsLogger,
+        }),
+        AssetLoader.loadJSONAsset("../../_shared/data/colour-maps.json", {
+          logger: diagnosticsLogger,
+          label: "Fluvia colour maps",
+        }),
+        AssetLoader.loadShaderSource("../../_shared/shaders/vert.glsl", {
+          logger: diagnosticsLogger,
+          label: "Fluvia vertex shader",
+        }),
+        AssetLoader.loadShaderSource("../../_shared/shaders/frag.glsl", {
+          logger: diagnosticsLogger,
+          label: "Fluvia fragment shader",
+        }),
       ]);
 
     font = loadedFont;
     colourMaps = loadedColourMaps;
-    vertShader = Array.isArray(loadedVertLines)
-      ? loadedVertLines.join("\n")
-      : "";
-    fragShader = Array.isArray(loadedFragLines)
-      ? loadedFragLines.join("\n")
-      : "";
+    vertShader = loadedVertShader;
+    fragShader = loadedFragShader;
   } catch (error) {
     diagnosticsLogger.error("Failed to load startup assets:", error);
     return;
@@ -69,7 +105,7 @@ async function setup() {
 
   setupCanvasProperties(mainCanvas);
 
-  requestAnimationFrame(() => {
+  scheduleStartupInitialisation(() => {
     disposeAppCore();
     try {
       appcore = new AppCore({

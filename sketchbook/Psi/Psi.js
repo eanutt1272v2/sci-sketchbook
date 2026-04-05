@@ -34,6 +34,32 @@ function disposeAppCore() {
   appcore = null;
 }
 
+function scheduleStartupInitialisation(task) {
+  if (typeof task !== "function") return;
+
+  if (
+    typeof AppDiagnostics !== "undefined" &&
+    typeof AppDiagnostics.scheduleFrameFriendlyTask === "function"
+  ) {
+    AppDiagnostics.scheduleFrameFriendlyTask(task, {
+      logger: diagnosticsLogger,
+      label: "Psi AppCore initialisation",
+      timeoutMs: 200,
+      useIdle: true,
+    });
+    return;
+  }
+
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => {
+      setTimeout(task, 0);
+    });
+    return;
+  }
+
+  setTimeout(task, 0);
+}
+
 const metadata = {
   name: "Psi",
   version: "v2.9.7-dev",
@@ -43,8 +69,16 @@ const metadata = {
 async function setup() {
   try {
     const [loadedFont, loadedColourMaps] = await Promise.all([
-      loadFont("../../_shared/fonts/Iosevka-Regular.ttf"),
-      loadJSON("../../_shared/data/colour-maps.json"),
+      AssetLoader.loadPreferredFont({
+        family: "Iosevka",
+        woff2Path: "../../_shared/fonts/Iosevka-Regular.woff2",
+        ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
+        logger: diagnosticsLogger,
+      }),
+      AssetLoader.loadJSONAsset("../../_shared/data/colour-maps.json", {
+        logger: diagnosticsLogger,
+        label: "Psi colour maps",
+      }),
     ]);
 
     font = loadedFont;
@@ -59,7 +93,7 @@ async function setup() {
 
   setupCanvasProperties(mainCanvas);
 
-  requestAnimationFrame(() => {
+  scheduleStartupInitialisation(() => {
     disposeAppCore();
     try {
       appcore = new AppCore({

@@ -100,7 +100,7 @@ class AppCore {
       autoRotateMode: 0,
       selectedAnimal: "",
       placeMode: true,
-      placeScale: 1,
+      placeScale: 2,
       autoCentre: false,
 
       imageFormat: "png",
@@ -217,13 +217,30 @@ class AppCore {
       this.gui.setupTabs();
     }
 
+    const loadInitial = () => {
+      if (
+        this.gui &&
+        this.animalLibrary.loaded &&
+        this.animalLibrary.animals.length > 0
+      ) {
+        this.loadInitialAnimal();
+      }
+    };
+
     if (
-      this.gui &&
-      this.animalLibrary.loaded &&
-      this.animalLibrary.animals.length > 0
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.scheduleFrameFriendlyTask === "function"
     ) {
-      this.loadInitialAnimal();
+      AppDiagnostics.scheduleFrameFriendlyTask(loadInitial, {
+        logger: this._diagnosticsLogger,
+        label: "Lenia initial animal bootstrap",
+        timeoutMs: 240,
+        useIdle: true,
+      });
+      return;
     }
+
+    loadInitial();
   }
 
   stepOnce() {

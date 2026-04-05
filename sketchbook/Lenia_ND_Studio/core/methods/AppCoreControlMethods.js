@@ -233,8 +233,8 @@ class AppCoreControlMethods {
         this.params.ndActiveAxis = "z";
       }
 
-      this.params.placeScale = 1;
-      this._lastPlacementScale = 1;
+      //this.params.placeScale = 1;
+      //this._lastPlacementScale = 1;
 
       this._applyAnimalSource();
 

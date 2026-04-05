@@ -750,5 +750,9 @@ class AppCore {
     if (this.renderer && typeof this.renderer.dispose === "function") {
       this.renderer.dispose();
     }
+
+    if (this.gui && typeof this.gui.dispose === "function") {
+      this.gui.dispose();
+    }
   }
 }

@@ -137,6 +137,135 @@ class AppDiagnostics {
     return cleanup;
   }
 
+  static scheduleFrameFriendlyTask(task, options = {}) {
+    if (typeof task !== "function") {
+      return;
+    }
+
+    const {
+      logger = null,
+      label = "deferred task",
+      timeoutMs = 120,
+      useIdle = true,
+      fallbackDelayMs = 0,
+    } = options || {};
+
+    const safeLogger = AppDiagnostics.resolveLogger("App", logger);
+    const safeDelay = Math.max(0, Math.floor(Number(fallbackDelayMs) || 0));
+    const safeTimeout = Math.max(0, Math.floor(Number(timeoutMs) || 120));
+
+    const scheduleMacrotask = (fn, delayMs = 0) => {
+      const delay = Math.max(0, Math.floor(Number(delayMs) || 0));
+      if (delay > 0) {
+        setTimeout(fn, delay);
+        return;
+      }
+
+      if (typeof MessageChannel === "function") {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = () => {
+          channel.port1.onmessage = null;
+          fn();
+        };
+        channel.port2.postMessage(0);
+        return;
+      }
+
+      if (typeof queueMicrotask === "function") {
+        queueMicrotask(fn);
+        return;
+      }
+
+      Promise.resolve().then(fn);
+    };
+
+    const runTask = () => {
+      try {
+        task();
+      } catch (error) {
+        safeLogger.error(`${label} failed:`, error);
+      }
+    };
+
+    const scheduleOutsideRaf = () => {
+      if (useIdle && typeof requestIdleCallback === "function") {
+        try {
+          requestIdleCallback(
+            () => {
+              scheduleMacrotask(runTask, safeDelay);
+            },
+            { timeout: safeTimeout },
+          );
+          return;
+        } catch {
+          // Fall through to timeout scheduling below.
+        }
+      }
+
+      scheduleMacrotask(runTask, safeDelay);
+    };
+
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => {
+        scheduleOutsideRaf();
+      });
+      return;
+    }
+
+    scheduleOutsideRaf();
+  }
+
+  static scheduleFrameFriendlySequence(steps, options = {}) {
+    if (!Array.isArray(steps) || steps.length === 0) {
+      return;
+    }
+
+    const queue = steps.filter((step) => typeof step === "function");
+    if (queue.length === 0) return;
+
+    const {
+      logger = null,
+      label = "deferred sequence",
+      timeoutMs = 120,
+      useIdle = true,
+      fallbackDelayMs = 0,
+    } = options || {};
+
+    const runNext = () => {
+      const next = queue.shift();
+      if (typeof next !== "function") {
+        return;
+      }
+
+      try {
+        next();
+      } catch (error) {
+        const safeLogger = AppDiagnostics.resolveLogger("App", logger);
+        safeLogger.error(`${label} step failed:`, error);
+      }
+
+      if (queue.length === 0) {
+        return;
+      }
+
+      AppDiagnostics.scheduleFrameFriendlyTask(runNext, {
+        logger,
+        label,
+        timeoutMs,
+        useIdle,
+        fallbackDelayMs,
+      });
+    };
+
+    AppDiagnostics.scheduleFrameFriendlyTask(runNext, {
+      logger,
+      label,
+      timeoutMs,
+      useIdle,
+      fallbackDelayMs,
+    });
+  }
+
   static safePostMessage(worker, message, transfers = [], logger, context) {
     if (!worker || typeof worker.postMessage !== "function") {
       if (logger && typeof logger.warn === "function") {

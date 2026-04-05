@@ -56,7 +56,7 @@ All sketches source a subset of methods from a common `_shared/` directory:
 | Resource | Path | Purpose |
 | :-- | :-- | :-- |
 | Colour map LUTs | `_shared/data/colour-maps.json` | 256-entry RGB lookup tables used for scientific visualisation with various colour maps |
-| Font | `_shared/fonts/Iosevka-Regular.ttf` | Monospace typeface used for overlays and statistics |
+| Font | `_shared/fonts/Iosevka-Regular.woff2` | Monospace typeface used for overlays and statistics |
 | Shaders | `_shared/shaders/vert.glsl`, `frag.glsl` | Vertex displacement and fragment colouring for 3D terrain in Fluvia |
 | Utilities | `_shared/utils/` | Shared run-length codec, transform, and rendering helpers |
 | Styles | `_shared/styles/` | Common CSS |

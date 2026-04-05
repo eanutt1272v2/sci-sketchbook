@@ -169,6 +169,9 @@ class AppCoreMutationMethods {
 
     this.params.R = targetR;
     this._prevR = targetR;
+    if (typeof this.syncPlacementScaleToRadius === "function") {
+      this.syncPlacementScaleToRadius(this.params.selectedAnimal);
+    }
 
     this._queueAction("zoomWorld", () =>
       this._queueOrRunMutation(() => {

@@ -35,6 +35,32 @@ function disposeAppCore() {
   appcore = null;
 }
 
+function scheduleStartupInitialisation(task) {
+  if (typeof task !== "function") return;
+
+  if (
+    typeof AppDiagnostics !== "undefined" &&
+    typeof AppDiagnostics.scheduleFrameFriendlyTask === "function"
+  ) {
+    AppDiagnostics.scheduleFrameFriendlyTask(task, {
+      logger: diagnosticsLogger,
+      label: "Lenia AppCore initialisation",
+      timeoutMs: 200,
+      useIdle: true,
+    });
+    return;
+  }
+
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => {
+      setTimeout(task, 0);
+    });
+    return;
+  }
+
+  setTimeout(task, 0);
+}
+
 const metadata = {
   name: "Lenia ND Studio",
   version: "v2.6.1-dev",
@@ -50,11 +76,28 @@ async function setup() {
       loadedAnimals4D,
       loadedColourMaps,
     ] = await Promise.all([
-      loadFont("../../_shared/fonts/Iosevka-Regular.ttf"),
-      loadJSON("../../_shared/data/animals.json"),
-      loadJSON("../../_shared/data/animals3D.json"),
-      loadJSON("../../_shared/data/animals4D.json"),
-      loadJSON("../../_shared/data/colour-maps.json"),
+      AssetLoader.loadPreferredFont({
+        family: "Iosevka",
+        woff2Path: "../../_shared/fonts/Iosevka-Regular.woff2",
+        ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
+        logger: diagnosticsLogger,
+      }),
+      AssetLoader.loadJSONAsset("../../_shared/data/animals.json", {
+        logger: diagnosticsLogger,
+        label: "Lenia 2D animals",
+      }),
+      AssetLoader.loadJSONAsset("../../_shared/data/animals3D.json", {
+        logger: diagnosticsLogger,
+        label: "Lenia 3D animals",
+      }),
+      AssetLoader.loadJSONAsset("../../_shared/data/animals4D.json", {
+        logger: diagnosticsLogger,
+        label: "Lenia 4D animals",
+      }),
+      AssetLoader.loadJSONAsset("../../_shared/data/colour-maps.json", {
+        logger: diagnosticsLogger,
+        label: "Lenia colour maps",
+      }),
     ]);
 
     font = loadedFont;
@@ -72,10 +115,10 @@ async function setup() {
 
   setupCanvasProperties(mainCanvas);
 
-  requestAnimationFrame(() => {
+  scheduleStartupInitialisation(() => {
     disposeAppCore();
     try {
-      appcore = new AppCore({
+      const nextAppCore = new AppCore({
         metadata,
         animalsData,
         animalsByDimension: {
@@ -86,8 +129,18 @@ async function setup() {
         colourMaps,
         font,
       });
+      appcore = nextAppCore;
 
-      appcore.setup();
+      if (nextAppCore && typeof nextAppCore.setup === "function") {
+        scheduleStartupInitialisation(() => {
+          try {
+            nextAppCore.setup();
+          } catch (error) {
+            diagnosticsLogger.error("Failed to complete AppCore setup:", error);
+            disposeAppCore();
+          }
+        });
+      }
     } catch (error) {
       diagnosticsLogger.error("Failed to initialise AppCore:", error);
       disposeAppCore();

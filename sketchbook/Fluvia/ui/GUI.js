@@ -2,6 +2,8 @@ class GUI {
   constructor(appcore) {
     this.appcore = appcore;
     this.recordButton = null;
+    this._tabsReady = false;
+    this._disposed = false;
     const { name, version, author } = this.appcore.metadata;
 
     this.pane = new Tweakpane.Pane({
@@ -9,7 +11,26 @@ class GUI {
       expanded: true,
     });
 
-    this.setupTabs();
+    const buildTabs = () => {
+      if (this._disposed) return;
+      if (this._tabsReady) return;
+      this.setupTabs();
+      this._tabsReady = true;
+    };
+
+    if (
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.scheduleFrameFriendlyTask === "function"
+    ) {
+      AppDiagnostics.scheduleFrameFriendlyTask(buildTabs, {
+        logger: this.appcore?._diagnosticsLogger,
+        label: "Fluvia GUI bootstrap",
+        timeoutMs: 240,
+        useIdle: true,
+      });
+    } else {
+      buildTabs();
+    }
   }
 
   setupTabs() {
@@ -705,5 +726,16 @@ class GUI {
         ? this.withHint("⏹ Stop Recording", "record", "Ctrl+R")
         : this.withHint("⏺ Start Recording", "record", "Ctrl+R");
     }
+  }
+
+  dispose() {
+    this._disposed = true;
+    this.recordButton = null;
+
+    if (this.pane && typeof this.pane.dispose === "function") {
+      this.pane.dispose();
+    }
+
+    this.pane = null;
   }
 }

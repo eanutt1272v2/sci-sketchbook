@@ -313,6 +313,7 @@ class AppCoreAnimalMethods {
 
         this.automaton.updateParameters(this.params);
         this._prevR = this.params.R;
+        this.syncPlacementScaleToRadius(this.params.selectedAnimal);
         this._workerSendKernel();
 
         this.refreshGUI();
@@ -348,6 +349,7 @@ class AppCoreAnimalMethods {
     const effectiveScale = this.getEffectivePlacementScale(scale);
     this.applyScaledAnimalParams(animal, effectiveScale, { baseR });
     this.updateAutomatonParams();
+    this.syncPlacementScaleToRadius(this.params.selectedAnimal);
     if (refreshGUI) this.refreshGUI();
     return true;
   }
@@ -389,6 +391,35 @@ class AppCoreAnimalMethods {
     return fallback;
   }
 
+  _getRadiusLinkedPlacementScale(selection = this.params.selectedAnimal) {
+    const animal = this._resolveAnimalForPlacement(selection);
+    const sourceParams = this._getAnimalSourceParams(animal) || {};
+    const sourceR = Number(sourceParams.R);
+    const currentR = Number(this.params.R);
+
+    if (
+      Number.isFinite(sourceR) &&
+      sourceR > 0 &&
+      Number.isFinite(currentR) &&
+      currentR > 0
+    ) {
+      return currentR / sourceR;
+    }
+
+    return null;
+  }
+
+  syncPlacementScaleToRadius(selection = this.params.selectedAnimal) {
+    const linkedScale = this._getRadiusLinkedPlacementScale(selection);
+    const fallback = this.getEffectivePlacementScale(this.params.placeScale);
+    const nextRaw = Number.isFinite(linkedScale) ? linkedScale : fallback;
+    const next = constrain(nextRaw, 0.25, 4);
+
+    this.params.placeScale = next;
+    this._lastPlacementScale = next;
+    return next;
+  }
+
   applyScaledAnimalParams(animal, scale = 1, { baseR = null } = {}) {
     if (!animal || !animal.params) return scale;
 
@@ -418,6 +449,8 @@ class AppCoreAnimalMethods {
   }
 
   updatePlacementScale(scale) {
+    this.syncPlacementScaleToRadius(this.params.selectedAnimal);
+
     const animal = this.getSelectedAnimal();
     const sourceParams = this._getAnimalSourceParams(animal) || {};
     const sourceR = Number(sourceParams.R);
@@ -437,7 +470,17 @@ class AppCoreAnimalMethods {
     const next = constrain(Number(scale) || 1, 0.25, 4);
     this.params.placeScale = next;
     this._lastPlacementScale = next;
-    this.applySelectedAnimalScaledRT(next, { baseR, refreshGUI: true });
+
+    const updated = this.applySelectedAnimalScaledRT(next, {
+      baseR,
+      refreshGUI: false,
+    });
+
+    if (!updated) {
+      this.syncPlacementScaleToRadius(this.params.selectedAnimal);
+    }
+
+    this.refreshGUI();
   }
 
   _coercePolarModeValue(mode = this.params.polarMode) {
@@ -527,7 +570,7 @@ class AppCoreAnimalMethods {
     const sourceParams = this._getAnimalSourceParams(animal) || {};
     const sourceR = Number(sourceParams.R);
     const dim = Number(this.params.dimension) || 2;
-    if (dim <= 2 && Number.isFinite(sourceR) && sourceR > 0) {
+    if (Number.isFinite(sourceR) && sourceR > 0) {
       const targetR = Math.max(2, Number(this.params.R) || sourceR);
       scale = targetR / sourceR;
     }

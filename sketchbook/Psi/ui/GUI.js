@@ -5,12 +5,33 @@ class GUI {
     this.bindings = {};
     this.massControl = { nucleusMassLog10: -27 };
     this.recordButton = null;
+    this._tabsReady = false;
+    this._disposed = false;
     this.pane = new Tweakpane.Pane({
       title: `${this.appcore.metadata.name} ${this.appcore.metadata.version} by ${this.appcore.metadata.author}`,
       expanded: true,
     });
 
-    this.setupTabs();
+    const buildTabs = () => {
+      if (this._disposed) return;
+      if (this._tabsReady) return;
+      this._tabsReady = true;
+      this.setupTabs();
+    };
+
+    if (
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.scheduleFrameFriendlyTask === "function"
+    ) {
+      AppDiagnostics.scheduleFrameFriendlyTask(buildTabs, {
+        logger: this.appcore?._diagnosticsLogger,
+        label: "Psi GUI bootstrap",
+        timeoutMs: 240,
+        useIdle: true,
+      });
+    } else {
+      buildTabs();
+    }
   }
 
   setupTabs() {
@@ -524,6 +545,18 @@ class GUI {
   }
 
   enforceConstraints() {
+    if (
+      !this._tabsReady ||
+      !this.pane ||
+      !this.bindings.n ||
+      !this.bindings.l ||
+      !this.bindings.m
+    ) {
+      this.syncMassControlFromParams();
+      this.appcore.requestRender();
+      return;
+    }
+
     const params = this.appcore.params;
 
     params.n = Math.max(
@@ -575,6 +608,11 @@ class GUI {
   }
 
   updateViewConstraints() {
+    if (!this._tabsReady || !this.pane || !this.bindings.sliceOffset) {
+      this.appcore.requestRender();
+      return;
+    }
+
     const params = this.appcore.params;
 
     this.bindings.sliceOffset.min = -params.viewRadius;
@@ -590,8 +628,22 @@ class GUI {
   }
 
   refresh() {
+    if (!this._tabsReady || !this.pane) return;
+
     this.syncMassControlFromParams();
     this.syncMediaControls();
     this.pane.refresh();
+  }
+
+  dispose() {
+    this._disposed = true;
+    this.recordButton = null;
+    this.bindings = {};
+
+    if (this.pane && typeof this.pane.dispose === "function") {
+      this.pane.dispose();
+    }
+
+    this.pane = null;
   }
 }

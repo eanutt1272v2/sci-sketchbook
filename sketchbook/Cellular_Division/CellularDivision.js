@@ -53,9 +53,40 @@ function disposeAppCore() {
   appcore = null;
 }
 
+function scheduleStartupInitialisation(task) {
+  if (typeof task !== "function") return;
+
+  if (
+    typeof AppDiagnostics !== "undefined" &&
+    typeof AppDiagnostics.scheduleFrameFriendlyTask === "function"
+  ) {
+    AppDiagnostics.scheduleFrameFriendlyTask(task, {
+      logger: diagnosticsLogger,
+      label: "Cellular Division AppCore initialisation",
+      timeoutMs: 200,
+      useIdle: true,
+    });
+    return;
+  }
+
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => {
+      setTimeout(task, 0);
+    });
+    return;
+  }
+
+  setTimeout(task, 0);
+}
+
 async function setup() {
   try {
-    font = await loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
+    font = await AssetLoader.loadPreferredFont({
+      family: "Iosevka",
+      woff2Path: "../../_shared/fonts/Iosevka-Regular.woff2",
+      ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
+      logger: diagnosticsLogger,
+    });
   } catch (error) {
     diagnosticsLogger.error("Failed to load startup assets:", error);
     return;
@@ -64,7 +95,7 @@ async function setup() {
   mainCanvas = createReadbackOptimisedCanvas(windowWidth, windowHeight);
   setupCanvasProperties(mainCanvas);
 
-  requestAnimationFrame(() => {
+  scheduleStartupInitialisation(() => {
     disposeAppCore();
     try {
       appcore = new AppCore({ metadata });

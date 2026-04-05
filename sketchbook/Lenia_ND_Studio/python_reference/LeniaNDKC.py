@@ -1225,7 +1225,7 @@ class Lenia:
 
     def _load_ui_font(self):
         legacy_bitmap = os.path.join(LEGACY_RESOURCE_DIR, 'bitocra-13.pil')
-        modern_ttf = os.path.join(SHARED_FONTS_DIR, 'Iosevka-Regular.ttf')
+        modern_ttf = os.path.join(SHARED_FONTS_DIR, 'Iosevka-Regular.woff2')
         if os.path.exists(legacy_bitmap):
             try:
                 return PIL.ImageFont.load(legacy_bitmap)
