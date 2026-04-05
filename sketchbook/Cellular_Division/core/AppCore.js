@@ -10,7 +10,13 @@ class AppCore {
         : { info() {}, warn() {}, error() {}, debug() {} };
     this.maxJSONImportBytes = 32 * 1024 * 1024;
     this.theme = new Theme();
+    this.params = {
+      imageFormat: "png",
+      recordingFPS: 60,
+      videoBitrateMbps: 8,
+    };
     this.sim = new Simulation(this.theme);
+    this.media = new Media(this);
     this.ui = new UIManager(this);
 
     this._themeMediaQuery = null;
@@ -88,10 +94,15 @@ class AppCore {
       this.ui.dispose();
     }
 
+    if (this.media && typeof this.media.dispose === "function") {
+      this.media.dispose();
+    }
+
     if (this.sim && typeof this.sim.dispose === "function") {
       this.sim.dispose();
     }
 
+    this.media = null;
     this.ui = null;
     this.sim = null;
   }
@@ -108,88 +119,48 @@ class AppCore {
     this.ui.toggleVisibility();
   }
 
+  refreshGUI() {}
+
+  exportImage() {
+    if (this.media && typeof this.media.exportImage === "function") {
+      this.media.exportImage();
+    }
+  }
+
   exportParamsJSON() {
-    const payload = {
-      format: "simpipe.params",
-      metadata: this.metadata,
-      params: this._getParamsSnapshot(),
-      exportedAt: new Date().toISOString(),
-    };
-    this._downloadJSON(payload, this._getFilename("params.json"));
+    if (this.media && typeof this.media.exportParamsJSON === "function") {
+      this.media.exportParamsJSON();
+    }
   }
 
   importParamsJSON() {
-    this._openJSONFileDialog((data) => {
-      if (
-        !data ||
-        typeof data !== "object" ||
-        data.format !== "simpipe.params"
-      ) {
-        throw new Error("[Cellular Division] Invalid params JSON payload");
-      }
-
-      this._applyParamsSnapshot(data.params || {});
-    });
+    if (this.media && typeof this.media.importParamsJSON === "function") {
+      this.media.importParamsJSON();
+    }
   }
 
   exportStatisticsJSON() {
-    const payload = {
-      format: "simpipe.stats",
-      metadata: this.metadata,
-      statistics: this._getStatisticsSnapshot(),
-      exportedAt: new Date().toISOString(),
-    };
-    this._downloadJSON(payload, this._getFilename("stats.json"));
+    if (this.media && typeof this.media.exportStatisticsJSON === "function") {
+      this.media.exportStatisticsJSON();
+    }
   }
 
   exportStatisticsCSV() {
-    const s = this._getStatisticsSnapshot();
-    const rows = [];
-    for (const [key, value] of Object.entries(s)) {
-      if (Array.isArray(value)) {
-        rows.push([key + "Length", value.length]);
-      } else {
-        rows.push([key, Number(value) || 0]);
-      }
+    if (this.media && typeof this.media.exportStatisticsCSV === "function") {
+      this.media.exportStatisticsCSV();
     }
-
-    const csv = "key,value\n" + rows.map((r) => `${r[0]},${r[1]}`).join("\n");
-    this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
   }
 
   exportStateJSON() {
-    const payload = {
-      format: "simpipe.state",
-      metadata: this.metadata,
-      params: this._getParamsSnapshot(),
-      statistics: this._getStatisticsSnapshot(),
-      exportedAt: new Date().toISOString(),
-    };
-    this._downloadJSON(payload, this._getFilename("state.json"));
+    if (this.media && typeof this.media.exportStateJSON === "function") {
+      this.media.exportStateJSON();
+    }
   }
 
   importStateJSON() {
-    this._openJSONFileDialog((data) => {
-      if (
-        !data ||
-        typeof data !== "object" ||
-        data.format !== "simpipe.state"
-      ) {
-        throw new Error("[Cellular Division] Invalid state JSON payload");
-      }
-
-      this._applyParamsSnapshot(data.params || {});
-
-      const history = data?.statistics?.history;
-      if (Array.isArray(history)) {
-        const maxHistory = Math.max(10, width);
-        const trimmed = history.slice(-maxHistory);
-        this.sim._history = trimmed.map((value) => {
-          const numeric = Number(value);
-          return Number.isFinite(numeric) ? numeric : 0;
-        });
-      }
-    });
+    if (this.media && typeof this.media.importStateJSON === "function") {
+      this.media.importStateJSON();
+    }
   }
 
   _getParamsSnapshot() {

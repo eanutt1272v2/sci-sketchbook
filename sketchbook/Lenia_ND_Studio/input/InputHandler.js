@@ -540,20 +540,30 @@ class InputHandler {
     }
 
     if (ctrlHeld && (keyValue === "[" || keyValue === "{" || kCode === 219)) {
+      const bounds = this.appcore?.getPlacementScaleBounds
+        ? this.appcore.getPlacementScaleBounds(
+            this.appcore.params?.selectedAnimal,
+          )
+        : { min: 0.25, max: 4 };
       params.placeScale = constrain(
         Math.round((params.placeScale - 0.05) * 20) / 20,
-        0.25,
-        4,
+        bounds.min,
+        bounds.max,
       );
       this.appcore.updatePlacementScale(params.placeScale);
       this.appcore.refreshGUI();
       return false;
     }
     if (ctrlHeld && (keyValue === "]" || keyValue === "}" || kCode === 221)) {
+      const bounds = this.appcore?.getPlacementScaleBounds
+        ? this.appcore.getPlacementScaleBounds(
+            this.appcore.params?.selectedAnimal,
+          )
+        : { min: 0.25, max: 4 };
       params.placeScale = constrain(
         Math.round((params.placeScale + 0.05) * 20) / 20,
-        0.25,
-        4,
+        bounds.min,
+        bounds.max,
       );
       this.appcore.updatePlacementScale(params.placeScale);
       this.appcore.refreshGUI();

@@ -409,11 +409,29 @@ class AppCoreAnimalMethods {
     return null;
   }
 
+  _getCombinedPlacementScale(
+    selection = this.params.selectedAnimal,
+    requestedScale = this.params.placeScale,
+  ) {
+    const sliderScale = this.getEffectivePlacementScale(requestedScale, selection);
+    const zoomScale = this._getRadiusLinkedPlacementScale(selection);
+
+    if (Number.isFinite(zoomScale) && zoomScale > 0) {
+      return zoomScale;
+    }
+
+    return sliderScale;
+  }
+
   syncPlacementScaleToRadius(selection = this.params.selectedAnimal) {
     const linkedScale = this._getRadiusLinkedPlacementScale(selection);
-    const fallback = this.getEffectivePlacementScale(this.params.placeScale);
+    const fallback = this.getEffectivePlacementScale(
+      this.params.placeScale,
+      selection,
+    );
+    const { min, max } = this.getPlacementScaleBounds(selection);
     const nextRaw = Number.isFinite(linkedScale) ? linkedScale : fallback;
-    const next = constrain(nextRaw, 0.25, 4);
+    const next = constrain(nextRaw, min, max);
 
     this.params.placeScale = next;
     this._lastPlacementScale = next;
@@ -449,16 +467,18 @@ class AppCoreAnimalMethods {
   }
 
   updatePlacementScale(scale) {
-    this.syncPlacementScaleToRadius(this.params.selectedAnimal);
+    const selection = this.params.selectedAnimal;
+    this.syncPlacementScaleToRadius(selection);
 
     const animal = this.getSelectedAnimal();
     const sourceParams = this._getAnimalSourceParams(animal) || {};
     const sourceR = Number(sourceParams.R);
+    const { min, max } = this.getPlacementScaleBounds(selection);
     const currentR = Math.max(2, Number(this.params.R) || 13);
     const currentScale = constrain(
       Number(this._lastPlacementScale) || 1,
-      0.25,
-      4,
+      min,
+      max,
     );
     const baseR =
       Number.isFinite(sourceR) && sourceR > 0
@@ -467,17 +487,25 @@ class AppCoreAnimalMethods {
           ? currentR / currentScale
           : currentR;
 
-    const next = constrain(Number(scale) || 1, 0.25, 4);
+    const next = constrain(Number(scale) || 1, min, max);
     this.params.placeScale = next;
     this._lastPlacementScale = next;
 
-    const updated = this.applySelectedAnimalScaledRT(next, {
-      baseR,
-      refreshGUI: false,
-    });
+    const targetR = Math.round(
+      constrain(baseR * next, 2, this.getMaxKernelRadius()),
+    );
 
-    if (!updated) {
-      this.syncPlacementScaleToRadius(this.params.selectedAnimal);
+    if (typeof this.zoomWorld === "function") {
+      this.zoomWorld(targetR);
+    } else {
+      const updated = this.applySelectedAnimalScaledRT(next, {
+        baseR,
+        refreshGUI: false,
+      });
+
+      if (!updated) {
+        this.syncPlacementScaleToRadius(selection);
+      }
     }
 
     this.refreshGUI();
@@ -566,14 +594,8 @@ class AppCoreAnimalMethods {
     const animal = this._resolveAnimalForPlacement(request.selection);
     if (!animal) return;
 
-    let scale = this.getEffectivePlacementScale(request.scale);
-    const sourceParams = this._getAnimalSourceParams(animal) || {};
-    const sourceR = Number(sourceParams.R);
+    const scale = this._getCombinedPlacementScale(request.selection, request.scale);
     const dim = Number(this.params.dimension) || 2;
-    if (Number.isFinite(sourceR) && sourceR > 0) {
-      const targetR = Math.max(2, Number(this.params.R) || sourceR);
-      scale = targetR / sourceR;
-    }
     this._ensureBuffers();
 
     if (dim > 2) {
@@ -638,6 +660,122 @@ class AppCoreAnimalMethods {
     }
   }
 
+  _mapNearestIndex(
+    dstIndex,
+    srcSize,
+    dstSize,
+    { centerWhenCollapsed = false } = {},
+  ) {
+    const safeSrc = Math.max(1, Math.floor(Number(srcSize) || 1));
+    const safeDst = Math.max(1, Math.floor(Number(dstSize) || 1));
+    if (safeSrc <= 1) return 0;
+    if (safeDst <= 1) {
+      return centerWhenCollapsed ? Math.floor((safeSrc - 1) / 2) : 0;
+    }
+    const srcPos = (dstIndex * (safeSrc - 1)) / (safeDst - 1);
+    return Math.max(0, Math.min(safeSrc - 1, Math.round(srcPos)));
+  }
+
+  _fitPatternToFootprint(
+    patternData,
+    srcW,
+    srcH,
+    {
+      targetW = srcW,
+      targetH = srcH,
+      maxW = Infinity,
+      maxH = Infinity,
+    } = {},
+  ) {
+    let width = Math.max(1, Math.floor(Number(srcW) || 1));
+    let height = Math.max(1, Math.floor(Number(srcH) || 1));
+
+    const toFloat32Pattern = (value) => {
+      if (value instanceof Float32Array) return value;
+      if (value instanceof ArrayBuffer) return new Float32Array(value);
+      if (ArrayBuffer.isView(value)) {
+        const bytes = new Uint8Array(
+          value.buffer,
+          value.byteOffset,
+          value.byteLength,
+        );
+        const cloned = new Uint8Array(bytes.length);
+        cloned.set(bytes);
+        const usableLength = Math.floor(cloned.byteLength / 4);
+        return new Float32Array(cloned.buffer, 0, usableLength);
+      }
+      if (Array.isArray(value)) {
+        return Float32Array.from(value, (v) => Number(v) || 0);
+      }
+      return new Float32Array(width * height);
+    };
+
+    let data = toFloat32Pattern(patternData);
+
+    if (data.length !== width * height) {
+      const normalised = new Float32Array(width * height);
+      normalised.set(data.subarray(0, Math.min(data.length, normalised.length)));
+      data = normalised;
+    }
+
+    const desiredW = Math.max(1, Math.floor(Number(targetW) || 1));
+    const desiredH = Math.max(1, Math.floor(Number(targetH) || 1));
+    if (width !== desiredW || height !== desiredH) {
+      const fitted = new Float32Array(desiredW * desiredH);
+      const copyW = Math.min(width, desiredW);
+      const copyH = Math.min(height, desiredH);
+      const srcOffX = Math.floor((width - copyW) / 2);
+      const srcOffY = Math.floor((height - copyH) / 2);
+      const dstOffX = Math.floor((desiredW - copyW) / 2);
+      const dstOffY = Math.floor((desiredH - copyH) / 2);
+
+      for (let y = 0; y < copyH; y++) {
+        const srcRow = (srcOffY + y) * width + srcOffX;
+        const dstRow = (dstOffY + y) * desiredW + dstOffX;
+        for (let x = 0; x < copyW; x++) {
+          fitted[dstRow + x] = data[srcRow + x] || 0;
+        }
+      }
+
+      data = fitted;
+      width = desiredW;
+      height = desiredH;
+    }
+
+    const limitW = Number.isFinite(maxW)
+      ? Math.max(1, Math.floor(Number(maxW) || 1))
+      : Infinity;
+    const limitH = Number.isFinite(maxH)
+      ? Math.max(1, Math.floor(Number(maxH) || 1))
+      : Infinity;
+
+    if (width > limitW || height > limitH) {
+      const copyW = Math.min(width, limitW);
+      const copyH = Math.min(height, limitH);
+      const srcOffX = Math.floor((width - copyW) / 2);
+      const srcOffY = Math.floor((height - copyH) / 2);
+      const cropped = new Float32Array(copyW * copyH);
+
+      for (let y = 0; y < copyH; y++) {
+        const srcRow = (srcOffY + y) * width + srcOffX;
+        const dstRow = y * copyW;
+        for (let x = 0; x < copyW; x++) {
+          cropped[dstRow + x] = data[srcRow + x] || 0;
+        }
+      }
+
+      data = cropped;
+      width = copyW;
+      height = copyH;
+    }
+
+    return {
+      patternData: data,
+      patternWidth: width,
+      patternHeight: height,
+    };
+  }
+
   _placeAnimalND(animal, cellX, cellY, scale) {
     if (!animal || !animal.cells) return;
     const cellsStr = Array.isArray(animal.cells)
@@ -656,21 +794,16 @@ class AppCoreAnimalMethods {
       const slices = RLECodec.parseND(cellsStr);
       if (!slices || slices.length === 0) return;
 
-      let maxZ = 0,
-        maxW = 0;
-      for (const s of slices) {
-        if (s.z > maxZ) maxZ = s.z;
-        if (s.w > maxW) maxW = s.w;
-      }
-      const offsetZ = Math.floor((depth - (maxZ + 1)) / 2);
-      const offsetW = extraDims >= 2 ? Math.floor((depth - (maxW + 1)) / 2) : 0;
+      const sourceSliceMap = new Map();
+      let maxSourceZIndex = 0;
+      let maxSourceWIndex = 0;
+      let maxSliceWidth = 0;
+      let maxSliceHeight = 0;
 
-      const planeEntries = [];
       for (const slice of slices) {
-        const cz = slice.z + offsetZ;
-        const cw = slice.w + offsetW;
-        if (cz < 0 || cz >= depth || cw < 0 || cw >= depth) continue;
-        const plane = extraDims >= 2 ? cz + cw * depth : cz;
+        const sourceZIndex = Math.max(0, Math.floor(Number(slice.z) || 0));
+        const sourceWIndex =
+          extraDims >= 2 ? Math.max(0, Math.floor(Number(slice.w) || 0)) : 0;
 
         const grid = slice.grid;
         const h = grid.length;
@@ -678,19 +811,100 @@ class AppCoreAnimalMethods {
         if (w === 0 || h === 0) continue;
 
         const patternData = this._scaleGrid(grid, w, h, scale);
-        planeEntries.push({
-          plane,
+        const scaledWidth =
+          Math.abs((scale || 1) - 1) < 1e-6
+            ? w
+            : Math.max(1, Math.round(w * scale));
+        const scaledHeight =
+          Math.abs((scale || 1) - 1) < 1e-6
+            ? h
+            : Math.max(1, Math.round(h * scale));
+
+        if (scaledWidth > maxSliceWidth) maxSliceWidth = scaledWidth;
+        if (scaledHeight > maxSliceHeight) maxSliceHeight = scaledHeight;
+        if (sourceZIndex > maxSourceZIndex) maxSourceZIndex = sourceZIndex;
+        if (sourceWIndex > maxSourceWIndex) maxSourceWIndex = sourceWIndex;
+
+        sourceSliceMap.set(`${sourceZIndex},${sourceWIndex}`, {
           patternData,
-          patternWidth:
-            Math.abs((scale || 1) - 1) < 1e-6
-              ? w
-              : Math.max(1, Math.round(w * scale)),
-          patternHeight:
-            Math.abs((scale || 1) - 1) < 1e-6
-              ? h
-              : Math.max(1, Math.round(h * scale)),
+          patternWidth: scaledWidth,
+          patternHeight: scaledHeight,
         });
       }
+
+      if (sourceSliceMap.size === 0) return;
+
+      // Scale depth support as well so ND stamping follows X/Y/Z/(W) uniformly.
+      const sourceZCount = maxSourceZIndex + 1;
+      const sourceWCount = extraDims >= 2 ? maxSourceWIndex + 1 : 1;
+      const targetZCount = Math.max(1, Math.round(sourceZCount * scale));
+      const targetWCount =
+        extraDims >= 2 ? Math.max(1, Math.round(sourceWCount * scale)) : 1;
+      const worldOffsetZ = Math.floor((depth - targetZCount) / 2);
+      const worldOffsetW =
+        extraDims >= 2 ? Math.floor((depth - targetWCount) / 2) : 0;
+
+      const preparedSourceSliceMap = new Map();
+      for (const [key, source] of sourceSliceMap.entries()) {
+        preparedSourceSliceMap.set(
+          key,
+          this._fitPatternToFootprint(
+            source.patternData,
+            source.patternWidth,
+            source.patternHeight,
+            {
+              targetW: maxSliceWidth,
+              targetH: maxSliceHeight,
+              maxW: size,
+              maxH: size,
+            },
+          ),
+        );
+      }
+
+      const planeEntries = [];
+      for (let targetWIndex = 0; targetWIndex < targetWCount; targetWIndex++) {
+        const sourceWIndex =
+          extraDims >= 2
+            ? this._mapNearestIndex(targetWIndex, sourceWCount, targetWCount, {
+                centerWhenCollapsed: true,
+              })
+            : 0;
+        const worldWIndex = targetWIndex + worldOffsetW;
+        if (extraDims >= 2 && (worldWIndex < 0 || worldWIndex >= depth)) {
+          continue;
+        }
+
+        for (let targetZIndex = 0; targetZIndex < targetZCount; targetZIndex++) {
+          const sourceZIndex = this._mapNearestIndex(
+            targetZIndex,
+            sourceZCount,
+            targetZCount,
+            {
+              centerWhenCollapsed: true,
+            },
+          );
+          const worldZIndex = targetZIndex + worldOffsetZ;
+          if (worldZIndex < 0 || worldZIndex >= depth) continue;
+
+          const source = preparedSourceSliceMap.get(
+            `${sourceZIndex},${sourceWIndex}`,
+          );
+          if (!source) continue;
+
+          const plane =
+            extraDims >= 2
+              ? worldZIndex + worldWIndex * depth
+              : worldZIndex;
+          planeEntries.push({
+            plane,
+            patternData: source.patternData,
+            patternWidth: source.patternWidth,
+            patternHeight: source.patternHeight,
+          });
+        }
+      }
+
       if (planeEntries.length === 0) return;
 
       this._workerNDMutation({
@@ -708,18 +922,25 @@ class AppCoreAnimalMethods {
       if (w === 0 || h === 0) return;
 
       const patternData = this._scaleGrid(grid, w, h, scale);
-      const pw =
+      let pw =
         Math.abs((scale || 1) - 1) < 1e-6
           ? w
           : Math.max(1, Math.round(w * scale));
-      const ph =
+      let ph =
         Math.abs((scale || 1) - 1) < 1e-6
           ? h
           : Math.max(1, Math.round(h * scale));
 
+      const fitted = this._fitPatternToFootprint(patternData, pw, ph, {
+        maxW: size,
+        maxH: size,
+      });
+      pw = fitted.patternWidth;
+      ph = fitted.patternHeight;
+
       this._workerNDMutation({
         type: "place",
-        patternData,
+        patternData: fitted.patternData,
         patternWidth: pw,
         patternHeight: ph,
         cellX,
@@ -738,15 +959,10 @@ class AppCoreAnimalMethods {
     const pw = Math.max(1, Math.round(w * scale));
     const ph = Math.max(1, Math.round(h * scale));
     const data = new Float32Array(ph * pw);
-    const mapNearestIndex = (dstIndex, srcSize, dstSize) => {
-      if (srcSize <= 1 || dstSize <= 1) return 0;
-      const srcPos = (dstIndex * (srcSize - 1)) / (dstSize - 1);
-      return Math.max(0, Math.min(srcSize - 1, Math.round(srcPos)));
-    };
     for (let dy = 0; dy < ph; dy++) {
       for (let dx = 0; dx < pw; dx++) {
-        const srcX = mapNearestIndex(dx, w, pw);
-        const srcY = mapNearestIndex(dy, h, ph);
+        const srcX = this._mapNearestIndex(dx, w, pw);
+        const srcY = this._mapNearestIndex(dy, h, ph);
         data[dy * pw + dx] = grid[srcY]?.[srcX] || 0;
       }
     }

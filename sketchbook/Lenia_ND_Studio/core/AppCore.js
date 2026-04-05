@@ -201,9 +201,8 @@ class AppCore {
     this._pendingPlacement = null;
     this._pendingMutations = [];
     this._lastPlacement = { cellX: null, cellY: null, atMs: 0 };
-    this._lastPlacementScale = Math.max(
-      0.25,
-      Math.min(4, Number(this.params.placeScale) || 1),
+    this._lastPlacementScale = this.getEffectivePlacementScale(
+      this.params.placeScale,
     );
     this._skipNextAnimalParamsLoad = false;
     this._lastAnimalParamsSelection = null;

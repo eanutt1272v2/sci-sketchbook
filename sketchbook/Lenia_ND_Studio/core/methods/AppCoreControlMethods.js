@@ -87,8 +87,21 @@ class AppCoreControlMethods {
     return Math.round(constrain(raw, 2, this.getMaxKernelRadius(size)));
   }
 
-  getEffectivePlacementScale(scale = this.params.placeScale) {
-    const uiScale = constrain(Number(scale) || 1, 0.25, 4);
+  getPlacementScaleBounds(selection = this.params.selectedAnimal) {
+    const minScale = 0.25;
+    const hardMax = 16;
+    return {
+      min: minScale,
+      max: hardMax,
+    };
+  }
+
+  getEffectivePlacementScale(
+    scale = this.params.placeScale,
+    selection = this.params.selectedAnimal,
+  ) {
+    const { min, max } = this.getPlacementScaleBounds(selection);
+    const uiScale = constrain(Number(scale) || 1, min, max);
     return uiScale;
   }
 
@@ -233,8 +246,8 @@ class AppCoreControlMethods {
         this.params.ndActiveAxis = "z";
       }
 
-      //this.params.placeScale = 1;
-      //this._lastPlacementScale = 1;
+      this.params.placeScale = 1;
+      this._lastPlacementScale = 1;
 
       this._applyAnimalSource();
 
@@ -546,6 +559,10 @@ class AppCoreControlMethods {
 
       if (this.gui && typeof this.gui.syncNDSliceBounds === "function") {
         this.gui.syncNDSliceBounds();
+      }
+
+      if (this.gui && typeof this.gui.syncPlacementScaleBounds === "function") {
+        this.gui.syncPlacementScaleBounds();
       }
 
       if (this.gui && typeof this.gui.syncAnimalSelectors === "function") {

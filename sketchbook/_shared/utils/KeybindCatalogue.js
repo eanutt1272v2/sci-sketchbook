@@ -180,6 +180,7 @@ class KeybindCatalogue {
         exportWorld: "Ctrl+Shift+E",
         record: "Ctrl+R",
         exportImage: "Ctrl+S",
+        keymapReference: "#",
       }),
     }),
     fluvia: Object.freeze({
@@ -261,6 +262,7 @@ class KeybindCatalogue {
         exportWorld: "Ctrl+Shift+W",
         record: "Ctrl+R",
         exportImage: "Ctrl+S",
+        keymapReference: "#",
       }),
     }),
     psi: Object.freeze({
@@ -340,6 +342,7 @@ class KeybindCatalogue {
         exportStatsCsv: "Ctrl+Shift+C",
         record: "Ctrl+R",
         exportImage: "Ctrl+S",
+        keymapReference: "#",
       }),
     }),
     cellular: Object.freeze({
@@ -395,6 +398,7 @@ class KeybindCatalogue {
         stateExport: "Ctrl+Shift+S",
         record: "Ctrl+R",
         exportImage: "Ctrl+S",
+        keymapReference: "#",
       }),
     }),
   });

@@ -96,11 +96,12 @@ class GUI {
   }
 
   createSimulationTab(page) {
+    
     const perf = page.addFolder({
       title: "Performance Metrics",
       expanded: true,
     });
-
+    
     perf.addBinding(this.appcore.statistics, "fps", {
       readonly: true,
       label: "FPS [Hz]",
@@ -110,8 +111,17 @@ class GUI {
       max: 100,
     });
 
-    perf.addBinding(this.appcore.statistics, "fps", {
-      label: "",
+    this.addSeparator(page);
+    
+    const keymapShortcut =
+      typeof KeybindCatalogue === "undefined"
+        ? "#"
+        : KeybindCatalogue.getHint("psi", "keymapReference", "#");
+    const keymapHint = {
+      text: `Press ${keymapShortcut} to open keymap reference`,
+    };
+    page.addBinding(keymapHint, "text", {
+      label: "Hint",
       readonly: true,
     });
   }

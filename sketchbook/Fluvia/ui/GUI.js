@@ -185,6 +185,20 @@ class GUI {
       max: 12,
       step: 1,
     });
+
+    this.addSeparator(page);
+
+    const keymapShortcut =
+      typeof KeybindCatalogue === "undefined"
+        ? "#"
+        : KeybindCatalogue.getHint("fluvia", "keymapReference", "#");
+    const keymapHint = {
+      text: `Press ${keymapShortcut} to open keymap reference`,
+    };
+    page.addBinding(keymapHint, "text", {
+      label: "Hint",
+      readonly: true,
+    });
   }
 
   createParametersTab(page) {
@@ -468,7 +482,7 @@ class GUI {
 
     this.addSeparator(page);
 
-    const geomorphFolder = page.addFolder({ title: "Mass Balance" });
+    const geomorphFolder = page.addFolder({ title: "Mass Balance", expanded: false });
 
     this.addGraphWithValue(geomorphFolder, statistics, "erosionRate", {
       label: "Total Erosion Rate [volume/s]",
@@ -521,7 +535,7 @@ class GUI {
 
     this.addSeparator(page);
 
-    const compositeFolder = page.addFolder({ title: "Composite Blend" });
+    const compositeFolder = page.addFolder({ title: "Composite Blend", expanded: false });
 
     this.addGraphWithValue(
       compositeFolder,

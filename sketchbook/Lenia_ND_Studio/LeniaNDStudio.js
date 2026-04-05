@@ -170,7 +170,7 @@ function setupCanvasProperties(canvas) {
   noSmooth();
   textFont(font || "monospace");
   pixelDensity(1);
-  frameRate(256);
+  frameRate(120);
 }
 
 function mouseClicked(event) {

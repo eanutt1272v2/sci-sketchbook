@@ -18,6 +18,7 @@ class GUI {
     this._animalMenuState = null;
     this._lastAnimalSelection = String(this.params?.selectedAnimal || "");
     this.recordButton = null;
+    this.placeScaleBinding = null;
     this.ndSliceZBinding = null;
     this.ndSliceWBinding = null;
     this._statsGraphWrapper = null;
@@ -43,6 +44,7 @@ class GUI {
       this.pane = null;
       this.animalBinding = null;
       this.recordButton = null;
+      this.placeScaleBinding = null;
       this.ndSliceZBinding = null;
       this.ndSliceWBinding = null;
       this.setupTabs();
@@ -124,6 +126,7 @@ class GUI {
         title: this.withHint("Random Parameters", "randomParams", "M"),
       })
       .on("click", () => this.appcore?.randomiseParams(false));
+
     this.addSeparator(page);
 
     const perf = page.addFolder({
@@ -403,6 +406,20 @@ class GUI {
           .on("click", () => this.appcore?.cycleNDActiveAxis(1));
       }
     }
+
+    this.addSeparator(page);
+
+    const keymapShortcut =
+      typeof KeybindCatalogue === "undefined"
+        ? "#"
+        : KeybindCatalogue.getHint("lenia", "keymapReference", "#");
+    const keymapHint = {
+      text: `Press ${keymapShortcut} to open keymap reference`,
+    };
+    page.addBinding(keymapHint, "text", {
+      label: "Hint",
+      readonly: true,
+    });
   }
 
   createParametersTab(page) {
@@ -733,11 +750,15 @@ class GUI {
       label: this.withHint("Click to Place", "placeMode", "Shift+X"),
     });
 
-    placementFolder
+    const placementScaleBounds = this.appcore?.getPlacementScaleBounds
+      ? this.appcore.getPlacementScaleBounds(params.selectedAnimal)
+      : { min: 0.25, max: 4 };
+
+    this.placeScaleBinding = placementFolder
       .addBinding(params, "placeScale", {
         label: this.withHint("Placement Scale", "placeScale", "Ctrl+[/]"),
-        min: 0.25,
-        max: 4,
+        min: placementScaleBounds.min,
+        max: placementScaleBounds.max,
         step: 0.05,
       })
       .on("change", () => {
@@ -757,6 +778,37 @@ class GUI {
         if (!this.appcore) return;
         this.appcore.applySelectedAnimalParams({ refreshGUI: true });
       });
+  }
+
+  syncPlacementScaleBounds() {
+    if (!this.appcore || !this.placeScaleBinding) return;
+    if (typeof this.appcore.getPlacementScaleBounds !== "function") return;
+
+    const bounds = this.appcore.getPlacementScaleBounds(this.params.selectedAnimal);
+    this.placeScaleBinding.min = bounds.min;
+    this.placeScaleBinding.max = bounds.max;
+    this.params.placeScale = constrain(
+      Number(this.params.placeScale) || 1,
+      bounds.min,
+      bounds.max,
+    );
+  }
+
+  syncAnimalSelectors() {
+    if (this.animalBinding && this._animalMenuState && this.animalLibrary) {
+      const token = this.animalLibrary.toAnimalMenuValue(
+        this.params.selectedAnimal,
+      );
+      if (
+        token &&
+        this._animalMenuState.selectedAnimalMenu !== token
+      ) {
+        this._animalMenuState.selectedAnimalMenu = token;
+        this.animalBinding.refresh?.();
+      }
+    }
+
+    this.syncPlacementScaleBounds();
   }
 
   syncNDSliceBounds() {

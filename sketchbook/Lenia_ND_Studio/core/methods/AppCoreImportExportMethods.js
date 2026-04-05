@@ -78,7 +78,8 @@ class AppCoreImportExportMethods {
       addNoise: (v) => constrain(v, 0, 10),
       maskRate: (v) => constrain(v, 0, 10),
       paramP: (v) => Math.round(constrain(v, 0, 64)),
-      placeScale: (v) => constrain(v, 0.25, 4),
+      placeScale: (v) =>
+        this.getEffectivePlacementScale(v, p.selectedAnimal),
       recordingFPS: (v) => Math.round(constrain(v, 12, 120)),
       videoBitrateMbps: (v) => constrain(v, 1, 64),
     };
@@ -206,9 +207,9 @@ class AppCoreImportExportMethods {
 
     this._skipNextAnimalParamsLoad = true;
     this._lastAnimalParamsSelection = p.selectedAnimal || "";
-    this._lastPlacementScale = Math.max(
-      0.25,
-      Math.min(4, Number(p.placeScale) || 1),
+    this._lastPlacementScale = this.getEffectivePlacementScale(
+      p.placeScale,
+      p.selectedAnimal,
     );
 
     this._syncSelectedAnimalForActiveDimension(p.selectedAnimal);

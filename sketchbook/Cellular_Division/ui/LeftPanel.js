@@ -3,6 +3,11 @@ class LeftPanel {
     this.sim = appcore.sim;
     this.theme = appcore.theme;
     this._pauseHint = KeybindCatalogue.getHint("cellular", "pause", "P/Space");
+    this.keymapHint = KeybindCatalogue.getHint(
+      "cellular",
+      "keymapReference",
+      "#",
+    );
     this.panel = new AccordionPanel(
       15,
       15,
@@ -62,7 +67,6 @@ class LeftPanel {
 
     this.panel.renderBackground();
     const px = this.panel.contentX();
-
     this.renderStatistics(px);
     this.renderSimulationControls(px);
     this.renderGraph();
@@ -291,6 +295,7 @@ class LeftPanel {
     fill(255, 170);
     textSize(12);
     textAlign(LEFT, BOTTOM);
+    text(`Press ${this.keymapHint} to open keymap reference`, 12, height - 28);
     text(`${name} ${version} by ${author}`, 12, height - 12);
     pop();
   }

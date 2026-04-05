@@ -41,6 +41,45 @@ self.onunhandledrejection = function (event) {
   _reportWorkerError("unhandledrejection", event?.reason);
 };
 
+const ND_MUTATION_MODE = Object.freeze({
+  RANDOMISE: 0,
+  CLEAR: 1,
+  PLACE: 2,
+  PLACE_ND: 3,
+});
+
+function _toNDMutationMode(modeOrType) {
+  const numeric = Number(modeOrType);
+  if (Number.isFinite(numeric)) {
+    const mode = Math.floor(numeric);
+    if (
+      mode === ND_MUTATION_MODE.RANDOMISE ||
+      mode === ND_MUTATION_MODE.CLEAR ||
+      mode === ND_MUTATION_MODE.PLACE ||
+      mode === ND_MUTATION_MODE.PLACE_ND
+    ) {
+      return mode;
+    }
+  }
+
+  const text = String(modeOrType || "")
+    .trim()
+    .toLowerCase();
+  if (text === "randomise" || text === "randomize") {
+    return ND_MUTATION_MODE.RANDOMISE;
+  }
+  if (text === "clear") {
+    return ND_MUTATION_MODE.CLEAR;
+  }
+  if (text === "place") {
+    return ND_MUTATION_MODE.PLACE;
+  }
+  if (text === "placend" || text === "place_nd" || text === "place-nd") {
+    return ND_MUTATION_MODE.PLACE_ND;
+  }
+  return -1;
+}
+
 self.onmessage = function (e) {
   try {
     const msg = e && e.data && typeof e.data === "object" ? e.data : null;
@@ -116,12 +155,21 @@ self.onmessage = function (e) {
       }
 
       if (_ndState) {
-        if (mutation.type === "randomise") {
+        const mutationMode = _toNDMutationMode(
+          mutation.mode != null ? mutation.mode : mutation.type,
+        );
+
+        const resetNDDerivedBuffers = () => {
+          _ndState.potential.fill(0);
+          _ndState.growth.fill(0);
+          if (_ndState.growthOld) _ndState.growthOld.fill(0);
+        };
+
+        if (mutationMode === ND_MUTATION_MODE.RANDOMISE) {
           const R = Number(params.R) || 10;
           const { size, dimension, planeCount, depth } = _ndState;
           _ndState.world.fill(0);
-          _ndState.potential.fill(0);
-          _ndState.growth.fill(0);
+          resetNDDerivedBuffers();
           const blobDim = Math.max(1, Math.floor(R * 0.9));
           const blobCount = 15 + Math.floor(Math.random() * 26);
           const border = Math.floor(R * 1.5);
@@ -172,13 +220,12 @@ self.onmessage = function (e) {
           }
         }
 
-        if (mutation.type === "clear") {
+        if (mutationMode === ND_MUTATION_MODE.CLEAR) {
           _ndState.world.fill(0);
-          _ndState.potential.fill(0);
-          _ndState.growth.fill(0);
+          resetNDDerivedBuffers();
         }
 
-        if (mutation.type === "place") {
+        if (mutationMode === ND_MUTATION_MODE.PLACE) {
           const { patternData, patternWidth, patternHeight, cellX, cellY } =
             mutation;
           const pattern = new Float32Array(patternData);
@@ -201,11 +248,10 @@ self.onmessage = function (e) {
               }
             }
           }
-          _ndState.potential.fill(0);
-          _ndState.growth.fill(0);
+          resetNDDerivedBuffers();
         }
 
-        if (mutation.type === "placeND") {
+        if (mutationMode === ND_MUTATION_MODE.PLACE_ND) {
           const { planeEntries, cellX, cellY } = mutation;
           const { size } = _ndState;
           for (const entry of planeEntries) {
@@ -225,8 +271,7 @@ self.onmessage = function (e) {
               }
             }
           }
-          _ndState.potential.fill(0);
-          _ndState.growth.fill(0);
+          resetNDDerivedBuffers();
         }
 
         const display = ndExtractDisplay(

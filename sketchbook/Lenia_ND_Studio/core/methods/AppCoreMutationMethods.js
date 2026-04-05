@@ -164,18 +164,18 @@ class AppCoreMutationMethods {
     const targetR = Math.round(
       constrain(Number(newR) || this.params.R, 2, this.getMaxKernelRadius()),
     );
-    const oldR = Number(this._prevR);
-    const safeOldR = Number.isFinite(oldR) && oldR > 0 ? oldR : targetR;
+    const appliedR = Number(this._prevR);
+    const safeAppliedR =
+      Number.isFinite(appliedR) && appliedR > 0 ? appliedR : targetR;
 
     this.params.R = targetR;
-    this._prevR = targetR;
     if (typeof this.syncPlacementScaleToRadius === "function") {
       this.syncPlacementScaleToRadius(this.params.selectedAnimal);
     }
 
     this._queueAction("zoomWorld", () =>
       this._queueOrRunMutation(() => {
-        const factor = targetR / safeOldR;
+        const factor = targetR / safeAppliedR;
         const hasBoard = !!this.board.world;
         if (hasBoard && Math.abs(factor - 1) > 1e-6) {
           this._ensureBuffers();
@@ -186,6 +186,7 @@ class AppCoreMutationMethods {
           }
         }
         this.updateAutomatonParams();
+        this._prevR = targetR;
       }),
     );
   }
@@ -224,7 +225,67 @@ class AppCoreMutationMethods {
     const b = this.board;
     this._ensureBuffers();
     const ndConfig = this.buildNDConfig();
-    const transfers = [b.world.buffer, b.potential.buffer, b.growth.buffer];
+    const safeMutation =
+      mutation && typeof mutation === "object" ? mutation : {};
+
+    const toNDMutationMode = (modeOrType) => {
+      const numeric = Number(modeOrType);
+      if (Number.isFinite(numeric)) return Math.floor(numeric);
+
+      const text = String(modeOrType || "")
+        .trim()
+        .toLowerCase();
+      if (text === "randomise" || text === "randomize") return 0;
+      if (text === "clear") return 1;
+      if (text === "place") return 2;
+      if (text === "placend" || text === "place_nd" || text === "place-nd") {
+        return 3;
+      }
+      return -1;
+    };
+
+    const inferredMode =
+      safeMutation.mode != null
+        ? Number(safeMutation.mode)
+        : toNDMutationMode(safeMutation.type);
+    const mutationPayload =
+      Number.isFinite(inferredMode) && inferredMode >= 0
+        ? { ...safeMutation, mode: Math.floor(inferredMode) }
+        : safeMutation;
+
+    const toFloat32Pattern = (value) => {
+      if (value instanceof Float32Array) return value;
+      if (value instanceof ArrayBuffer) return new Float32Array(value);
+      if (ArrayBuffer.isView(value)) {
+        const bytes = new Uint8Array(
+          value.buffer,
+          value.byteOffset,
+          value.byteLength,
+        );
+        const cloned = new Uint8Array(bytes.length);
+        cloned.set(bytes);
+        const usableLength = Math.floor(cloned.byteLength / 4);
+        return new Float32Array(cloned.buffer, 0, usableLength);
+      }
+      if (Array.isArray(value)) {
+        return Float32Array.from(value, (v) => Number(v) || 0);
+      }
+      return new Float32Array(0);
+    };
+
+    const transferSeen = new Set();
+    const transfers = [];
+    const addTransfer = (buffer) => {
+      if (!(buffer instanceof ArrayBuffer)) return;
+      if (transferSeen.has(buffer)) return;
+      transferSeen.add(buffer);
+      transfers.push(buffer);
+    };
+
+    addTransfer(b.world.buffer);
+    addTransfer(b.potential.buffer);
+    addTransfer(b.growth.buffer);
+
     const msg = {
       type: "ndMutation",
       params: { ...this.params, size: this.params.latticeExtent },
@@ -232,23 +293,27 @@ class AppCoreMutationMethods {
       world: b.world.buffer,
       potential: b.potential.buffer,
       growth: b.growth.buffer,
-      mutation,
+      mutation: mutationPayload,
     };
-    if (mutation.patternData) {
-      msg.mutation = { ...mutation, patternData: mutation.patternData.buffer };
-      transfers.push(mutation.patternData.buffer);
+    if (mutationPayload.patternData) {
+      const pattern = toFloat32Pattern(mutationPayload.patternData);
+      msg.mutation = { ...mutationPayload, patternData: pattern.buffer };
+      addTransfer(pattern.buffer);
     }
-    if (mutation.planeEntries) {
+    if (Array.isArray(mutationPayload.planeEntries)) {
+      const planeEntries = mutationPayload.planeEntries.map((entry = {}) => {
+        const pattern = toFloat32Pattern(entry.patternData);
+        addTransfer(pattern.buffer);
+        return {
+          ...entry,
+          patternData: pattern.buffer,
+        };
+      });
+
       msg.mutation = {
-        ...mutation,
-        planeEntries: mutation.planeEntries.map((e) => ({
-          ...e,
-          patternData: e.patternData.buffer,
-        })),
+        ...mutationPayload,
+        planeEntries,
       };
-      for (const e of mutation.planeEntries) {
-        transfers.push(e.patternData.buffer);
-      }
     }
     b.world = null;
     b.potential = null;
