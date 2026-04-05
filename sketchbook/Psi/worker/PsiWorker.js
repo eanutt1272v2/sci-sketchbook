@@ -17,6 +17,49 @@ const _workerSanitisers =
     },
   });
 
+function _toWorkerErrorPayload(stage, error) {
+  if (error && typeof error === "object") {
+    return {
+      type: "workerError",
+      stage,
+      name: String(error.name || "Error"),
+      message: String(error.message || "Worker failure"),
+      stack: String(error.stack || ""),
+    };
+  }
+
+  return {
+    type: "workerError",
+    stage,
+    name: "Error",
+    message: String(error || "Worker failure"),
+    stack: "",
+  };
+}
+
+function _reportWorkerError(stage, error) {
+  const payload = _toWorkerErrorPayload(stage, error);
+  try {
+    self.postMessage(payload);
+  } catch {
+    // Ignore recursive post failures.
+  }
+  try {
+    console.error(`[PsiWorker] ${payload.stage}: ${payload.message}`);
+  } catch {
+    // Console may be unavailable in some worker runtimes.
+  }
+}
+
+self.onerror = function (_message, _source, _lineno, _colno, error) {
+  _reportWorkerError("runtime", error || _message);
+  return false;
+};
+
+self.onunhandledrejection = function (event) {
+  _reportWorkerError("unhandledrejection", event?.reason);
+};
+
 const CONSTS = {
   electronMassKg: 9.1093837015e-31,
   protonMassKg: 1.67262192369e-27,
@@ -483,79 +526,83 @@ function computeGrid(
 }
 
 self.onmessage = function (e) {
-  const msg = e && e.data && typeof e.data === "object" ? e.data : {};
-  const { type } = msg;
+  try {
+    const msg = e && e.data && typeof e.data === "object" ? e.data : {};
+    const { type } = msg;
 
-  if (type === "render") {
-    const safe = sanitiseRenderPayload(msg);
+    if (type === "render") {
+      const safe = sanitiseRenderPayload(msg);
 
-    const { grid, peak } = computeGrid(
-      safe.n,
-      safe.l,
-      safe.m,
-      safe.res,
-      safe.viewRadius,
-      safe.slicePlane,
-      safe.sliceOffset,
-      safe.viewCentre,
-      safe.nuclearCharge,
-      safe.useReducedMass,
-      safe.nucleusMassKg,
-      safe.reuseGridBuffer,
-    );
-
-    let analysisStats = null;
-    let analysisPeak = null;
-    let analysisAMu = null;
-    const canonicalResolution = safe.analysisResolution;
-    const canonicalViewRadius = safe.analysisViewRadius;
-
-    if (safe.includeAnalysis) {
-      const canonical = computeGrid(
+      const { grid, peak } = computeGrid(
         safe.n,
         safe.l,
         safe.m,
-        canonicalResolution,
-        canonicalViewRadius,
+        safe.res,
+        safe.viewRadius,
         safe.slicePlane,
         safe.sliceOffset,
-        { x: 0, y: 0, z: 0 },
+        safe.viewCentre,
         safe.nuclearCharge,
         safe.useReducedMass,
         safe.nucleusMassKg,
+        safe.reuseGridBuffer,
       );
 
-      analysisPeak = canonical.peak;
-      analysisAMu = canonical.aMu;
-      analysisStats = computeDensityStatistics(
-        canonical.grid,
-        canonicalResolution,
-        canonicalViewRadius,
+      let analysisStats = null;
+      let analysisPeak = null;
+      let analysisAMu = null;
+      const canonicalResolution = safe.analysisResolution;
+      const canonicalViewRadius = safe.analysisViewRadius;
+
+      if (safe.includeAnalysis) {
+        const canonical = computeGrid(
+          safe.n,
+          safe.l,
+          safe.m,
+          canonicalResolution,
+          canonicalViewRadius,
+          safe.slicePlane,
+          safe.sliceOffset,
+          { x: 0, y: 0, z: 0 },
+          safe.nuclearCharge,
+          safe.useReducedMass,
+          safe.nucleusMassKg,
+        );
+
+        analysisPeak = canonical.peak;
+        analysisAMu = canonical.aMu;
+        analysisStats = computeDensityStatistics(
+          canonical.grid,
+          canonicalResolution,
+          canonicalViewRadius,
+          {
+            n: safe.n,
+            l: safe.l,
+            nuclearCharge: safe.nuclearCharge,
+            useReducedMass: safe.useReducedMass,
+            nucleusMassKg: safe.nucleusMassKg,
+          },
+        );
+      }
+
+      self.postMessage(
         {
-          n: safe.n,
-          l: safe.l,
-          nuclearCharge: safe.nuclearCharge,
-          useReducedMass: safe.useReducedMass,
-          nucleusMassKg: safe.nucleusMassKg,
+          type: "result",
+          requestId: safe.requestId,
+          resolution: safe.res,
+          grid: grid.buffer,
+          peak,
+          analysisPeak,
+          analysisAMu,
+          analysisResolution: canonicalResolution,
+          analysisViewRadius: canonicalViewRadius,
+          analysisSignature: safe.includeAnalysis ? safe.analysisSignature : "",
+          analysisStats,
         },
+        [grid.buffer],
       );
     }
-
-    self.postMessage(
-      {
-        type: "result",
-        requestId: safe.requestId,
-        resolution: safe.res,
-        grid: grid.buffer,
-        peak,
-        analysisPeak,
-        analysisAMu,
-        analysisResolution: canonicalResolution,
-        analysisViewRadius: canonicalViewRadius,
-        analysisSignature: safe.includeAnalysis ? safe.analysisSignature : "",
-        analysisStats,
-      },
-      [grid.buffer],
-    );
+  } catch (error) {
+    _reportWorkerError("onmessage", error);
   }
 };

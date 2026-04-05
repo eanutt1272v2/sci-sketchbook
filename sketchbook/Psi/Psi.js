@@ -3,6 +3,21 @@ p5.disableFriendlyErrors = true;
 let appcore;
 let colourMaps, font;
 
+const diagnosticsLogger =
+  typeof AppDiagnostics !== "undefined" &&
+  typeof AppDiagnostics.resolveLogger === "function"
+    ? AppDiagnostics.resolveLogger("Psi")
+    : { info() {}, warn() {}, error() {}, debug() {} };
+
+if (
+  typeof AppDiagnostics !== "undefined" &&
+  typeof AppDiagnostics.installGlobalErrorHandlers === "function"
+) {
+  AppDiagnostics.installGlobalErrorHandlers("Psi", {
+    logger: diagnosticsLogger,
+  });
+}
+
 function createReadbackOptimisedCanvas(widthPx, heightPx) {
   const canvasEl = document.createElement("canvas");
   try {
@@ -21,7 +36,7 @@ function disposeAppCore() {
 
 const metadata = {
   name: "Psi",
-  version: "v2.9.5-dev",
+  version: "v2.9.7-dev",
   author: "@eanutt1272.v2",
 };
 
@@ -35,7 +50,7 @@ async function setup() {
     font = loadedFont;
     colourMaps = loadedColourMaps;
   } catch (error) {
-    console.error("[Psi] Failed to load startup assets:", error);
+    diagnosticsLogger.error("Failed to load startup assets:", error);
     return;
   }
 
@@ -46,11 +61,16 @@ async function setup() {
 
   requestAnimationFrame(() => {
     disposeAppCore();
-    appcore = new AppCore({
-      metadata,
-      colourMaps,
-      font,
-    });
+    try {
+      appcore = new AppCore({
+        metadata,
+        colourMaps,
+        font,
+      });
+    } catch (error) {
+      diagnosticsLogger.error("Failed to initialise AppCore:", error);
+      disposeAppCore();
+    }
   });
 }
 

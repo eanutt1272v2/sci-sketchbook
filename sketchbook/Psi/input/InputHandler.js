@@ -1,6 +1,12 @@
 class InputHandler {
   constructor(appcore) {
     this.appcore = appcore;
+    this._diagnosticsLogger =
+      appcore?._diagnosticsLogger ||
+      (typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Psi")
+        : { info() {}, warn() {}, error() {}, debug() {} });
     this.gesture = {
       pan: null,
       pinch: null,
@@ -113,8 +119,8 @@ class InputHandler {
     if (keyValue === "#") {
       this.appcore.toggleKeymapRef();
       this.appcore.refreshGUI();
-      console.log(
-        `[Psi] Keymap Reference: ${this.appcore.params.renderKeymapRef}`,
+      this._diagnosticsLogger.info(
+        `Keymap Reference: ${this.appcore.params.renderKeymapRef}`,
       );
       return false;
     }
@@ -144,7 +150,7 @@ class InputHandler {
           this.appcore.media.startRecording();
         }
       } catch (error) {
-        console.error("[Psi] Recording toggle failed:", error);
+        this._diagnosticsLogger.error("Recording toggle failed:", error);
       }
       this.appcore.refreshGUI();
       return false;
@@ -263,7 +269,7 @@ class InputHandler {
     }
 
     if (logMsg) {
-      console.log(`[Psi] ${logMsg}`);
+      this._diagnosticsLogger.info(logMsg);
     }
 
     if (shouldRefreshGUI) {

@@ -1,6 +1,12 @@
 class InputHandler {
   constructor(appcore) {
     this.appcore = appcore;
+    this._diagnosticsLogger =
+      appcore?._diagnosticsLogger ||
+      (typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Fluvia")
+        : { info() {}, warn() {}, error() {}, debug() {} });
     this.keys = {
       up: false,
       down: false,
@@ -83,7 +89,7 @@ class InputHandler {
       try {
         this.appcore.media.openImportDialog();
       } catch (error) {
-        console.error("[Fluvia] Import heightmap failed:", error);
+        this._diagnosticsLogger.error("Import heightmap failed:", error);
       }
       return false;
     }
@@ -115,7 +121,7 @@ class InputHandler {
           this.appcore.media.startRecording();
         }
       } catch (error) {
-        console.error("[Fluvia] Recording toggle failed:", error);
+        this._diagnosticsLogger.error("Recording toggle failed:", error);
       }
       this.appcore.refreshGUI();
       return false;
@@ -125,7 +131,7 @@ class InputHandler {
       try {
         this.appcore.media.exportImage();
       } catch (error) {
-        console.error("[Fluvia] Export image failed:", error);
+        this._diagnosticsLogger.error("Export image failed:", error);
       }
       return false;
     }
@@ -333,7 +339,7 @@ class InputHandler {
       try {
         this.appcore.media.exportWorldJSON();
       } catch (error) {
-        console.error("[Fluvia] Export world failed:", error);
+        this._diagnosticsLogger.error("Export world failed:", error);
       }
       return false;
     }
@@ -342,7 +348,7 @@ class InputHandler {
       try {
         this.appcore.media.importWorldJSON();
       } catch (error) {
-        console.error("[Fluvia] Import world failed:", error);
+        this._diagnosticsLogger.error("Import world failed:", error);
       }
       return false;
     }

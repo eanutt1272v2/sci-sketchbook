@@ -138,10 +138,16 @@ class KeyboardUtils {
   }
 
   static safeHandle(label, action, handler) {
+    const diagnosticsLogger =
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger(label || "Keyboard")
+        : { info() {}, warn() {}, error() {}, debug() {} };
+
     try {
       return handler();
     } catch (error) {
-      console.error(`[${label}] Keyboard ${action} handling failed:`, error);
+      diagnosticsLogger.error(`Keyboard ${action} handling failed:`, error);
       return false;
     }
   }

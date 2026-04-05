@@ -14,13 +14,28 @@ const Config = {
 
 const metadata = {
   name: "Cellular Division",
-  version: "v3.0.3-dev",
+  version: "v3.0.5-dev",
   author: "@eanutt1272.v2",
 };
 
 let appcore;
 let font;
 let mainCanvas;
+
+const diagnosticsLogger =
+  typeof AppDiagnostics !== "undefined" &&
+  typeof AppDiagnostics.resolveLogger === "function"
+    ? AppDiagnostics.resolveLogger("Cellular Division")
+    : { info() {}, warn() {}, error() {}, debug() {} };
+
+if (
+  typeof AppDiagnostics !== "undefined" &&
+  typeof AppDiagnostics.installGlobalErrorHandlers === "function"
+) {
+  AppDiagnostics.installGlobalErrorHandlers("Cellular Division", {
+    logger: diagnosticsLogger,
+  });
+}
 
 function createReadbackOptimisedCanvas(widthPx, heightPx) {
   const canvasEl = document.createElement("canvas");
@@ -42,7 +57,7 @@ async function setup() {
   try {
     font = await loadFont("../../_shared/fonts/Iosevka-Regular.ttf");
   } catch (error) {
-    console.error("[Cellular Division] Failed to load startup assets:", error);
+    diagnosticsLogger.error("Failed to load startup assets:", error);
     return;
   }
 
@@ -51,7 +66,12 @@ async function setup() {
 
   requestAnimationFrame(() => {
     disposeAppCore();
-    appcore = new AppCore({ metadata });
+    try {
+      appcore = new AppCore({ metadata });
+    } catch (error) {
+      diagnosticsLogger.error("Failed to initialise AppCore:", error);
+      disposeAppCore();
+    }
   });
 }
 

@@ -4,6 +4,21 @@ let appcore;
 let font, animalsData, animalsData3D, animalsData4D, colourMaps;
 let mainCanvas;
 
+const diagnosticsLogger =
+  typeof AppDiagnostics !== "undefined" &&
+  typeof AppDiagnostics.resolveLogger === "function"
+    ? AppDiagnostics.resolveLogger("Lenia")
+    : { info() {}, warn() {}, error() {}, debug() {} };
+
+if (
+  typeof AppDiagnostics !== "undefined" &&
+  typeof AppDiagnostics.installGlobalErrorHandlers === "function"
+) {
+  AppDiagnostics.installGlobalErrorHandlers("Lenia", {
+    logger: diagnosticsLogger,
+  });
+}
+
 function createReadbackOptimisedCanvas(widthPx, heightPx) {
   const canvasEl = document.createElement("canvas");
   try {
@@ -22,7 +37,7 @@ function disposeAppCore() {
 
 const metadata = {
   name: "Lenia ND Studio",
-  version: "v2.5.8-dev",
+  version: "v2.6.1-dev",
   author: "@eanutt1272.v2",
 };
 
@@ -48,7 +63,7 @@ async function setup() {
     animalsData4D = loadedAnimals4D;
     colourMaps = loadedColourMaps;
   } catch (error) {
-    console.error("[Lenia] Failed to load startup assets:", error);
+    diagnosticsLogger.error("Failed to load startup assets:", error);
     return;
   }
 
@@ -59,19 +74,24 @@ async function setup() {
 
   requestAnimationFrame(() => {
     disposeAppCore();
-    appcore = new AppCore({
-      metadata,
-      animalsData,
-      animalsByDimension: {
-        2: animalsData,
-        3: animalsData3D,
-        4: animalsData4D,
-      },
-      colourMaps,
-      font,
-    });
+    try {
+      appcore = new AppCore({
+        metadata,
+        animalsData,
+        animalsByDimension: {
+          2: animalsData,
+          3: animalsData3D,
+          4: animalsData4D,
+        },
+        colourMaps,
+        font,
+      });
 
-    appcore.setup();
+      appcore.setup();
+    } catch (error) {
+      diagnosticsLogger.error("Failed to initialise AppCore:", error);
+      disposeAppCore();
+    }
   });
 }
 

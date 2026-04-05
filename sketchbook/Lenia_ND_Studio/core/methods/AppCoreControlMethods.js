@@ -250,8 +250,8 @@ class AppCoreControlMethods {
         this.clearWorld();
       }
 
-      console.log(
-        `[Lenia] ${nextDimension}D mode enabled with ${this.params.latticeExtent}^${nextDimension} world shape and ND tensor stepping.`,
+      this._diagnosticsLogger.info(
+        `${nextDimension}D mode enabled with ${this.params.latticeExtent}^${nextDimension} world shape and ND tensor stepping.`,
       );
 
       if (this.gui && typeof this.gui.rebuildPane === "function") {

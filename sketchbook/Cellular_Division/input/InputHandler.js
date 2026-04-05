@@ -4,6 +4,12 @@ class InputHandler {
     this.sim = sim;
     this.leftPanel = leftPanel;
     this.rightPanel = rightPanel;
+    this._diagnosticsLogger =
+      ui?.appcore?._diagnosticsLogger ||
+      (typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Cellular Division")
+        : { info() {}, warn() {}, error() {}, debug() {} });
 
     this.wasPressed = false;
     this.activeTypingParam = -1;
@@ -188,7 +194,7 @@ class InputHandler {
           this.ui.appcore.media.startRecording();
         }
       } catch (error) {
-        console.error("[Cellular Division] Recording toggle failed:", error);
+        this._diagnosticsLogger.error("Recording toggle failed:", error);
       }
       return;
     }

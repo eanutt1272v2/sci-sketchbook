@@ -4,6 +4,21 @@ let appcore;
 let vertShader, fragShader, colourMaps, font;
 let mainCanvas;
 
+const diagnosticsLogger =
+  typeof AppDiagnostics !== "undefined" &&
+  typeof AppDiagnostics.resolveLogger === "function"
+    ? AppDiagnostics.resolveLogger("Fluvia")
+    : { info() {}, warn() {}, error() {}, debug() {} };
+
+if (
+  typeof AppDiagnostics !== "undefined" &&
+  typeof AppDiagnostics.installGlobalErrorHandlers === "function"
+) {
+  AppDiagnostics.installGlobalErrorHandlers("Fluvia", {
+    logger: diagnosticsLogger,
+  });
+}
+
 function disposeAppCore() {
   if (!appcore || typeof appcore.dispose !== "function") return;
   appcore.dispose();
@@ -12,7 +27,7 @@ function disposeAppCore() {
 
 const metadata = {
   name: "Fluvia",
-  version: "v5.4.4-dev",
+  version: "v5.4.7-dev",
   author: "@eanutt1272.v2",
 };
 
@@ -45,7 +60,7 @@ async function setup() {
       ? loadedFragLines.join("\n")
       : "";
   } catch (error) {
-    console.error("[Fluvia] Failed to load startup assets:", error);
+    diagnosticsLogger.error("Failed to load startup assets:", error);
     return;
   }
 
@@ -56,13 +71,18 @@ async function setup() {
 
   requestAnimationFrame(() => {
     disposeAppCore();
-    appcore = new AppCore({
-      metadata,
-      vertShader,
-      fragShader,
-      colourMaps,
-      font,
-    });
+    try {
+      appcore = new AppCore({
+        metadata,
+        vertShader,
+        fragShader,
+        colourMaps,
+        font,
+      });
+    } catch (error) {
+      diagnosticsLogger.error("Failed to initialise AppCore:", error);
+      disposeAppCore();
+    }
   });
 }
 

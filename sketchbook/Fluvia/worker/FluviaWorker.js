@@ -37,6 +37,49 @@ const _workerSanitisers =
     },
   });
 
+function _toWorkerErrorPayload(stage, error) {
+  if (error && typeof error === "object") {
+    return {
+      type: "workerError",
+      stage,
+      name: String(error.name || "Error"),
+      message: String(error.message || "Worker failure"),
+      stack: String(error.stack || ""),
+    };
+  }
+
+  return {
+    type: "workerError",
+    stage,
+    name: "Error",
+    message: String(error || "Worker failure"),
+    stack: "",
+  };
+}
+
+function _reportWorkerError(stage, error) {
+  const payload = _toWorkerErrorPayload(stage, error);
+  try {
+    self.postMessage(payload);
+  } catch {
+    // Ignore recursive post failures.
+  }
+  try {
+    console.error(`[FluviaWorker] ${payload.stage}: ${payload.message}`);
+  } catch {
+    // Console may be unavailable in some worker runtimes.
+  }
+}
+
+self.onerror = function (_message, _source, _lineno, _colno, error) {
+  _reportWorkerError("runtime", error || _message);
+  return false;
+};
+
+self.onunhandledrejection = function (event) {
+  _reportWorkerError("unhandledrejection", event?.reason);
+};
+
 const SQRT2 = Math.SQRT2;
 const HISTOGRAM_BINS = 256;
 const neighbours = [
@@ -627,78 +670,82 @@ const analysisState = {
 };
 
 self.onmessage = function (e) {
-  const data = e && e.data && typeof e.data === "object" ? e.data : {};
-  if (data.type !== "step") return;
+  try {
+    const data = e && e.data && typeof e.data === "object" ? e.data : {};
+    if (data.type !== "step") return;
 
-  const safe = sanitiseStepPayload(data);
+    const safe = sanitiseStepPayload(data);
 
-  const state = {
-    size: safe.size,
-    area: safe.area,
-    randomSeed: safe.randomSeed,
+    const state = {
+      size: safe.size,
+      area: safe.area,
+      randomSeed: safe.randomSeed,
 
-    dropletsPerFrame: safe.params.dropletsPerFrame,
-    maxAge: safe.params.maxAge,
-    minVolume: safe.params.minVolume,
-    precipitationRate: safe.params.precipitationRate,
-    gravity: safe.params.gravity,
-    momentumTransfer: safe.params.momentumTransfer,
-    entrainment: safe.params.entrainment,
-    depositionRate: safe.params.depositionRate,
-    evaporationRate: safe.params.evaporationRate,
-    sedimentErosionRate: safe.params.sedimentErosionRate,
-    bedrockErosionRate: safe.params.bedrockErosionRate,
-    maxHeightDiff: safe.params.maxHeightDiff,
-    settlingRate: safe.params.settlingRate,
-    learningRate: safe.params.learningRate,
-    heightScale: safe.params.heightScale,
+      dropletsPerFrame: safe.params.dropletsPerFrame,
+      maxAge: safe.params.maxAge,
+      minVolume: safe.params.minVolume,
+      precipitationRate: safe.params.precipitationRate,
+      gravity: safe.params.gravity,
+      momentumTransfer: safe.params.momentumTransfer,
+      entrainment: safe.params.entrainment,
+      depositionRate: safe.params.depositionRate,
+      evaporationRate: safe.params.evaporationRate,
+      sedimentErosionRate: safe.params.sedimentErosionRate,
+      bedrockErosionRate: safe.params.bedrockErosionRate,
+      maxHeightDiff: safe.params.maxHeightDiff,
+      settlingRate: safe.params.settlingRate,
+      learningRate: safe.params.learningRate,
+      heightScale: safe.params.heightScale,
 
-    heightMap: coerceFloatMap(data.heightMap, safe.area),
-    bedrockMap: coerceFloatMap(data.bedrockMap, safe.area),
-    sedimentMap: coerceFloatMap(data.sedimentMap, safe.area),
-    dischargeMap: coerceFloatMap(data.dischargeMap, safe.area),
-    dischargeTrack: coerceFloatMap(data.dischargeTrack, safe.area),
-    momentumX: coerceFloatMap(data.momentumX, safe.area),
-    momentumY: coerceFloatMap(data.momentumY, safe.area),
-    momentumXTrack: coerceFloatMap(data.momentumXTrack, safe.area),
-    momentumYTrack: coerceFloatMap(data.momentumYTrack, safe.area),
-  };
+      heightMap: coerceFloatMap(data.heightMap, safe.area),
+      bedrockMap: coerceFloatMap(data.bedrockMap, safe.area),
+      sedimentMap: coerceFloatMap(data.sedimentMap, safe.area),
+      dischargeMap: coerceFloatMap(data.dischargeMap, safe.area),
+      dischargeTrack: coerceFloatMap(data.dischargeTrack, safe.area),
+      momentumX: coerceFloatMap(data.momentumX, safe.area),
+      momentumY: coerceFloatMap(data.momentumY, safe.area),
+      momentumXTrack: coerceFloatMap(data.momentumXTrack, safe.area),
+      momentumYTrack: coerceFloatMap(data.momentumYTrack, safe.area),
+    };
 
-  hydraulicErosion(state);
-  updateDischargeMap(state);
-  const analysis = computeAnalysis(state, analysisState);
+    hydraulicErosion(state);
+    updateDischargeMap(state);
+    const analysis = computeAnalysis(state, analysisState);
 
-  self.postMessage(
-    {
-      type: "result",
-      requestId: safe.requestId,
-      heightMap: state.heightMap.buffer,
-      bedrockMap: state.bedrockMap.buffer,
-      sedimentMap: state.sedimentMap.buffer,
-      dischargeMap: state.dischargeMap.buffer,
-      dischargeTrack: state.dischargeTrack.buffer,
-      momentumX: state.momentumX.buffer,
-      momentumY: state.momentumY.buffer,
-      momentumXTrack: state.momentumXTrack.buffer,
-      momentumYTrack: state.momentumYTrack.buffer,
-      analysis: {
-        ...analysis,
-        heightHistogram: analysis.heightHistogram.buffer,
-        normHistogram: analysis.normHistogram.buffer,
+    self.postMessage(
+      {
+        type: "result",
+        requestId: safe.requestId,
+        heightMap: state.heightMap.buffer,
+        bedrockMap: state.bedrockMap.buffer,
+        sedimentMap: state.sedimentMap.buffer,
+        dischargeMap: state.dischargeMap.buffer,
+        dischargeTrack: state.dischargeTrack.buffer,
+        momentumX: state.momentumX.buffer,
+        momentumY: state.momentumY.buffer,
+        momentumXTrack: state.momentumXTrack.buffer,
+        momentumYTrack: state.momentumYTrack.buffer,
+        analysis: {
+          ...analysis,
+          heightHistogram: analysis.heightHistogram.buffer,
+          normHistogram: analysis.normHistogram.buffer,
+        },
       },
-    },
-    [
-      state.heightMap.buffer,
-      state.bedrockMap.buffer,
-      state.sedimentMap.buffer,
-      state.dischargeMap.buffer,
-      state.dischargeTrack.buffer,
-      state.momentumX.buffer,
-      state.momentumY.buffer,
-      state.momentumXTrack.buffer,
-      state.momentumYTrack.buffer,
-      analysis.heightHistogram.buffer,
-      analysis.normHistogram.buffer,
-    ],
-  );
+      [
+        state.heightMap.buffer,
+        state.bedrockMap.buffer,
+        state.sedimentMap.buffer,
+        state.dischargeMap.buffer,
+        state.dischargeTrack.buffer,
+        state.momentumX.buffer,
+        state.momentumY.buffer,
+        state.momentumXTrack.buffer,
+        state.momentumYTrack.buffer,
+        analysis.heightHistogram.buffer,
+        analysis.normHistogram.buffer,
+      ],
+    );
+  } catch (error) {
+    _reportWorkerError("onmessage", error);
+  }
 };

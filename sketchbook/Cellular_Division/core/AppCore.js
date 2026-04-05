@@ -3,6 +3,11 @@ class AppCore {
     const { metadata = null } = assets;
 
     this.metadata = metadata;
+    this._diagnosticsLogger =
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Cellular Division")
+        : { info() {}, warn() {}, error() {}, debug() {} };
     this.maxJSONImportBytes = 32 * 1024 * 1024;
     this.theme = new Theme();
     this.sim = new Simulation(this.theme);
@@ -271,8 +276,8 @@ class AppCore {
       }
 
       if (file.size > this.maxJSONImportBytes) {
-        console.error(
-          `[Cellular Division] JSON import failed: file too large (${file.size} bytes, max ${this.maxJSONImportBytes})`,
+        this._diagnosticsLogger.error(
+          `JSON import failed: file too large (${file.size} bytes, max ${this.maxJSONImportBytes})`,
         );
         document.body.removeChild(input);
         return;
@@ -284,13 +289,13 @@ class AppCore {
           const parsed = JSON.parse(String(reader.result || "{}"));
           onSuccess(parsed);
         } catch (err) {
-          console.error("[Cellular Division] JSON import failed:", err);
+          this._diagnosticsLogger.error("JSON import failed:", err);
         } finally {
           document.body.removeChild(input);
         }
       };
       reader.onerror = () => {
-        console.error("[Cellular Division] Failed to read selected file");
+        this._diagnosticsLogger.error("Failed to read selected file");
         document.body.removeChild(input);
       };
       reader.readAsText(file);

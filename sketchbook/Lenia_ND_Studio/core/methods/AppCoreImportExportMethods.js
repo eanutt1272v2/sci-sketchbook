@@ -292,8 +292,8 @@ class AppCoreImportExportMethods {
         }
 
         const fieldKeys = Object.keys(payload.fields);
-        console.log(
-          `[Lenia] Imported world: size=${this.params.latticeExtent}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}, fields=[${fieldKeys.join(",")}], selectedAnimal=${this.params.selectedAnimal || "none"}, placeScale=${this.params.placeScale || 1}`,
+        this._diagnosticsLogger.info(
+          `Imported world: size=${this.params.latticeExtent}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}, fields=[${fieldKeys.join(",")}], selectedAnimal=${this.params.selectedAnimal || "none"}, placeScale=${this.params.placeScale || 1}`,
         );
       }),
     );

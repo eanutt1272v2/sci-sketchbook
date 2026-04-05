@@ -1,6 +1,12 @@
 class InputHandler {
   constructor(appcore) {
     this.appcore = appcore;
+    this._diagnosticsLogger =
+      appcore?._diagnosticsLogger ||
+      (typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Lenia")
+        : { info() {}, warn() {}, error() {}, debug() {} });
     this._pointerActive = false;
     this._lastPointer = { x: 0, y: 0 };
   }
@@ -522,7 +528,7 @@ class InputHandler {
           this.appcore.media.startRecording();
         }
       } catch (error) {
-        console.error("[Lenia] Recording toggle failed:", error);
+        this._diagnosticsLogger.error("Recording toggle failed:", error);
       }
       this.appcore.gui?.syncMediaControls();
       return false;

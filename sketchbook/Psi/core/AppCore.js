@@ -12,6 +12,11 @@ class AppCore {
     const { metadata, colourMaps, font } = assets;
 
     this.metadata = metadata;
+    this._diagnosticsLogger =
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Psi")
+        : { info() {}, warn() {}, error() {}, debug() {} };
     this.colourMaps = colourMaps || {};
     this.colourMapKeys = Object.keys(this.colourMaps);
 
@@ -460,6 +465,39 @@ class AppCore {
     next.handler();
   }
 
+  _postWorkerMessage(msg, transfers = [], context = "worker request") {
+    if (!this._worker) return false;
+
+    if (
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.safePostMessage === "function"
+    ) {
+      return AppDiagnostics.safePostMessage(
+        this._worker,
+        msg,
+        transfers,
+        this._diagnosticsLogger,
+        context,
+      );
+    }
+
+    try {
+      this._worker.postMessage(msg, transfers);
+      return true;
+    } catch (error) {
+      this._diagnosticsLogger.error(`Failed ${context}`, error);
+      return false;
+    }
+  }
+
+  _handleWorkerFailure(reason, detail = null) {
+    this._diagnosticsLogger.error(`Worker ${reason}`, detail);
+
+    this._workerBusy = false;
+    this._renderPending = false;
+    this._gridRecycleBuffer = null;
+  }
+
   _initWorker() {
     try {
       this._worker = new Worker("worker/PsiWorker.js");
@@ -468,16 +506,19 @@ class AppCore {
     }
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
     this._worker.onerror = (e) => {
-      console.error("[Psi] Worker error:", e);
-      this._workerBusy = false;
-      this._gridRecycleBuffer = null;
+      this._handleWorkerFailure("runtime error", e);
+    };
+    this._worker.onmessageerror = (e) => {
+      this._handleWorkerFailure("message deserialisation error", e);
     };
   }
 
-  _takeGridRecycleTransfer() {
+  _takeGridRecycleTransfer(clear = true) {
     if (!this._gridRecycleBuffer) return [];
     const transfer = [this._gridRecycleBuffer];
-    this._gridRecycleBuffer = null;
+    if (clear) {
+      this._gridRecycleBuffer = null;
+    }
     return transfer;
   }
 
@@ -529,7 +570,16 @@ class AppCore {
       analysisViewRadius,
       reuseGridBuffer,
     };
-    this._worker.postMessage(msg, this._takeGridRecycleTransfer());
+    const transfers = this._takeGridRecycleTransfer(false);
+    const posted = this._postWorkerMessage(msg, transfers, "render dispatch");
+    if (!posted) {
+      this._workerBusy = false;
+      this._renderPending = true;
+      return;
+    }
+    if (transfers.length > 0) {
+      this._gridRecycleBuffer = null;
+    }
   }
 
   _applyWorkerAnalysis(data) {
@@ -564,7 +614,26 @@ class AppCore {
   }
 
   _onWorkerMessage(data) {
-    if (!data || typeof data !== "object" || data.type !== "result") return;
+    if (data && typeof data === "object" && data.type === "workerError") {
+      const stage =
+        typeof data.stage === "string" && data.stage
+          ? data.stage
+          : "unknown stage";
+      const message =
+        typeof data.message === "string" && data.message
+          ? data.message
+          : "unknown worker failure";
+      this._handleWorkerFailure(
+        `reported failure during ${stage}: ${message}`,
+        data,
+      );
+      return;
+    }
+
+    if (!data || typeof data !== "object" || data.type !== "result") {
+      this._workerBusy = false;
+      return;
+    }
 
     if (Number(data.requestId) !== this._renderRequestId) {
       return;
@@ -627,6 +696,9 @@ class AppCore {
 
   dispose() {
     if (this._worker) {
+      this._worker.onmessage = null;
+      this._worker.onerror = null;
+      this._worker.onmessageerror = null;
       this._worker.terminate();
       this._worker = null;
     }

@@ -2,6 +2,15 @@ class MediaCore {
   constructor(appcore, logTag) {
     this.appcore = appcore;
     this.logTag = logTag;
+    const loggerTag = String(logTag || "Media")
+      .replace(/\]\[/g, ":")
+      .replace(/[\[\]]/g, "")
+      .trim();
+    this._diagnosticsLogger =
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger(loggerTag || "Media")
+        : { info() {}, warn() {}, error() {}, debug() {} };
     this.maxJSONImportBytes = 32 * 1024 * 1024;
     this.mediaRecorder = null;
     this.recordingStream = null;
@@ -21,15 +30,15 @@ class MediaCore {
   }
 
   _logInfo(message, ...rest) {
-    console.log(`${this.logTag} ${message}`, ...rest);
+    this._diagnosticsLogger.info(message, ...rest);
   }
 
   _logWarn(message, ...rest) {
-    console.warn(`${this.logTag} ${message}`, ...rest);
+    this._diagnosticsLogger.warn(message, ...rest);
   }
 
   _logError(message, ...rest) {
-    console.error(`${this.logTag} ${message}`, ...rest);
+    this._diagnosticsLogger.error(message, ...rest);
   }
 
   _createHiddenInput(accept, onFile) {

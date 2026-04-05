@@ -1,6 +1,12 @@
 class Renderer {
   constructor(appcore) {
     this.appcore = appcore;
+    this._diagnosticsLogger =
+      appcore?._diagnosticsLogger ||
+      (typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Fluvia")
+        : { info() {}, warn() {}, error() {}, debug() {} });
 
     this.canvas3D = createGraphics(width, height, WEBGL);
     this._warned3DFallback = false;
@@ -388,8 +394,8 @@ class Renderer {
     let is3D = this.appcore.params.renderMethod === "3D";
     if (is3D && !this._canRender3D()) {
       if (!this._warned3DFallback) {
-        console.warn(
-          "[Fluvia] WebGL graphics API unavailable, falling back to 2D rendering",
+        this._diagnosticsLogger.warn(
+          "WebGL graphics API unavailable, falling back to 2D rendering",
         );
         this._warned3DFallback = true;
       }

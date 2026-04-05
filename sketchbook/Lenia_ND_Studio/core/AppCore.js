@@ -17,6 +17,11 @@ class AppCore {
     } = assets;
 
     this.metadata = metadata;
+    this._diagnosticsLogger =
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Lenia")
+        : { info() {}, warn() {}, error() {}, debug() {} };
     this.animalDatasetByDimension = {
       2: Array.isArray(animalsByDimension?.[2])
         ? animalsByDimension[2]
@@ -239,6 +244,9 @@ class AppCore {
 
   dispose() {
     if (this._worker) {
+      this._worker.onmessage = null;
+      this._worker.onerror = null;
+      this._worker.onmessageerror = null;
       this._worker.terminate();
       this._worker = null;
     }

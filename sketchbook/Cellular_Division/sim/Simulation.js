@@ -1,5 +1,10 @@
 class Simulation {
   constructor(theme = null) {
+    this._diagnosticsLogger =
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Cellular Division")
+        : { info() {}, warn() {}, error() {}, debug() {} };
     this.alpha = 180;
     this.beta = 17;
     this.gamma = 13.4;
@@ -49,7 +54,7 @@ class Simulation {
     try {
       this._worker = new Worker("worker/SimulationWorker.js");
     } catch (e) {
-      console.warn(
+      this._diagnosticsLogger.warn(
         "[Cellular Division] Worker unavailable, falling back to synchronous simulation",
         e,
       );
@@ -58,9 +63,52 @@ class Simulation {
     }
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
     this._worker.onerror = (e) => {
-      console.error("[Cellular Division] Worker error:", e);
-      this._workerBusy = false;
+      this._handleWorkerFailure("runtime error", e);
     };
+    this._worker.onmessageerror = (e) => {
+      this._handleWorkerFailure("message deserialisation error", e);
+    };
+  }
+
+  _postWorkerMessage(msg, transfers = [], context = "worker request") {
+    if (!this._worker) return false;
+
+    if (
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.safePostMessage === "function"
+    ) {
+      return AppDiagnostics.safePostMessage(
+        this._worker,
+        msg,
+        transfers,
+        this._diagnosticsLogger,
+        context,
+      );
+    }
+
+    try {
+      this._worker.postMessage(msg, transfers);
+      return true;
+    } catch (error) {
+      this._diagnosticsLogger.error(`Failed ${context}`, error);
+      return false;
+    }
+  }
+
+  _handleWorkerFailure(reason, detail = null) {
+    this._diagnosticsLogger.error(`Worker ${reason}`, detail);
+    this._workerBusy = false;
+    this._workerReady = false;
+    this._particleBufferForWorker = null;
+  }
+
+  _sendWorkerParam(key, value) {
+    if (!this._worker) return;
+    this._postWorkerMessage(
+      { type: "setParam", key, value },
+      [],
+      `setParam:${key}`,
+    );
   }
 
   _terminateWorker() {
@@ -68,6 +116,7 @@ class Simulation {
 
     this._worker.onmessage = null;
     this._worker.onerror = null;
+    this._worker.onmessageerror = null;
     this._worker.terminate();
     this._worker = null;
     this._workerBusy = false;
@@ -80,35 +129,61 @@ class Simulation {
 
     const msg = { type: "tick", particleDataBuffer: null };
     const transfers = [];
+    const recycledBuffer = this._particleBufferForWorker;
 
-    if (this._particleBufferForWorker) {
-      msg.particleDataBuffer = this._particleBufferForWorker;
-      transfers.push(this._particleBufferForWorker);
-      this._particleBufferForWorker = null;
+    if (recycledBuffer) {
+      msg.particleDataBuffer = recycledBuffer;
+      transfers.push(recycledBuffer);
     }
 
-    this._worker.postMessage(msg, transfers);
+    const posted = this._postWorkerMessage(msg, transfers, "tick dispatch");
+    if (posted && recycledBuffer) {
+      this._particleBufferForWorker = null;
+    }
   }
 
   _sendWorkerInit() {
     if (!this._worker) return;
     this._workerReady = false;
     this._workerBusy = false;
-    this._worker.postMessage({
-      type: "restart",
-      count: this.particleCount,
-      canvasW: width,
-      canvasH: height,
-      alpha: this.alpha,
-      beta: this.beta,
-      gamma: this.gamma,
-      radius: this.radius,
-      densityThreshold: this.densityThreshold,
-    });
+    this._postWorkerMessage(
+      {
+        type: "restart",
+        count: this.particleCount,
+        canvasW: width,
+        canvasH: height,
+        alpha: this.alpha,
+        beta: this.beta,
+        gamma: this.gamma,
+        radius: this.radius,
+        densityThreshold: this.densityThreshold,
+      },
+      [],
+      "restart dispatch",
+    );
   }
 
   _onWorkerMessage(data) {
-    if (!data || typeof data !== "object") return;
+    if (!data || typeof data !== "object") {
+      this._workerBusy = false;
+      return;
+    }
+
+    if (data.type === "workerError") {
+      const stage =
+        typeof data.stage === "string" && data.stage
+          ? data.stage
+          : "unknown stage";
+      const message =
+        typeof data.message === "string" && data.message
+          ? data.message
+          : "unknown worker failure";
+      this._handleWorkerFailure(
+        `reported failure during ${stage}: ${message}`,
+        data,
+      );
+      return;
+    }
 
     if (data.type === "ready") {
       this._workerReady = true;
@@ -119,7 +194,10 @@ class Simulation {
       this._particleBufferForWorker = null;
       return;
     }
-    if (data.type !== "result") return;
+    if (data.type !== "result") {
+      this._workerBusy = false;
+      return;
+    }
 
     if (!(data.particleData instanceof ArrayBuffer)) {
       this._workerBusy = false;
@@ -395,45 +473,25 @@ class Simulation {
   setAlpha(value) {
     this.alpha = constrain(value, 0, 360);
     this.updateSpecies();
-    if (this._worker)
-      this._worker.postMessage({
-        type: "setParam",
-        key: "alpha",
-        value: this.alpha,
-      });
+    this._sendWorkerParam("alpha", this.alpha);
   }
 
   setBeta(value) {
     this.beta = constrain(value, 0, 90);
     this.updateSpecies();
-    if (this._worker)
-      this._worker.postMessage({
-        type: "setParam",
-        key: "beta",
-        value: this.beta,
-      });
+    this._sendWorkerParam("beta", this.beta);
   }
 
   setGamma(value) {
     this.gamma = constrain(value, 0, 50);
     this.updateSpecies();
-    if (this._worker)
-      this._worker.postMessage({
-        type: "setParam",
-        key: "gamma",
-        value: this.gamma,
-      });
+    this._sendWorkerParam("gamma", this.gamma);
   }
 
   setRadius(value) {
     this.radius = constrain(value, 5, 50);
     this.updateSpecies();
-    if (this._worker)
-      this._worker.postMessage({
-        type: "setParam",
-        key: "radius",
-        value: this.radius,
-      });
+    this._sendWorkerParam("radius", this.radius);
   }
 
   setTrailAlpha(value) {
@@ -442,12 +500,7 @@ class Simulation {
 
   setDensityThreshold(value) {
     this.densityThreshold = constrain(value, 1, 60);
-    if (this._worker)
-      this._worker.postMessage({
-        type: "setParam",
-        key: "densityThreshold",
-        value: this.densityThreshold,
-      });
+    this._sendWorkerParam("densityThreshold", this.densityThreshold);
   }
 
   setParticleCount(value) {
@@ -464,8 +517,13 @@ class Simulation {
 
   togglePause() {
     this.paused = !this.paused;
-    if (this._worker)
-      this._worker.postMessage({ type: "setPaused", value: this.paused });
+    if (this._worker) {
+      this._postWorkerMessage(
+        { type: "setPaused", value: this.paused },
+        [],
+        "pause toggle",
+      );
+    }
   }
 
   isPaused() {

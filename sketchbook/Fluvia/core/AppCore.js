@@ -5,6 +5,11 @@ class AppCore {
     const { metadata, vertShader, fragShader, colourMaps, font } = assets;
 
     this.metadata = metadata;
+    this._diagnosticsLogger =
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Fluvia")
+        : { info() {}, warn() {}, error() {}, debug() {} };
     this.shaders = {
       vert: vertShader,
       frag: fragShader,
@@ -368,6 +373,38 @@ class AppCore {
     camera.update();
   }
 
+  _postWorkerMessage(msg, transfers = [], context = "worker request") {
+    if (!this._worker) return false;
+
+    if (
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.safePostMessage === "function"
+    ) {
+      return AppDiagnostics.safePostMessage(
+        this._worker,
+        msg,
+        transfers,
+        this._diagnosticsLogger,
+        context,
+      );
+    }
+
+    try {
+      this._worker.postMessage(msg, transfers);
+      return true;
+    } catch (error) {
+      this._diagnosticsLogger.error(`Failed ${context}`, error);
+      return false;
+    }
+  }
+
+  _handleWorkerFailure(reason, detail = null) {
+    this._diagnosticsLogger.error(`Worker ${reason}`, detail);
+
+    this._restoreTerrainBuffers();
+    this._lastWorkerStepMs = 0;
+  }
+
   _initWorker() {
     try {
       this._worker = new Worker("worker/FluviaWorker.js");
@@ -377,9 +414,10 @@ class AppCore {
 
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
     this._worker.onerror = (e) => {
-      console.error("[Fluvia] Worker error:", e);
-      this._workerBusy = false;
-      this._lastWorkerStepMs = 0;
+      this._handleWorkerFailure("runtime error", e);
+    };
+    this._worker.onmessageerror = (e) => {
+      this._handleWorkerFailure("message deserialisation error", e);
     };
   }
 
@@ -393,9 +431,6 @@ class AppCore {
     const { terrain, params } = this;
 
     if (!terrain.heightMap) return;
-
-    this._workerBusy = true;
-    this._lastWorkerStepMs = nowMs;
 
     const requestId = ++this._workerRequestId;
 
@@ -433,7 +468,7 @@ class AppCore {
       momentumYTrack: terrain.momentumYTrack.buffer,
     };
 
-    this._worker.postMessage(msg, [
+    const transfers = [
       msg.heightMap,
       msg.bedrockMap,
       msg.sedimentMap,
@@ -443,7 +478,17 @@ class AppCore {
       msg.momentumY,
       msg.momentumXTrack,
       msg.momentumYTrack,
-    ]);
+    ];
+
+    const posted = this._postWorkerMessage(msg, transfers, "step dispatch");
+    if (!posted) {
+      this._workerBusy = false;
+      this._lastWorkerStepMs = 0;
+      return;
+    }
+
+    this._workerBusy = true;
+    this._lastWorkerStepMs = nowMs;
 
     terrain.heightMap = null;
     terrain.bedrockMap = null;
@@ -457,7 +502,31 @@ class AppCore {
   }
 
   _onWorkerMessage(data) {
-    if (!data || typeof data !== "object" || data.type !== "result") return;
+    if (data && typeof data === "object" && data.type === "workerError") {
+      const stage =
+        typeof data.stage === "string" && data.stage
+          ? data.stage
+          : "unknown stage";
+      const message =
+        typeof data.message === "string" && data.message
+          ? data.message
+          : "unknown worker failure";
+      this._handleWorkerFailure(
+        `reported failure during ${stage}: ${message}`,
+        data,
+      );
+      return;
+    }
+
+    if (!data || typeof data !== "object") {
+      this._workerBusy = false;
+      return;
+    }
+
+    if (data.type !== "result") {
+      this._workerBusy = false;
+      return;
+    }
     if (Number(data.requestId) !== this._workerRequestId) {
       return;
     }
@@ -478,7 +547,7 @@ class AppCore {
 
     for (const key of requiredBuffers) {
       if (!this._isValidFloatBuffer(data[key], expectedLength)) {
-        console.error(`[Fluvia] Invalid worker payload for ${key}`);
+        this._diagnosticsLogger.error(`Invalid worker payload for ${key}`);
         this._restoreTerrainBuffers();
         return;
       }
@@ -565,6 +634,9 @@ class AppCore {
 
   _terminateWorker() {
     if (this._worker) {
+      this._worker.onmessage = null;
+      this._worker.onerror = null;
+      this._worker.onmessageerror = null;
       this._worker.terminate();
       this._worker = null;
     }

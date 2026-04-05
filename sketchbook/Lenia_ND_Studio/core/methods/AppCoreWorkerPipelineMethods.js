@@ -1,4 +1,85 @@
 class AppCoreWorkerPipelineMethods {
+  _ensureDiagnosticsLogger() {
+    if (
+      this._diagnosticsLogger &&
+      typeof this._diagnosticsLogger.error === "function"
+    ) {
+      return this._diagnosticsLogger;
+    }
+
+    this._diagnosticsLogger =
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.resolveLogger === "function"
+        ? AppDiagnostics.resolveLogger("Lenia", this._diagnosticsLogger)
+        : { info() {}, warn() {}, error() {}, debug() {} };
+
+    return this._diagnosticsLogger;
+  }
+
+  _logWarn(message, ...rest) {
+    this._ensureDiagnosticsLogger().warn(message, ...rest);
+  }
+
+  _logError(message, ...rest) {
+    this._ensureDiagnosticsLogger().error(message, ...rest);
+  }
+
+  _logDebug(message, ...rest) {
+    this._ensureDiagnosticsLogger().debug(message, ...rest);
+  }
+
+  _postWorkerMessage(msg, transfers = [], context = "worker request") {
+    if (!this._worker) return false;
+
+    if (
+      typeof AppDiagnostics !== "undefined" &&
+      typeof AppDiagnostics.safePostMessage === "function"
+    ) {
+      return AppDiagnostics.safePostMessage(
+        this._worker,
+        msg,
+        transfers,
+        this._diagnosticsLogger,
+        context,
+      );
+    }
+
+    try {
+      this._worker.postMessage(msg, transfers);
+      return true;
+    } catch (error) {
+      this._logError(`Failed ${context}`, error);
+      return false;
+    }
+  }
+
+  _handleWorkerFailure(reason, detail = null) {
+    this._logError(`Worker ${reason}`, detail);
+
+    this._workerBusy = false;
+    this._stepPending = false;
+    this._kernelPending = false;
+    this._viewPending = false;
+    this._changeRecycleBuffer = null;
+
+    const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
+    if (dim > 2) {
+      const safeSize = NDCompat.coerceGridSize(this.params.latticeExtent, dim);
+      if (safeSize < this.params.latticeExtent) {
+        this._logWarn(
+          `Recovering from worker failure by reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize}.`,
+        );
+        this.params.latticeExtent = safeSize;
+        this.changeResolution();
+        return;
+      }
+    }
+
+    this._ensureBuffers();
+    this._flushPendingMutations();
+    this._tryExecutePendingPlacement();
+  }
+
   _initWorker() {
     try {
       this._worker = new Worker("worker/LeniaWorker.js");
@@ -8,28 +89,10 @@ class AppCoreWorkerPipelineMethods {
 
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
     this._worker.onerror = (e) => {
-      console.error("[Lenia] Worker error:", e);
-      this._workerBusy = false;
-      this._stepPending = false;
-      this._kernelPending = false;
-      this._viewPending = false;
-      this._changeRecycleBuffer = null;
-
-      const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
-      if (dim > 2) {
-        const safeSize = NDCompat.coerceGridSize(
-          this.params.latticeExtent,
-          dim,
-        );
-        if (safeSize < this.params.latticeExtent) {
-          console.warn(
-            `[Lenia] Recovering from worker allocation failure by reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize}.`,
-          );
-          this.params.latticeExtent = safeSize;
-          this.changeResolution();
-          return;
-        }
-      }
+      this._handleWorkerFailure("runtime error", e);
+    };
+    this._worker.onmessageerror = (e) => {
+      this._handleWorkerFailure("message deserialisation error", e);
     };
 
     this._workerSendKernel();
@@ -40,8 +103,8 @@ class AppCoreWorkerPipelineMethods {
     if (dim > 2) {
       const safeSize = NDCompat.coerceGridSize(this.params.latticeExtent, dim);
       if (safeSize !== this.params.latticeExtent) {
-        console.warn(
-          `[Lenia] Reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize} to avoid excessive worker memory usage.`,
+        this._logWarn(
+          `Reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize} to avoid excessive worker memory usage.`,
         );
         this.params.latticeExtent = safeSize;
         this.changeResolution();
@@ -54,14 +117,23 @@ class AppCoreWorkerPipelineMethods {
       this._kernelPending = true;
       return;
     }
-    this._workerBusy = true;
     this._kernelPending = false;
     const ndConfig = this.buildNDConfig();
-    this._worker.postMessage({
-      type: "kernel",
-      params: { ...this.params, size: this.params.latticeExtent },
-      ndConfig,
-    });
+    const posted = this._postWorkerMessage(
+      {
+        type: "kernel",
+        params: { ...this.params, size: this.params.latticeExtent },
+        ndConfig,
+      },
+      [],
+      "kernel dispatch",
+    );
+    if (!posted) {
+      this._workerBusy = false;
+      this._kernelPending = true;
+      return;
+    }
+    this._workerBusy = true;
   }
 
   _bufferToFloat32(buffer, expectedLength) {
@@ -249,17 +321,35 @@ class AppCoreWorkerPipelineMethods {
   }
 
   _logStaleWorkerPayload(kind, payloadLength, expectedLength) {
-    const log =
+    const message = `Ignoring stale ${kind} payload (len=${payloadLength}, expected=${expectedLength})`;
+    if (
       this._resolutionTransitionActive ||
       this._hasQueuedAction("changeResolution")
-        ? console.debug
-        : console.warn;
-    log(
-      `[Lenia] Ignoring stale ${kind} payload (len=${payloadLength}, expected=${expectedLength})`,
-    );
+    ) {
+      this._logDebug(message);
+      return;
+    }
+
+    this._logWarn(message);
   }
 
   _onWorkerMessage(data) {
+    if (data && typeof data === "object" && data.type === "workerError") {
+      const stage =
+        typeof data.stage === "string" && data.stage
+          ? data.stage
+          : "unknown stage";
+      const message =
+        typeof data.message === "string" && data.message
+          ? data.message
+          : "unknown worker failure";
+      this._handleWorkerFailure(
+        `reported failure during ${stage}: ${message}`,
+        data,
+      );
+      return;
+    }
+
     if (!data || typeof data !== "object" || typeof data.type !== "string") {
       this._workerBusy = false;
       return;
@@ -270,7 +360,7 @@ class AppCoreWorkerPipelineMethods {
 
     if (data.type === "kernelReady") {
       if (!this._isKernelPayloadValid(data)) {
-        console.error("[Lenia] Ignoring malformed kernelReady payload");
+        this._logError("Ignoring malformed kernelReady payload");
         this._resetWorkerAfterPayloadIssue();
         return;
       }
@@ -323,7 +413,7 @@ class AppCoreWorkerPipelineMethods {
         growthLength !== payloadLength ||
         (growthOldLength !== null && growthOldLength !== payloadLength)
       ) {
-        console.error("[Lenia] Ignoring malformed view payload");
+        this._logError("Ignoring malformed view payload");
         this._resetWorkerAfterPayloadIssue({ ensureBuffers: true });
         return;
       }
@@ -343,7 +433,7 @@ class AppCoreWorkerPipelineMethods {
           : this._bufferToFloat32(data.growthOld, payloadLength);
 
       if (!world || !potential || !growth || (data.growthOld && !growthOld)) {
-        console.error("[Lenia] Ignoring malformed view payload");
+        this._logError("Ignoring malformed view payload");
         this._resetWorkerAfterPayloadIssue({ ensureBuffers: true });
         return;
       }
@@ -387,7 +477,7 @@ class AppCoreWorkerPipelineMethods {
         changeLength !== payloadLength ||
         (growthOldLength !== null && growthOldLength !== payloadLength)
       ) {
-        console.error("[Lenia] Ignoring malformed step payload");
+        this._logError("Ignoring malformed step payload");
         this._resetWorkerAfterPayloadIssue({ clearChangeRecycleBuffer: true });
         return;
       }
@@ -414,7 +504,7 @@ class AppCoreWorkerPipelineMethods {
         !change ||
         (data.growthOld && !growthOld)
       ) {
-        console.error("[Lenia] Ignoring malformed step payload");
+        this._logError("Ignoring malformed step payload");
         this._resetWorkerAfterPayloadIssue({ clearChangeRecycleBuffer: true });
         return;
       }
@@ -450,7 +540,13 @@ class AppCoreWorkerPipelineMethods {
         this._stepPending = false;
         this._dispatchWorkerStep();
       }
+      return;
     }
+
+    this._workerBusy = false;
+    this._logWarn(
+      `Ignoring unexpected worker message type: ${String(data.type)}`,
+    );
   }
 
   _queueOrRunMutation(mutation) {
@@ -510,25 +606,37 @@ class AppCoreWorkerPipelineMethods {
       changeBuffer: this._changeRecycleBuffer,
     };
 
-    if (this._changeRecycleBuffer) {
-      transfers.push(this._changeRecycleBuffer);
-      this._changeRecycleBuffer = null;
+    const recycledChangeBuffer = this._changeRecycleBuffer;
+    if (recycledChangeBuffer) {
+      transfers.push(recycledChangeBuffer);
     }
 
+    const seedWorld = this._ndSeedWorld;
     if (this.params.multiStep && b.growthOld) {
       const growthOldCopy = new Float32Array(b.growthOld);
       msg.growthOld = growthOldCopy.buffer;
       transfers.push(growthOldCopy.buffer);
     }
 
-    if (this._ndSeedWorld) {
-      msg.ndSeedWorld = this._ndSeedWorld.buffer;
-      transfers.push(this._ndSeedWorld.buffer);
-      this._ndSeedWorld = null;
+    if (seedWorld) {
+      msg.ndSeedWorld = seedWorld.buffer;
+      transfers.push(seedWorld.buffer);
+    }
+
+    const posted = this._postWorkerMessage(msg, transfers, "step dispatch");
+    if (!posted) {
+      this._workerBusy = false;
+      this._stepPending = true;
+      return false;
     }
 
     this._workerBusy = true;
-    this._worker.postMessage(msg, transfers);
+    if (recycledChangeBuffer) {
+      this._changeRecycleBuffer = null;
+    }
+    if (seedWorld) {
+      this._ndSeedWorld = null;
+    }
     return true;
   }
 
@@ -540,8 +648,15 @@ class AppCoreWorkerPipelineMethods {
     }
 
     const b = this.board;
+    if (!b.world || !b.potential || !b.growth) {
+      this._ensureBuffers();
+    }
     const ndConfig = this.buildNDConfig();
-    const transfers = [b.world.buffer, b.potential.buffer, b.growth.buffer];
+    const worldBuffer = b.world.buffer;
+    const potentialBuffer = b.potential.buffer;
+    const growthBuffer = b.growth.buffer;
+    const growthOldBuffer = b.growthOld ? b.growthOld.buffer : null;
+    const transfers = [worldBuffer, potentialBuffer, growthBuffer];
     const msg = {
       type: "view",
       params: {
@@ -549,14 +664,27 @@ class AppCoreWorkerPipelineMethods {
         size: this.params.latticeExtent,
       },
       ndConfig,
-      world: b.world.buffer,
-      potential: b.potential.buffer,
-      growth: b.growth.buffer,
-      growthOld: b.growthOld ? b.growthOld.buffer : null,
+      world: worldBuffer,
+      potential: potentialBuffer,
+      growth: growthBuffer,
+      growthOld: growthOldBuffer,
     };
 
-    if (b.growthOld) {
-      transfers.push(b.growthOld.buffer);
+    if (growthOldBuffer) {
+      transfers.push(growthOldBuffer);
+    }
+
+    const seedWorld = this._ndSeedWorld;
+    if (seedWorld) {
+      msg.ndSeedWorld = seedWorld.buffer;
+      transfers.push(seedWorld.buffer);
+    }
+
+    const posted = this._postWorkerMessage(msg, transfers, "view request");
+    if (!posted) {
+      this._workerBusy = false;
+      this._viewPending = true;
+      return false;
     }
 
     b.world = null;
@@ -564,15 +692,12 @@ class AppCoreWorkerPipelineMethods {
     b.growth = null;
     b.growthOld = null;
 
-    if (this._ndSeedWorld) {
-      msg.ndSeedWorld = this._ndSeedWorld.buffer;
-      transfers.push(this._ndSeedWorld.buffer);
+    if (seedWorld) {
       this._ndSeedWorld = null;
     }
 
     this._workerBusy = true;
     this._viewPending = false;
-    this._worker.postMessage(msg, transfers);
     return true;
   }
 

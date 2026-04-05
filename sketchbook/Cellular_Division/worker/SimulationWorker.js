@@ -17,6 +17,49 @@ const _workerSanitisers =
     },
   });
 
+function _toWorkerErrorPayload(stage, error) {
+  if (error && typeof error === "object") {
+    return {
+      type: "workerError",
+      stage,
+      name: String(error.name || "Error"),
+      message: String(error.message || "Worker failure"),
+      stack: String(error.stack || ""),
+    };
+  }
+
+  return {
+    type: "workerError",
+    stage,
+    name: "Error",
+    message: String(error || "Worker failure"),
+    stack: "",
+  };
+}
+
+function _reportWorkerError(stage, error) {
+  const payload = _toWorkerErrorPayload(stage, error);
+  try {
+    self.postMessage(payload);
+  } catch {
+    // Ignore recursive post failures.
+  }
+  try {
+    console.error(`[CellDivWorker] ${payload.stage}: ${payload.message}`);
+  } catch {
+    // Console may be unavailable in some worker runtimes.
+  }
+}
+
+self.onerror = function (_message, _source, _lineno, _colno, error) {
+  _reportWorkerError("runtime", error || _message);
+  return false;
+};
+
+self.onunhandledrejection = function (event) {
+  _reportWorkerError("unhandledrejection", event?.reason);
+};
+
 const TWO_PI = Math.PI * 2;
 const GRID_SIZE = 30;
 const CELLS_INTERVAL = 15;
@@ -385,51 +428,55 @@ function buildResult(reuseBuffer) {
 }
 
 self.onmessage = function (e) {
-  const msg = e && e.data && typeof e.data === "object" ? e.data : {};
+  try {
+    const msg = e && e.data && typeof e.data === "object" ? e.data : {};
 
-  if (typeof msg.type !== "string") return;
+    if (typeof msg.type !== "string") return;
 
-  switch (msg.type) {
-    case "init":
-    case "restart":
-      initSimulation(msg);
-      self.postMessage({ type: "ready" });
-      break;
+    switch (msg.type) {
+      case "init":
+      case "restart":
+        initSimulation(msg);
+        self.postMessage({ type: "ready" });
+        break;
 
-    case "tick": {
-      tick();
-      const reuseBuffer =
-        msg.particleDataBuffer instanceof ArrayBuffer
-          ? msg.particleDataBuffer
-          : null;
-      const result = buildResult(reuseBuffer);
-      self.postMessage(result, [result.particleData]);
-      break;
-    }
-
-    case "setParam":
-      if (typeof msg.key !== "string") break;
-      applyParamUpdate(msg.key, msg.value);
-      break;
-
-    case "setParticleCount": {
-      const oldCount = state.particles.length;
-      const newCount = toInteger(msg.count, oldCount, 0, MAX_PARTICLES);
-      if (newCount > oldCount) {
-        for (let i = oldCount; i < newCount; i++) {
-          state.particles.push(new Particle(state.canvasW, state.canvasH));
-        }
-      } else {
-        state.particles.length = newCount;
+      case "tick": {
+        tick();
+        const reuseBuffer =
+          msg.particleDataBuffer instanceof ArrayBuffer
+            ? msg.particleDataBuffer
+            : null;
+        const result = buildResult(reuseBuffer);
+        self.postMessage(result, [result.particleData]);
+        break;
       }
-      break;
+
+      case "setParam":
+        if (typeof msg.key !== "string") break;
+        applyParamUpdate(msg.key, msg.value);
+        break;
+
+      case "setParticleCount": {
+        const oldCount = state.particles.length;
+        const newCount = toInteger(msg.count, oldCount, 0, MAX_PARTICLES);
+        if (newCount > oldCount) {
+          for (let i = oldCount; i < newCount; i++) {
+            state.particles.push(new Particle(state.canvasW, state.canvasH));
+          }
+        } else {
+          state.particles.length = newCount;
+        }
+        break;
+      }
+
+      case "setPaused":
+        state.paused = Boolean(msg.value);
+        break;
+
+      default:
+        break;
     }
-
-    case "setPaused":
-      state.paused = Boolean(msg.value);
-      break;
-
-    default:
-      break;
+  } catch (error) {
+    _reportWorkerError("onmessage", error);
   }
 };
