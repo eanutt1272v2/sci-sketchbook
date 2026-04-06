@@ -282,7 +282,7 @@ class GUI {
       this.appcore.params,
       "viewRadius",
       {
-        label: "View Radius [a₀]",
+        label: this.withHint("View Radius [a₀]", "viewRadius", "I/K"),
         min: 1,
         max: 256,
       },
@@ -309,7 +309,11 @@ class GUI {
       this.appcore.params,
       "sliceOffset",
       {
-        label: "Slice Offset [a₀]",
+        label: this.withHint(
+          "Slice Offset [a₀]",
+          "sliceOffset",
+          "Shift+J/L",
+        ),
         min: -1024,
         max: 1024,
       },
@@ -330,7 +334,7 @@ class GUI {
 
     pan
       .addBinding(this.appcore.params.viewCentre, "x", {
-        label: "Pan X [a₀]",
+        label: this.withHint("Pan X [a₀]", "panX", "Shift+A/D"),
         min: -256,
         max: 256,
         step: 0.1,
@@ -339,7 +343,7 @@ class GUI {
 
     pan
       .addBinding(this.appcore.params.viewCentre, "y", {
-        label: "Pan Y [a₀]",
+        label: this.withHint("Pan Y [a₀]", "panY", "Shift+W/S"),
         min: -256,
         max: 256,
         step: 0.1,
@@ -348,7 +352,7 @@ class GUI {
 
     pan
       .addBinding(this.appcore.params.viewCentre, "z", {
-        label: "Pan Z [a₀]",
+        label: this.withHint("Pan Z [a₀]", "panZ", "Shift+Q/E"),
         min: -256,
         max: 256,
         step: 0.1,

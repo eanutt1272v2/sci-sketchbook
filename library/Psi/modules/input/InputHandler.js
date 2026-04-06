@@ -69,6 +69,48 @@ class InputHandler {
       }
     }
 
+    const zoomInDown = this._isKeyHeld("i");
+    const zoomOutDown = this._isKeyHeld("k");
+    if (zoomInDown || zoomOutDown) {
+      const delta = (zoomOutDown ? 0.75 : 0) - (zoomInDown ? 0.75 : 0);
+      if (delta !== 0) {
+        params.viewRadius = constrain(params.viewRadius + delta, 1, 256);
+        needsRender = true;
+        syncViewConstraints = true;
+      }
+    }
+
+    const sliceDown = shiftHeld && this._isKeyHeld("j");
+    const sliceUp = shiftHeld && this._isKeyHeld("l");
+    if (sliceDown || sliceUp) {
+      const delta = (sliceUp ? 0.5 : 0) - (sliceDown ? 0.5 : 0);
+      if (delta !== 0) {
+        params.sliceOffset = constrain(
+          params.sliceOffset + delta,
+          -params.viewRadius,
+          params.viewRadius,
+        );
+        needsRender = true;
+      }
+    }
+
+    if (shiftHeld) {
+      const panStep = max(0.25, params.viewRadius * 0.03);
+      const panX =
+        (this._isKeyHeld("d") ? 1 : 0) - (this._isKeyHeld("a") ? 1 : 0);
+      const panY =
+        (this._isKeyHeld("w") ? 1 : 0) - (this._isKeyHeld("s") ? 1 : 0);
+      const panZ =
+        (this._isKeyHeld("e") ? 1 : 0) - (this._isKeyHeld("q") ? 1 : 0);
+
+      if (panX || panY || panZ) {
+        params.viewCentre.x += panX * panStep;
+        params.viewCentre.y += panY * panStep;
+        params.viewCentre.z += panZ * panStep;
+        needsRender = true;
+      }
+    }
+
     const exposureDown = keyIsDown(219) || this._isKeyHeld("[", "{");
     const exposureUp = keyIsDown(221) || this._isKeyHeld("]", "}");
 
@@ -209,13 +251,25 @@ class InputHandler {
       this.appcore.params.nucleusMassKg = Math.pow(10, next);
       this.appcore.requestRender();
       logMsg = `Nucleus mass log10 = ${next.toFixed(2)}`;
-    } else if ((keyLower === "w" || keyLower === "s") && !ctrlHeld) {
+    } else if (
+      (keyLower === "w" || keyLower === "s") &&
+      !ctrlHeld &&
+      !shiftHeld
+    ) {
       this.appcore.updateQuantumNumbers("n", keyLower === "w" ? 1 : -1);
       logMsg = `n changed to ${this.appcore.params.n}`;
-    } else if ((keyLower === "d" || keyLower === "a") && !ctrlHeld) {
+    } else if (
+      (keyLower === "d" || keyLower === "a") &&
+      !ctrlHeld &&
+      !shiftHeld
+    ) {
       this.appcore.updateQuantumNumbers("l", keyLower === "d" ? 1 : -1);
       logMsg = `l changed to ${this.appcore.params.l}`;
-    } else if ((keyLower === "e" || keyLower === "q") && !ctrlHeld) {
+    } else if (
+      (keyLower === "e" || keyLower === "q") &&
+      !ctrlHeld &&
+      !shiftHeld
+    ) {
       this.appcore.updateQuantumNumbers("m", keyLower === "e" ? 1 : -1);
       logMsg = `m changed to ${this.appcore.params.m}`;
     }
@@ -241,8 +295,10 @@ class InputHandler {
           logMsg = `Node Overlay: ${this.appcore.params.renderNodeOverlay}`;
           break;
         case "l":
-          this.appcore.toggleLegend();
-          logMsg = `Legend: ${this.appcore.params.renderLegend}`;
+          if (!shiftHeld) {
+            this.appcore.toggleLegend();
+            logMsg = `Legend: ${this.appcore.params.renderLegend}`;
+          }
           break;
         case "m":
           this.appcore.toggleSmoothing();
