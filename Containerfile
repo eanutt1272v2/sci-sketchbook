@@ -8,7 +8,7 @@ RUN apk add --no-cache libcap && \
 
 WORKDIR /srv
 
-COPY sketchbook /srv
+COPY library /srv
 
 COPY Caddyfile /etc/caddy/Caddyfile
 

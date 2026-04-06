@@ -1,19 +1,38 @@
 p5.disableFriendlyErrors = true;
 
+const Config = {
+  GRID_SIZE: 30,
+  CELLS_INTERVAL: 15,
+  LEFT_PANEL_WIDTH: 260,
+  RIGHT_COLUMN_WIDTH: 220,
+  COLUMN_GAP: 10,
+  VALUE_BOX_WIDTH: 50,
+  VALUE_BOX_HEIGHT: 16,
+  MIN_PARTICLES: 100,
+  MAX_PARTICLES: 20000,
+};
+
+const metadata = {
+  name: "Cellular Division",
+  version: "v3.0.7-dev",
+  author: "@eanutt1272.v2",
+};
+
 let appcore;
-let colourMaps, font;
+let font;
+let mainCanvas;
 
 const diagnosticsLogger =
   typeof AppDiagnostics !== "undefined" &&
   typeof AppDiagnostics.resolveLogger === "function"
-    ? AppDiagnostics.resolveLogger("Psi")
+    ? AppDiagnostics.resolveLogger("Cellular Division")
     : { info() {}, warn() {}, error() {}, debug() {} };
 
 if (
   typeof AppDiagnostics !== "undefined" &&
   typeof AppDiagnostics.installGlobalErrorHandlers === "function"
 ) {
-  AppDiagnostics.installGlobalErrorHandlers("Psi", {
+  AppDiagnostics.installGlobalErrorHandlers("Cellular Division", {
     logger: diagnosticsLogger,
   });
 }
@@ -43,7 +62,7 @@ function scheduleStartupInitialisation(task) {
   ) {
     AppDiagnostics.scheduleFrameFriendlyTask(task, {
       logger: diagnosticsLogger,
-      label: "Psi AppCore initialisation",
+      label: "Cellular Division AppCore initialisation",
       timeoutMs: 200,
       useIdle: true,
     });
@@ -60,47 +79,26 @@ function scheduleStartupInitialisation(task) {
   setTimeout(task, 0);
 }
 
-const metadata = {
-  name: "Psi",
-  version: "v2.9.7-dev",
-  author: "@eanutt1272.v2",
-};
-
 async function setup() {
   try {
-    const [loadedFont, loadedColourMaps] = await Promise.all([
-      AssetLoader.loadPreferredFont({
-        family: "Iosevka",
-        woff2Path: "../../_shared/fonts/Iosevka-Regular.woff2",
-        ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
-        logger: diagnosticsLogger,
-      }),
-      AssetLoader.loadJSONAsset("../../_shared/data/colour-maps.json", {
-        logger: diagnosticsLogger,
-        label: "Psi colour maps",
-      }),
-    ]);
-
-    font = loadedFont;
-    colourMaps = loadedColourMaps;
+    font = await AssetLoader.loadPreferredFont({
+      family: "Iosevka",
+      woff2Path: "../../_shared/fonts/Iosevka-Regular.woff2",
+      ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
+      logger: diagnosticsLogger,
+    });
   } catch (error) {
     diagnosticsLogger.error("Failed to load startup assets:", error);
     return;
   }
 
-  const canvasSize = min(windowWidth, windowHeight);
-  const mainCanvas = createReadbackOptimisedCanvas(canvasSize, canvasSize);
-
+  mainCanvas = createReadbackOptimisedCanvas(windowWidth, windowHeight);
   setupCanvasProperties(mainCanvas);
 
   scheduleStartupInitialisation(() => {
     disposeAppCore();
     try {
-      appcore = new AppCore({
-        metadata,
-        colourMaps,
-        font,
-      });
+      appcore = new AppCore({ metadata });
     } catch (error) {
       diagnosticsLogger.error("Failed to initialise AppCore:", error);
       disposeAppCore();
@@ -122,6 +120,7 @@ function setupCanvasProperties(canvas) {
     KeyboardUtils.installCanvasFocusBridge(canvasEl);
   }
 
+  noSmooth();
   textFont(font || "monospace");
   pixelDensity(1);
   frameRate(120);
@@ -133,41 +132,13 @@ function draw() {
   appcore.render();
 }
 
+function keyPressed(event) {
+  if (!appcore) return false;
+  appcore.onKeyPressed(event);
+  return false;
+}
+
 function windowResized() {
   if (!appcore) return;
-  appcore.resize();
-}
-
-function keyPressed(event) {
-  const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
-  return appcore ? appcore.handleKeyPressed(keyValue, keyCode, event) : false;
-}
-
-function keyReleased(event) {
-  const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
-  return appcore ? appcore.handleKeyReleased(keyValue, keyCode, event) : false;
-}
-
-function mouseWheel(event) {
-  return appcore ? appcore.handleWheel(event) : false;
-}
-
-function mouseDragged(event) {
-  return appcore ? appcore.handlePointer(event) : false;
-}
-
-function mouseReleased(event) {
-  return appcore ? appcore.handlePointerEnd(event) : false;
-}
-
-function touchStarted(event) {
-  return appcore ? appcore.handlePointer(event) : false;
-}
-
-function touchMoved(event) {
-  return appcore ? appcore.handlePointer(event) : false;
-}
-
-function touchEnded(event) {
-  return appcore ? appcore.handlePointerEnd(event) : false;
+  appcore.windowResized();
 }

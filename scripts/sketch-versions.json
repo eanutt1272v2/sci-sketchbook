@@ -1,18 +1,18 @@
 {
   "Cellular Division": {
-    "file": "sketchbook/Cellular_Division/CellularDivision.js",
-    "version": "v3.0.5-dev"
+    "file": "library/Cellular_Division/CellularDivision.js",
+    "version": "v3.0.7-dev"
   },
   "Fluvia": {
-    "file": "sketchbook/Fluvia/Fluvia.js",
-    "version": "v5.4.7-dev"
+    "file": "library/Fluvia/Fluvia.js",
+    "version": "v5.4.9-dev"
   },
   "Lenia ND Studio": {
-    "file": "sketchbook/Lenia_ND_Studio/LeniaNDStudio.js",
-    "version": "v2.6.1-dev"
+    "file": "library/Lenia_ND_Studio/LeniaNDStudio.js",
+    "version": "v2.6.3-dev"
   },
   "Psi": {
-    "file": "sketchbook/Psi/Psi.js",
-    "version": "v2.9.7-dev"
+    "file": "library/Psi/Psi.js",
+    "version": "v2.9.9-dev"
   }
 }

@@ -13,10 +13,10 @@ Live instances: <https://sci-sketchbook.onrender.com/> (will wind down) | <https
 
 ## Project Files
 
-* [Cellular Division — Primordial Particle System](./sketchbook/Cellular_Division)
-* [Psi — Hydrogen Orbital Probability Densities](./sketchbook/Psi)
-* [Fluvia — Lagrangian Hydraulic Erosion](./sketchbook/Fluvia)
-* [Lenia ND Studio — Continuous Cellular Automata](./sketchbook/Lenia_ND_Studio)
+* [Cellular Division — Primordial Particle System](./library/Cellular_Division)
+* [Psi — Hydrogen Orbital Probability Densities](./library/Psi)
+* [Fluvia — Lagrangian Hydraulic Erosion](./library/Fluvia)
+* [Lenia ND Studio — Continuous Cellular Automata](./library/Lenia_ND_Studio)
 
 ---
 
@@ -42,10 +42,10 @@ Every sketch is a self-contained browser-based application with its own solver(s
 
 | Sketch | Domain | Method | Implementation |
 | :-- | :-- | :-- | :-- |
-| [Cellular Division](./sketchbook/Cellular_Division) | Artificial life | Primordial Particle System (PPS) Model — density-driven self-organisation of identical particles into dividing 'cellular' structures | p5.js + Web Worker |
-| [Psi](./sketchbook/Psi) | Quantum mechanics | Hydrogenic bound-state wavefunctions — normalised radial functions, complex spherical harmonics, and probability density evaluation on slice planes | p5.js + Web Worker |
-| [Fluvia](./sketchbook/Fluvia) | Geomorphology | Lagrangian particle-based hydraulic erosion modrl with momentum-coupled meandering, thermal erosion, and a basic dual-layer bedrock–sediment data structure | p5.js + Web Worker + GLSL |
-| [Lenia ND Studio](./sketchbook/Lenia_ND_Studio) | Continuous cellular automata | FFT-accelerated Lenia with configurable kernel/growth families, multi-shell convolution, and 2D/3D/4D support | p5.js + Web Worker |
+| [Cellular Division](./library/Cellular_Division) | Artificial life | Primordial Particle System (PPS) Model — density-driven self-organisation of identical particles into dividing 'cellular' structures | p5.js + Web Worker |
+| [Psi](./library/Psi) | Quantum mechanics | Hydrogenic bound-state wavefunctions — normalised radial functions, complex spherical harmonics, and probability density evaluation on slice planes | p5.js + Web Worker |
+| [Fluvia](./library/Fluvia) | Geomorphology | Lagrangian particle-based hydraulic erosion modrl with momentum-coupled meandering, thermal erosion, and a basic dual-layer bedrock–sediment data structure | p5.js + Web Worker + GLSL |
+| [Lenia ND Studio](./library/Lenia_ND_Studio) | Continuous cellular automata | FFT-accelerated Lenia with configurable kernel/growth families, multi-shell convolution, and 2D/3D/4D support | p5.js + Web Worker |
 
 ---
 
@@ -95,7 +95,7 @@ cd sci-sketchbook
 podman compose up -d --build
 ```
 
-Open `http://localhost:8080` and navigate to `sketchbook/<Sketch_Name>/`.
+Open `http://localhost:8080` and navigate to `library/<Sketch_Name>/`.
 
 > [!TIP]
 > If your Podman installation does not include the Compose plugin, use `podman-compose up -d --build` instead.
@@ -103,7 +103,7 @@ Open `http://localhost:8080` and navigate to `sketchbook/<Sketch_Name>/`.
 #### 3.2 Single sketch via static server
 
 ```bash
-cd sketchbook/Psi
+cd library/Psi
 python3 -m http.server 8080
 ```
 

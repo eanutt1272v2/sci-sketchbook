@@ -17,7 +17,7 @@ services:
       - no-new-privileges:true
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
-      - ./sketchbook:/srv:ro,Z
+      - ./library:/srv:ro,Z
       - caddy_data:/data
       - caddy_config:/config
 

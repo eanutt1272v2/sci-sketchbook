@@ -324,7 +324,7 @@ All parameter keys accept `Shift` for a 10× step multiplier.
 ### Run
 
 ```bash
-cd sketchbook/Cellular_Division
+cd library/Cellular_Division
 python3 -m http.server 8080
 ```
 

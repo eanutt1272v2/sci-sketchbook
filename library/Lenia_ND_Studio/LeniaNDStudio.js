@@ -63,7 +63,7 @@ function scheduleStartupInitialisation(task) {
 
 const metadata = {
   name: "Lenia ND Studio",
-  version: "v2.6.1-dev",
+  version: "v2.6.3-dev",
   author: "@eanutt1272.v2",
 };
 

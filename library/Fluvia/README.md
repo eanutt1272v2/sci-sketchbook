@@ -375,7 +375,7 @@ Per-frame analysis computes 30+ metrics across four categories:
 ## Run
 
 ```bash
-cd sketchbook/Fluvia
+cd library/Fluvia
 python3 -m http.server 8080
 ```
 

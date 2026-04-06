@@ -385,7 +385,7 @@ Format: $n`\ell_m`$, e.g. $`4p_0`$, $`3d_{-1}`$.
 ### Run
 
 ```bash
-cd sketchbook/Psi
+cd library/Psi
 python3 -m http.server 8080
 ```
 

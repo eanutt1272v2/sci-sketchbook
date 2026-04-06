@@ -437,7 +437,7 @@ Symmetry detection decomposes polar samples from the centroid into Fourier harmo
 ### Run
 
 ```bash
-cd sketchbook/Lenia_ND_Studio
+cd library/Lenia_ND_Studio
 python3 -m http.server 8080
 ```
 
