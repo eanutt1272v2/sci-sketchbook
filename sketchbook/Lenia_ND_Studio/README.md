@@ -31,8 +31,7 @@ FFT-accelerated continuous cellular automaton studio implementing Lenia with con
 - [input/InputHandler.js — Keyboard, mouse, and touch controls](input/InputHandler.js)
 - [analysis/Analyser.js — Statistics, symmetry detection, moment invariants, periodicity](analysis/Analyser.js)
 - [media/Media.js — World/parameter/statistics import and export, image/video capture](media/Media.js)
-- [model/NDCompat.js — Canonical N-dimensional configuration and grid-size constraints](model/NDCompat.js)
-- [model/NDCompatibility.js — Legacy alias for backwards compatibility](model/NDCompatibility.js)
+- [model/NDCompatibility.js — Canonical N-dimensional configuration and grid-size constraints (NDCompat class)](model/NDCompatibility.js)
 
 ### Folder Structure
 
@@ -54,7 +53,6 @@ Lenia_ND_Studio/
 │  ├─ AnimalLibrary.js
 │  ├─ Automaton.js
 │  ├─ Board.js
-│  ├─ NDCompat.js
 │  ├─ NDCompatibility.js
 │  └─ RLECodec.js
 ├─ render/

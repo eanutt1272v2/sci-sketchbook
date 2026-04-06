@@ -500,7 +500,7 @@ class AppCore {
 
   _initWorker() {
     try {
-      this._worker = new Worker("worker/PsiWorker.js");
+      this._worker = new Worker("./modules/worker/PsiWorker.js");
     } catch (e) {
       throw new Error("[Psi] Worker is required but could not be created.");
     }

@@ -407,7 +407,7 @@ class AppCore {
 
   _initWorker() {
     try {
-      this._worker = new Worker("worker/FluviaWorker.js");
+      this._worker = new Worker("./modules/worker/FluviaWorker.js");
     } catch (e) {
       throw new Error("[Fluvia] Worker is required but could not be created.");
     }

@@ -23,12 +23,12 @@ function _reportWorkerError(stage, error) {
   try {
     self.postMessage(payload);
   } catch {
-    // Ignore recursive post failures.
+    console.warn("[LeniaWorker] Failed to post error message to main thread. Original error:", payload);
   }
   try {
     console.error(`[LeniaWorker] ${payload.stage}: ${payload.message}`);
   } catch {
-    // Console may be unavailable in some worker runtimes.
+    // Ignore logging failures because obviously logging shouldn't cause more errors. If this fails, there's not much we can do about it. It's up to the bloody user to fix their console if it can't handle error messages.
   }
 }
 

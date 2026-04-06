@@ -16,39 +16,39 @@
     </script>
   </head>
   <body>
-    <script src="../_shared/utils/KeyboardUtils.js"></script>
     <script src="../_shared/utils/AppDiagnostics.js"></script>
     <script src="../_shared/utils/AssetLoader.js"></script>
-    <script src="../_shared/utils/ColourMapLUT.js"></script>
     <script src="../_shared/utils/FormatUtils.js"></script>
-    <script src="../_shared/utils/KeymapRenderer.js"></script>
+    <script src="../_shared/utils/ColourMapLUT.js"></script>
+    <script src="../_shared/utils/KeyboardUtils.js"></script>
     <script src="../_shared/utils/KeybindCatalogue.js"></script>
+    <script src="../_shared/utils/KeymapRenderer.js"></script>
     <script src="../_shared/utils/MediaCore.js"></script>
 
-    <script src="model/RLECodec.js"></script>
-    <script src="model/NDCompat.js"></script>
-    <script src="model/NDCompatibility.js"></script>
-    <script src="model/AnimalLibrary.js"></script>
+    <script src="./modules/model/RLECodec.js"></script>
+    <script src="./modules/model/NDCompatibility.js"></script>
+    <script src="./modules/model/AnimalLibrary.js"></script>
+    <script src="./modules/model/Board.js"></script>
+    <script src="./modules/model/Automaton.js"></script>
+    <script src="./modules/analysis/Analyser.js"></script>
 
-    <script src="model/Board.js"></script>
-    <script src="model/Automaton.js"></script>
+    <script src="./modules/render/Renderer.js"></script>
+    <script src="./modules/render/methods/RendererOverlayPanelMethods.js"></script>
+    <script src="./modules/render/methods/RendererStatsTrajectoryMethods.js"></script>
+    <script src="./modules/media/Media.js"></script>
 
-    <script src="render/Renderer.js"></script>
-    <script src="render/methods/RendererOverlayPanelMethods.js"></script>
-    <script src="render/methods/RendererStatsTrajectoryMethods.js"></script>
-    <script src="analysis/Analyser.js"></script>
-    <script src="media/Media.js"></script>
-    <script src="ui/components/StatsGraphComponent.js"></script>
-    <script src="ui/GUI.js"></script>
-    <script src="input/InputHandler.js"></script>
+    <script src="./modules/ui/components/StatsGraphComponent.js"></script>
+    <script src="./modules/ui/GUI.js"></script>
+    <script src="./modules/input/InputHandler.js"></script>
 
-    <script src="core/AppCore.js"></script>
-    <script src="core/methods/AppCoreMutationMethods.js"></script>
-    <script src="core/methods/AppCoreAnimalMethods.js"></script>
-    <script src="core/methods/AppCoreControlMethods.js"></script>
-    <script src="core/methods/AppCoreWorkerPipelineMethods.js"></script>
-    <script src="core/methods/AppCoreImportExportMethods.js"></script>
-    <script src="core/methods/AppCoreRenderLoopMethods.js"></script>
+    <script src="./modules/core/AppCore.js"></script>
+    <script src="./modules/core/methods/AppCoreMutationMethods.js"></script>
+    <script src="./modules/core/methods/AppCoreAnimalMethods.js"></script>
+    <script src="./modules/core/methods/AppCoreControlMethods.js"></script>
+    <script src="./modules/core/methods/AppCoreWorkerPipelineMethods.js"></script>
+    <script src="./modules/core/methods/AppCoreImportExportMethods.js"></script>
+    <script src="./modules/core/methods/AppCoreRenderLoopMethods.js"></script>
+
     <script src="LeniaNDStudio.js"></script>
   </body>
 </html>

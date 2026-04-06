@@ -52,7 +52,7 @@ class Simulation {
 
   _initWorker() {
     try {
-      this._worker = new Worker("worker/SimulationWorker.js");
+      this._worker = new Worker("./modules/worker/SimulationWorker.js");
     } catch (e) {
       this._diagnosticsLogger.warn(
         "[Cellular Division] Worker unavailable, falling back to synchronous simulation",

@@ -47,8 +47,8 @@ class AppDiagnostics {
       if (stored === "1" || stored === "true") {
         return true;
       }
-    } catch {
-      // Access to localStorage can fail in private contexts.
+    } catch (error) {
+      console.warn("[AppDiagnostics] Unable to access localStorage for debug flag", error);
     }
 
     try {
@@ -57,8 +57,8 @@ class AppDiagnostics {
       const params = new URLSearchParams(search);
       const value = String(params.get("debug") || "").toLowerCase();
       return value === "1" || value === "true" || value === "yes";
-    } catch {
-      // URL parsing may fail in some restricted environments.
+    } catch (error) {
+      console.warn("[AppDiagnostics] Unable to parse URL for debug flag", error);
       return false;
     }
   }
@@ -197,8 +197,8 @@ class AppDiagnostics {
             { timeout: safeTimeout },
           );
           return;
-        } catch {
-          // Fall through to timeout scheduling below.
+        } catch (error) {
+          console.warn("[AppDiagnostics] requestIdleCallback failed", error);
         }
       }
 

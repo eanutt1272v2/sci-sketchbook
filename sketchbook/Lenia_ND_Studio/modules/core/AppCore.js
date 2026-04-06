@@ -247,6 +247,7 @@ class AppCore {
     this._ensureBuffers();
     if (this._worker) this._dispatchWorkerStep();
   }
+  
   windowResized() {
     const canvasSize = min(windowWidth, windowHeight);
     if (width === canvasSize && height === canvasSize) {

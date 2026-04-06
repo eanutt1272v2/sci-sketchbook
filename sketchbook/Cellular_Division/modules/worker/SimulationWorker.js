@@ -1,7 +1,7 @@
 "use strict";
 
 if (typeof importScripts === "function") {
-  importScripts("../../_shared/utils/WorkerSanitisers.js");
+  importScripts("../../../_shared/utils/WorkerSanitisers.js");
 }
 
 const _workerSanitisers =
@@ -41,13 +41,13 @@ function _reportWorkerError(stage, error) {
   const payload = _toWorkerErrorPayload(stage, error);
   try {
     self.postMessage(payload);
-  } catch {
-    // Ignore recursive post failures.
+  } catch (error) {
+    console.warn("[CellDivWorker] Failed to post error message to main thread", error);
   }
   try {
     console.error(`[CellDivWorker] ${payload.stage}: ${payload.message}`);
   } catch {
-    // Console may be unavailable in some worker runtimes.
+    // Ignore logging failures because obviously logging shouldn't cause more errors. If this fails, there's not much we can do about it. It's up to the bloody user to fix their console if it can't handle error messages.
   }
 }
 

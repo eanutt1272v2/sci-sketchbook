@@ -82,7 +82,7 @@ class AppCoreWorkerPipelineMethods {
 
   _initWorker() {
     try {
-      this._worker = new Worker("worker/LeniaWorker.js");
+      this._worker = new Worker("./modules/worker/LeniaWorker.js");
     } catch (e) {
       throw new Error("[Lenia] Worker is required but could not be created.");
     }

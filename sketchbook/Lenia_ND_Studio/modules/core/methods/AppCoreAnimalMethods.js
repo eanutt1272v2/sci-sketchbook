@@ -834,7 +834,6 @@ class AppCoreAnimalMethods {
 
       if (sourceSliceMap.size === 0) return;
 
-      // Scale depth support as well so ND stamping follows X/Y/Z/(W) uniformly.
       const sourceZCount = maxSourceZIndex + 1;
       const sourceWCount = extraDims >= 2 ? maxSourceWIndex + 1 : 1;
       const targetZCount = Math.max(1, Math.round(sourceZCount * scale));

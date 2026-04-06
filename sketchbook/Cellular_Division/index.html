@@ -12,34 +12,33 @@
     <script src="https://cdn.jsdelivr.net/npm/p5@2.2.3/lib/p5.min.js"></script>
   </head>
   <body>
-    <script src="../_shared/utils/KeyboardUtils.js"></script>
     <script src="../_shared/utils/AppDiagnostics.js"></script>
     <script src="../_shared/utils/AssetLoader.js"></script>
-    <script src="../_shared/utils/MediaCore.js"></script>
+    <script src="../_shared/utils/KeyboardUtils.js"></script>
     <script src="../_shared/utils/KeybindCatalogue.js"></script>
+    <script src="../_shared/utils/MediaCore.js"></script>
 
-    <script src="ui/Theme.js"></script>
-    <script src="core/ParameterSet.js"></script>
+    <script src="./modules/core/ParameterSet.js"></script>
+    <script src="./modules/sim/Species.js"></script>
+    <script src="./modules/ui/Theme.js"></script>
 
-    <script src="ui/components/Button.js"></script>
-    <script src="ui/components/Slider.js"></script>
-    <script src="ui/components/AccordionPanel.js"></script>
-    <script src="ui/components/AccordionGroup.js"></script>
+    <script src="./modules/ui/components/Button.js"></script>
+    <script src="./modules/ui/components/Slider.js"></script>
+    <script src="./modules/ui/components/AccordionPanel.js"></script>
+    <script src="./modules/ui/components/AccordionGroup.js"></script>
 
-    <script src="ui/LeftPanel.js"></script>
-    <script src="ui/RightPanel.js"></script>
-    <script src="ui/UIManager.js"></script>
+    <script src="./modules/sim/Particle.js"></script>
+    <script src="./modules/sim/Grid.js"></script>
+    <script src="./modules/sim/CellTracker.js"></script>
+    <script src="./modules/sim/Simulation.js"></script>
+    <script src="./modules/media/Media.js"></script>
 
-    <script src="sim/Species.js"></script>
-    <script src="sim/Particle.js"></script>
-    <script src="sim/Grid.js"></script>
-    <script src="sim/CellTracker.js"></script>
-    <script src="sim/Simulation.js"></script>
-    <script src="media/Media.js"></script>
+    <script src="./modules/ui/LeftPanel.js"></script>
+    <script src="./modules/ui/RightPanel.js"></script>
+    <script src="./modules/ui/UIManager.js"></script>
+    <script src="./modules/input/InputHandler.js"></script>
 
-    <script src="input/InputHandler.js"></script>
-    <script src="core/AppCore.js"></script>
-
+    <script src="./modules/core/AppCore.js"></script>
     <script src="CellularDivision.js"></script>
   </body>
 </html>
