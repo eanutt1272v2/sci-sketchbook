@@ -1,7 +1,7 @@
 "use strict";
 
 if (typeof importScripts === "function") {
-  importScripts("../../_shared/utils/WorkerSanitisers.js");
+  importScripts("../../../_shared/utils/WorkerSanitisers.js");
 }
 
 const _workerSanitisers =
@@ -19,16 +19,19 @@ const _workerSanitisers =
 
 const _twiddleCache = new Map();
 const _symmetryCache = new Map();
+
 let _trigCache = {
   size: 0,
   cos: null,
   sin: null,
 };
+
 const _fft2DScratch = {
   N: 0,
   row: null,
   col: null,
 };
+
 const _symmScratch = {
   size: 0,
   prAngles: null,
@@ -72,6 +75,7 @@ const _growthLutPoly = new Float32Array(_GROWTH_LUT_SIZE);
 const _GROWTH_LUT_POLY_MAX = 1.5;
 const _GLI_EXP = (_GROWTH_LUT_SIZE - 1) / _GROWTH_LUT_UMAX;
 const _GLI_POLY = (_GROWTH_LUT_SIZE - 1) / _GROWTH_LUT_POLY_MAX;
+
 (function _initGrowthLUTs() {
   for (let i = 0; i < _GROWTH_LUT_SIZE; i++) {
     const u = (i / (_GROWTH_LUT_SIZE - 1)) * _GROWTH_LUT_UMAX;

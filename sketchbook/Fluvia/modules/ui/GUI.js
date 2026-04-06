@@ -482,7 +482,10 @@ class GUI {
 
     this.addSeparator(page);
 
-    const geomorphFolder = page.addFolder({ title: "Mass Balance", expanded: false });
+    const geomorphFolder = page.addFolder({
+      title: "Mass Balance",
+      expanded: false,
+    });
 
     this.addGraphWithValue(geomorphFolder, statistics, "erosionRate", {
       label: "Total Erosion Rate [volume/s]",
@@ -535,7 +538,10 @@ class GUI {
 
     this.addSeparator(page);
 
-    const compositeFolder = page.addFolder({ title: "Composite Blend", expanded: false });
+    const compositeFolder = page.addFolder({
+      title: "Composite Blend",
+      expanded: false,
+    });
 
     this.addGraphWithValue(
       compositeFolder,

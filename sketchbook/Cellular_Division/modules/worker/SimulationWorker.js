@@ -42,7 +42,10 @@ function _reportWorkerError(stage, error) {
   try {
     self.postMessage(payload);
   } catch (error) {
-    console.warn("[CellDivWorker] Failed to post error message to main thread", error);
+    console.warn(
+      "[CellDivWorker] Failed to post error message to main thread",
+      error,
+    );
   }
   try {
     console.error(`[CellDivWorker] ${payload.stage}: ${payload.message}`);

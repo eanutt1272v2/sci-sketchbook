@@ -784,7 +784,9 @@ class GUI {
     if (!this.appcore || !this.placeScaleBinding) return;
     if (typeof this.appcore.getPlacementScaleBounds !== "function") return;
 
-    const bounds = this.appcore.getPlacementScaleBounds(this.params.selectedAnimal);
+    const bounds = this.appcore.getPlacementScaleBounds(
+      this.params.selectedAnimal,
+    );
     this.placeScaleBinding.min = bounds.min;
     this.placeScaleBinding.max = bounds.max;
     this.params.placeScale = constrain(
@@ -799,10 +801,7 @@ class GUI {
       const token = this.animalLibrary.toAnimalMenuValue(
         this.params.selectedAnimal,
       );
-      if (
-        token &&
-        this._animalMenuState.selectedAnimalMenu !== token
-      ) {
+      if (token && this._animalMenuState.selectedAnimalMenu !== token) {
         this._animalMenuState.selectedAnimalMenu = token;
         this.animalBinding.refresh?.();
       }

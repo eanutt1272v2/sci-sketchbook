@@ -78,8 +78,7 @@ class AppCoreImportExportMethods {
       addNoise: (v) => constrain(v, 0, 10),
       maskRate: (v) => constrain(v, 0, 10),
       paramP: (v) => Math.round(constrain(v, 0, 64)),
-      placeScale: (v) =>
-        this.getEffectivePlacementScale(v, p.selectedAnimal),
+      placeScale: (v) => this.getEffectivePlacementScale(v, p.selectedAnimal),
       recordingFPS: (v) => Math.round(constrain(v, 12, 120)),
       videoBitrateMbps: (v) => constrain(v, 1, 64),
     };

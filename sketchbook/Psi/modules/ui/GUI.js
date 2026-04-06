@@ -96,12 +96,11 @@ class GUI {
   }
 
   createSimulationTab(page) {
-    
     const perf = page.addFolder({
       title: "Performance Metrics",
       expanded: true,
     });
-    
+
     perf.addBinding(this.appcore.statistics, "fps", {
       readonly: true,
       label: "FPS [Hz]",
@@ -112,7 +111,7 @@ class GUI {
     });
 
     this.addSeparator(page);
-    
+
     const keymapShortcut =
       typeof KeybindCatalogue === "undefined"
         ? "#"

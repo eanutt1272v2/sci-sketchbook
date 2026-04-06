@@ -1,7 +1,7 @@
 "use strict";
 
 if (typeof importScripts === "function") {
-  importScripts("../../_shared/utils/WorkerSanitisers.js");
+  importScripts("../../../_shared/utils/WorkerSanitisers.js");
 }
 
 const _workerSanitisers =
@@ -42,7 +42,10 @@ function _reportWorkerError(stage, error) {
   try {
     self.postMessage(payload);
   } catch {
-    console.warn("[PsiWorker] Failed to post error message to main thread. Original error:", payload);
+    console.warn(
+      "[PsiWorker] Failed to post error message to main thread. Original error:",
+      payload,
+    );
   }
   try {
     console.error(`[PsiWorker] ${payload.stage}: ${payload.message}`);

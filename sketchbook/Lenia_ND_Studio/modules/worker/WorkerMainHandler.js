@@ -23,7 +23,10 @@ function _reportWorkerError(stage, error) {
   try {
     self.postMessage(payload);
   } catch {
-    console.warn("[LeniaWorker] Failed to post error message to main thread. Original error:", payload);
+    console.warn(
+      "[LeniaWorker] Failed to post error message to main thread. Original error:",
+      payload,
+    );
   }
   try {
     console.error(`[LeniaWorker] ${payload.stage}: ${payload.message}`);

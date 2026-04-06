@@ -413,7 +413,10 @@ class AppCoreAnimalMethods {
     selection = this.params.selectedAnimal,
     requestedScale = this.params.placeScale,
   ) {
-    const sliderScale = this.getEffectivePlacementScale(requestedScale, selection);
+    const sliderScale = this.getEffectivePlacementScale(
+      requestedScale,
+      selection,
+    );
     const zoomScale = this._getRadiusLinkedPlacementScale(selection);
 
     if (Number.isFinite(zoomScale) && zoomScale > 0) {
@@ -594,7 +597,10 @@ class AppCoreAnimalMethods {
     const animal = this._resolveAnimalForPlacement(request.selection);
     if (!animal) return;
 
-    const scale = this._getCombinedPlacementScale(request.selection, request.scale);
+    const scale = this._getCombinedPlacementScale(
+      request.selection,
+      request.scale,
+    );
     const dim = Number(this.params.dimension) || 2;
     this._ensureBuffers();
 
@@ -680,12 +686,7 @@ class AppCoreAnimalMethods {
     patternData,
     srcW,
     srcH,
-    {
-      targetW = srcW,
-      targetH = srcH,
-      maxW = Infinity,
-      maxH = Infinity,
-    } = {},
+    { targetW = srcW, targetH = srcH, maxW = Infinity, maxH = Infinity } = {},
   ) {
     let width = Math.max(1, Math.floor(Number(srcW) || 1));
     let height = Math.max(1, Math.floor(Number(srcH) || 1));
@@ -714,7 +715,9 @@ class AppCoreAnimalMethods {
 
     if (data.length !== width * height) {
       const normalised = new Float32Array(width * height);
-      normalised.set(data.subarray(0, Math.min(data.length, normalised.length)));
+      normalised.set(
+        data.subarray(0, Math.min(data.length, normalised.length)),
+      );
       data = normalised;
     }
 
@@ -874,7 +877,11 @@ class AppCoreAnimalMethods {
           continue;
         }
 
-        for (let targetZIndex = 0; targetZIndex < targetZCount; targetZIndex++) {
+        for (
+          let targetZIndex = 0;
+          targetZIndex < targetZCount;
+          targetZIndex++
+        ) {
           const sourceZIndex = this._mapNearestIndex(
             targetZIndex,
             sourceZCount,
@@ -892,9 +899,7 @@ class AppCoreAnimalMethods {
           if (!source) continue;
 
           const plane =
-            extraDims >= 2
-              ? worldZIndex + worldWIndex * depth
-              : worldZIndex;
+            extraDims >= 2 ? worldZIndex + worldWIndex * depth : worldZIndex;
           planeEntries.push({
             plane,
             patternData: source.patternData,

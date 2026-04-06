@@ -48,7 +48,10 @@ class AppDiagnostics {
         return true;
       }
     } catch (error) {
-      console.warn("[AppDiagnostics] Unable to access localStorage for debug flag", error);
+      console.warn(
+        "[AppDiagnostics] Unable to access localStorage for debug flag",
+        error,
+      );
     }
 
     try {
@@ -58,7 +61,10 @@ class AppDiagnostics {
       const value = String(params.get("debug") || "").toLowerCase();
       return value === "1" || value === "true" || value === "yes";
     } catch (error) {
-      console.warn("[AppDiagnostics] Unable to parse URL for debug flag", error);
+      console.warn(
+        "[AppDiagnostics] Unable to parse URL for debug flag",
+        error,
+      );
       return false;
     }
   }
