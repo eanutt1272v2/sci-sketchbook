@@ -6,45 +6,45 @@ class Analyser {
   }
 
   reinitialise() {
-    const stats = this.appcore.statistics;
+    const statistics = this.appcore.statistics;
 
     this.simulationStartTime = performance.now();
 
-    stats.simulationTime = 0;
-    stats.frameCounter = 0;
-    stats.heightHistogram = new Int32Array(256);
-    stats.normHistogram = new Float32Array(256);
+    statistics.simulationTime = 0;
+    statistics.frameCounter = 0;
+    statistics.heightHistogram = new Int32Array(256);
+    statistics.normHistogram = new Float32Array(256);
 
-    stats.rugosity = 0;
-    stats.drainageDensity = 0;
-    stats.sedimentFlux = 0;
-    stats.erosionRate = 0;
-    stats.hydraulicResidence = 0;
+    statistics.rugosity = 0;
+    statistics.drainageDensity = 0;
+    statistics.sedimentFlux = 0;
+    statistics.erosionRate = 0;
+    statistics.hydraulicResidence = 0;
 
-    stats.totalWater = 0;
-    stats.totalSediment = 0;
-    stats.totalBedrock = 0;
+    statistics.totalWater = 0;
+    statistics.totalSediment = 0;
+    statistics.totalBedrock = 0;
 
-    stats.avgElevation = 0;
-    stats.elevationStdDev = 0;
+    statistics.avgElevation = 0;
+    statistics.elevationStdDev = 0;
 
-    stats.activeWaterCover = 0;
-    stats.slopeComplexity = 0;
+    statistics.activeWaterCover = 0;
+    statistics.slopeComplexity = 0;
 
-    stats.compositeWaterCoveragePct = 0;
-    stats.compositeSedimentCoveragePct = 0;
-    stats.compositeFlatCoveragePct = 0;
-    stats.compositeSteepCoveragePct = 0;
-    stats.compositeMeanSlopeWeight = 0;
-    stats.compositeMeanSedimentAlpha = 0;
-    stats.compositeMeanWaterAlpha = 0;
+    statistics.compositeWaterCoveragePct = 0;
+    statistics.compositeSedimentCoveragePct = 0;
+    statistics.compositeFlatCoveragePct = 0;
+    statistics.compositeSteepCoveragePct = 0;
+    statistics.compositeMeanSlopeWeight = 0;
+    statistics.compositeMeanSedimentAlpha = 0;
+    statistics.compositeMeanWaterAlpha = 0;
 
-    stats.heightBounds.min = 0;
-    stats.heightBounds.max = 0;
-    stats.sedimentBounds.min = 0;
-    stats.sedimentBounds.max = 0;
-    stats.dischargeBounds.min = 0;
-    stats.dischargeBounds.max = 0;
+    statistics.heightBounds.min = 0;
+    statistics.heightBounds.max = 0;
+    statistics.sedimentBounds.min = 0;
+    statistics.sedimentBounds.max = 0;
+    statistics.dischargeBounds.min = 0;
+    statistics.dischargeBounds.max = 0;
   }
 
   update() {

@@ -108,14 +108,14 @@ class AppCoreRenderLoopMethods {
       this.renderer.renderLegend();
     }
 
-    if (this.params.renderStats) {
-      this.renderer.renderStats(this.statistics, this.params);
+    if (this.params.renderStatistics) {
+      this.renderer.renderStatistics(this.statistics, this.params);
     }
 
-    if (this.params.renderAnimalName) {
-      const animal = this.getSelectedAnimal();
-      if (animal?.name) {
-        this.renderer.renderAnimalName(animal);
+    if (this.params.renderSolitonName) {
+      const soliton = this.getSelectedSoliton();
+      if (soliton?.name) {
+        this.renderer.renderSolitonName(soliton);
       }
     }
   }

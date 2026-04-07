@@ -497,7 +497,7 @@ class Board {
     return this;
   }
 
-  getStats() {
+  getStatistics() {
     if (!this.world || typeof this.world.length !== "number") {
       return { mass: 0, max: 0 };
     }
@@ -515,12 +515,12 @@ class Board {
   }
 
   toJSON() {
-    const stats = this.getStats();
+    const statistics = this.getStatistics();
     return {
       size: this.size,
       params: this.params,
       world: this._worldToRLE(),
-      stats,
+      statistics,
     };
   }
 

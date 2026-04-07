@@ -471,12 +471,12 @@ class Renderer {
   }
 
   renderOverlay() {
-    if (this.appcore.params.renderStats) this.renderStats();
+    if (this.appcore.params.renderStatistics) this.renderStatistics();
     if (this.appcore.params.renderLegend) this.renderLegend();
     if (this.appcore.params.renderKeymapRef) this.renderKeymapRef();
   }
 
-  renderStats() {
+  renderStatistics() {
     const { statistics, params } = this.appcore;
     const fmt = (value, fixed = 3) => {
       const n = Number(value) || 0;

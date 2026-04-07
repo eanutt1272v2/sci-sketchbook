@@ -26,11 +26,11 @@ FFT-accelerated continuous cellular automaton studio implementing Lenia with con
 - [model/Automaton.js — Kernel state container and sparse representation](model/Automaton.js)
 - [model/Board.js — Grid storage, pattern loading, scaling, and transformation](model/Board.js)
 - [render/Renderer.js — World/potential/growth/kernel rendering with LUT, overlays, and polar modes](render/Renderer.js)
-- [model/AnimalLibrary.js — Organism preset manager and parameter application](model/AnimalLibrary.js)
+- [model/SolitonLibrary.js — Organism preset manager and parameter application](model/SolitonLibrary.js)
 - [ui/GUI.js — Tweakpane interface (6 tabs)](ui/GUI.js)
 - [input/InputHandler.js — Keyboard, mouse, and touch controls](input/InputHandler.js)
 - [analysis/Analyser.js — Statistics, symmetry detection, moment invariants, periodicity](analysis/Analyser.js)
-- [media/Media.js — World/parameter/statistics import and export, image/video capture](media/Media.js)
+- [media/Media.js — World/parameter/statistics import and export, image/media capture](media/Media.js)
 - [model/NDCompatibility.js — Canonical N-dimensional configuration and grid-size constraints (NDCompat class)](model/NDCompatibility.js)
 
 ### Folder Structure
@@ -43,14 +43,14 @@ Lenia_ND_Studio/
 ├─ core/
 │  ├─ AppCore.js
 │  └─ methods/
-│     ├─ AppCoreAnimalMethods.js
+│     ├─ AppCoreSolitonMethods.js
 │     ├─ AppCoreControlMethods.js
 │     ├─ AppCoreMutationMethods.js
 │     ├─ AppCoreWorkerPipelineMethods.js
 │     ├─ AppCoreImportExportMethods.js
 │     └─ AppCoreRenderLoopMethods.js
 ├─ model/
-│  ├─ AnimalLibrary.js
+│  ├─ SolitonLibrary.js
 │  ├─ Automaton.js
 │  ├─ Board.js
 │  ├─ NDCompatibility.js
@@ -307,9 +307,9 @@ Buffers are transferred with ownership (zero-copy `ArrayBuffer` transfer) betwee
 
 Three JSON libraries contain presets organised by biological-style taxonomy:
 
-- `animals.json` — 2D organisms
-- `animals3D.json` — 3D organisms
-- `animals4D.json` — 4D organisms
+- `solitons.json` — 2D organisms
+- `solitons3D.json` — 3D organisms
+- `solitons4D.json` — 4D organisms
 
 Each preset stores parameters $(R, T, m, s, \mathbf{b}, kn, gn)$ and an RLE-compressed initial pattern. Classification follows Chan's notation with codes like `O2u` (Orbium unicaudatus) which map to genus/species pairs.
 
@@ -395,7 +395,7 @@ Symmetry detection decomposes polar samples from the centroid into Fourier harmo
 | `,` / `.`       | Cycle colour map                                          |
 | `G`             | Grid overlay (`Shift` = general overlay)                  |
 | `L` / `B` / `O` | Legend / scale bar / statistics                           |
-| `J`             | Motion overlay (`Shift` = animal name, `Ctrl` = symmetry) |
+| `J`             | Motion overlay (`Shift` = soliton name, `Ctrl` = symmetry) |
 | `K`             | Calculation panels                                        |
 | `'`             | Auto-centre (`Shift` = auto-rotate, `Ctrl` = polar mode)  |
 

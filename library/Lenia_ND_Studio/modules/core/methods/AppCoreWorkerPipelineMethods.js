@@ -64,7 +64,7 @@ class AppCoreWorkerPipelineMethods {
 
     const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
     if (dim > 2) {
-      const safeSize = NDCompat.coerceGridSize(this.params.latticeExtent, dim);
+      const safeSize = NDCompatibility.coerceGridSize(this.params.latticeExtent, dim);
       if (safeSize < this.params.latticeExtent) {
         this._logWarn(
           `Recovering from worker failure by reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize}.`,
@@ -101,7 +101,7 @@ class AppCoreWorkerPipelineMethods {
   _workerSendKernel() {
     const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
     if (dim > 2) {
-      const safeSize = NDCompat.coerceGridSize(this.params.latticeExtent, dim);
+      const safeSize = NDCompatibility.coerceGridSize(this.params.latticeExtent, dim);
       if (safeSize !== this.params.latticeExtent) {
         this._logWarn(
           `Reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize} to avoid excessive worker memory usage.`,

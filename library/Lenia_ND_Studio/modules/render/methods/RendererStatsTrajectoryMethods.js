@@ -1,4 +1,4 @@
-class RendererStatsTrajectoryMethods {
+class RendererStatisticsTrajectoryMethods {
   _renderTrajectoryPath(history, colour, cellPx, viewShiftX, viewShiftY) {
     if (!Array.isArray(history) || history.length < 2) return;
 
@@ -84,7 +84,7 @@ class RendererStatsTrajectoryMethods {
     }
     this._renderTrajectoryPath(massHistory, massTrailColour, cellPx, vsx, vsy);
 
-    const showLabel = params.renderStats !== true;
+    const showLabel = params.renderStatistics !== true;
     if (!showLabel) return;
     push();
     this._applyTextFont();
@@ -157,7 +157,7 @@ class RendererStatsTrajectoryMethods {
     );
     ellipse(growthPoint.x * cellPx, growthPoint.y * cellPx, 6, 6);
 
-    if (!params.renderStats) {
+    if (!params.renderStatistics) {
       this._applyTextFont();
       noStroke();
       fill(220, 200);
@@ -169,4 +169,4 @@ class RendererStatsTrajectoryMethods {
   }
 }
 
-Renderer.installMethodsFrom(RendererStatsTrajectoryMethods);
+Renderer.installMethodsFrom(RendererStatisticsTrajectoryMethods);

@@ -375,16 +375,16 @@ class InputHandler {
     }
 
     if (keyLower === "z" && !ctrlHeld) {
-      this.appcore.loadSelectedAnimal();
+      this.appcore.loadSelectedSoliton();
       this.appcore.refreshGUI();
       return false;
     }
     if (keyLower === "c" && !ctrlHeld) {
-      this._cycleAnimal(shiftHeld ? -10 : -1);
+      this._cycleSoliton(shiftHeld ? -10 : -1);
       return false;
     }
     if (keyLower === "v" && !ctrlHeld) {
-      this._cycleAnimal(shiftHeld ? 10 : 1);
+      this._cycleSoliton(shiftHeld ? 10 : 1);
       return false;
     }
     if (keyLower === "x" && !ctrlHeld) {
@@ -393,7 +393,7 @@ class InputHandler {
         this.appcore.refreshGUI();
       } else {
         const repeats = 1;
-        for (let i = 0; i < repeats; i++) this.appcore.placeAnimalRandom();
+        for (let i = 0; i < repeats; i++) this.appcore.placeSolitonRandom();
         this.appcore.refreshGUI();
       }
       return false;
@@ -431,32 +431,32 @@ class InputHandler {
     }
 
     if (altHeld && !ctrlHeld && keyLower === "j") {
-      this.appcore.cycleStatsMode(shiftHeld ? -1 : 1);
+      this.appcore.cycleStatisticsMode(shiftHeld ? -1 : 1);
       return false;
     }
     if (altHeld && !ctrlHeld && keyLower === "k") {
-      this.appcore.cycleStatsAxis("x", shiftHeld ? -1 : 1);
+      this.appcore.cycleStatisticsAxis("x", shiftHeld ? -1 : 1);
       return false;
     }
     if (altHeld && !ctrlHeld && keyLower === "l") {
-      this.appcore.cycleStatsAxis("y", shiftHeld ? -1 : 1);
+      this.appcore.cycleStatisticsAxis("y", shiftHeld ? -1 : 1);
       return false;
     }
     if (altHeld && ctrlHeld && keyLower === "n") {
-      this.appcore.startStatsSegment();
+      this.appcore.startStatisticsSegment();
       return false;
     }
     if (altHeld && ctrlHeld && keyLower === "j") {
       if (shiftHeld) {
-        this.appcore.clearAllStatsSegments();
+        this.appcore.clearAllStatisticsSegments();
       } else {
-        this.appcore.clearCurrentStatsSegment();
+        this.appcore.clearCurrentStatisticsSegment();
       }
       return false;
     }
 
     if (ctrlHeld && keyLower === "h") {
-      params.renderStats = !params.renderStats;
+      params.renderStatistics = !params.renderStatistics;
       this.appcore.refreshGUI();
       return false;
     }
@@ -468,9 +468,9 @@ class InputHandler {
     if (ctrlHeld && keyLower === "k" && !shiftHeld && !altHeld) {
       const currentMode = Math.max(
         0,
-        Math.min(6, Math.floor(Number(params.statsMode) || 1)),
+        Math.min(6, Math.floor(Number(params.statisticsMode) || 1)),
       );
-      params.statsMode = currentMode === 5 ? 1 : 5;
+      params.statisticsMode = currentMode === 5 ? 1 : 5;
       this.appcore.analyser?.updatePeriodogram?.(params, 10, true);
       this.appcore.refreshGUI();
       return false;
@@ -486,7 +486,7 @@ class InputHandler {
     }
     if (keyLower === "j" && !ctrlHeld) {
       if (shiftHeld) {
-        params.renderAnimalName = !params.renderAnimalName;
+        params.renderSolitonName = !params.renderSolitonName;
       } else {
         params.renderMotionOverlay = !params.renderMotionOverlay;
       }
@@ -535,14 +535,14 @@ class InputHandler {
     }
 
     if (ctrlHeld && shiftHeld && keyLower === "z") {
-      this.appcore.applySelectedAnimalParams({ refreshGUI: true });
+      this.appcore.applySelectedSolitonParams({ refreshGUI: true });
       return false;
     }
 
     if (ctrlHeld && (keyValue === "[" || keyValue === "{" || kCode === 219)) {
       const bounds = this.appcore?.getPlacementScaleBounds
         ? this.appcore.getPlacementScaleBounds(
-            this.appcore.params?.selectedAnimal,
+            this.appcore.params?.selectedSoliton,
           )
         : { min: 0.25, max: 4 };
       params.placeScale = constrain(
@@ -557,7 +557,7 @@ class InputHandler {
     if (ctrlHeld && (keyValue === "]" || keyValue === "}" || kCode === 221)) {
       const bounds = this.appcore?.getPlacementScaleBounds
         ? this.appcore.getPlacementScaleBounds(
-            this.appcore.params?.selectedAnimal,
+            this.appcore.params?.selectedSoliton,
           )
         : { min: 0.25, max: 4 };
       params.placeScale = constrain(
@@ -629,8 +629,8 @@ class InputHandler {
     this.appcore.refreshGUI();
   }
 
-  _cycleAnimal(delta) {
-    this.appcore.cycleAnimal(delta);
+  _cycleSoliton(delta) {
+    this.appcore.cycleSoliton(delta);
   }
 
   _adjustPeak(index, delta) {

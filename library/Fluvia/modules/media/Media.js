@@ -141,14 +141,14 @@ class Media extends MediaCore {
 
   exportStatisticsJSON() {
     const payload = {
-      format: "simpipe.stats",
+      format: "simpipe.statistics",
       metadata: this._getMetadataSnapshot(),
       statistics: this._serialiseStatistics(),
       series: [],
       exportedAt: new Date().toISOString(),
     };
-    this._downloadJSON(payload, this._getFilename("stats.json"));
-    this._logInfo("Stats JSON exported");
+    this._downloadJSON(payload, this._getFilename("statistics.json"));
+    this._logInfo("Statistics JSON exported");
   }
 
   exportStatisticsCSV() {
@@ -163,8 +163,8 @@ class Media extends MediaCore {
       rows
         .map((r) => `${this._toCSVCell(r[0])},${this._toCSVCell(r[1])}`)
         .join("\n");
-    this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
-    this._logInfo("Stats CSV exported");
+    this._downloadText(csv, this._getFilename("statistics.csv"), "text/csv");
+    this._logInfo("Statistics CSV exported");
   }
 
   exportWorldJSON() {
@@ -321,12 +321,12 @@ class Media extends MediaCore {
     }
 
     const size = terrain.size;
-    const statsBounds = this.appcore?.statistics?.heightBounds;
-    const statsMin = Number(statsBounds?.min);
-    const statsMax = Number(statsBounds?.max);
+    const statisticsBounds = this.appcore?.statistics?.heightBounds;
+    const statisticsMin = Number(statisticsBounds?.min);
+    const statisticsMax = Number(statisticsBounds?.max);
     const bounds =
-      Number.isFinite(statsMin) && Number.isFinite(statsMax)
-        ? { min: statsMin, max: statsMax }
+      Number.isFinite(statisticsMin) && Number.isFinite(statisticsMax)
+        ? { min: statisticsMin, max: statisticsMax }
         : terrain.getMapBounds(terrain.heightMap);
     const range = Math.max(1e-9, bounds.max - bounds.min);
 

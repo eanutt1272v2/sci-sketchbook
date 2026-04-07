@@ -4,30 +4,30 @@ class GUI {
     statistics,
     renderData,
     metadata,
-    animalLibrary = null,
+    solitonLibrary = null,
     appcore = null,
   ) {
     this.params = params;
     this.statistics = statistics;
     this.renderData = renderData;
     this.metadata = metadata;
-    this.animalLibrary = animalLibrary;
+    this.solitonLibrary = solitonLibrary;
     this.appcore = appcore;
     this.pane = null;
-    this.animalBinding = null;
-    this._animalMenuState = null;
-    this._lastAnimalSelection = String(this.params?.selectedAnimal || "");
+    this.solitonBinding = null;
+    this._solitonMenuState = null;
+    this._lastSolitonSelection = String(this.params?.selectedSoliton || "");
     this.recordButton = null;
     this.placeScaleBinding = null;
     this.ndSliceZBinding = null;
     this.ndSliceWBinding = null;
-    this._statsGraphWrapper = null;
-    this._statsGraphCanvas = null;
-    this._statsGraphCaption = null;
-    this._statsGraphRaf = 0;
-    this._statsGraphLastFrameMs = 0;
-    this._statsGraphScratch = null;
-    this._statsGraphLayers = null;
+    this._statisticsGraphWrapper = null;
+    this._statisticsGraphCanvas = null;
+    this._statisticsGraphCaption = null;
+    this._statisticsGraphRaf = 0;
+    this._statisticsGraphLastFrameMs = 0;
+    this._statisticsGraphScratch = null;
+    this._statisticsGraphLayers = null;
   }
 
   rebuildPane() {
@@ -35,14 +35,14 @@ class GUI {
     this._rebuildScheduled = true;
     Promise.resolve().then(() => {
       this._rebuildScheduled = false;
-      if (typeof this._teardownStatsGraph === "function") {
-        this._teardownStatsGraph();
+      if (typeof this._teardownStatisticsGraph === "function") {
+        this._teardownStatisticsGraph();
       }
       if (this.pane) {
         this.pane.dispose();
       }
       this.pane = null;
-      this.animalBinding = null;
+      this.solitonBinding = null;
       this.recordButton = null;
       this.placeScaleBinding = null;
       this.ndSliceZBinding = null;
@@ -62,7 +62,7 @@ class GUI {
         { title: "Simulation" },
         { title: "Parameters" },
         { title: "Rendering" },
-        { title: "Animals" },
+        { title: "Solitons" },
         { title: "Statistics" },
         { title: "Media" },
       ],
@@ -70,7 +70,7 @@ class GUI {
 
     this.createSimulationTab(tabs.pages[0]);
     this.createParametersTab(tabs.pages[1]);
-    this.createAnimalsTab(tabs.pages[3]);
+    this.createSolitonsTab(tabs.pages[3]);
     this.createRenderTab(tabs.pages[2]);
     this.createStatisticsTab(tabs.pages[4]);
     this.createMediaTab(tabs.pages[5]);
@@ -600,8 +600,8 @@ class GUI {
     overlay.addBinding(params, "renderCalcPanels", {
       label: this.withHint("Toggle Calculation Panels", "renderCalc", "K"),
     });
-    overlay.addBinding(params, "renderAnimalName", {
-      label: this.withHint("Toggle Animal Name", "renderName", "Shift+J"),
+    overlay.addBinding(params, "renderSolitonName", {
+      label: this.withHint("Toggle Soliton Name", "renderName", "Shift+J"),
     });
     this.addSeparator(page);
 
@@ -648,96 +648,96 @@ class GUI {
       );
   }
 
-  createAnimalsTab(page) {
+  createSolitonsTab(page) {
     const { params } = this;
     const sourceDimension =
-      this.animalLibrary && Number.isFinite(this.animalLibrary.activeDimension)
-        ? this.animalLibrary.activeDimension
+      this.solitonLibrary && Number.isFinite(this.solitonLibrary.activeDimension)
+        ? this.solitonLibrary.activeDimension
         : params.dimension;
-    const animalCount = Array.isArray(this.animalLibrary?.animals)
-      ? this.animalLibrary.animals.length
+    const solitonCount = Array.isArray(this.solitonLibrary?.solitons)
+      ? this.solitonLibrary.solitons.length
       : 0;
-    const options = this.animalLibrary
-      ? this.animalLibrary.getHierarchicalAnimalMenu()
+    const options = this.solitonLibrary
+      ? this.solitonLibrary.getHierarchicalSolitonMenu()
       : {};
 
-    const currentSelection = String(params.selectedAnimal || "");
-    const currentAnimalToken = this.animalLibrary
-      ? this.animalLibrary.toAnimalMenuValue(currentSelection)
+    const currentSelection = String(params.selectedSoliton || "");
+    const currentSolitonToken = this.solitonLibrary
+      ? this.solitonLibrary.toSolitonMenuValue(currentSelection)
       : currentSelection;
-    const firstAnimalToken = this.animalLibrary
-      ? this.animalLibrary.getFirstAnimalMenuValue()
+    const firstSolitonToken = this.solitonLibrary
+      ? this.solitonLibrary.getFirstSolitonMenuValue()
       : "";
     const optionValues = new Set(Object.values(options));
-    const initialMenuValue = optionValues.has(currentAnimalToken)
-      ? currentAnimalToken
-      : optionValues.has(firstAnimalToken)
-        ? firstAnimalToken
-        : currentAnimalToken;
+    const initialMenuValue = optionValues.has(currentSolitonToken)
+      ? currentSolitonToken
+      : optionValues.has(firstSolitonToken)
+        ? firstSolitonToken
+        : currentSolitonToken;
 
-    this._animalMenuState = {
-      selectedAnimalMenu: initialMenuValue,
+    this._solitonMenuState = {
+      selectedSolitonMenu: initialMenuValue,
     };
 
-    this.animalBinding = page.addBinding(
-      this._animalMenuState,
-      "selectedAnimalMenu",
+    this.solitonBinding = page.addBinding(
+      this._solitonMenuState,
+      "selectedSolitonMenu",
       {
-        label: `Selected Animal (${animalCount} × ${sourceDimension}D)`,
+        label: `Selected Soliton (${solitonCount} × ${sourceDimension}D)`,
         options,
       },
     );
-    this.animalBinding.on("change", (event) => {
-      const idx = this.animalLibrary
-        ? this.animalLibrary.parseAnimalMenuValue(event.value)
+    this.solitonBinding.on("change", (event) => {
+      const idx = this.solitonLibrary
+        ? this.solitonLibrary.parseSolitonMenuValue(event.value)
         : parseInt(String(event.value), 10);
 
       if (!Number.isFinite(idx) || idx < 0) {
-        const fallback = this.animalLibrary
-          ? this.animalLibrary.toAnimalMenuValue(params.selectedAnimal)
-          : String(params.selectedAnimal || "");
-        this._animalMenuState.selectedAnimalMenu = fallback;
-        this.animalBinding?.refresh?.();
+        const fallback = this.solitonLibrary
+          ? this.solitonLibrary.toSolitonMenuValue(params.selectedSoliton)
+          : String(params.selectedSoliton || "");
+        this._solitonMenuState.selectedSolitonMenu = fallback;
+        this.solitonBinding?.refresh?.();
         return;
       }
 
       const nextSelection = String(idx);
-      this._lastAnimalSelection = nextSelection;
+      this._lastSolitonSelection = nextSelection;
 
-      const selected = this.appcore?.selectAnimalByIndex
-        ? this.appcore.selectAnimalByIndex(idx, {
+      const selected = this.appcore?.selectSolitonByIndex
+        ? this.appcore.selectSolitonByIndex(idx, {
             preserveScaleFactor: true,
           })
         : false;
 
       if (selected) return;
 
-      if (params.selectedAnimal === nextSelection) return;
-      params.selectedAnimal = nextSelection;
-      this.appcore?.loadSelectedAnimalParams();
-      this.appcore?.loadSelectedAnimal();
+      if (params.selectedSoliton === nextSelection) return;
+      params.selectedSoliton = nextSelection;
+      this.appcore?.loadSelectedSolitonParams();
+      this.appcore?.loadSelectedSoliton();
     });
 
     page
       .addButton({
-        title: this.withHint("◀ Previous", "prevAnimal", "C"),
+        title: this.withHint("◀ Previous", "prevSoliton", "C"),
       })
-      .on("click", () => this.appcore?.cycleAnimal(-1));
+      .on("click", () => this.appcore?.cycleSoliton(-1));
     page
       .addButton({
-        title: this.withHint("▶ Next", "nextAnimal", "V"),
+        title: this.withHint("▶ Next", "nextSoliton", "V"),
       })
-      .on("click", () => this.appcore?.cycleAnimal(1));
+      .on("click", () => this.appcore?.cycleSoliton(1));
     page
       .addButton({
-        title: this.withHint("Reload at Centre", "reloadAnimalAtCentre", "Z"),
+        title: this.withHint("Reload at Centre", "reloadSolitonAtCentre", "Z"),
       })
-      .on("click", () => this.appcore?.loadSelectedAnimal());
+      .on("click", () => this.appcore?.loadSelectedSoliton());
     page
       .addButton({
         title: this.withHint("Place at Random", "placeRandom", "X"),
       })
-      .on("click", () => this.appcore?.placeAnimalRandom());
+      .on("click", () => this.appcore?.placeSolitonRandom());
 
     this.addSeparator(page);
 
@@ -751,7 +751,7 @@ class GUI {
     });
 
     const placementScaleBounds = this.appcore?.getPlacementScaleBounds
-      ? this.appcore.getPlacementScaleBounds(params.selectedAnimal)
+      ? this.appcore.getPlacementScaleBounds(params.selectedSoliton)
       : { min: 0.25, max: 4 };
 
     this.placeScaleBinding = placementFolder
@@ -769,14 +769,14 @@ class GUI {
     placementFolder
       .addButton({
         title: this.withHint(
-          "Reset Animal Parameters",
-          "resetAnimalParams",
+          "Reset Soliton Parameters",
+          "resetSolitonParams",
           "Ctrl+Shift+Z",
         ),
       })
       .on("click", () => {
         if (!this.appcore) return;
-        this.appcore.applySelectedAnimalParams({ refreshGUI: true });
+        this.appcore.applySelectedSolitonParams({ refreshGUI: true });
       });
   }
 
@@ -785,7 +785,7 @@ class GUI {
     if (typeof this.appcore.getPlacementScaleBounds !== "function") return;
 
     const bounds = this.appcore.getPlacementScaleBounds(
-      this.params.selectedAnimal,
+      this.params.selectedSoliton,
     );
     this.placeScaleBinding.min = bounds.min;
     this.placeScaleBinding.max = bounds.max;
@@ -796,14 +796,14 @@ class GUI {
     );
   }
 
-  syncAnimalSelectors() {
-    if (this.animalBinding && this._animalMenuState && this.animalLibrary) {
-      const token = this.animalLibrary.toAnimalMenuValue(
-        this.params.selectedAnimal,
+  syncSolitonSelectors() {
+    if (this.solitonBinding && this._solitonMenuState && this.solitonLibrary) {
+      const token = this.solitonLibrary.toSolitonMenuValue(
+        this.params.selectedSoliton,
       );
-      if (token && this._animalMenuState.selectedAnimalMenu !== token) {
-        this._animalMenuState.selectedAnimalMenu = token;
-        this.animalBinding.refresh?.();
+      if (token && this._solitonMenuState.selectedSolitonMenu !== token) {
+        this._solitonMenuState.selectedSolitonMenu = token;
+        this.solitonBinding.refresh?.();
       }
     }
 
@@ -839,13 +839,13 @@ class GUI {
   }
 
   dispose() {
-    if (typeof this._teardownStatsGraph === "function") {
-      this._teardownStatsGraph();
+    if (typeof this._teardownStatisticsGraph === "function") {
+      this._teardownStatisticsGraph();
     }
     if (this.pane) {
       this.pane.dispose();
       this.pane = null;
-      this.animalBinding = null;
+      this.solitonBinding = null;
       this.recordButton = null;
       this.ndSliceZBinding = null;
       this.ndSliceWBinding = null;
@@ -884,10 +884,10 @@ class GUI {
       });
     const refreshSpectralAnalysis = () => {
       this.appcore?.analyser?.updatePeriodogram?.(params, 10, true);
-      this._renderStatsGraph();
+      this._renderStatisticsGraph();
     };
 
-    const statsAxisOptions = this.appcore
+    const statisticsAxisOptions = this.appcore
       ? this.appcore.getStatAxisOptions()
       : { m: "m", g: "g", x: "x", y: "y" };
 
@@ -896,10 +896,10 @@ class GUI {
       expanded: true,
     });
 
-    overlays.addBinding(params, "renderStats", {
+    overlays.addBinding(params, "renderStatistics", {
       label: this.withHint(
         "Toggle Statistics Overlay",
-        "renderStats",
+        "renderStatistics",
         "Ctrl+H",
       ),
     });
@@ -912,8 +912,8 @@ class GUI {
     });
 
     graphs
-      .addBinding(params, "statsMode", {
-        label: this.withHint("Graph Mode", "statsMode", "Alt+J"),
+      .addBinding(params, "statisticsMode", {
+        label: this.withHint("Graph Mode", "statisticsMode", "Alt+J"),
         options: {
           None: 0,
           "Comparative Graph": 1,
@@ -926,14 +926,14 @@ class GUI {
     graphs
       .addBinding(params, "graphX", {
         label: this.withHint("Graph X axis", "graphXAxis", "Alt+K"),
-        options: statsAxisOptions,
+        options: statisticsAxisOptions,
       })
       .on("change", refreshSpectralAnalysis);
 
     graphs
       .addBinding(params, "graphY", {
         label: this.withHint("Graph Y axis", "graphYAxis", "Alt+L"),
-        options: statsAxisOptions,
+        options: statisticsAxisOptions,
       })
       .on("change", refreshSpectralAnalysis);
 
@@ -950,9 +950,9 @@ class GUI {
         max: 1,
         step: 0.01,
       })
-      .on("change", () => this._renderStatsGraph());
+      .on("change", () => this._renderStatisticsGraph());
 
-    this._mountStatsGraph(graphs);
+    this._mountStatisticsGraph(graphs);
 
     this.addSeparator(page);
 
@@ -961,7 +961,7 @@ class GUI {
       expanded: false,
     });
 
-    segments.addBinding(params, "statsTrimSegment", {
+    segments.addBinding(params, "statisticsTrimSegment", {
       label: "Segment Length",
       options: {
         Unlimited: 0,
@@ -970,7 +970,7 @@ class GUI {
       },
     });
 
-    segments.addBinding(params, "statsGroupByParams", {
+    segments.addBinding(params, "statisticsGroupByParams", {
       label: "Group by Parameters",
     });
 
@@ -978,13 +978,13 @@ class GUI {
 
     segments
       .addButton({ title: "Start New Segment" })
-      .on("click", () => this.appcore?.startStatsSegment());
+      .on("click", () => this.appcore?.startStatisticsSegment());
     segments
       .addButton({ title: "Clear Current Segment" })
-      .on("click", () => this.appcore?.clearCurrentStatsSegment());
+      .on("click", () => this.appcore?.clearCurrentStatisticsSegment());
     segments
       .addButton({ title: "Clear All Segments" })
-      .on("click", () => this.appcore?.clearAllStatsSegments());
+      .on("click", () => this.appcore?.clearAllStatisticsSegments());
 
     this.addSeparator(page);
 
@@ -1117,7 +1117,7 @@ class GUI {
       .addButton({
         title: this.withHint(
           "Export Statistics (JSON)",
-          "exportStatsJson",
+          "exportStatisticsJson",
           "Ctrl+Shift+J",
         ),
       })
@@ -1126,7 +1126,7 @@ class GUI {
       .addButton({
         title: this.withHint(
           "Export Statistics (CSV)",
-          "exportStatsCsv",
+          "exportStatisticsCsv",
           "Ctrl+Shift+K",
         ),
       })
@@ -1137,7 +1137,7 @@ class GUI {
       })
       .on("click", () => media?.exportWorldJSON());
 
-    const capture = exp.addFolder({ title: "Video Capture" });
+    const capture = exp.addFolder({ title: "Media Capture" });
 
     capture.addBinding(this.params, "recordingFPS", {
       label: "Recording FPS [Hz]",
@@ -1191,6 +1191,6 @@ class GUI {
   }
 }
 
-if (window.StatsGraphComponent?.install) {
-  window.StatsGraphComponent.install(GUI);
+if (window.StatisticsGraphComponent?.install) {
+  window.StatisticsGraphComponent.install(GUI);
 }

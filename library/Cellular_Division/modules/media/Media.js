@@ -27,22 +27,22 @@ class Media extends MediaCore {
 
   exportStatisticsJSON() {
     const payload = {
-      format: "simpipe.stats",
+      format: "simpipe.statistics",
       metadata: this._getMetadataSnapshot(),
       statistics: this._getStatisticsSnapshot(),
       exportedAt: new Date().toISOString(),
     };
-    this._downloadJSON(payload, this._getFilename("stats.json"));
-    this._logInfo("Stats JSON exported");
+    this._downloadJSON(payload, this._getFilename("statistics.json"));
+    this._logInfo("Statistics JSON exported");
   }
 
   exportStatisticsCSV() {
-    const stats = this._getStatisticsSnapshot();
+    const statistics = this._getStatisticsSnapshot();
     const exportedAt = new Date().toISOString();
     const metadataJson = JSON.stringify(this._getMetadataSnapshot());
     const rows = [];
 
-    for (const [key, value] of Object.entries(stats)) {
+    for (const [key, value] of Object.entries(statistics)) {
       if (Array.isArray(value)) {
         rows.push([`${key}Length`, value.length]);
       } else {
@@ -59,10 +59,10 @@ class Media extends MediaCore {
 
     this._downloadText(
       lines.join("\n"),
-      this._getFilename("stats.csv"),
+      this._getFilename("statistics.csv"),
       "text/csv",
     );
-    this._logInfo(`Stats CSV exported: rows=${rows.length}`);
+    this._logInfo(`Statistics CSV exported: rows=${rows.length}`);
   }
 
   exportStateJSON() {

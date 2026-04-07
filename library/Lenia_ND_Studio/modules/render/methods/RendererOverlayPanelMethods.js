@@ -278,11 +278,11 @@ class RendererOverlayPanelMethods {
     pop();
   }
 
-  renderAnimalName(animal) {
-    if (!animal) return;
-    const latinParts = [animal.code || "", animal.name || ""].filter(Boolean);
+  renderSolitonName(soliton) {
+    if (!soliton) return;
+    const latinParts = [soliton.code || "", soliton.name || ""].filter(Boolean);
     const latinLabel = latinParts.join(" ");
-    const cname = animal.cname || "";
+    const cname = soliton.cname || "";
     if (!latinLabel && !cname) return;
 
     const y = height - 20;
@@ -321,23 +321,23 @@ class RendererOverlayPanelMethods {
     pop();
   }
 
-  renderStats(statistics, params) {
-    this._statsFrameCount += 1;
-    if (this._statsGfx && this._statsFrameCount % 6 !== 0) {
-      image(this._statsGfx, 0, 0);
+  renderStatistics(statistics, params) {
+    this._statisticsFrameCount += 1;
+    if (this._statisticsGfx && this._statisticsFrameCount % 6 !== 0) {
+      image(this._statisticsGfx, 0, 0);
       return;
     }
 
     if (
-      !this._statsGfx ||
-      this._statsGfx.width !== width ||
-      this._statsGfx.height !== height
+      !this._statisticsGfx ||
+      this._statisticsGfx.width !== width ||
+      this._statisticsGfx.height !== height
     ) {
-      if (this._statsGfx) this._statsGfx.remove();
-      this._statsGfx = createGraphics(width, height);
+      if (this._statisticsGfx) this._statisticsGfx.remove();
+      this._statisticsGfx = createGraphics(width, height);
     }
 
-    const pg = this._statsGfx;
+    const pg = this._statisticsGfx;
     pg.clear();
 
     const dt = 1 / params.T;
@@ -367,7 +367,7 @@ class RendererOverlayPanelMethods {
     const worldShape = `${worldSize}${dimPower}`;
     const fmt = FormatUtils.formatFixed;
 
-    const stats = [
+    const statisticsLines = [
       `FPS=${(Number(statistics.fps) || 0).toFixed(1)} [Hz]`,
       `Generation=${String(statistics.gen)} [gen]`,
       `Time=${fmt(statistics.time, 3)} [μs]`,
@@ -427,7 +427,7 @@ class RendererOverlayPanelMethods {
     pg.textSize(12.5);
     pg.noStroke();
     pg.fill(255);
-    pg.text(stats.join("\n"), 20, 20);
+    pg.text(statisticsLines.join("\n"), 20, 20);
 
     image(pg, 0, 0);
   }
@@ -735,9 +735,9 @@ class RendererOverlayPanelMethods {
       this._scaleGfx = null;
     }
     this._scaleCacheKey = "";
-    if (this._statsGfx) {
-      this._statsGfx.remove();
-      this._statsGfx = null;
+    if (this._statisticsGfx) {
+      this._statisticsGfx.remove();
+      this._statisticsGfx = null;
     }
     this._rollBuffer = null;
   }

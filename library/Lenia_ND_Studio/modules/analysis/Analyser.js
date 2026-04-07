@@ -130,8 +130,8 @@ class Analyser {
     this._syncSeriesMetadata();
   }
 
-  applyWorkerStatistics(workerStats, automaton) {
-    if (!workerStats || typeof workerStats !== "object") return;
+  applyWorkerStatistics(workerStatistics, automaton) {
+    if (!workerStatistics || typeof workerStatistics !== "object") return;
 
     const statistics = this.statistics;
     const toFinite = (value) => {
@@ -141,47 +141,47 @@ class Analyser {
 
     statistics.gen = automaton.gen || 0;
     statistics.time = automaton.time || 0;
-    statistics.mass = toFinite(workerStats.mass);
-    statistics.growth = toFinite(workerStats.growth);
-    statistics.massLog = toFinite(workerStats.massLog);
-    statistics.growthLog = toFinite(workerStats.growthLog);
-    statistics.massVolumeLog = toFinite(workerStats.massVolumeLog);
-    statistics.growthVolumeLog = toFinite(workerStats.growthVolumeLog);
-    statistics.massDensity = toFinite(workerStats.massDensity);
-    statistics.growthDensity = toFinite(workerStats.growthDensity);
-    statistics.maxValue = toFinite(workerStats.maxValue);
-    statistics.gyradius = toFinite(workerStats.gyradius);
-    statistics.centreX = toFinite(workerStats.centreX);
-    statistics.centreY = toFinite(workerStats.centreY);
-    statistics.growthCentreX = toFinite(workerStats.growthCentreX);
-    statistics.growthCentreY = toFinite(workerStats.growthCentreY);
-    statistics.massGrowthDist = toFinite(workerStats.massGrowthDist);
-    statistics.massAsym = toFinite(workerStats.massAsym);
-    statistics.speed = toFinite(workerStats.speed);
-    statistics.centroidSpeed = toFinite(workerStats.centroidSpeed);
-    statistics.angle = toFinite(workerStats.angle);
-    statistics.centroidRotateSpeed = toFinite(workerStats.centroidRotateSpeed);
-    statistics.growthRotateSpeed = toFinite(workerStats.growthRotateSpeed);
+    statistics.mass = toFinite(workerStatistics.mass);
+    statistics.growth = toFinite(workerStatistics.growth);
+    statistics.massLog = toFinite(workerStatistics.massLog);
+    statistics.growthLog = toFinite(workerStatistics.growthLog);
+    statistics.massVolumeLog = toFinite(workerStatistics.massVolumeLog);
+    statistics.growthVolumeLog = toFinite(workerStatistics.growthVolumeLog);
+    statistics.massDensity = toFinite(workerStatistics.massDensity);
+    statistics.growthDensity = toFinite(workerStatistics.growthDensity);
+    statistics.maxValue = toFinite(workerStatistics.maxValue);
+    statistics.gyradius = toFinite(workerStatistics.gyradius);
+    statistics.centreX = toFinite(workerStatistics.centreX);
+    statistics.centreY = toFinite(workerStatistics.centreY);
+    statistics.growthCentreX = toFinite(workerStatistics.growthCentreX);
+    statistics.growthCentreY = toFinite(workerStatistics.growthCentreY);
+    statistics.massGrowthDist = toFinite(workerStatistics.massGrowthDist);
+    statistics.massAsym = toFinite(workerStatistics.massAsym);
+    statistics.speed = toFinite(workerStatistics.speed);
+    statistics.centroidSpeed = toFinite(workerStatistics.centroidSpeed);
+    statistics.angle = toFinite(workerStatistics.angle);
+    statistics.centroidRotateSpeed = toFinite(workerStatistics.centroidRotateSpeed);
+    statistics.growthRotateSpeed = toFinite(workerStatistics.growthRotateSpeed);
     statistics.majorAxisRotateSpeed = toFinite(
-      workerStats.majorAxisRotateSpeed,
+      workerStatistics.majorAxisRotateSpeed,
     );
-    statistics.symmSides = toFinite(workerStats.symmSides);
-    statistics.symmStrength = toFinite(workerStats.symmStrength);
-    statistics.symmAngle = toFinite(workerStats.symmAngle);
-    statistics.symmRotate = toFinite(workerStats.symmRotate);
-    statistics.rotationSpeed = toFinite(workerStats.rotationSpeed);
-    statistics.lyapunov = toFinite(workerStats.lyapunov);
-    statistics.hu1Log = toFinite(workerStats.hu1Log);
-    statistics.hu4Log = toFinite(workerStats.hu4Log);
-    statistics.hu5Log = toFinite(workerStats.hu5Log);
-    statistics.hu6Log = toFinite(workerStats.hu6Log);
-    statistics.hu7Log = toFinite(workerStats.hu7Log);
-    statistics.flusser7 = toFinite(workerStats.flusser7);
-    statistics.flusser8Log = toFinite(workerStats.flusser8Log);
-    statistics.flusser9Log = toFinite(workerStats.flusser9Log);
-    statistics.flusser10Log = toFinite(workerStats.flusser10Log);
-    statistics.period = toFinite(workerStats.period);
-    statistics.periodConfidence = toFinite(workerStats.periodConfidence);
+    statistics.symmSides = toFinite(workerStatistics.symmSides);
+    statistics.symmStrength = toFinite(workerStatistics.symmStrength);
+    statistics.symmAngle = toFinite(workerStatistics.symmAngle);
+    statistics.symmRotate = toFinite(workerStatistics.symmRotate);
+    statistics.rotationSpeed = toFinite(workerStatistics.rotationSpeed);
+    statistics.lyapunov = toFinite(workerStatistics.lyapunov);
+    statistics.hu1Log = toFinite(workerStatistics.hu1Log);
+    statistics.hu4Log = toFinite(workerStatistics.hu4Log);
+    statistics.hu5Log = toFinite(workerStatistics.hu5Log);
+    statistics.hu6Log = toFinite(workerStatistics.hu6Log);
+    statistics.hu7Log = toFinite(workerStatistics.hu7Log);
+    statistics.flusser7 = toFinite(workerStatistics.flusser7);
+    statistics.flusser8Log = toFinite(workerStatistics.flusser8Log);
+    statistics.flusser9Log = toFinite(workerStatistics.flusser9Log);
+    statistics.flusser10Log = toFinite(workerStatistics.flusser10Log);
+    statistics.period = toFinite(workerStatistics.period);
+    statistics.periodConfidence = toFinite(workerStatistics.periodConfidence);
 
     this._recordTrajectoryPoint(statistics);
     statistics.trajectoryMass = this.trajectoryMass;
@@ -192,21 +192,21 @@ class Analyser {
     statistics.psdPrimaryPeriod = this.psdPrimaryPeriod;
     statistics.psdSecondaryPeriod = this.psdSecondaryPeriod;
 
-    statistics.sidesVec = workerStats.sidesVec || null;
-    statistics.angleVec = workerStats.angleVec || null;
-    statistics.rotateVec = workerStats.rotateVec || null;
-    statistics.radiusVec = workerStats.radiusVec || null;
-    statistics.symmMaxRadius = workerStats.symmMaxRadius || 0;
-    statistics.polarArray = workerStats.polarArray || null;
-    statistics.polarTH = workerStats.polarTH || null;
-    statistics.polarR = workerStats.polarR || null;
-    statistics.polarDensity = workerStats.polarDensity || null;
-    statistics.rotateWSum = workerStats.rotateWSum || null;
-    statistics.densitySum = workerStats.densitySum || null;
+    statistics.sidesVec = workerStatistics.sidesVec || null;
+    statistics.angleVec = workerStatistics.angleVec || null;
+    statistics.rotateVec = workerStatistics.rotateVec || null;
+    statistics.radiusVec = workerStatistics.radiusVec || null;
+    statistics.symmMaxRadius = workerStatistics.symmMaxRadius || 0;
+    statistics.polarArray = workerStatistics.polarArray || null;
+    statistics.polarTH = workerStatistics.polarTH || null;
+    statistics.polarR = workerStatistics.polarR || null;
+    statistics.polarDensity = workerStatistics.polarDensity || null;
+    statistics.rotateWSum = workerStatistics.rotateWSum || null;
+    statistics.densitySum = workerStatistics.densitySum || null;
 
-    if (workerStats.polarTH && workerStats.polarR) {
-      this.polarSeriesTH.push(new Float32Array(workerStats.polarTH));
-      this.polarSeriesR.push(new Float32Array(workerStats.polarR));
+    if (workerStatistics.polarTH && workerStatistics.polarR) {
+      this.polarSeriesTH.push(new Float32Array(workerStatistics.polarTH));
+      this.polarSeriesR.push(new Float32Array(workerStatistics.polarR));
       if (this.polarSeriesTH.length > this.maxPolarSeries) {
         this.polarSeriesTH.shift();
       }
@@ -308,8 +308,8 @@ class Analyser {
     const xKey = String(params?.graphX || "m");
     const yKey = String(params?.graphY || "g");
     const activeRows = this.getActiveSegment();
-    const primarySeries = this._extractStatSeries(activeRows, xKey);
-    const secondarySeries = this._extractStatSeries(activeRows, yKey);
+    const primarySeries = this._extractStatisticseries(activeRows, xKey);
+    const secondarySeries = this._extractStatisticseries(activeRows, yKey);
 
     if (primarySeries.length < 32 || secondarySeries.length < 32) {
       this.psdFreq = null;
@@ -390,7 +390,7 @@ class Analyser {
     return Number.isInteger(idx) ? idx : -1;
   }
 
-  _extractStatSeries(rows, statKey) {
+  _extractStatisticseries(rows, statKey) {
     if (!Array.isArray(rows) || rows.length === 0) return [];
     const idx = Analyser.getStatIndex(statKey);
     if (idx < 0) return [];
@@ -449,7 +449,7 @@ class Analyser {
       this.seriesSegments.push(segment);
     }
     segment.push(normalised);
-    this._trimSegment(segment, params?.statsTrimSegment);
+    this._trimSegment(segment, params?.statisticsTrimSegment);
 
     this.current = normalised;
     this._syncSeriesMetadata();

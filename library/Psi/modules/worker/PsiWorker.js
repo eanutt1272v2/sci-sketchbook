@@ -551,7 +551,7 @@ self.onmessage = function (e) {
         safe.reuseGridBuffer,
       );
 
-      let analysisStats = null;
+      let analysisStatistics = null;
       let analysisPeak = null;
       let analysisAMu = null;
       const canonicalResolution = safe.analysisResolution;
@@ -574,7 +574,7 @@ self.onmessage = function (e) {
 
         analysisPeak = canonical.peak;
         analysisAMu = canonical.aMu;
-        analysisStats = computeDensityStatistics(
+        analysisStatistics = computeDensityStatistics(
           canonical.grid,
           canonicalResolution,
           canonicalViewRadius,
@@ -600,7 +600,7 @@ self.onmessage = function (e) {
           analysisResolution: canonicalResolution,
           analysisViewRadius: canonicalViewRadius,
           analysisSignature: safe.includeAnalysis ? safe.analysisSignature : "",
-          analysisStats,
+          analysisStatistics,
         },
         [grid.buffer],
       );

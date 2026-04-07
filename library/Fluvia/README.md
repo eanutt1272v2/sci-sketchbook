@@ -286,7 +286,7 @@ Main                          Worker
   │                             │    update discharge & momentum
   │                             │  thermal erosion pass
   │                             │  analysis pass
-  │←── result(buffers, stats) ──│
+  │←── result(buffers, statistics) ──│
 ```
 
 ### 8.2 3D Rendering Pipeline

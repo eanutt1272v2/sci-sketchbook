@@ -170,7 +170,7 @@ class AppCoreMutationMethods {
 
     this.params.R = targetR;
     if (typeof this.syncPlacementScaleToRadius === "function") {
-      this.syncPlacementScaleToRadius(this.params.selectedAnimal);
+      this.syncPlacementScaleToRadius(this.params.selectedSoliton);
     }
 
     this._queueAction("zoomWorld", () =>
@@ -399,16 +399,16 @@ class AppCoreMutationMethods {
     next.handler();
   }
 
-  loadInitialAnimal() {
-    if (!this.animalLibrary.loaded || this.animalLibrary.animals.length === 0)
+  loadInitialSoliton() {
+    if (!this.solitonLibrary.loaded || this.solitonLibrary.solitons.length === 0)
       return;
 
-    const firstAnimal = this.animalLibrary.getAnimal(0);
-    if (firstAnimal) {
-      this._skipNextAnimalParamsLoad = true;
-      this._lastAnimalParamsSelection = "0";
-      this.params.selectedAnimal = "0";
-      this.loadAnimal(firstAnimal);
+    const firstSoliton = this.solitonLibrary.getSoliton(0);
+    if (firstSoliton) {
+      this._skipNextSolitonParamsLoad = true;
+      this._lastSolitonParamsSelection = "0";
+      this.params.selectedSoliton = "0";
+      this.loadSoliton(firstSoliton);
       this.refreshGUI();
     }
   }

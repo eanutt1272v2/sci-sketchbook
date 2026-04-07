@@ -10,8 +10,8 @@ class AppCore {
   constructor(assets) {
     const {
       metadata,
-      animalsData,
-      animalsByDimension = null,
+      solitonsData,
+      solitonsByDimension = null,
       colourMaps,
       font,
     } = assets;
@@ -22,18 +22,18 @@ class AppCore {
       typeof AppDiagnostics.resolveLogger === "function"
         ? AppDiagnostics.resolveLogger("Lenia")
         : { info() {}, warn() {}, error() {}, debug() {} };
-    this.animalDatasetByDimension = {
-      2: Array.isArray(animalsByDimension?.[2])
-        ? animalsByDimension[2]
-        : Array.isArray(animalsData)
-          ? animalsData
+    this.solitonDatasetByDimension = {
+      2: Array.isArray(solitonsByDimension?.[2])
+        ? solitonsByDimension[2]
+        : Array.isArray(solitonsData)
+          ? solitonsData
           : [],
-      3: Array.isArray(animalsByDimension?.[3]) ? animalsByDimension[3] : [],
-      4: Array.isArray(animalsByDimension?.[4]) ? animalsByDimension[4] : [],
+      3: Array.isArray(solitonsByDimension?.[3]) ? solitonsByDimension[3] : [],
+      4: Array.isArray(solitonsByDimension?.[4]) ? solitonsByDimension[4] : [],
     };
-    this.animalsByDimension = NDCompat.buildAnimalsByDimension(
-      this.animalDatasetByDimension[2],
-      this.animalDatasetByDimension,
+    this.solitonsByDimension = NDCompatibility.buildSolitonsByDimension(
+      this.solitonDatasetByDimension[2],
+      this.solitonDatasetByDimension,
     );
     this.font = font;
     this.colourMaps = colourMaps || {};
@@ -80,25 +80,25 @@ class AppCore {
       renderGrid: true,
       renderScale: true,
       renderLegend: true,
-      renderStats: true,
+      renderStatistics: true,
       renderMotionOverlay: true,
       renderTrajectoryOverlay: false,
       renderMassGrowthOverlay: false,
       renderSymmetryOverlay: false,
       periodogramUseWelch: true,
-      statsMode: 1,
+      statisticsMode: 1,
       graphX: "m",
       graphY: "g",
-      statsTrimSegment: 1,
-      statsGroupByParams: false,
+      statisticsTrimSegment: 1,
+      statisticsGroupByParams: false,
       recurrenceThreshold: 0.2,
       renderCalcPanels: true,
-      renderAnimalName: true,
+      renderSolitonName: true,
       renderKeymapRef: false,
 
       polarMode: 0,
       autoRotateMode: 0,
-      selectedAnimal: "",
+      selectedSoliton: "",
       placeMode: true,
       placeScale: 2,
       autoCentre: false,
@@ -165,12 +165,12 @@ class AppCore {
   }
 
   initialiseModules() {
-    this.animalLibrary = new AnimalLibrary(this.params);
-    if (this.animalLibrary.loadFromDimensionMap) {
-      this.animalLibrary.loadFromDimensionMap(this.animalDatasetByDimension);
-      this.animalLibrary.setActiveDimension(this.params.dimension);
+    this.solitonLibrary = new SolitonLibrary(this.params);
+    if (this.solitonLibrary.loadFromDimensionMap) {
+      this.solitonLibrary.loadFromDimensionMap(this.solitonDatasetByDimension);
+      this.solitonLibrary.setActiveDimension(this.params.dimension);
     } else {
-      this.animalLibrary.loadFromData(this.animalDatasetByDimension[2] || []);
+      this.solitonLibrary.loadFromData(this.solitonDatasetByDimension[2] || []);
     }
     this.board = new Board(this.params.latticeExtent);
     this.automaton = new Automaton(this.params);
@@ -187,7 +187,7 @@ class AppCore {
       this.statistics,
       this.renderData,
       this.metadata,
-      this.animalLibrary,
+      this.solitonLibrary,
       this,
     );
     this.input = new InputHandler(this);
@@ -204,8 +204,8 @@ class AppCore {
     this._lastPlacementScale = this.getEffectivePlacementScale(
       this.params.placeScale,
     );
-    this._skipNextAnimalParamsLoad = false;
-    this._lastAnimalParamsSelection = null;
+    this._skipNextSolitonParamsLoad = false;
+    this._lastSolitonParamsSelection = null;
     this._changeRecycleBuffer = null;
     this._resolutionTransitionActive = false;
     this._initWorker();
@@ -219,10 +219,10 @@ class AppCore {
     const loadInitial = () => {
       if (
         this.gui &&
-        this.animalLibrary.loaded &&
-        this.animalLibrary.animals.length > 0
+        this.solitonLibrary.loaded &&
+        this.solitonLibrary.solitons.length > 0
       ) {
-        this.loadInitialAnimal();
+        this.loadInitialSoliton();
       }
     };
 
@@ -232,7 +232,7 @@ class AppCore {
     ) {
       AppDiagnostics.scheduleFrameFriendlyTask(loadInitial, {
         logger: this._diagnosticsLogger,
-        label: "Lenia initial animal bootstrap",
+        label: "Lenia initial soliton bootstrap",
         timeoutMs: 240,
         useIdle: true,
       });

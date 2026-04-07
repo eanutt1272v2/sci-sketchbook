@@ -1,41 +1,41 @@
 class AppCoreImportExportMethods {
   _normaliseGridSize(size) {
-    return NDCompat.coerceGridSize(size, this.params.dimension);
+    return NDCompatibility.coerceGridSize(size, this.params.dimension);
   }
 
-  _syncSelectedAnimalForActiveDimension(preferredSelection = null) {
-    this._applyAnimalSource();
+  _syncSelectedSolitonForActiveDimension(preferredSelection = null) {
+    this._applySolitonSource();
 
-    const animals = Array.isArray(this.animalLibrary?.animals)
-      ? this.animalLibrary.animals
+    const solitons = Array.isArray(this.solitonLibrary?.solitons)
+      ? this.solitonLibrary.solitons
       : [];
-    const total = animals.length;
+    const total = solitons.length;
 
     if (total <= 0) {
-      this.params.selectedAnimal = "";
-      this._skipNextAnimalParamsLoad = true;
-      this._lastAnimalParamsSelection = "";
+      this.params.selectedSoliton = "";
+      this._skipNextSolitonParamsLoad = true;
+      this._lastSolitonParamsSelection = "";
       return null;
     }
 
     const raw =
       preferredSelection !== null && typeof preferredSelection !== "undefined"
         ? preferredSelection
-        : this.params.selectedAnimal;
+        : this.params.selectedSoliton;
     let idx = parseInt(String(raw), 10);
     if (!Number.isFinite(idx) || idx < 0 || idx >= total) {
       idx = 0;
     }
 
-    this.params.selectedAnimal = String(idx);
-    this._skipNextAnimalParamsLoad = true;
-    this._lastAnimalParamsSelection = this.params.selectedAnimal;
-    return this.animalLibrary.getAnimal(idx);
+    this.params.selectedSoliton = String(idx);
+    this._skipNextSolitonParamsLoad = true;
+    this._lastSolitonParamsSelection = this.params.selectedSoliton;
+    return this.solitonLibrary.getSoliton(idx);
   }
 
-  _applyAnimalSource() {
-    if (!this.animalLibrary || !this.animalLibrary.setActiveDimension) return;
-    this.animalLibrary.setActiveDimension(this.params.dimension);
+  _applySolitonSource() {
+    if (!this.solitonLibrary || !this.solitonLibrary.setActiveDimension) return;
+    this.solitonLibrary.setActiveDimension(this.params.dimension);
   }
 
   _normaliseImportedParamsPayload(rawParams, { allowGridSize = true } = {}) {
@@ -49,11 +49,11 @@ class AppCoreImportExportMethods {
     }
 
     if (
-      "selectedAnimal" in sanitised &&
-      (sanitised.selectedAnimal === null ||
-        sanitised.selectedAnimal === undefined)
+      "selectedSoliton" in sanitised &&
+      (sanitised.selectedSoliton === null ||
+        sanitised.selectedSoliton === undefined)
     ) {
-      sanitised.selectedAnimal = "";
+      sanitised.selectedSoliton = "";
     }
 
     if (!allowGridSize) {
@@ -78,7 +78,7 @@ class AppCoreImportExportMethods {
       addNoise: (v) => constrain(v, 0, 10),
       maskRate: (v) => constrain(v, 0, 10),
       paramP: (v) => Math.round(constrain(v, 0, 64)),
-      placeScale: (v) => this.getEffectivePlacementScale(v, p.selectedAnimal),
+      placeScale: (v) => this.getEffectivePlacementScale(v, p.selectedSoliton),
       recordingFPS: (v) => Math.round(constrain(v, 12, 120)),
       videoBitrateMbps: (v) => constrain(v, 1, 64),
     };
@@ -94,25 +94,25 @@ class AppCoreImportExportMethods {
     const p = this.params;
 
     if ("dimension" in rawParams) {
-      p.dimension = NDCompat.coerceDimension(p.dimension);
-      if (this.animalLibrary?.setActiveDimension) {
-        this.animalLibrary.setActiveDimension(p.dimension);
+      p.dimension = NDCompatibility.coerceDimension(p.dimension);
+      if (this.solitonLibrary?.setActiveDimension) {
+        this.solitonLibrary.setActiveDimension(p.dimension);
       }
     }
     if ("viewMode" in rawParams) {
-      p.viewMode = NDCompat.coerceViewMode(p.dimension, p.viewMode);
+      p.viewMode = NDCompatibility.coerceViewMode(p.dimension, p.viewMode);
     }
     if ("ndDepth" in rawParams) {
-      p.ndDepth = NDCompat.coerceDepth(p.ndDepth, p.dimension);
+      p.ndDepth = NDCompatibility.coerceDepth(p.ndDepth, p.dimension);
     }
     if ("ndSliceZ" in rawParams) {
-      p.ndSliceZ = NDCompat.coerceSliceIndex(p.ndSliceZ, p.ndDepth);
+      p.ndSliceZ = NDCompatibility.coerceSliceIndex(p.ndSliceZ, p.ndDepth);
     }
     if ("ndSliceW" in rawParams) {
-      p.ndSliceW = NDCompat.coerceSliceIndex(p.ndSliceW, p.ndDepth);
+      p.ndSliceW = NDCompatibility.coerceSliceIndex(p.ndSliceW, p.ndDepth);
     }
     if (!(allowGridSize && "latticeExtent" in rawParams)) {
-      p.latticeExtent = NDCompat.coerceGridSize(p.latticeExtent, p.dimension);
+      p.latticeExtent = NDCompatibility.coerceGridSize(p.latticeExtent, p.dimension);
     }
 
     p.ndActiveAxis = this._coerceNDActiveAxis(p.ndActiveAxis, p.dimension);
@@ -149,11 +149,11 @@ class AppCoreImportExportMethods {
     }
   }
 
-  _coerceImportedSelectedAnimal(rawParams) {
+  _coerceImportedSelectedSoliton(rawParams) {
     const p = this.params;
-    if (!("selectedAnimal" in rawParams)) return;
+    if (!("selectedSoliton" in rawParams)) return;
 
-    const incoming = rawParams.selectedAnimal;
+    const incoming = rawParams.selectedSoliton;
     if (
       incoming === "" ||
       incoming === null ||
@@ -165,11 +165,11 @@ class AppCoreImportExportMethods {
     const idx = parseInt(String(incoming), 10);
     if (
       !Number.isFinite(idx) ||
-      !this.animalLibrary ||
+      !this.solitonLibrary ||
       idx < 0 ||
-      idx >= this.animalLibrary.animals.length
+      idx >= this.solitonLibrary.solitons.length
     ) {
-      p.selectedAnimal = "";
+      p.selectedSoliton = "";
     }
   }
 
@@ -202,16 +202,16 @@ class AppCoreImportExportMethods {
       prevRenderMode,
       prevImageFormat,
     });
-    this._coerceImportedSelectedAnimal(rawParams);
+    this._coerceImportedSelectedSoliton(rawParams);
 
-    this._skipNextAnimalParamsLoad = true;
-    this._lastAnimalParamsSelection = p.selectedAnimal || "";
+    this._skipNextSolitonParamsLoad = true;
+    this._lastSolitonParamsSelection = p.selectedSoliton || "";
     this._lastPlacementScale = this.getEffectivePlacementScale(
       p.placeScale,
-      p.selectedAnimal,
+      p.selectedSoliton,
     );
 
-    this._syncSelectedAnimalForActiveDimension(p.selectedAnimal);
+    this._syncSelectedSolitonForActiveDimension(p.selectedSoliton);
 
     return {
       latticeExtentChanged: p.latticeExtent !== beforeGridSize,
@@ -293,7 +293,7 @@ class AppCoreImportExportMethods {
 
         const fieldKeys = Object.keys(payload.fields);
         this._diagnosticsLogger.info(
-          `Imported world: size=${this.params.latticeExtent}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, stats=${payload.statistics ? "restored" : "reset"}, fields=[${fieldKeys.join(",")}], selectedAnimal=${this.params.selectedAnimal || "none"}, placeScale=${this.params.placeScale || 1}`,
+          `Imported world: size=${this.params.latticeExtent}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, statistics=${payload.statistics ? "restored" : "reset"}, fields=[${fieldKeys.join(",")}], selectedSoliton=${this.params.selectedSoliton || "none"}, placeScale=${this.params.placeScale || 1}`,
         );
       }),
     );

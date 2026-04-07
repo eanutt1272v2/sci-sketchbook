@@ -48,7 +48,7 @@ class AppCore {
       maxHeightDiff: 0.01,
       settlingRate: 0.8,
 
-      renderStats: true,
+      renderStatistics: true,
       renderLegend: true,
       renderKeymapRef: false,
 
@@ -164,7 +164,7 @@ class AppCore {
 
   _sanitiseToggleParams(p) {
     p.running = Boolean(p.running);
-    p.renderStats = Boolean(p.renderStats);
+    p.renderStatistics = Boolean(p.renderStatistics);
     p.renderLegend = Boolean(p.renderLegend);
     p.renderKeymapRef = Boolean(p.renderKeymapRef);
   }

@@ -1,9 +1,9 @@
-class AppCoreAnimalMethods {
-  _packNDSeed(animal, scale = 1) {
-    if (!animal || !animal.cells) return null;
-    const cellsStr = Array.isArray(animal.cells)
-      ? animal.cells[0]
-      : animal.cells;
+class AppCoreSolitonMethods {
+  _packNDSeed(soliton, scale = 1) {
+    if (!soliton || !soliton.cells) return null;
+    const cellsStr = Array.isArray(soliton.cells)
+      ? soliton.cells[0]
+      : soliton.cells;
     if (typeof cellsStr !== "string") return null;
     if (!cellsStr.includes("%") && !cellsStr.includes("#")) return null;
 
@@ -14,7 +14,7 @@ class AppCoreAnimalMethods {
     if (dimension <= 2) return null;
 
     const size = this.params.latticeExtent;
-    const depth = NDCompat.getWorldDepthForDimension(size, dimension);
+    const depth = NDCompatibility.getWorldDepthForDimension(size, dimension);
     const extraDims = Math.max(0, dimension - 2);
     const planeCount = Math.pow(depth, extraDims);
     const cellCount = size * size;
@@ -28,11 +28,11 @@ class AppCoreAnimalMethods {
       if (s.z > maxZ) maxZ = s.z;
       if (s.w > maxW) maxW = s.w;
     }
-    const animalDepthZ = maxZ + 1;
-    const animalDepthW = maxW + 1;
+    const solitonDepthZ = maxZ + 1;
+    const solitonDepthW = maxW + 1;
 
-    const offsetZ = Math.floor((depth - animalDepthZ) / 2);
-    const offsetW = extraDims >= 2 ? Math.floor((depth - animalDepthW) / 2) : 0;
+    const offsetZ = Math.floor((depth - solitonDepthZ) / 2);
+    const offsetW = extraDims >= 2 ? Math.floor((depth - solitonDepthW) / 2) : 0;
 
     const requestedScale = Number(scale) || 1;
     const useNativeScale = Math.abs(requestedScale - 1) < 1e-6;
@@ -107,20 +107,20 @@ class AppCoreAnimalMethods {
     return packed;
   }
 
-  loadAnimal(animal, options = {}) {
-    if (!animal) return;
+  loadSoliton(soliton, options = {}) {
+    if (!soliton) return;
 
     this._pendingActions = this._pendingActions.filter(
-      (action) => action.name !== "loadAnimalParams",
+      (action) => action.name !== "loadSolitonParams",
     );
 
-    this._queueAnimalLoad(animal, { loadPattern: true, ...options });
+    this._queueSolitonLoad(soliton, { loadPattern: true, ...options });
   }
 
-  loadSelectedAnimal() {
-    const selection = this.params.selectedAnimal || "";
-    const animal = this._resolveAnimalForPlacement(selection);
-    if (!animal) return;
+  loadSelectedSoliton() {
+    const selection = this.params.selectedSoliton || "";
+    const soliton = this._resolveSolitonForPlacement(selection);
+    if (!soliton) return;
 
     const boardSize = this.board?.size || this.params.latticeExtent;
     const centre = Math.floor(boardSize / 2);
@@ -136,7 +136,7 @@ class AppCoreAnimalMethods {
     );
     if (!request) return;
 
-    this._queueAction("reloadAnimalAtCentre", () =>
+    this._queueAction("reloadSolitonAtCentre", () =>
       this._queueOrRunMutation(() => {
         this._ensureBuffers();
         this.board.clear();
@@ -147,27 +147,27 @@ class AppCoreAnimalMethods {
     );
   }
 
-  cycleAnimal(delta) {
-    const lib = this.animalLibrary;
-    if (!lib || !lib.animals || lib.animals.length === 0) return;
+  cycleSoliton(delta) {
+    const lib = this.solitonLibrary;
+    if (!lib || !lib.solitons || lib.solitons.length === 0) return;
 
-    const currentSelection = this.params.selectedAnimal || "";
+    const currentSelection = this.params.selectedSoliton || "";
     const preservedScaleFactor =
       this._getScaleFactorForSelection(currentSelection);
 
-    const total = lib.animals.length;
-    const current = this.getSelectedAnimalIndex();
+    const total = lib.solitons.length;
+    const current = this.getSelectedSolitonIndex();
     const base = current === null ? (delta > 0 ? -1 : 0) : current;
     const next = (((base + delta) % total) + total) % total;
     const nextSelection = String(next);
 
-    this._skipNextAnimalParamsLoad = true;
-    this._lastAnimalParamsSelection = nextSelection;
-    this.params.selectedAnimal = nextSelection;
+    this._skipNextSolitonParamsLoad = true;
+    this._lastSolitonParamsSelection = nextSelection;
+    this.params.selectedSoliton = nextSelection;
 
-    const animal = lib.getAnimal(next);
-    if (animal) {
-      this.loadAnimal(animal, {
+    const soliton = lib.getSoliton(next);
+    if (soliton) {
+      this.loadSoliton(soliton, {
         preserveScaleFactor: true,
         preservedScaleFactor,
       });
@@ -175,69 +175,69 @@ class AppCoreAnimalMethods {
     this.refreshGUI();
   }
 
-  selectAnimalByIndex(index, { preserveScaleFactor = true } = {}) {
-    const lib = this.animalLibrary;
-    if (!lib || !Array.isArray(lib.animals) || lib.animals.length === 0) {
+  selectSolitonByIndex(index, { preserveScaleFactor = true } = {}) {
+    const lib = this.solitonLibrary;
+    if (!lib || !Array.isArray(lib.solitons) || lib.solitons.length === 0) {
       return false;
     }
 
     const idx = Math.floor(Number(index));
-    if (!Number.isFinite(idx) || idx < 0 || idx >= lib.animals.length) {
+    if (!Number.isFinite(idx) || idx < 0 || idx >= lib.solitons.length) {
       return false;
     }
 
-    const currentSelection = this.params.selectedAnimal || "";
+    const currentSelection = this.params.selectedSoliton || "";
     const nextSelection = String(idx);
     const preservedScaleFactor = preserveScaleFactor
       ? this._getScaleFactorForSelection(currentSelection, 1)
       : 1;
 
-    this._skipNextAnimalParamsLoad = true;
-    this._lastAnimalParamsSelection = nextSelection;
-    this.params.selectedAnimal = nextSelection;
+    this._skipNextSolitonParamsLoad = true;
+    this._lastSolitonParamsSelection = nextSelection;
+    this.params.selectedSoliton = nextSelection;
 
-    const animal = lib.getAnimal(idx);
-    if (!animal) return false;
+    const soliton = lib.getSoliton(idx);
+    if (!soliton) return false;
 
-    this.loadAnimal(animal, {
+    this.loadSoliton(soliton, {
       preserveScaleFactor,
       preservedScaleFactor,
     });
     return true;
   }
 
-  loadAnimalParams(animal, options = {}) {
-    if (!animal) return;
+  loadSolitonParams(soliton, options = {}) {
+    if (!soliton) return;
 
-    this._queueAnimalLoad(animal, { loadPattern: false, ...options });
+    this._queueSolitonLoad(soliton, { loadPattern: false, ...options });
   }
 
-  _queueAnimalLoad(
-    animal,
+  _queueSolitonLoad(
+    soliton,
     {
       loadPattern = true,
       preserveScaleFactor = false,
       preservedScaleFactor = null,
     } = {},
   ) {
-    const actionName = loadPattern ? "loadAnimal" : "loadAnimalParams";
+    const actionName = loadPattern ? "loadSoliton" : "loadSolitonParams";
 
     this._queueAction(actionName, () =>
       this._queueOrRunMutation(() => {
         this._ensureBuffers();
         this.analyser.resetStatistics();
 
-        const sourceParams = this._getAnimalSourceParams(animal) || {};
+        const sourceParams = this._getSolitonSourceParams(soliton) || {};
         const sourceR = Number(sourceParams.R);
         const currentKn = Number(this.params.kn) || 1;
         const nextKn = Number(sourceParams.kn) || currentKn;
         const isCurrentLife = currentKn === 4;
         const isNextLife = nextKn === 4;
-        const animalCode = String(animal?.code || "")
+        const solitonCode = String(soliton?.code || "")
           .trim()
           .toLowerCase();
-        const forcePartR = animalCode.startsWith("~");
-        const forceNativeBugR = animalCode === "sbug" || animalCode === "bbug";
+        const forcePartR = solitonCode.startsWith("~");
+        const forceNativeBugR = solitonCode === "sbug" || solitonCode === "bbug";
         const defaultR = this.getDefaultRadius(
           this.params.latticeExtent,
           this.params.dimension,
@@ -263,7 +263,7 @@ class AppCoreAnimalMethods {
         }
 
         this.params.R = baseR;
-        this._applyAnimalSimulationParams(animal);
+        this._applySolitonSimulationParams(soliton);
 
         const requestedScale = this.getEffectivePlacementScale(
           this.params.placeScale,
@@ -282,7 +282,7 @@ class AppCoreAnimalMethods {
             patternScale = this.params.R / sourceR;
           }
         } else {
-          patternScale = this.applyScaledAnimalParams(animal, requestedScale, {
+          patternScale = this.applyScaledSolitonParams(soliton, requestedScale, {
             baseR: Number.isFinite(sourceR) && sourceR > 0 ? sourceR : baseR,
           });
         }
@@ -294,18 +294,18 @@ class AppCoreAnimalMethods {
         const dim = Number(this.params.dimension) || 2;
         if (loadPattern && dim <= 2) {
           if (Math.abs(patternScale - 1) < 1e-6) {
-            this.board.loadPattern(animal);
+            this.board.loadPattern(soliton);
           } else {
             this.board.clear();
             const centre = Math.floor(this.board.size / 2);
-            this.board.placePatternScaled(animal, centre, centre, patternScale);
+            this.board.placePatternScaled(soliton, centre, centre, patternScale);
           }
         } else if (loadPattern) {
           this.board.clear();
         }
 
         if (loadPattern && dim > 2) {
-          const ndSeed = this._packNDSeed(animal, patternScale);
+          const ndSeed = this._packNDSeed(soliton, patternScale);
           if (ndSeed) {
             this._ndSeedWorld = ndSeed;
           }
@@ -313,7 +313,7 @@ class AppCoreAnimalMethods {
 
         this.automaton.updateParameters(this.params);
         this._prevR = this.params.R;
-        this.syncPlacementScaleToRadius(this.params.selectedAnimal);
+        this.syncPlacementScaleToRadius(this.params.selectedSoliton);
         this._workerSendKernel();
 
         this.refreshGUI();
@@ -321,46 +321,46 @@ class AppCoreAnimalMethods {
     );
   }
 
-  _applyAnimalSimulationParams(animal) {
-    if (!animal) return false;
+  _applySolitonSimulationParams(soliton) {
+    if (!soliton) return false;
 
-    this.animalLibrary.applyAnimalParameters(animal);
+    this.solitonLibrary.applySolitonParameters(soliton);
 
     return true;
   }
 
-  applySelectedAnimalParams({ refreshGUI = false } = {}) {
-    const animal = this.getSelectedAnimal();
-    if (!animal) return false;
+  applySelectedSolitonParams({ refreshGUI = false } = {}) {
+    const soliton = this.getSelectedSoliton();
+    if (!soliton) return false;
 
-    this._applyAnimalSimulationParams(animal);
+    this._applySolitonSimulationParams(soliton);
     this.updateAutomatonParams();
     if (refreshGUI) this.refreshGUI();
     return true;
   }
 
-  applySelectedAnimalScaledRT(
+  applySelectedSolitonScaledRT(
     scale,
     { baseR = null, refreshGUI = false } = {},
   ) {
-    const animal = this.getSelectedAnimal();
-    if (!animal) return false;
+    const soliton = this.getSelectedSoliton();
+    if (!soliton) return false;
 
     const effectiveScale = this.getEffectivePlacementScale(scale);
-    this.applyScaledAnimalParams(animal, effectiveScale, { baseR });
+    this.applyScaledSolitonParams(soliton, effectiveScale, { baseR });
     this.updateAutomatonParams();
-    this.syncPlacementScaleToRadius(this.params.selectedAnimal);
+    this.syncPlacementScaleToRadius(this.params.selectedSoliton);
     if (refreshGUI) this.refreshGUI();
     return true;
   }
 
-  _getAnimalSourceParams(animal) {
-    if (!animal || !animal.params) return null;
-    return Array.isArray(animal.params)
-      ? animal.params.find((entry) => entry && typeof entry === "object") ||
-          animal.params[0] ||
+  _getSolitonSourceParams(soliton) {
+    if (!soliton || !soliton.params) return null;
+    return Array.isArray(soliton.params)
+      ? soliton.params.find((entry) => entry && typeof entry === "object") ||
+          soliton.params[0] ||
           null
-      : animal.params;
+      : soliton.params;
   }
 
   _getScaleFactorForSelection(selection, fallback = 1) {
@@ -372,10 +372,10 @@ class AppCoreAnimalMethods {
       return fallback;
     }
 
-    const animal = this._resolveAnimalForPlacement(selection);
-    if (!animal) return fallback;
+    const soliton = this._resolveSolitonForPlacement(selection);
+    if (!soliton) return fallback;
 
-    const sourceParams = this._getAnimalSourceParams(animal) || {};
+    const sourceParams = this._getSolitonSourceParams(soliton) || {};
     const sourceR = Number(sourceParams.R);
     const currentR = Number(this.params.R);
 
@@ -391,9 +391,9 @@ class AppCoreAnimalMethods {
     return fallback;
   }
 
-  _getRadiusLinkedPlacementScale(selection = this.params.selectedAnimal) {
-    const animal = this._resolveAnimalForPlacement(selection);
-    const sourceParams = this._getAnimalSourceParams(animal) || {};
+  _getRadiusLinkedPlacementScale(selection = this.params.selectedSoliton) {
+    const soliton = this._resolveSolitonForPlacement(selection);
+    const sourceParams = this._getSolitonSourceParams(soliton) || {};
     const sourceR = Number(sourceParams.R);
     const currentR = Number(this.params.R);
 
@@ -410,7 +410,7 @@ class AppCoreAnimalMethods {
   }
 
   _getCombinedPlacementScale(
-    selection = this.params.selectedAnimal,
+    selection = this.params.selectedSoliton,
     requestedScale = this.params.placeScale,
   ) {
     const sliderScale = this.getEffectivePlacementScale(
@@ -426,7 +426,7 @@ class AppCoreAnimalMethods {
     return sliderScale;
   }
 
-  syncPlacementScaleToRadius(selection = this.params.selectedAnimal) {
+  syncPlacementScaleToRadius(selection = this.params.selectedSoliton) {
     const linkedScale = this._getRadiusLinkedPlacementScale(selection);
     const fallback = this.getEffectivePlacementScale(
       this.params.placeScale,
@@ -441,10 +441,10 @@ class AppCoreAnimalMethods {
     return next;
   }
 
-  applyScaledAnimalParams(animal, scale = 1, { baseR = null } = {}) {
-    if (!animal || !animal.params) return scale;
+  applyScaledSolitonParams(soliton, scale = 1, { baseR = null } = {}) {
+    if (!soliton || !soliton.params) return scale;
 
-    const sourceParams = this._getAnimalSourceParams(animal) || {};
+    const sourceParams = this._getSolitonSourceParams(soliton) || {};
 
     const sourceR = Number(sourceParams.R);
     const requestedScale = Number(scale) || 1;
@@ -470,11 +470,11 @@ class AppCoreAnimalMethods {
   }
 
   updatePlacementScale(scale) {
-    const selection = this.params.selectedAnimal;
+    const selection = this.params.selectedSoliton;
     this.syncPlacementScaleToRadius(selection);
 
-    const animal = this.getSelectedAnimal();
-    const sourceParams = this._getAnimalSourceParams(animal) || {};
+    const soliton = this.getSelectedSoliton();
+    const sourceParams = this._getSolitonSourceParams(soliton) || {};
     const sourceR = Number(sourceParams.R);
     const { min, max } = this.getPlacementScaleBounds(selection);
     const currentR = Math.max(2, Number(this.params.R) || 13);
@@ -501,7 +501,7 @@ class AppCoreAnimalMethods {
     if (typeof this.zoomWorld === "function") {
       this.zoomWorld(targetR);
     } else {
-      const updated = this.applySelectedAnimalScaledRT(next, {
+      const updated = this.applySelectedSolitonScaledRT(next, {
         baseR,
         refreshGUI: false,
       });
@@ -547,24 +547,24 @@ class AppCoreAnimalMethods {
     return this.setPolarMode(next, { refreshGUI });
   }
 
-  loadSelectedAnimalParams() {
-    const currentSelection = this.params.selectedAnimal || "";
-    const previousSelection = this._lastAnimalParamsSelection;
+  loadSelectedSolitonParams() {
+    const currentSelection = this.params.selectedSoliton || "";
+    const previousSelection = this._lastSolitonParamsSelection;
 
-    if (this._skipNextAnimalParamsLoad) {
-      this._skipNextAnimalParamsLoad = false;
-      this._lastAnimalParamsSelection = currentSelection;
+    if (this._skipNextSolitonParamsLoad) {
+      this._skipNextSolitonParamsLoad = false;
+      this._lastSolitonParamsSelection = currentSelection;
       return;
     }
 
-    if (currentSelection === this._lastAnimalParamsSelection) {
+    if (currentSelection === this._lastSolitonParamsSelection) {
       return;
     }
 
-    this._lastAnimalParamsSelection = currentSelection;
-    const animal = this.getSelectedAnimal();
-    if (animal) {
-      this.loadAnimalParams(animal, {
+    this._lastSolitonParamsSelection = currentSelection;
+    const soliton = this.getSelectedSoliton();
+    if (soliton) {
+      this.loadSolitonParams(soliton, {
         preserveScaleFactor: true,
         preservedScaleFactor: this._getScaleFactorForSelection(
           previousSelection,
@@ -578,24 +578,24 @@ class AppCoreAnimalMethods {
     return this._pendingActions.some((action) => action?.name === name);
   }
 
-  _resolveAnimalForPlacement(selection) {
+  _resolveSolitonForPlacement(selection) {
     const rawSelection =
       selection !== null && typeof selection !== "undefined"
         ? selection
-        : this.params.selectedAnimal;
+        : this.params.selectedSoliton;
     const idx = parseInt(String(rawSelection), 10);
     if (Number.isFinite(idx)) {
-      const animal = this.animalLibrary.getAnimal(idx);
-      if (animal) return animal;
+      const soliton = this.solitonLibrary.getSoliton(idx);
+      if (soliton) return soliton;
     }
-    return this.getSelectedAnimal();
+    return this.getSelectedSoliton();
   }
 
   _executePlacementRequest(request) {
     if (!request) return;
 
-    const animal = this._resolveAnimalForPlacement(request.selection);
-    if (!animal) return;
+    const soliton = this._resolveSolitonForPlacement(request.selection);
+    if (!soliton) return;
 
     const scale = this._getCombinedPlacementScale(
       request.selection,
@@ -605,10 +605,10 @@ class AppCoreAnimalMethods {
     this._ensureBuffers();
 
     if (dim > 2) {
-      this._placeAnimalND(animal, request.cellX, request.cellY, scale);
+      this._placeSolitonND(soliton, request.cellX, request.cellY, scale);
     } else {
       this._applyPlacement({
-        animal,
+        soliton,
         cellX: request.cellX,
         cellY: request.cellY,
         scale,
@@ -616,12 +616,12 @@ class AppCoreAnimalMethods {
     }
   }
 
-  placeAnimal(cellX, cellY) {
+  placeSoliton(cellX, cellY) {
     if (!this.params.placeMode) return;
 
-    const selection = this.params.selectedAnimal || "";
-    const animal = this._resolveAnimalForPlacement(selection);
-    if (!animal) return;
+    const selection = this.params.selectedSoliton || "";
+    const soliton = this._resolveSolitonForPlacement(selection);
+    if (!soliton) return;
 
     const scale = this.params.placeScale || 1;
     const boardSize = this.board?.size || this.params.latticeExtent;
@@ -638,8 +638,8 @@ class AppCoreAnimalMethods {
     if (!request) return;
 
     if (
-      this._hasQueuedAction("loadAnimalParams") ||
-      this._hasQueuedAction("loadAnimal")
+      this._hasQueuedAction("loadSolitonParams") ||
+      this._hasQueuedAction("loadSoliton")
     ) {
       this._queueAction("deferredPlacement", () =>
         this._queueOrRunMutation(() => {
@@ -657,12 +657,12 @@ class AppCoreAnimalMethods {
     this._executePlacementRequest(request);
   }
 
-  _applyPlacement({ animal, cellX, cellY, scale }) {
-    if (!animal) return;
+  _applyPlacement({ soliton, cellX, cellY, scale }) {
+    if (!soliton) return;
     if (Math.abs((scale || 1) - 1) < 1e-6) {
-      this.board.placePattern(animal, cellX, cellY);
+      this.board.placePattern(soliton, cellX, cellY);
     } else {
-      this.board.placePatternScaled(animal, cellX, cellY, scale);
+      this.board.placePatternScaled(soliton, cellX, cellY, scale);
     }
   }
 
@@ -779,18 +779,18 @@ class AppCoreAnimalMethods {
     };
   }
 
-  _placeAnimalND(animal, cellX, cellY, scale) {
-    if (!animal || !animal.cells) return;
-    const cellsStr = Array.isArray(animal.cells)
-      ? animal.cells[0]
-      : animal.cells;
+  _placeSolitonND(soliton, cellX, cellY, scale) {
+    if (!soliton || !soliton.cells) return;
+    const cellsStr = Array.isArray(soliton.cells)
+      ? soliton.cells[0]
+      : soliton.cells;
     const isND =
       typeof cellsStr === "string" &&
       (cellsStr.includes("%") || cellsStr.includes("#"));
 
     const dimension = Number(this.params.dimension) || 2;
     const size = this.params.latticeExtent;
-    const depth = NDCompat.getWorldDepthForDimension(size, dimension);
+    const depth = NDCompatibility.getWorldDepthForDimension(size, dimension);
     const extraDims = Math.max(0, dimension - 2);
 
     if (isND) {
@@ -918,7 +918,7 @@ class AppCoreAnimalMethods {
         cellY,
       });
     } else {
-      const grids = this.board._getPatternGrids(animal);
+      const grids = this.board._getPatternGrids(soliton);
       if (!grids || grids.length === 0) return;
       const grid = grids[0];
       const h = grid.length;
@@ -973,10 +973,10 @@ class AppCoreAnimalMethods {
     return data;
   }
 
-  placeAnimalRandom() {
-    const selection = this.params.selectedAnimal || "";
-    const animal = this._resolveAnimalForPlacement(selection);
-    if (!animal) return;
+  placeSolitonRandom() {
+    const selection = this.params.selectedSoliton || "";
+    const soliton = this._resolveSolitonForPlacement(selection);
+    if (!soliton) return;
 
     const size = this.params.latticeExtent;
     const cellX = Math.floor(Math.random() * size);
@@ -984,7 +984,7 @@ class AppCoreAnimalMethods {
     const scale = this.params.placeScale || 1;
     const request = { selection, cellX, cellY, scale };
 
-    this._queueAction("placeAnimalRandom", () =>
+    this._queueAction("placeSolitonRandom", () =>
       this._queueOrRunMutation(() => {
         this._executePlacementRequest(request);
       }),
@@ -992,4 +992,4 @@ class AppCoreAnimalMethods {
   }
 }
 
-AppCore.installMethodsFrom(AppCoreAnimalMethods);
+AppCore.installMethodsFrom(AppCoreSolitonMethods);

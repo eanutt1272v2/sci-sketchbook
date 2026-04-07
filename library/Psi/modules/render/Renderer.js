@@ -197,28 +197,28 @@ class Renderer {
       colourMap,
       pixelSmoothing,
     } = this.appcore.params;
-    const stats = this.appcore.statistics;
+    const statistics = this.appcore.statistics;
     const { axis1, axis2, fixedLabel, axis1Label, axis2Label } =
       this.appcore.getPlaneAxes();
     const lines = [
       `Orbital: ${orbitalNotation}`,
       `Quantum: n=${n}, l=${l}, m=${m}`,
       `Nuclear Charge: Z=${nuclearCharge}`,
-      `FPS=${stats.fps.toFixed(1)} [Hz]`,
+      `FPS=${statistics.fps.toFixed(1)} [Hz]`,
       `Resolution=${resolution} [px]`,
       `Plane: ${slicePlane.toUpperCase()}`,
       `Slice ${fixedLabel}=${sliceOffset.toFixed(2)} [a₀]`,
       `View Radius=${viewRadius.toFixed(2)} [a₀]`,
       `Pan ${axis1Label}=${viewCentre[axis1].toFixed(2)} [a₀]`,
       `Pan ${axis2Label}=${viewCentre[axis2].toFixed(2)} [a₀]`,
-      `Mean Density=${this._fmtSci(stats.mean, 3)} [m⁻³]`,
-      `Density Std Dev=${this._fmtSci(stats.stdDev, 3)} [m⁻³]`,
-      `Density Peak=${this._fmtSci(stats.peakDensity, 3)} [m⁻³]`,
-      `Entropy=${this._fmtSci(stats.entropy, 3)}`,
-      `Concentration=${this._fmtSci(stats.concentration, 3)}`,
-      `Radial Peak=${stats.radialPeak.toFixed(3)} [a₀]`,
-      `Radial Spread=${stats.radialSpread.toFixed(3)} [a₀]`,
-      `Node Estimate=${stats.nodeEstimate.toFixed(0)}`,
+      `Mean Density=${this._fmtSci(statistics.mean, 3)} [m⁻³]`,
+      `Density Std Dev=${this._fmtSci(statistics.stdDev, 3)} [m⁻³]`,
+      `Density Peak=${this._fmtSci(statistics.peakDensity, 3)} [m⁻³]`,
+      `Entropy=${this._fmtSci(statistics.entropy, 3)}`,
+      `Concentration=${this._fmtSci(statistics.concentration, 3)}`,
+      `Radial Peak=${statistics.radialPeak.toFixed(3)} [a₀]`,
+      `Radial Spread=${statistics.radialSpread.toFixed(3)} [a₀]`,
+      `Node Estimate=${statistics.nodeEstimate.toFixed(0)}`,
       `Colour Map: ${colourMap} (palette id)`,
       `Exposure=${exposure.toFixed(2)} [index]`,
       `Pixel Smoothing: ${pixelSmoothing ? "true" : "false"}`,

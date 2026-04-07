@@ -751,7 +751,7 @@ self.onmessage = function (e) {
         );
         _lastAnalysisResult = analysis;
       } else {
-        const quick = computeQuickStats(
+        const quick = computeQuickStatistics(
           analysisWorld,
           analysisGrowth,
           params.size,

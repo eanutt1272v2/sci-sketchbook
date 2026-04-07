@@ -270,7 +270,7 @@ class InputHandler {
     }
 
     if (keyLower === "o" && !ctrlHeld) {
-      this.appcore.params.renderStats = !this.appcore.params.renderStats;
+      this.appcore.params.renderStatistics = !this.appcore.params.renderStatistics;
       this.appcore.refreshGUI();
       return false;
     }

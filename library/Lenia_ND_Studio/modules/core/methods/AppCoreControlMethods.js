@@ -1,20 +1,20 @@
 class AppCoreControlMethods {
-  getSelectedAnimalIndex() {
-    const value = this.params.selectedAnimal;
+  getSelectedSolitonIndex() {
+    const value = this.params.selectedSoliton;
     if (!value || value === "") return null;
 
     const idx = parseInt(value, 10);
     return Number.isNaN(idx) ? null : idx;
   }
 
-  getSelectedAnimal() {
-    const idx = this.getSelectedAnimalIndex();
+  getSelectedSoliton() {
+    const idx = this.getSelectedSolitonIndex();
     if (idx === null) return null;
-    return this.animalLibrary.getAnimal(idx);
+    return this.solitonLibrary.getSoliton(idx);
   }
 
   getViewModeOptions() {
-    const modes = NDCompat.getViewModesForDimension(this.params.dimension);
+    const modes = NDCompatibility.getViewModesForDimension(this.params.dimension);
 
     return modes.reduce((options, mode) => {
       if (mode === "slice") options["Slice"] = mode;
@@ -24,8 +24,8 @@ class AppCoreControlMethods {
   }
 
   getGridSizeOptions(dimension = this.params.dimension) {
-    const dim = NDCompat.coerceDimension(dimension);
-    const sizes = NDCompat.getGridSizeOptions(dim);
+    const dim = NDCompatibility.coerceDimension(dimension);
+    const sizes = NDCompatibility.getGridSizeOptions(dim);
     const canvasSize = min(windowWidth, windowHeight);
     const superscriptDigits = {
       0: "⁰",
@@ -82,12 +82,12 @@ class AppCoreControlMethods {
     dimension = this.params.dimension,
   ) {
     const size = Math.max(1, Math.floor(Number(latticeExtent) || 1));
-    const dim = NDCompat.coerceDimension(dimension);
+    const dim = NDCompatibility.coerceDimension(dimension);
     const raw = (size / 64) * dim * 5;
     return Math.round(constrain(raw, 2, this.getMaxKernelRadius(size)));
   }
 
-  getPlacementScaleBounds(selection = this.params.selectedAnimal) {
+  getPlacementScaleBounds(selection = this.params.selectedSoliton) {
     const minScale = 0.25;
     const hardMax = 16;
     return {
@@ -98,7 +98,7 @@ class AppCoreControlMethods {
 
   getEffectivePlacementScale(
     scale = this.params.placeScale,
-    selection = this.params.selectedAnimal,
+    selection = this.params.selectedSoliton,
   ) {
     const { min, max } = this.getPlacementScaleBounds(selection);
     const uiScale = constrain(Number(scale) || 1, min, max);
@@ -147,7 +147,7 @@ class AppCoreControlMethods {
   }
 
   _coerceNDActiveAxis(axis, dimension = this.params.dimension) {
-    const dim = NDCompat.coerceDimension(dimension);
+    const dim = NDCompatibility.coerceDimension(dimension);
     if (dim <= 3) return "z";
     return String(axis || "z").toLowerCase() === "w" ? "w" : "z";
   }
@@ -185,14 +185,14 @@ class AppCoreControlMethods {
   }
 
   buildNDConfig() {
-    const dimension = NDCompat.coerceDimension(this.params.dimension);
-    const viewMode = NDCompat.coerceViewMode(dimension, this.params.viewMode);
-    const ndDepth = NDCompat.getWorldDepthForDimension(
+    const dimension = NDCompatibility.coerceDimension(this.params.dimension);
+    const viewMode = NDCompatibility.coerceViewMode(dimension, this.params.viewMode);
+    const ndDepth = NDCompatibility.getWorldDepthForDimension(
       this.params.latticeExtent,
       dimension,
     );
-    const ndSliceZ = NDCompat.coerceSliceIndex(this.params.ndSliceZ, ndDepth);
-    const ndSliceW = NDCompat.coerceSliceIndex(this.params.ndSliceW, ndDepth);
+    const ndSliceZ = NDCompatibility.coerceSliceIndex(this.params.ndSliceZ, ndDepth);
+    const ndSliceW = NDCompatibility.coerceSliceIndex(this.params.ndSliceW, ndDepth);
     this.params.dimension = dimension;
     this.params.viewMode = viewMode;
     this.params.ndDepth = ndDepth;
@@ -215,7 +215,7 @@ class AppCoreControlMethods {
 
   setDimension(dimension) {
     if (this._changingDimension) return;
-    const nextDimension = NDCompat.coerceDimension(dimension);
+    const nextDimension = NDCompatibility.coerceDimension(dimension);
 
     this._changingDimension = true;
     try {
@@ -231,7 +231,7 @@ class AppCoreControlMethods {
 
       if ((Number(this.params.dimension) || 2) > 2) {
         this.params.viewMode = "projection";
-        const ndDepthForSlice = NDCompat.getWorldDepthForDimension(
+        const ndDepthForSlice = NDCompatibility.getWorldDepthForDimension(
           this.params.latticeExtent,
           nextDimension,
         );
@@ -249,16 +249,16 @@ class AppCoreControlMethods {
       this.params.placeScale = 1;
       this._lastPlacementScale = 1;
 
-      this._applyAnimalSource();
+      this._applySolitonSource();
 
-      const animal = this._syncSelectedAnimalForActiveDimension(0);
+      const soliton = this._syncSelectedSolitonForActiveDimension(0);
 
       if (sizeChanged) {
         this.changeResolution();
       }
 
-      if (animal) {
-        this.loadAnimal(animal);
+      if (soliton) {
+        this.loadSoliton(soliton);
       } else {
         this.clearWorld();
       }
@@ -297,7 +297,7 @@ class AppCoreControlMethods {
     );
     const step = Math.floor(Number(delta) || 0);
     if (!Number.isFinite(step) || step === 0) return;
-    const depth = NDCompat.coerceDepth(
+    const depth = NDCompatibility.coerceDepth(
       this.params.ndDepth,
       this.params.dimension,
     );
@@ -318,7 +318,7 @@ class AppCoreControlMethods {
 
   centreNDSlices({ allAxes = true } = {}) {
     if ((this.params.dimension || 2) <= 2) return;
-    const depth = NDCompat.coerceDepth(
+    const depth = NDCompatibility.coerceDepth(
       this.params.ndDepth,
       this.params.dimension,
     );
@@ -399,7 +399,7 @@ class AppCoreControlMethods {
       last.cellY = cellY;
       last.atMs = nowMs;
 
-      this.placeAnimal(cellX, cellY);
+      this.placeSoliton(cellX, cellY);
       return false;
     }
   }
@@ -496,16 +496,16 @@ class AppCoreControlMethods {
     }, {});
   }
 
-  cycleStatsMode(delta = 1, { refreshGUI = true } = {}) {
+  cycleStatisticsMode(delta = 1, { refreshGUI = true } = {}) {
     const modes = [0, 1, 5, 6];
-    const currentRaw = Math.floor(Number(this.params.statsMode) || 1);
+    const currentRaw = Math.floor(Number(this.params.statisticsMode) || 1);
     const currentIndex = modes.indexOf(currentRaw);
     const current = currentIndex >= 0 ? currentIndex : 0;
     const step = Math.floor(Number(delta) || 0) || 1;
     const nextIndex =
       (((current + step) % modes.length) + modes.length) % modes.length;
     const next = modes[nextIndex];
-    this.params.statsMode = next;
+    this.params.statisticsMode = next;
 
     if (next === 5) {
       this.analyser?.updatePeriodogram?.(this.params, 10, true);
@@ -515,7 +515,7 @@ class AppCoreControlMethods {
     return next;
   }
 
-  cycleStatsAxis(axis = "x", delta = 1, { refreshGUI = true } = {}) {
+  cycleStatisticsAxis(axis = "x", delta = 1, { refreshGUI = true } = {}) {
     const key = String(axis).toLowerCase() === "y" ? "graphY" : "graphX";
     const headers = this.getStatAxisHeaders();
     if (!headers.length) return this.params[key];
@@ -532,18 +532,18 @@ class AppCoreControlMethods {
     return this.params[key];
   }
 
-  startStatsSegment({ refreshGUI = true } = {}) {
+  startStatisticsSegment({ refreshGUI = true } = {}) {
     this.analyser?.startNewSegment?.();
     if (refreshGUI) this.refreshGUI();
   }
 
-  clearCurrentStatsSegment({ refreshGUI = true } = {}) {
+  clearCurrentStatisticsSegment({ refreshGUI = true } = {}) {
     this.analyser?.clearCurrentSegment?.();
     this.analyser?.updatePeriodogram?.(this.params, 10, true);
     if (refreshGUI) this.refreshGUI();
   }
 
-  clearAllStatsSegments({ refreshGUI = true } = {}) {
+  clearAllStatisticsSegments({ refreshGUI = true } = {}) {
     this.analyser?.clearAllSegments?.();
     this.analyser?.updatePeriodogram?.(this.params, 10, true);
     if (refreshGUI) this.refreshGUI();
@@ -565,8 +565,8 @@ class AppCoreControlMethods {
         this.gui.syncPlacementScaleBounds();
       }
 
-      if (this.gui && typeof this.gui.syncAnimalSelectors === "function") {
-        this.gui.syncAnimalSelectors();
+      if (this.gui && typeof this.gui.syncSolitonSelectors === "function") {
+        this.gui.syncSolitonSelectors();
       }
 
       if (this.gui && this.gui.pane) this.gui.pane.refresh();

@@ -26,9 +26,9 @@ Real-time numerical visualiser of hydrogenic bound-state probability densities. 
 * [worker/PsiWorker.js — Density-grid computation kernel (wavefunctions, special functions)](worker/PsiWorker.js)
 * [render/Renderer.js — LUT rendering, overlays, legend, and node visualisation](render/Renderer.js)
 * [analysis/Analyser.js — Density statistics, radial probability moments, and node detection](analysis/Analyser.js)
-* [ui/GUI.js — Tweakpane interface (4 tabs: Sim, Render, Stats, Media)](ui/GUI.js)
+* [ui/GUI.js — Tweakpane interface (4 tabs: Sim, Render, Statistics, Media)](ui/GUI.js)
 * [ui/InputHandler.js — Keyboard, mouse, and touch input](ui/InputHandler.js)
-* [media/Media.js — Parameter/statistics import and export, image/video capture](media/Media.js)
+* [media/Media.js — Parameter/statistics import and export, image/media capture](media/Media.js)
 
 ### Folder Structure
 
@@ -355,7 +355,7 @@ Format: $n`\ell_m`$, e.g. $`4p_0`$, $`3d_{-1}`$.
 | `[` / `]` | Exposure ±0.01 |
 | `+` / `-` | Resolution ±2 |
 | `M` | Toggle smoothing |
-| `O` / `N` / `L` | Toggle overlays (stats / nodes / legend) |
+| `O` / `N` / `L` | Toggle overlays (statistics / nodes / legend) |
 
 #### 10.4 Import / Export
 

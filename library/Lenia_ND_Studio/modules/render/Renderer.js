@@ -41,8 +41,8 @@ class Renderer {
     this._legendCacheKey = "";
     this._scaleGfx = null;
     this._scaleCacheKey = "";
-    this._statsGfx = null;
-    this._statsFrameCount = 0;
+    this._statisticsGfx = null;
+    this._statisticsFrameCount = 0;
     this._viewOffsetActive = false;
     this._viewShiftX = 0;
     this._viewShiftY = 0;
@@ -136,9 +136,9 @@ class Renderer {
       this._scaleGfx = null;
     }
     this._scaleCacheKey = "";
-    if (this._statsGfx) {
-      this._statsGfx.remove();
-      this._statsGfx = null;
+    if (this._statisticsGfx) {
+      this._statisticsGfx.remove();
+      this._statisticsGfx = null;
     }
   }
 

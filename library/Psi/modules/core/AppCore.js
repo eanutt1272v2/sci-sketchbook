@@ -600,8 +600,8 @@ class AppCore {
       this._analysisSignature = data.analysisSignature;
     }
 
-    if (!this.params.renderOverlay || !data.analysisStats) return;
-    this.analyser.applyWorkerStatistics(data.analysisStats, {
+    if (!this.params.renderOverlay || !data.analysisStatistics) return;
+    this.analyser.applyWorkerStatistics(data.analysisStatistics, {
       ...this.params,
       fps: Number(this.statistics.fps) || 0,
       resolution:

@@ -1,6 +1,6 @@
-class StatsGraphComponent {
-  _mountStatsGraph(graphsFolder) {
-    this._teardownStatsGraph();
+class StatisticsGraphComponent {
+  _mountStatisticsGraph(graphsFolder) {
+    this._teardownStatisticsGraph();
 
     if (typeof document === "undefined") return;
 
@@ -60,43 +60,43 @@ class StatsGraphComponent {
     wrapper.appendChild(caption);
     contentHost.appendChild(wrapper);
 
-    this._statsGraphWrapper = wrapper;
-    this._statsGraphCanvas = canvas;
-    this._statsGraphCaption = caption;
+    this._statisticsGraphWrapper = wrapper;
+    this._statisticsGraphCanvas = canvas;
+    this._statisticsGraphCaption = caption;
 
-    this._startStatsGraphLoop();
-    this._renderStatsGraph();
+    this._startStatisticsGraphLoop();
+    this._renderStatisticsGraph();
   }
 
-  _teardownStatsGraph() {
-    if (this._statsGraphRaf) {
-      cancelAnimationFrame(this._statsGraphRaf);
-      this._statsGraphRaf = 0;
+  _teardownStatisticsGraph() {
+    if (this._statisticsGraphRaf) {
+      cancelAnimationFrame(this._statisticsGraphRaf);
+      this._statisticsGraphRaf = 0;
     }
 
-    if (this._statsGraphWrapper && this._statsGraphWrapper.parentNode) {
-      this._statsGraphWrapper.parentNode.removeChild(this._statsGraphWrapper);
+    if (this._statisticsGraphWrapper && this._statisticsGraphWrapper.parentNode) {
+      this._statisticsGraphWrapper.parentNode.removeChild(this._statisticsGraphWrapper);
     }
 
-    this._statsGraphWrapper = null;
-    this._statsGraphCanvas = null;
-    this._statsGraphCaption = null;
-    this._statsGraphLastFrameMs = 0;
-    this._statsGraphScratch = null;
-    this._statsGraphLayers = null;
+    this._statisticsGraphWrapper = null;
+    this._statisticsGraphCanvas = null;
+    this._statisticsGraphCaption = null;
+    this._statisticsGraphLastFrameMs = 0;
+    this._statisticsGraphScratch = null;
+    this._statisticsGraphLayers = null;
   }
 
-  _startStatsGraphLoop() {
-    if (this._statsGraphRaf || !this._statsGraphCanvas) return;
+  _startStatisticsGraphLoop() {
+    if (this._statisticsGraphRaf || !this._statisticsGraphCanvas) return;
 
     const tick = (ts) => {
-      this._statsGraphRaf = requestAnimationFrame(tick);
-      if (ts - this._statsGraphLastFrameMs < 110) return;
-      this._statsGraphLastFrameMs = ts;
-      this._renderStatsGraph();
+      this._statisticsGraphRaf = requestAnimationFrame(tick);
+      if (ts - this._statisticsGraphLastFrameMs < 110) return;
+      this._statisticsGraphLastFrameMs = ts;
+      this._renderStatisticsGraph();
     };
 
-    this._statsGraphRaf = requestAnimationFrame(tick);
+    this._statisticsGraphRaf = requestAnimationFrame(tick);
   }
 
   _resolveStatIndex(statistics, statKey) {
@@ -159,7 +159,7 @@ class StatsGraphComponent {
 
     const host =
       referenceElement ||
-      this._statsGraphWrapper ||
+      this._statisticsGraphWrapper ||
       this.pane?.element ||
       document.documentElement;
     const rootStyle = window.getComputedStyle(document.documentElement);
@@ -537,10 +537,10 @@ class StatsGraphComponent {
 
   _getGraphScratchCanvas(width, height) {
     if (typeof document === "undefined") return null;
-    if (!this._statsGraphScratch) {
-      this._statsGraphScratch = document.createElement("canvas");
+    if (!this._statisticsGraphScratch) {
+      this._statisticsGraphScratch = document.createElement("canvas");
     }
-    const canvas = this._statsGraphScratch;
+    const canvas = this._statisticsGraphScratch;
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
     return canvas;
@@ -548,29 +548,29 @@ class StatsGraphComponent {
 
   _getGraphLayerCanvas(mode, width, height) {
     if (typeof document === "undefined") return null;
-    if (!this._statsGraphLayers) {
-      this._statsGraphLayers = {};
+    if (!this._statisticsGraphLayers) {
+      this._statisticsGraphLayers = {};
     }
     const key = String(mode);
-    if (!this._statsGraphLayers[key]) {
-      this._statsGraphLayers[key] = document.createElement("canvas");
+    if (!this._statisticsGraphLayers[key]) {
+      this._statisticsGraphLayers[key] = document.createElement("canvas");
     }
-    const canvas = this._statsGraphLayers[key];
+    const canvas = this._statisticsGraphLayers[key];
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
     return canvas;
   }
 
-  _renderStatsGraph() {
-    const canvas = this._statsGraphCanvas;
+  _renderStatisticsGraph() {
+    const canvas = this._statisticsGraphCanvas;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const stats = this.statistics || {};
+    const statistics = this.statistics || {};
     const params = this.params || {};
-    const rawMode = Math.floor(Number(params.statsMode));
+    const rawMode = Math.floor(Number(params.statisticsMode));
     const mode =
       rawMode === 0 || rawMode === 1 || rawMode === 5 || rawMode === 6
         ? rawMode
@@ -622,7 +622,7 @@ class StatsGraphComponent {
           layerCtx,
           cssWidth,
           cssHeight,
-          stats,
+          statistics,
           params,
           theme,
         ),
@@ -632,7 +632,7 @@ class StatsGraphComponent {
           layerCtx,
           cssWidth,
           cssHeight,
-          stats,
+          statistics,
           params,
           theme,
         ),
@@ -642,7 +642,7 @@ class StatsGraphComponent {
           layerCtx,
           cssWidth,
           cssHeight,
-          stats,
+          statistics,
           params,
           theme,
         ),
@@ -680,8 +680,8 @@ class StatsGraphComponent {
       caption = selected?.caption || "graph unavailable";
     }
 
-    if (this._statsGraphCaption) {
-      this._statsGraphCaption.textContent = caption;
+    if (this._statisticsGraphCaption) {
+      this._statisticsGraphCaption.textContent = caption;
     }
   }
 
@@ -1080,15 +1080,15 @@ class StatsGraphComponent {
   }
 }
 
-window.StatsGraphComponent = window.StatsGraphComponent || {};
-window.StatsGraphComponent.install = function installStatsGraphComponent(
+window.StatisticsGraphComponent = window.StatisticsGraphComponent || {};
+window.StatisticsGraphComponent.install = function installStatisticsGraphComponent(
   targetClass,
 ) {
   if (!targetClass || !targetClass.prototype) return;
   for (const name of Object.getOwnPropertyNames(
-    StatsGraphComponent.prototype,
+    StatisticsGraphComponent.prototype,
   )) {
     if (name === "constructor") continue;
-    targetClass.prototype[name] = StatsGraphComponent.prototype[name];
+    targetClass.prototype[name] = StatisticsGraphComponent.prototype[name];
   }
 };

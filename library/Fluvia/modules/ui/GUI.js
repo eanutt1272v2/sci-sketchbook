@@ -44,11 +44,11 @@ class GUI {
       ],
     });
 
-    const [simPage, paramsPage, renderPage, statsPage, mediaPage] = tabs.pages;
+    const [simPage, paramsPage, renderPage, statisticsPage, mediaPage] = tabs.pages;
     this.createSimulationTab(simPage);
     this.createParametersTab(paramsPage);
     this.createRenderTab(renderPage);
-    this.createStatisticsTab(statsPage);
+    this.createStatisticsTab(statisticsPage);
     this.createMediaTab(mediaPage);
   }
 
@@ -368,8 +368,8 @@ class GUI {
       expanded: true,
     });
 
-    display.addBinding(params, "renderStats", {
-      label: this.withHint("Toggle Statistics Overlay", "overlayStats", "O"),
+    display.addBinding(params, "renderStatistics", {
+      label: this.withHint("Toggle Statistics Overlay", "overlayStatistics", "O"),
     });
 
     this.addSeparator(page);
@@ -670,14 +670,14 @@ class GUI {
       .on("click", () => media.exportParamsJSON());
     exp
       .addButton({
-        title: this.withHint("Export Stats", "exportStats", "Ctrl+Shift+J"),
+        title: this.withHint("Export Statistics (JSON)", "exportStatistics", "Ctrl+Shift+J"),
       })
       .on("click", () => media.exportStatisticsJSON());
     exp
       .addButton({
         title: this.withHint(
-          "Export Stats CSV",
-          "exportStatsCsv",
+          "Export Statistics (CSV)",
+          "exportStatisticsCsv",
           "Ctrl+Shift+K",
         ),
       })
@@ -693,7 +693,7 @@ class GUI {
 
     this.addSeparator(exp);
 
-    const capture = exp.addFolder({ title: "Video Capture" });
+    const capture = exp.addFolder({ title: "Media Capture" });
 
     capture.addBinding(params, "recordingFPS", {
       label: "Recording FPS [Hz]",

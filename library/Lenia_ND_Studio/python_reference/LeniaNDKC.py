@@ -680,7 +680,7 @@ class Analyzer:
         polar_FFT[:, 0] = 0
         return polar_FFT
 
-    def calc_stats(self, polar_what=0, psd_x='m', psd_y='g', is_welch=True):
+    def calc_statistics(self, polar_what=0, psd_x='m', psd_y='g', is_welch=True):
         self.m_last_centre = self.m_centre
         self.m_last_angle = self.m_angle
         # self.shape_last_angle = self.shape_angle
@@ -866,7 +866,7 @@ class Analyzer:
                         _, self.psd2 = self.calc_psd(Y, fs=T, nfft=512, is_welch=is_welch)
                         #if self.psd2 is not None: print(X.shape, self.psd1.shape, Y.shape, self.psd2.shape)
 
-    def stats_fullname(self, i=None, x=None):
+    def statistics_fullname(self, i=None, x=None):
         if not x: x = self.STAT_HEADERS[i]
         return "{code}={name}".format(code=x, name=self.STAT_NAMES[x])
 
@@ -896,7 +896,7 @@ class Analyzer:
         self.period = None
         self.period_gen = 100
 
-    def add_stats(self, psd_y='g'):
+    def add_statistics(self, psd_y='g'):
         multi = max(1, self.world.params[0]['T'] // 10)
         if self.series == []:
             self.new_segment()
@@ -1125,9 +1125,9 @@ class Lenia:
         self.polar_mode = 0
         self.markers_mode = 0
 
-        self.stats_mode = 0
-        self.stats_x = 4
-        self.stats_y = 5
+        self.statistics_mode = 0
+        self.statistics_x = 4
+        self.statistics_y = 5
         self.is_group_params = False
         self.is_draw_params = False
         self.is_auto_centre = False
@@ -1239,13 +1239,13 @@ class Lenia:
         return PIL.ImageFont.load_default()
 
     @property
-    def stats_x_name(self): return self.analyzer.STAT_HEADERS[self.stats_x]
+    def statistics_x_name(self): return self.analyzer.STAT_HEADERS[self.statistics_x]
     @property
-    def stats_y_name(self): return self.analyzer.STAT_HEADERS[self.stats_y]
-    @stats_x_name.setter
-    def stats_x_name(self, val): self.stats_x = self.analyzer.STAT_HEADERS.index(val)
-    @stats_y_name.setter
-    def stats_y_name(self, val): self.stats_y = self.analyzer.STAT_HEADERS.index(val)
+    def statistics_y_name(self): return self.analyzer.STAT_HEADERS[self.statistics_y]
+    @statistics_x_name.setter
+    def statistics_x_name(self, val): self.statistics_x = self.analyzer.STAT_HEADERS.index(val)
+    @statistics_y_name.setter
+    def statistics_y_name(self, val): self.statistics_y = self.analyzer.STAT_HEADERS.index(val)
 
     def convert_font_run_once(self, font_file_path):
         import PIL.BdfFontFile, PIL.PcfFontFile
@@ -1618,7 +1618,7 @@ class Lenia:
         multi = max(1, self.world.params[0]['T'] // 10)
         start_gen = self.analyzer.SEGMENT_INIT * multi
         seg = self.analyzer.series[-1][start_gen:]
-        val_seg = [val[self.stats_x] for val in seg]
+        val_seg = [val[self.statistics_x] for val in seg]
         if self.search_algo in [4]:
             fitness = max(val_seg)
         elif self.search_algo in [5]:
@@ -1628,7 +1628,7 @@ class Lenia:
             var = sum([((x - avg) ** 2) for x in val_seg]) / len(val_seg)
             fitness = var ** 0.5
         func = ["max","avg","stdev"][self.search_algo-4]
-        cname = "{func}({stat})={fitness:.3f}".format(func=func, stat=self.stats_x_name, fitness=fitness)
+        cname = "{func}({stat})={fitness:.3f}".format(func=func, stat=self.statistics_x_name, fitness=fitness)
         self.world.names[2] = cname
         # self.update_lineage(cname=cname)
         self.leaderboard.append({'fitness':fitness, 'world':copy.deepcopy(self.world)})
@@ -1685,9 +1685,9 @@ class Lenia:
             self.search_stage = 1
             self.search_total = 0
             self.search_success = 0
-            # self.stats_mode = 1
-            # self.stats_x_name = 't'
-            # self.stats_y_name = 'm'
+            # self.statistics_mode = 1
+            # self.statistics_x_name = 't'
+            # self.statistics_y_name = 'm'
             if self.search_algo in [0]:
                 self.random_params()
                 self.random_world()
@@ -1704,7 +1704,7 @@ class Lenia:
                 self.automaton.reset()
                 self.analyzer.reset()
                 # self.analyzer.trim_segment = 0
-                # self.stats_x_name = 's'
+                # self.statistics_x_name = 's'
         else:
             self.is_auto_centre = True
             self.is_auto_load = True
@@ -1805,7 +1805,7 @@ class Lenia:
                 if self.search_algo in [0, 1, 2, 3]:
                     STATUS.append("{success} found in {trial} trials ({algo}), saving to {path}".format(success=self.search_success, trial=self.search_total, algo=self.get_value_text('search_algo'), path=self.FOUND_ANIMALS_PATH))
                 elif self.search_algo in [4, 5, 6]:
-                    STATUS.append("{leader1:.3f}, {leader2:.3f}, {leader3:.3f} leading in {trial} steps ({algo})".format(stat=self.stats_x_name, leader1=self.leaderboard[0]['fitness'], leader2=self.leaderboard[1]['fitness'], leader3=self.leaderboard[2]['fitness'], trial=self.search_total, algo=self.get_value_text('search_algo')))
+                    STATUS.append("{leader1:.3f}, {leader2:.3f}, {leader3:.3f} leading in {trial} steps ({algo})".format(stat=self.statistics_x_name, leader1=self.leaderboard[0]['fitness'], leader2=self.leaderboard[1]['fitness'], leader3=self.leaderboard[2]['fitness'], trial=self.search_total, algo=self.get_value_text('search_algo')))
 
     def clean_code(self, code):
         if '<' in code:
@@ -1848,7 +1848,7 @@ class Lenia:
 
     def append_found_file_leaderboard(self):
         # self.append_found_file(world=self.search_back)
-        self.append_found_file_text("\"Leaderboard: {algo} where {stat}\",\n".format(stat=self.analyzer.stats_fullname(i=self.stats_x), algo=self.get_value_text('search_algo')))
+        self.append_found_file_text("\"Leaderboard: {algo} where {stat}\",\n".format(stat=self.analyzer.statistics_fullname(i=self.statistics_x), algo=self.get_value_text('search_algo')))
         for entity in self.leaderboard:
             if entity['world'] is not None:
                 self.append_found_file(world=entity['world'])
@@ -1975,7 +1975,7 @@ class Lenia:
 
             if show_arr is not None:
                 self.draw_world(show_arr, 0, 1)
-            elif self.stats_mode in [0, 1, 2]:
+            elif self.statistics_mode in [0, 1, 2]:
                 change_range = 1 if not self.automaton.is_soft_clip else 1.4
                 field_lo = -1 if not self.automaton.is_arita_mode else 0
                 if self.show_what==0: self.draw_world(self.show_which_channels(self.world.cells), 0, 1, is_shift=True, is_higher_zero=True, markers=['world','arrow','scale','grid','colormap','params'])
@@ -1986,13 +1986,13 @@ class Lenia:
                 # elif self.show_what==5: self.draw_world(self.automaton.fftshift(np.log(np.abs(self.automaton.potential_FFT))), -20, 5, markers=['colormap','params'])  #-40, 10
                 # elif self.show_what==6: self.draw_world(grad, 0, 1, is_shift=True, markers=['arrow','scale','grid','colormap','params'])
                 # elif self.show_what==7: self.draw_world(self.automaton.change, -change_range, change_range, is_shift=True, markers=['arrow','scale','grid','colormap','params'])
-            elif self.stats_mode in [3, 4]:
+            elif self.statistics_mode in [3, 4]:
                 self.draw_black()
-                self.draw_stats(is_current_series=self.stats_mode in [1, 2, 3], is_small=self.stats_mode in [1])
-            elif self.stats_mode in [6]:
+                self.draw_statistics(is_current_series=self.statistics_mode in [1, 2, 3], is_small=self.statistics_mode in [1])
+            elif self.statistics_mode in [6]:
                 self.draw_recurrence()
 
-            elif self.stats_mode in [5]:
+            elif self.statistics_mode in [5]:
                 self.draw_black()
                 self.draw_psd(is_welch=True)
 
@@ -2051,7 +2051,7 @@ class Lenia:
             A = [A]
         # if type(A) in [list]: A = [np.maximum.reduce(A)]
         R = self.world.params[0]['R']
-        is_xy = self.stats_x_name in ['x'] and self.stats_y_name in ['y'] and self.stats_mode in [2]
+        is_xy = self.statistics_x_name in ['x'] and self.statistics_y_name in ['y'] and self.statistics_mode in [2]
         axes = tuple(reversed(range(DIM)))
         if is_shift and not self.is_auto_centre:
             shift = self.analyzer.total_shift_idx #if 'world' in markers else self.analyzer.total_shift_idx - self.analyzer.last_shift_idx 
@@ -2095,13 +2095,13 @@ class Lenia:
                 m1 = self.analyzer.m_centre * R * PIXEL
                 self.shift_img(self.img, int(m1[0]), int(m1[1]), is_rotate=False)
             if is_xy:
-                self.draw_stats(is_draw_text=False, is_current_series=self.stats_mode in [1, 2, 3], is_small=self.stats_mode in [1])
+                self.draw_statistics(is_draw_text=False, is_current_series=self.statistics_mode in [1, 2, 3], is_small=self.statistics_mode in [1])
             if angle_shift != 0:
                 self.img = self.img.rotate(-angle_shift*360, resample=PIL.Image.NEAREST, expand=False)
                 # samp_rotate = OG:96, D7:-8, D8:-6, D9:-5.4
             self.draw_symmetry_title(markers)
             self.draw_legend(markers, vmin, vmax)
-            #if self.stats_mode in [1]:
+            #if self.statistics_mode in [1]:
             #    self.draw_histo(A, vmin, vmax)
         elif self.polar_mode in [2,3,4] and self.analyzer.polar_array is not None:
             if self.polar_mode in [2] and self.analyzer.is_calc_symmetry:
@@ -2150,8 +2150,8 @@ class Lenia:
 
         if not self.is_show_rgb():
             self.img.putpalette(self.colormaps[self.colormap_id])
-        if self.stats_mode in [1, 2]:
-            self.draw_stats(is_draw_line=not is_xy, is_current_series=self.stats_mode in [1, 2, 3], is_small=self.stats_mode in [1])
+        if self.statistics_mode in [1, 2]:
+            self.draw_statistics(is_draw_line=not is_xy, is_current_series=self.statistics_mode in [1, 2, 3], is_small=self.statistics_mode in [1])
 
     def draw_title(self, draw, line, title, color=255):
         font = self.font
@@ -2384,18 +2384,18 @@ class Lenia:
     def cube_xy(self, d1, d2, d3, s):
         return (s + d1 - d3), (2*s + d1 - 2*d2 + d3)
 
-    def draw_stats(self, is_current_series=True, is_small=True, is_draw_line=True, is_draw_text=True):
+    def draw_statistics(self, is_current_series=True, is_small=True, is_draw_line=True, is_draw_text=True):
         R = self.world.params[0]['R']
         draw = PIL.ImageDraw.Draw(self.img)
         series = self.analyzer.series
         current = self.analyzer.current
-        is_square = self.stats_x_name in ['x', 'y'] and self.stats_y_name in ['x', 'y']
-        is_xy = self.stats_x_name in ['x'] and self.stats_y_name in ['y'] and self.stats_mode in [2]
+        is_square = self.statistics_x_name in ['x', 'y'] and self.statistics_y_name in ['x', 'y']
+        is_xy = self.statistics_x_name in ['x'] and self.statistics_y_name in ['y'] and self.statistics_mode in [2]
         if series != [] and is_current_series:
             series = [series[-1]]
         if series != [] and series != [[]]:
-            X = [np.asarray([val[self.stats_x] for val in seg]) for seg in series if len(seg)>0]
-            Y = [np.asarray([val[self.stats_y] for val in seg]) for seg in series if len(seg)>0]
+            X = [np.asarray([val[self.statistics_x] for val in seg]) for seg in series if len(seg)>0]
+            Y = [np.asarray([val[self.statistics_y] for val in seg]) for seg in series if len(seg)>0]
             S = [seg[0][1] for seg in series if len(seg)>0]
             M = [seg[0][0] for seg in series if len(seg)>0]
             # if name_x in ['n', 't']: X = [seg - seg.min() for seg in X]
@@ -2412,8 +2412,8 @@ class Lenia:
                 # massmax = max(seg.max() for seg in mass if seg.size>0)
                 # if name_x in ['m_a']:
                     # xmin, xmax = min(xmin, -massmax/32), max(xmax, massmax/32)
-            title_st_x = "X: {name} ({min:.3f}-{max:.3f}) {val:.3f}".format(name=self.stats_x_name, min=xmin, max=xmax, val=current[self.stats_x])
-            title_st_y = "Y: {name} ({min:.3f}-{max:.3f}) {val:.3f}".format(name=self.stats_y_name, min=ymin, max=ymax, val=current[self.stats_y])
+            title_st_x = "X: {name} ({min:.3f}-{max:.3f}) {val:.3f}".format(name=self.statistics_x_name, min=xmin, max=xmax, val=current[self.statistics_x])
+            title_st_y = "Y: {name} ({min:.3f}-{max:.3f}) {val:.3f}".format(name=self.statistics_y_name, min=ymin, max=ymax, val=current[self.statistics_y])
             if is_small:
                 xmax = (xmax - xmin) * 4 + xmin
                 ymax = (ymax - ymin) * 4 + ymin
@@ -2483,7 +2483,7 @@ class Lenia:
                 if peak_freq > 0:
                     self.analyzer.period = 1 / peak_freq
                     self.analyzer.period_gen = self.analyzer.period * T
-            for (n, psd, name) in zip([0,1], [self.analyzer.psd2, self.analyzer.psd1], [self.stats_y_name, self.stats_x_name]):
+            for (n, psd, name) in zip([0,1], [self.analyzer.psd2, self.analyzer.psd1], [self.statistics_y_name, self.statistics_x_name]):
                 if psd is not None and psd.shape[0] > 0:
                     #if len(psd.shape) > 1: psd = psd.max(axis=1)
                     c = 254 if n==0 else 255
@@ -2629,7 +2629,7 @@ class Lenia:
                 json.dump(data, file, indent=4, ensure_ascii=False)
             with open(path+'.csv', 'w', newline='\n') as file:
                 writer = csv.writer(file)
-                writer.writerow([self.analyzer.stats_fullname(x=x) for x in self.analyzer.STAT_HEADERS])
+                writer.writerow([self.analyzer.statistics_fullname(x=x) for x in self.analyzer.STAT_HEADERS])
                 writer.writerows([e for l in self.analyzer.series for e in l])
             STATUS.append("> data and image saved to '"+path+".*'")
             self.is_save_image = True
@@ -2637,8 +2637,8 @@ class Lenia:
             STATUS.append("I/O error({}): {}".format(e.errno, e.strerror))
 
     def change_stat_axis(self, axis1, axis2, d):
-        if self.stats_mode == 0:
-            self.stats_mode = 1
+        if self.statistics_mode == 0:
+            self.statistics_mode = 1
         while True:
             axis1 = (axis1 + d) % len(self.analyzer.STAT_HEADERS)
             if axis1 != axis2 and axis1 > 2: break
@@ -2834,8 +2834,8 @@ class Lenia:
         elif k in ['quoteright']: self.is_auto_centre = not self.is_auto_centre
         elif k in ['s+quoteright']: self.auto_rotate_mode = (self.auto_rotate_mode + 1) % 3 if DIM==2 else 0
         elif k in ['c+quoteright', 's+c+quoteright']: self.polar_mode = (self.polar_mode + inc_or_dec) % 5 if DIM==2 else 0
-        # elif k in ['c+quoteright']: self.is_auto_centre = True; self.auto_rotate_mode = 2; self.analyzer.is_calc_symmetry = True; self.stats_mode = 5; self.samp_freq = int(round(self.analyzer.period_gen*2))
-        # elif k in ['s+c+quoteright']: self.is_auto_centre = False; self.auto_rotate_mode = 0; self.analyzer.is_calc_symmetry = False; self.stats_mode = 0; self.samp_freq = 1
+        # elif k in ['c+quoteright']: self.is_auto_centre = True; self.auto_rotate_mode = 2; self.analyzer.is_calc_symmetry = True; self.statistics_mode = 5; self.samp_freq = int(round(self.analyzer.period_gen*2))
+        # elif k in ['s+c+quoteright']: self.is_auto_centre = False; self.auto_rotate_mode = 0; self.analyzer.is_calc_symmetry = False; self.statistics_mode = 0; self.samp_freq = 1
         #animals [zxcv 1-0]
         elif k in ['z']: self.reload_animal(); self.info_type = 'animal'
         elif k in ['c']: self.load_animal_id(self.world, self.animal_id - inc_1_or_10); self.world_updated(); self.info_type = 'animal'
@@ -2866,19 +2866,19 @@ class Lenia:
         elif k in ['c+v']: self.paste_world()
         elif k in ['c+s', 's+c+s']: self.save_world(is_seq='s+' in k)
         elif k in ['c+w', 's+c+w']: self.is_run = self.recorder.toggle_recording(is_save_frames='s+' in k)
-        #stats [hjkl]
+        #statistics [hjkl]
         elif k in ['h', 's+h']: self.markers_mode = (self.markers_mode + inc_or_dec) % 8
         elif k in ['c+h']: self.is_show_fps = not self.is_show_fps
-        elif k in ['j', 's+j']: self.stats_mode = (self.stats_mode + inc_or_dec) % 7; self.info_type = 'stats'
-        elif k in ['k', 's+k']: self.stats_x = self.change_stat_axis(self.stats_x, self.stats_y, inc_or_dec); self.info_type = 'stats'
-        elif k in ['l', 's+l']: self.stats_y = self.change_stat_axis(self.stats_y, self.stats_x, inc_or_dec); self.info_type = 'stats'
+        elif k in ['j', 's+j']: self.statistics_mode = (self.statistics_mode + inc_or_dec) % 7; self.info_type = 'statistics'
+        elif k in ['k', 's+k']: self.statistics_x = self.change_stat_axis(self.statistics_x, self.statistics_y, inc_or_dec); self.info_type = 'statistics'
+        elif k in ['l', 's+l']: self.statistics_y = self.change_stat_axis(self.statistics_y, self.statistics_x, inc_or_dec); self.info_type = 'statistics'
         elif k in ['c+j']: self.analyzer.clear_segment()
-        elif k in ['a+j']: self.stats_mode = 5  # periodogram
+        elif k in ['a+j']: self.statistics_mode = 5  # periodogram
         elif k in ['s+c+j']: self.analyzer.clear_series()
         elif k in ['c+k']: self.analyzer.trim_segment = (self.analyzer.trim_segment + inc_or_dec) % 3
         elif k in ['c+l']: self.is_group_params = not self.is_group_params
-        elif k in ['s+c+k']: self.stats_mode = 1; self.stats_x_name = 'm'; self.stats_y_name = 'g'; self.analyzer.trim_segment = 1; self.info_type = 'stats'
-        elif k in ['s+c+l']: self.stats_mode = 2; self.stats_x_name = 'x'; self.stats_y_name = 'y'; self.analyzer.trim_segment = 2; self.info_type = 'stats'
+        elif k in ['s+c+k']: self.statistics_mode = 1; self.statistics_x_name = 'm'; self.statistics_y_name = 'g'; self.analyzer.trim_segment = 1; self.info_type = 'statistics'
+        elif k in ['s+c+l']: self.statistics_mode = 2; self.statistics_x_name = 'x'; self.statistics_y_name = 'y'; self.analyzer.trim_segment = 2; self.info_type = 'statistics'
         #info [,./]
         elif k in ['comma']: self.info_type = 'animal'
         elif k in ['period']: self.info_type = 'params'
@@ -2894,7 +2894,7 @@ class Lenia:
             self.analyzer.is_calc_symmetry = True
         else:
             self.analyzer.is_calc_symmetry = False
-        self.analyzer.is_calc_psd = (self.stats_mode in [5])
+        self.analyzer.is_calc_psd = (self.statistics_mode in [5])
         if self.auto_rotate_mode not in [0]:
             self.is_auto_centre = True
 
@@ -3019,13 +3019,13 @@ class Lenia:
             if self.markers_mode in [0,1,4,5]: st.append("Bars")
             if self.markers_mode in [0,2,4,6]: st.append("Vector")
             return ",".join(st) if st != [] else "None"
-        elif name=='stats_mode': return ["None","Corner","Overlay","Segment","All segments","Periodogram","Recurrence plot"][self.stats_mode]
-        elif name=='stats_x': return self.analyzer.stats_fullname(i=self.stats_x)
-        elif name=='stats_y': return self.analyzer.stats_fullname(i=self.stats_y)
+        elif name=='statistics_mode': return ["None","Corner","Overlay","Segment","All segments","Periodogram","Recurrence plot"][self.statistics_mode]
+        elif name=='statistics_x': return self.analyzer.statistics_fullname(i=self.statistics_x)
+        elif name=='statistics_y': return self.analyzer.statistics_fullname(i=self.statistics_y)
         elif name=='z_axis': return str(DIM-self.z_axis)
         elif name=='mask_rate': return "{rate}%".format(rate=self.automaton.mask_rate * 10)
         elif name=='add_noise': return "{rate}%".format(rate=self.automaton.add_noise * 10)
-        elif name=='search_algo': return ["Global search","Depth search","Breadth search","Depth+breadth search","Genetic algo on max({stat})","Genetic algo on avg({stat})","Genetic algo on stdev({stat})"][self.search_algo].format(stat=self.stats_x_name)
+        elif name=='search_algo': return ["Global search","Depth search","Breadth search","Depth+breadth search","Genetic algo on max({stat})","Genetic algo on avg({stat})","Genetic algo on stdev({stat})"][self.search_algo].format(stat=self.statistics_x_name)
         elif name=='show_kernel': return self.show_kernel
         elif name=='trim_segment': return ["Unlimited","Short","Long"][self.analyzer.trim_segment]
     def update_menu(self):
@@ -3130,9 +3130,9 @@ class Lenia:
             '@mask_rate|*Async rate|s+c+I', '@add_noise|*Noise rate|s+c+O', 
             '|*Reset async & noise|s+c+P']))
 
-        self.menu.add_cascade(label='Stats', menu=self.create_submenu(self.menu, [
+        self.menu.add_cascade(label='Statistics', menu=self.create_submenu(self.menu, [
             '@markers_mode|Show marks|H', '^is_show_fps|*Show FPS|c+H', None,
-            '@stats_mode|Show stats|J', '@stats_x|Stats X axis|K', '@stats_y|Stats Y axis|L', 
+            '@statistics_mode|Show statistics|J', '@statistics_x|Statistics X axis|K', '@statistics_y|Statistics Y axis|L', 
             '|*Show mass-growth|s+c+K', '|*Show trajectory|s+c+L', None,
             '|*Clear segment|c+J', '|*Clear all segments|s+c+J', 
             '@trim_segment|*Segment length|c+K', '^is_group_params|*Group by params|c+L']))
@@ -3174,7 +3174,7 @@ class Lenia:
             elif self.info_type == 'info': info_st = self.get_info_st()
             elif self.info_type == 'time': info_st = self.get_time_st()
             elif self.info_type == 'angular': info_st = self.get_angular_st()
-            elif self.info_type == 'stats': info_st = "X axis: {xstat}, Y axis: {ystat}".format(xstat=self.analyzer.stats_fullname(i=self.stats_x), ystat=self.analyzer.stats_fullname(i=self.stats_y))
+            elif self.info_type == 'statistics': info_st = "X axis: {xstat}, Y axis: {ystat}".format(xstat=self.analyzer.statistics_fullname(i=self.statistics_x), ystat=self.analyzer.statistics_fullname(i=self.statistics_y))
             elif self.info_type == 'slice': info_st = "slice: {slice}, Z axis: {d}th dim".format(slice=self.z_slices, d=DIM-self.z_axis)
             elif self.info_type == 'channel': info_st = "channel: {name}".format(name=self.show_which_channels_name())
             elif self.info_type == 'search': info_st = "auto find algorithm: {algo}".format(algo=self.get_value_text('search_algo'))
@@ -3216,11 +3216,11 @@ class Lenia:
             if self.is_run:
                 self.calc_fps()
                 self.automaton.calc_once()
-                self.analyzer.is_calc_psd = (self.stats_mode in [5])
+                self.analyzer.is_calc_psd = (self.statistics_mode in [5])
                 self.analyzer.is_calc_symmetry = (self.polar_mode not in [0] or self.auto_rotate_mode in [2])
                 self.analyzer.centre_world()
-                self.analyzer.calc_stats(self.show_what, psd_x=self.stats_x, psd_y=self.stats_y, is_welch=True)
-                self.analyzer.add_stats(psd_y=self.stats_y)
+                self.analyzer.calc_statistics(self.show_what, psd_x=self.statistics_x, psd_y=self.statistics_y, is_welch=True)
+                self.analyzer.add_statistics(psd_y=self.statistics_y)
                 if not self.is_layer_mode and not (self.search_mode == 0 and self.is_search_small):
                     self.back = None
                     self.clear_transform()

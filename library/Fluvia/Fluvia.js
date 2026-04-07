@@ -53,7 +53,7 @@ function scheduleStartupInitialisation(task) {
 
 const metadata = {
   name: "Fluvia",
-  version: "v5.4.9-dev",
+  version: "v5.5.0-dev",
   author: "@eanutt1272.v2",
 };
 

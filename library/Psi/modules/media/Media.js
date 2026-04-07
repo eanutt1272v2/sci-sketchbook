@@ -26,16 +26,16 @@ class Media extends MediaCore {
   }
 
   exportStatisticsJSON() {
-    const stats = this._getStatisticsSnapshot();
+    const statistics = this._getStatisticsSnapshot();
     const payload = {
-      format: "simpipe.stats",
+      format: "simpipe.statistics",
       metadata: this._getMetadataSnapshot(),
-      statistics: stats.statistics,
-      series: stats.series,
+      statistics: statistics.statistics,
+      series: statistics.series,
       exportedAt: new Date().toISOString(),
     };
-    this._downloadJSON(payload, this._getFilename("stats.json"));
-    this._logInfo(`Stats JSON exported: rows=${payload.series.length}`);
+    this._downloadJSON(payload, this._getFilename("statistics.json"));
+    this._logInfo(`Statistics JSON exported: rows=${payload.series.length}`);
   }
 
   exportStatisticsCSV() {
@@ -71,10 +71,10 @@ class Media extends MediaCore {
     }
     this._downloadText(
       rows.join("\n"),
-      this._getFilename("stats.csv"),
+      this._getFilename("statistics.csv"),
       "text/csv",
     );
-    this._logInfo(`Stats CSV exported: rows=${series.length}`);
+    this._logInfo(`Statistics CSV exported: rows=${series.length}`);
   }
 
   _applyParamsPayload(data) {

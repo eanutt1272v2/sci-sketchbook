@@ -76,7 +76,7 @@ All sketches support a common `simpipe.*` JSON standard for purposes such as par
 
 ```json
 {
-  "format": "simpipe.params | simpipe.stats | simpipe.world",
+  "format": "simpipe.params | simpipe.statistics | simpipe.world",
   "metadata": { "name": "...", "version": "...", "author": "..." },
   "params": { },
   "exportedAt": "ISO 8601"

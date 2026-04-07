@@ -1,7 +1,7 @@
 p5.disableFriendlyErrors = true;
 
 let appcore;
-let font, animalsData, animalsData3D, animalsData4D, colourMaps;
+let font, solitonsData, solitonsData3D, solitonsData4D, colourMaps;
 let mainCanvas;
 
 const diagnosticsLogger =
@@ -63,7 +63,7 @@ function scheduleStartupInitialisation(task) {
 
 const metadata = {
   name: "Lenia ND Studio",
-  version: "v2.6.3-dev",
+  version: "v2.6.4-dev",
   author: "@eanutt1272.v2",
 };
 
@@ -71,9 +71,9 @@ async function setup() {
   try {
     const [
       loadedFont,
-      loadedAnimals2D,
-      loadedAnimals3D,
-      loadedAnimals4D,
+      loadedSolitons2D,
+      loadedSolitons3D,
+      loadedSolitons4D,
       loadedColourMaps,
     ] = await Promise.all([
       AssetLoader.loadPreferredFont({
@@ -82,17 +82,17 @@ async function setup() {
         ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
         logger: diagnosticsLogger,
       }),
-      AssetLoader.loadJSONAsset("../../_shared/data/animals.json", {
+      AssetLoader.loadJSONAsset("../../_shared/data/solitons.json", {
         logger: diagnosticsLogger,
-        label: "Lenia 2D animals",
+        label: "Lenia 2D solitons",
       }),
-      AssetLoader.loadJSONAsset("../../_shared/data/animals3D.json", {
+      AssetLoader.loadJSONAsset("../../_shared/data/solitons3D.json", {
         logger: diagnosticsLogger,
-        label: "Lenia 3D animals",
+        label: "Lenia 3D solitons",
       }),
-      AssetLoader.loadJSONAsset("../../_shared/data/animals4D.json", {
+      AssetLoader.loadJSONAsset("../../_shared/data/solitons4D.json", {
         logger: diagnosticsLogger,
-        label: "Lenia 4D animals",
+        label: "Lenia 4D solitons",
       }),
       AssetLoader.loadJSONAsset("../../_shared/data/colour-maps.json", {
         logger: diagnosticsLogger,
@@ -101,9 +101,9 @@ async function setup() {
     ]);
 
     font = loadedFont;
-    animalsData = loadedAnimals2D;
-    animalsData3D = loadedAnimals3D;
-    animalsData4D = loadedAnimals4D;
+    solitonsData = loadedSolitons2D;
+    solitonsData3D = loadedSolitons3D;
+    solitonsData4D = loadedSolitons4D;
     colourMaps = loadedColourMaps;
   } catch (error) {
     diagnosticsLogger.error("Failed to load startup assets:", error);
@@ -120,11 +120,11 @@ async function setup() {
     try {
       const nextAppCore = new AppCore({
         metadata,
-        animalsData,
-        animalsByDimension: {
-          2: animalsData,
-          3: animalsData3D,
-          4: animalsData4D,
+        solitonsData,
+        solitonsByDimension: {
+          2: solitonsData,
+          3: solitonsData3D,
+          4: solitonsData4D,
         },
         colourMaps,
         font,

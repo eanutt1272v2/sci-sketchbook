@@ -15,11 +15,11 @@ class LeftPanel {
       this.theme,
     );
 
-    const stats = new AccordionGroup("Statistics", false);
-    stats.addRow("fps", 20);
-    stats.addRow("time", 20);
-    stats.addRow("cells", 20);
-    this.panel.addGroup(stats);
+    const statistics = new AccordionGroup("Statistics", false);
+    statistics.addRow("fps", 20);
+    statistics.addRow("time", 20);
+    statistics.addRow("cells", 20);
+    this.panel.addGroup(statistics);
 
     const simulation = new AccordionGroup("Simulation", false);
     simulation.addRow("particleCaption", 15);

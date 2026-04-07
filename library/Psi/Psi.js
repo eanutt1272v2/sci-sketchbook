@@ -62,7 +62,7 @@ function scheduleStartupInitialisation(task) {
 
 const metadata = {
   name: "Psi",
-  version: "v2.9.9-dev",
+  version: "v2.9.8-dev",
   author: "@eanutt1272.v2",
 };
 

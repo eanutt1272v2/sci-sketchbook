@@ -406,23 +406,23 @@ class Analyser {
     this.recordStatistics(params);
   }
 
-  applyWorkerStatistics(workerStats, params) {
-    if (!workerStats || typeof workerStats !== "object") return;
+  applyWorkerStatistics(workerStatistics, params) {
+    if (!workerStatistics || typeof workerStatistics !== "object") return;
 
     const toFinite = (value) => {
       const n = Number(value);
       return Number.isFinite(n) ? n : 0;
     };
 
-    this.statistics.density = toFinite(workerStats.density);
-    this.statistics.peakDensity = toFinite(workerStats.peakDensity);
-    this.statistics.mean = toFinite(workerStats.mean);
-    this.statistics.stdDev = toFinite(workerStats.stdDev);
-    this.statistics.entropy = toFinite(workerStats.entropy);
-    this.statistics.concentration = toFinite(workerStats.concentration);
-    this.statistics.radialPeak = toFinite(workerStats.radialPeak);
-    this.statistics.radialSpread = toFinite(workerStats.radialSpread);
-    this.statistics.nodeEstimate = toFinite(workerStats.nodeEstimate);
+    this.statistics.density = toFinite(workerStatistics.density);
+    this.statistics.peakDensity = toFinite(workerStatistics.peakDensity);
+    this.statistics.mean = toFinite(workerStatistics.mean);
+    this.statistics.stdDev = toFinite(workerStatistics.stdDev);
+    this.statistics.entropy = toFinite(workerStatistics.entropy);
+    this.statistics.concentration = toFinite(workerStatistics.concentration);
+    this.statistics.radialPeak = toFinite(workerStatistics.radialPeak);
+    this.statistics.radialSpread = toFinite(workerStatistics.radialSpread);
+    this.statistics.nodeEstimate = toFinite(workerStatistics.nodeEstimate);
 
     this.recordStatistics(params);
   }

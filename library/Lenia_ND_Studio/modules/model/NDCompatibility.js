@@ -1,4 +1,4 @@
-class NDCompat {
+class NDCompatibility {
   static SUPPORTED_DIMENSIONS = Object.freeze([2, 3, 4]);
 
   static GRID_SIZE_OPTIONS_BY_DIMENSION = Object.freeze({
@@ -86,23 +86,23 @@ class NDCompat {
     return Math.max(0, Math.min(d - 1, n));
   }
 
-  static normaliseAnimalDataset(data) {
+  static normaliseSolitonDataset(data) {
     const dataArray = Array.isArray(data) ? data : Object.values(data || {});
     return dataArray.filter(
-      (animal) => animal && animal.name && !animal.code?.startsWith(">"),
+      (soliton) => soliton && soliton.name && !soliton.code?.startsWith(">"),
     );
   }
 
-  static buildAnimalsByDimension(animals2D, animalsByDimension = null) {
+  static buildSolitonsByDimension(solitons2D, solitonsByDimension = null) {
     const source =
-      animalsByDimension && typeof animalsByDimension === "object"
-        ? animalsByDimension
+      solitonsByDimension && typeof solitonsByDimension === "object"
+        ? solitonsByDimension
         : {};
 
     return {
-      2: this.normaliseAnimalDataset(source[2] || animals2D),
-      3: this.normaliseAnimalDataset(source[3]),
-      4: this.normaliseAnimalDataset(source[4]),
+      2: this.normaliseSolitonDataset(source[2] || solitons2D),
+      3: this.normaliseSolitonDataset(source[3]),
+      4: this.normaliseSolitonDataset(source[4]),
     };
   }
 }

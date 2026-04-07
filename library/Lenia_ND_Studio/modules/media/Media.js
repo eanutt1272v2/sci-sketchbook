@@ -38,13 +38,13 @@ class Media extends MediaCore {
       worldPayload[key] = this._encodeFloatField(arr, expectedLength);
     }
 
-    const stats = this._getFullStatsSnapshot();
+    const statistics = this._getFullStatisticsSnapshot();
     const payload = {
       format: "simpipe.world",
       metadata: this._getMetadataSnapshot(),
       params: this._getFullParamsSnapshot(),
-      statistics: stats.statistics,
-      series: stats.series,
+      statistics: statistics.statistics,
+      series: statistics.series,
       world: worldPayload,
       exportedAt: new Date().toISOString(),
     };
@@ -72,7 +72,7 @@ class Media extends MediaCore {
 
         const payload = this._normaliseWorldPayload(data);
         this.appcore.importWorldPayload(payload);
-        this._logInfo("World JSON imported (params, stats, and field states)");
+        this._logInfo("World JSON imported (params, statistics, and field states)");
       });
     });
   }
@@ -123,22 +123,22 @@ class Media extends MediaCore {
       `# metadata: ${metadataJson}\n` +
       csvBody;
     if (!csv) return;
-    this._downloadText(csv, this._getFilename("stats.csv"), "text/csv");
-    this._logInfo("Stats CSV exported");
+    this._downloadText(csv, this._getFilename("statistics.csv"), "text/csv");
+    this._logInfo("Statistics CSV exported");
   }
 
   exportStatisticsJSON() {
-    const stats = this._getFullStatsSnapshot();
+    const statistics = this._getFullStatisticsSnapshot();
     const payload = {
-      format: "simpipe.stats",
+      format: "simpipe.statistics",
       metadata: this._getMetadataSnapshot(),
-      statistics: stats.statistics,
-      series: stats.series,
+      statistics: statistics.statistics,
+      series: statistics.series,
       exportedAt: new Date().toISOString(),
     };
-    this._downloadJSON(payload, this._getFilename("stats.json"));
+    this._downloadJSON(payload, this._getFilename("statistics.json"));
     this._logInfo(
-      `Stats JSON exported: rows=${this.appcore.analyser.series.length}`,
+      `Statistics JSON exported: rows=${this.appcore.analyser.series.length}`,
     );
   }
 
@@ -201,7 +201,7 @@ class Media extends MediaCore {
     return this._cloneJSONCompatible(this.appcore.metadata || {});
   }
 
-  _getFullStatsSnapshot() {
+  _getFullStatisticsSnapshot() {
     return {
       statistics: this._cloneJSONCompatible(this.appcore.statistics || {}),
       series: this._capSeries(

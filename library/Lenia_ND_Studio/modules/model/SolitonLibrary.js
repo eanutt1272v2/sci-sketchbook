@@ -1,11 +1,11 @@
-class AnimalLibrary {
+class SolitonLibrary {
   constructor(params = null) {
     this.params = params;
-    this.animals = [];
+    this.solitons = [];
     this.taxonomy = [];
     this.taxonomyRanks = [];
     this.taxonomyLevelLabels = [];
-    this.animalsByDimension = {
+    this.solitonsByDimension = {
       2: [],
       3: [],
       4: [],
@@ -30,9 +30,9 @@ class AnimalLibrary {
   }
 
   loadFromData(data, dimension = 2) {
-    const dim = NDCompat.coerceDimension(dimension);
+    const dim = NDCompatibility.coerceDimension(dimension);
     const dataArray = Array.isArray(data) ? data : Object.values(data || {});
-    const animals = [];
+    const solitons = [];
     const taxonomy = [];
     const taxonomyRanks = [];
     const lineage = [];
@@ -63,17 +63,17 @@ class AnimalLibrary {
         continue;
       }
 
-      animals.push(entry);
+      solitons.push(entry);
       taxonomy.push(lineage.filter(Boolean));
       taxonomyRanks.push(rankLineage.filter(Boolean));
     }
 
-    this.animalsByDimension[dim] = animals;
+    this.solitonsByDimension[dim] = solitons;
     this.taxonomyByDimension[dim] = taxonomy;
     this.taxonomyRanksByDimension[dim] = taxonomyRanks;
     this.taxonomyLevelLabelsByDimension[dim] = levelLabels;
     if (dim === this.activeDimension) {
-      this.animals = animals;
+      this.solitons = solitons;
       this.taxonomy = taxonomy;
       this.taxonomyRanks = taxonomyRanks;
       this.taxonomyLevelLabels = levelLabels;
@@ -91,8 +91,8 @@ class AnimalLibrary {
   }
 
   setActiveDimension(dimension) {
-    this.activeDimension = NDCompat.coerceDimension(dimension);
-    this.animals = this.animalsByDimension[this.activeDimension] || [];
+    this.activeDimension = NDCompatibility.coerceDimension(dimension);
+    this.solitons = this.solitonsByDimension[this.activeDimension] || [];
     this.taxonomy = this.taxonomyByDimension[this.activeDimension] || [];
     this.taxonomyRanks =
       this.taxonomyRanksByDimension[this.activeDimension] || [];
@@ -100,13 +100,13 @@ class AnimalLibrary {
       this.taxonomyLevelLabelsByDimension[this.activeDimension] || [];
   }
 
-  getAnimal(index) {
-    return this.animals[index] || null;
+  getSoliton(index) {
+    return this.solitons[index] || null;
   }
 
-  getAnimalList() {
-    return this.animals.reduce((options, animal, idx) => {
-      const animalLabel = this._formatAnimalLabel(animal, 56);
+  getSolitonList() {
+    return this.solitons.reduce((options, soliton, idx) => {
+      const solitonLabel = this._formatSolitonLabel(soliton, 56);
       const taxonPath = Array.isArray(this.taxonomy[idx])
         ? this.taxonomy[idx]
         : [];
@@ -114,7 +114,7 @@ class AnimalLibrary {
         .map((segment) => this._truncate(this._normaliseSpaces(segment), 24))
         .join(" > ");
 
-      let name = taxonLabel ? `${taxonLabel} > ${animalLabel}` : animalLabel;
+      let name = taxonLabel ? `${taxonLabel} > ${solitonLabel}` : solitonLabel;
       name = this._truncate(name, 112);
 
       if (name in options) {
@@ -127,34 +127,34 @@ class AnimalLibrary {
     }, {});
   }
 
-  toAnimalMenuValue(index) {
+  toSolitonMenuValue(index) {
     const idx = Math.floor(Number(index));
     if (!Number.isFinite(idx) || idx < 0) return "";
-    return `__animal__:${idx}`;
+    return `__soliton__:${idx}`;
   }
 
-  parseAnimalMenuValue(value) {
+  parseSolitonMenuValue(value) {
     const raw = String(value || "");
-    const match = raw.match(/^__animal__:(\d+)$/);
+    const match = raw.match(/^__soliton__:(\d+)$/);
     if (!match) return null;
 
     const idx = parseInt(match[1], 10);
-    if (!Number.isFinite(idx) || idx < 0 || idx >= this.animals.length) {
+    if (!Number.isFinite(idx) || idx < 0 || idx >= this.solitons.length) {
       return null;
     }
     return idx;
   }
 
-  getFirstAnimalMenuValue() {
-    return this.animals.length > 0 ? this.toAnimalMenuValue(0) : "";
+  getFirstSolitonMenuValue() {
+    return this.solitons.length > 0 ? this.toSolitonMenuValue(0) : "";
   }
 
-  getHierarchicalAnimalMenu() {
+  getHierarchicalSolitonMenu() {
     const options = {};
     const seenHeaders = new Set();
 
-    for (let idx = 0; idx < this.animals.length; idx++) {
-      const animal = this.animals[idx];
+    for (let idx = 0; idx < this.solitons.length; idx++) {
+      const soliton = this.solitons[idx];
       const path = Array.isArray(this.taxonomy[idx]) ? this.taxonomy[idx] : [];
 
       for (let level = 0; level < path.length; level++) {
@@ -175,11 +175,11 @@ class AnimalLibrary {
       }
 
       const prefix = `${"| ".repeat(path.length)}`;
-      const animalLabel = `${prefix}${this._formatAnimalLabel(animal, 88)}`;
+      const solitonLabel = `${prefix}${this._formatSolitonLabel(soliton, 88)}`;
       this._addUniqueMenuOption(
         options,
-        animalLabel,
-        this.toAnimalMenuValue(idx),
+        solitonLabel,
+        this.toSolitonMenuValue(idx),
       );
     }
 
@@ -227,10 +227,10 @@ class AnimalLibrary {
     }, {});
   }
 
-  getAnimalsForTaxonomy(prefix = []) {
+  getSolitonsForTaxonomy(prefix = []) {
     const prefixPath = Array.isArray(prefix) ? prefix : [];
 
-    return this.animals.reduce((options, animal, idx) => {
+    return this.solitons.reduce((options, soliton, idx) => {
       const taxonomyPath = Array.isArray(this.taxonomy[idx])
         ? this.taxonomy[idx]
         : [];
@@ -240,9 +240,9 @@ class AnimalLibrary {
         return options;
       }
 
-      let name = this._formatAnimalLabel(animal, 56);
+      let name = this._formatSolitonLabel(soliton, 56);
       if (!name) {
-        name = `Animal ${idx + 1}`;
+        name = `Soliton ${idx + 1}`;
       }
       if (name in options) {
         let n = 2;
@@ -348,9 +348,9 @@ class AnimalLibrary {
     return this._truncate(combined, 64);
   }
 
-  _formatAnimalLabel(animal, maxLength = 56) {
+  _formatSolitonLabel(soliton, maxLength = 56) {
     const label = this._normaliseSpaces(
-      `${animal?.code || ""} ${animal?.name || ""} ${animal?.cname || ""}`,
+      `${soliton?.code || ""} ${soliton?.name || ""} ${soliton?.cname || ""}`,
     );
     return this._truncate(label, maxLength);
   }
@@ -368,8 +368,8 @@ class AnimalLibrary {
     return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
   }
 
-  applyAnimalParameters(animal) {
-    if (!animal?.params || !this.params) return;
+  applySolitonParameters(soliton) {
+    if (!soliton?.params || !this.params) return;
 
     const params = this.params;
     const allowedKeys = new Set([
@@ -389,11 +389,11 @@ class AnimalLibrary {
       "aritaMode",
     ]);
 
-    const sourceParams = Array.isArray(animal.params)
-      ? animal.params.find((entry) => entry && typeof entry === "object") ||
-        animal.params[0] ||
+    const sourceParams = Array.isArray(soliton.params)
+      ? soliton.params.find((entry) => entry && typeof entry === "object") ||
+        soliton.params[0] ||
         {}
-      : animal.params;
+      : soliton.params;
 
     if (!Object.prototype.hasOwnProperty.call(sourceParams, "h")) {
       params.h = 1;

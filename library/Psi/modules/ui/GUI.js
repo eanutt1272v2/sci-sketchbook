@@ -489,14 +489,14 @@ class GUI {
       .on("click", () => media.exportParamsJSON());
     exp
       .addButton({
-        title: this.withHint("Export Stats", "exportStats", "Ctrl+Shift+S"),
+        title: this.withHint("Export Statistics (JSON)", "exportStatistics", "Ctrl+Shift+S"),
       })
       .on("click", () => media.exportStatisticsJSON());
     exp
       .addButton({
         title: this.withHint(
-          "Export Stats CSV",
-          "exportStatsCsv",
+          "Export Statistics (CSV)",
+          "exportStatisticsCsv",
           "Ctrl+Shift+C",
         ),
       })
@@ -504,7 +504,7 @@ class GUI {
 
     this.addSeparator(exp);
 
-    const capture = exp.addFolder({ title: "Video Capture" });
+    const capture = exp.addFolder({ title: "Media Capture" });
 
     capture.addBinding(params, "recordingFPS", {
       label: "Recording FPS [Hz]",
