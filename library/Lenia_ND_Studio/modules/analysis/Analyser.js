@@ -1,56 +1,10 @@
 class Analyser {
-  static STAT_NAMES = {
-    fps: "FPS [Hz]",
-    n: "Generation [gen]",
-    t: "Time [μs]",
-    m: "Mass [μg]",
-    g: "Growth [μg/μs]",
-    ml: "Mass (log scale) [μg]",
-    gl: "Growth (log scale) [μg/μs]",
-    vl: "Mass volume (log scale) [μm²]",
-    vgl: "Growth volume (log scale) [μm²]",
-    rho: "Mass density [μg/μm²]",
-    rhog: "Growth density [μg/(μm²·μs)]",
-    p: "Peak value [cell-state]",
-    r: "Gyradius [μm]",
-    x: "Centroid X [μm]",
-    y: "Centroid Y [μm]",
-    gx: "Growth centroid X [μm]",
-    gy: "Growth centroid Y [μm]",
-    d: "Mass-growth distance [μm]",
-    dg: "Growth-centroid distance [μm]",
-    s: "Speed [μm/μs]",
-    cs: "Centroid speed [μm/μs]",
-    a: "Direction angle [rad]",
-    wc: "Centroid rotate speed [rad/μs]",
-    wg: "Growth-centroid rotate speed [rad/μs]",
-    wt: "Major axis rotate speed [rad/μs]",
-    ma: "Mass asymmetry [μg]",
-    k: "Rotational symmetry order",
-    ks: "Rotational symmetry strength [%]",
-    wr: "Rotational speed [rad/μs]",
-    ly: "Lyapunov exponent [gen⁻¹]",
-    h1: "Moment of inertia - Hu's moment invariant 1 (log scale)",
-    h4: "Skewness - Hu's moment invariant 4 (log scale)",
-    h5: "Hu's 5 (log scale)",
-    h6: "Hu's 6 (log scale)",
-    h7: "Hu's 7 (log scale)",
-    f7: "Kurtosis - Flusser's moment invariant 7",
-    f8: "Flusser's 8 (log scale)",
-    f9: "Flusser's 9 (log scale)",
-    f10: "Flusser's 10 (log scale)",
-  };
-
-  static STAT_HEADERS = Object.keys(Analyser.STAT_NAMES);
-  static STAT_INDEX = Object.freeze(
-    Analyser.STAT_HEADERS.reduce((acc, key, index) => {
-      acc[key] = index;
-      return acc;
-    }, {}),
-  );
+  static STAT_NAMES = STAT_NAMES;
+  static STAT_HEADERS = STAT_HEADERS;
+  static STAT_INDEX = STAT_INDEX;
   static STAT_ROW_INDEX = Object.freeze({
-    mass: 3,
-    growth: 4,
+    mass: STAT_INDEX["m"],
+    growth: STAT_INDEX["g"],
   });
   static PSD_INTERVAL = 32;
   static SEGMENT_LENGTH_SHORT = 512;
@@ -72,48 +26,7 @@ class Analyser {
     this.psdPrimaryPeriod = 0;
     this.psdSecondaryPeriod = 0;
     this._lastPsdGeneration = -1;
-    this.statistics = statistics || {
-      gen: 0,
-      time: 0,
-      mass: 0,
-      growth: 0,
-      massLog: 0,
-      growthLog: 0,
-      massVolumeLog: 0,
-      growthVolumeLog: 0,
-      massDensity: 0,
-      growthDensity: 0,
-      maxValue: 0,
-      gyradius: 0,
-      centreX: 0,
-      centreY: 0,
-      growthCentreX: 0,
-      growthCentreY: 0,
-      massGrowthDist: 0,
-      massAsym: 0,
-      speed: 0,
-      centroidSpeed: 0,
-      angle: 0,
-      centroidRotateSpeed: 0,
-      growthRotateSpeed: 0,
-      majorAxisRotateSpeed: 0,
-      symmSides: 0,
-      symmStrength: 0,
-      rotationSpeed: 0,
-      lyapunov: 0,
-      hu1Log: 0,
-      hu4Log: 0,
-      hu5Log: 0,
-      hu6Log: 0,
-      hu7Log: 0,
-      flusser7: 0,
-      flusser8Log: 0,
-      flusser9Log: 0,
-      flusser10Log: 0,
-      period: 0,
-      periodConfidence: 0,
-      fps: 0,
-    };
+    this.statistics = statistics || createEmptyStatistics();
     this.renderData = renderData || {
       frameCount: 0,
       lastTime: 0,
@@ -134,54 +47,16 @@ class Analyser {
     if (!workerStatistics || typeof workerStatistics !== "object") return;
 
     const statistics = this.statistics;
-    const toFinite = (value) => {
-      const n = Number(value);
-      return Number.isFinite(n) ? n : 0;
-    };
 
     statistics.gen = automaton.gen || 0;
     statistics.time = automaton.time || 0;
-    statistics.mass = toFinite(workerStatistics.mass);
-    statistics.growth = toFinite(workerStatistics.growth);
-    statistics.massLog = toFinite(workerStatistics.massLog);
-    statistics.growthLog = toFinite(workerStatistics.growthLog);
-    statistics.massVolumeLog = toFinite(workerStatistics.massVolumeLog);
-    statistics.growthVolumeLog = toFinite(workerStatistics.growthVolumeLog);
-    statistics.massDensity = toFinite(workerStatistics.massDensity);
-    statistics.growthDensity = toFinite(workerStatistics.growthDensity);
-    statistics.maxValue = toFinite(workerStatistics.maxValue);
-    statistics.gyradius = toFinite(workerStatistics.gyradius);
-    statistics.centreX = toFinite(workerStatistics.centreX);
-    statistics.centreY = toFinite(workerStatistics.centreY);
-    statistics.growthCentreX = toFinite(workerStatistics.growthCentreX);
-    statistics.growthCentreY = toFinite(workerStatistics.growthCentreY);
-    statistics.massGrowthDist = toFinite(workerStatistics.massGrowthDist);
-    statistics.massAsym = toFinite(workerStatistics.massAsym);
-    statistics.speed = toFinite(workerStatistics.speed);
-    statistics.centroidSpeed = toFinite(workerStatistics.centroidSpeed);
-    statistics.angle = toFinite(workerStatistics.angle);
-    statistics.centroidRotateSpeed = toFinite(workerStatistics.centroidRotateSpeed);
-    statistics.growthRotateSpeed = toFinite(workerStatistics.growthRotateSpeed);
-    statistics.majorAxisRotateSpeed = toFinite(
-      workerStatistics.majorAxisRotateSpeed,
-    );
-    statistics.symmSides = toFinite(workerStatistics.symmSides);
-    statistics.symmStrength = toFinite(workerStatistics.symmStrength);
-    statistics.symmAngle = toFinite(workerStatistics.symmAngle);
-    statistics.symmRotate = toFinite(workerStatistics.symmRotate);
-    statistics.rotationSpeed = toFinite(workerStatistics.rotationSpeed);
-    statistics.lyapunov = toFinite(workerStatistics.lyapunov);
-    statistics.hu1Log = toFinite(workerStatistics.hu1Log);
-    statistics.hu4Log = toFinite(workerStatistics.hu4Log);
-    statistics.hu5Log = toFinite(workerStatistics.hu5Log);
-    statistics.hu6Log = toFinite(workerStatistics.hu6Log);
-    statistics.hu7Log = toFinite(workerStatistics.hu7Log);
-    statistics.flusser7 = toFinite(workerStatistics.flusser7);
-    statistics.flusser8Log = toFinite(workerStatistics.flusser8Log);
-    statistics.flusser9Log = toFinite(workerStatistics.flusser9Log);
-    statistics.flusser10Log = toFinite(workerStatistics.flusser10Log);
-    statistics.period = toFinite(workerStatistics.period);
-    statistics.periodConfidence = toFinite(workerStatistics.periodConfidence);
+    applyWorkerStatScalars(statistics, workerStatistics);
+    statistics.symmAngle = Number.isFinite(Number(workerStatistics.symmAngle))
+      ? Number(workerStatistics.symmAngle)
+      : 0;
+    statistics.symmRotate = Number.isFinite(Number(workerStatistics.symmRotate))
+      ? Number(workerStatistics.symmRotate)
+      : 0;
 
     this._recordTrajectoryPoint(statistics);
     statistics.trajectoryMass = this.trajectoryMass;
@@ -224,46 +99,7 @@ class Analyser {
 
   resetStatistics() {
     const statistics = this.statistics;
-    statistics.gen = 0;
-    statistics.time = 0;
-    statistics.mass = 0;
-    statistics.growth = 0;
-    statistics.massLog = 0;
-    statistics.growthLog = 0;
-    statistics.massVolumeLog = 0;
-    statistics.growthVolumeLog = 0;
-    statistics.massDensity = 0;
-    statistics.growthDensity = 0;
-    statistics.maxValue = 0;
-    statistics.gyradius = 0;
-    statistics.centreX = 0;
-    statistics.centreY = 0;
-    statistics.growthCentreX = 0;
-    statistics.growthCentreY = 0;
-    statistics.massGrowthDist = 0;
-    statistics.massAsym = 0;
-    statistics.speed = 0;
-    statistics.centroidSpeed = 0;
-    statistics.angle = 0;
-    statistics.centroidRotateSpeed = 0;
-    statistics.growthRotateSpeed = 0;
-    statistics.majorAxisRotateSpeed = 0;
-    statistics.symmSides = 0;
-    statistics.symmStrength = 0;
-    statistics.rotationSpeed = 0;
-    statistics.lyapunov = 0;
-    statistics.hu1Log = 0;
-    statistics.hu4Log = 0;
-    statistics.hu5Log = 0;
-    statistics.hu6Log = 0;
-    statistics.hu7Log = 0;
-    statistics.flusser7 = 0;
-    statistics.flusser8Log = 0;
-    statistics.flusser9Log = 0;
-    statistics.flusser10Log = 0;
-    statistics.period = 0;
-    statistics.periodConfidence = 0;
-    statistics.fps = 0;
+    resetStatisticsScalars(statistics);
     statistics.polarArray = null;
     statistics.polarTH = null;
     statistics.polarR = null;
@@ -428,7 +264,7 @@ class Analyser {
     this.statistics.statNames = Analyser.STAT_NAMES;
   }
 
-  addStatRow(row, params = {}) {
+  addStatisticRow(row, params = {}) {
     const normalised = this._normaliseStatRow(row);
     if (!normalised) return;
 
@@ -735,61 +571,15 @@ class Analyser {
     this.renderData.frameCount++;
   }
 
-  getStatRow() {
-    const statistics = this.statistics;
-    return [
-      statistics.fps || 0,
-      statistics.gen || 0,
-      statistics.time || 0,
-      statistics.mass || 0,
-      statistics.growth || 0,
-      statistics.massLog || 0,
-      statistics.growthLog || 0,
-      statistics.massVolumeLog || 0,
-      statistics.growthVolumeLog || 0,
-      statistics.massDensity || 0,
-      statistics.growthDensity || 0,
-      statistics.maxValue || 0,
-      statistics.gyradius || 0,
-      statistics.centreX || 0,
-      statistics.centreY || 0,
-      statistics.growthCentreX || 0,
-      statistics.growthCentreY || 0,
-      statistics.massGrowthDist || 0,
-      statistics.massAsym || 0,
-      statistics.speed || 0,
-      statistics.centroidSpeed || 0,
-      statistics.angle || 0,
-      statistics.centroidRotateSpeed || 0,
-      statistics.growthRotateSpeed || 0,
-      statistics.majorAxisRotateSpeed || 0,
-      statistics.symmSides || 0,
-      statistics.symmStrength || 0,
-      statistics.rotationSpeed || 0,
-      statistics.lyapunov || 0,
-      statistics.hu1Log || 0,
-      statistics.hu4Log || 0,
-      statistics.hu5Log || 0,
-      statistics.hu6Log || 0,
-      statistics.hu7Log || 0,
-      statistics.flusser7 || 0,
-      statistics.flusser8Log || 0,
-      statistics.flusser9Log || 0,
-      statistics.flusser10Log || 0,
-      statistics.period || 0,
-      statistics.periodConfidence || 0,
-    ];
+  getStatisticsRow() {
+    return statisticsToRow(this.statistics);
   }
 
   exportCSV() {
-    const headers =
-      "FPS,Gen,Time,Mass,Growth,MassLog,GrowthLog,MassVolumeLog,GrowthVolumeLog,MassDensity,GrowthDensity,PeakValue,Gyradius,CentreX,CentreY,GrowthCentreX,GrowthCentreY,MassGrowthDist,GrowthCentroidDistance,MassAsym,Speed,CentroidSpeed,Angle,CentroidRotateSpeed,GrowthCentroidRotateSpeed,MajorAxisRotateSpeed,SymmSides,SymmStrength,RotationSpeed,Lyapunov,Hu1Log,Hu4Log,Hu5Log,Hu6Log,Hu7Log,Flusser7,Flusser8Log,Flusser9Log,Flusser10Log,Period,PeriodConfidence\n";
-    let csv = headers;
-
+    let csv = STAT_CSV_HEADERS.join(",") + "\n";
     for (const row of this.series) {
       csv += row.join(",") + "\n";
     }
-
     return csv;
   }
 

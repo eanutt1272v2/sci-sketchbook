@@ -1,7 +1,14 @@
 "use strict";
 
 if (typeof importScripts === "function") {
-  importScripts("../../../_shared/utils/WorkerSanitisers.js");
+  try {
+    importScripts("../../../_shared/utils/WorkerSanitisers.js");
+  } catch (_error) {
+    console.error(
+      "Failed to load WorkerSanitisers.js, using built-in fallback sanitisers. This may cause issues if the main thread is relying on custom sanitisation logic.",
+      _error,
+    );
+  }
 }
 
 const _workerSanitisers =
@@ -481,6 +488,8 @@ function computeGrid(
 
   const axisCentre1 = c1 === 0 ? centreX : c1 === 1 ? centreY : centreZ;
   const axisCentre2 = c2 === 0 ? centreX : c2 === 1 ? centreY : centreZ;
+  const axisCentreFixed =
+    cFixed === 0 ? centreX : cFixed === 1 ? centreY : centreZ;
 
   let peak = 1e-10;
 
@@ -500,9 +509,10 @@ function computeGrid(
       if (c2 === 0) x = p2;
       else if (c2 === 1) y = p2;
       else z = p2;
-      if (cFixed === 0) x = sliceOffset;
-      else if (cFixed === 1) y = sliceOffset;
-      else z = sliceOffset;
+      const fixedCoord = sliceOffset + axisCentreFixed;
+      if (cFixed === 0) x = fixedCoord;
+      else if (cFixed === 1) y = fixedCoord;
+      else z = fixedCoord;
 
       const density = getProbabilityDensity(
         x,

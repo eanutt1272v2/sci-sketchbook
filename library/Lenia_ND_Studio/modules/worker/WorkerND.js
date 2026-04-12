@@ -195,12 +195,21 @@ function ndInjectSliceFrom2D(state, source2D, ndConfig) {
   }
 }
 
-function ndExtractDisplay(state, ndConfig, outWorld, outPotential, outGrowth) {
+function ndExtractDisplay(
+  state,
+  ndConfig,
+  outWorld,
+  outPotential,
+  outGrowth,
+  options = {},
+) {
   const { size, channelCount, depth, dimension } = state;
   const cellCount = size * size;
   const total2D = cellCount * channelCount;
   const isSlice = String(ndConfig?.viewMode || "projection") === "slice";
   const cache = state._cache || null;
+  const includePotential = options?.includePotential !== false;
+  const includeGrowth = options?.includeGrowth !== false;
 
   const world2D =
     outWorld && outWorld.length === total2D
@@ -227,18 +236,22 @@ function ndExtractDisplay(state, ndConfig, outWorld, outPotential, outGrowth) {
       const off2d = c * cellCount;
       const offNd = planeBase + c * cellCount;
       world2D.set(state.world.subarray(offNd, offNd + cellCount), off2d);
-      potential2D.set(
-        state.potential.subarray(offNd, offNd + cellCount),
-        off2d,
-      );
-      growth2D.set(state.growth.subarray(offNd, offNd + cellCount), off2d);
+      if (includePotential) {
+        potential2D.set(
+          state.potential.subarray(offNd, offNd + cellCount),
+          off2d,
+        );
+      }
+      if (includeGrowth) {
+        growth2D.set(state.growth.subarray(offNd, offNd + cellCount), off2d);
+      }
     }
     return { world2D, potential2D, growth2D };
   }
 
   world2D.fill(0);
-  potential2D.fill(0);
-  growth2D.fill(0);
+  if (includePotential) potential2D.fill(0);
+  if (includeGrowth) growth2D.fill(0);
 
   const depthWeights = cache?.depthWeights;
   const projectionOffsets = cache?.projectionPlaneOffsets;
@@ -271,8 +284,12 @@ function ndExtractDisplay(state, ndConfig, outWorld, outPotential, outGrowth) {
       const offNd = planeBase + c * cellCount;
       for (let i = 0; i < cellCount; i++) {
         world2D[off2d + i] += state.world[offNd + i] * w;
-        potential2D[off2d + i] += state.potential[offNd + i] * w;
-        growth2D[off2d + i] += state.growth[offNd + i] * w;
+        if (includePotential) {
+          potential2D[off2d + i] += state.potential[offNd + i] * w;
+        }
+        if (includeGrowth) {
+          growth2D[off2d + i] += state.growth[offNd + i] * w;
+        }
       }
     }
   }
@@ -280,7 +297,7 @@ function ndExtractDisplay(state, ndConfig, outWorld, outPotential, outGrowth) {
   return { world2D, potential2D, growth2D };
 }
 
-function ndStepState(params, ndConfig, kernelFFT, N, source2D, ndSeedWorld) {
+function ndStepState(params, ndConfig, kernelFFTsND, N, source2D, ndSeedWorld) {
   const state = ndEnsureState(params, ndConfig, source2D, ndSeedWorld);
   if (!ndSeedWorld) {
     ndInjectSliceFrom2D(state, source2D, ndConfig);
@@ -288,19 +305,37 @@ function ndStepState(params, ndConfig, kernelFFT, N, source2D, ndSeedWorld) {
 
   const { size, dimension } = state;
 
-  if (!_ndKernelFFT || _ndKernelDim !== dimension || _ndKernelSize !== size) {
+  let ndKernels = Array.isArray(kernelFFTsND)
+    ? kernelFFTsND.filter((k) => k && typeof k.length === "number")
+    : kernelFFTsND
+      ? [kernelFFTsND]
+      : [];
+
+  if (
+    ndKernels.length === 0 &&
+    (!_ndKernelFFT || _ndKernelDim !== dimension || _ndKernelSize !== size)
+  ) {
     const ndKernel = buildKernelND(params, size, dimension);
     _ndKernelFFT = buildKernelFFTND(ndKernel, size, dimension);
     _ndKernelDim = dimension;
     _ndKernelSize = size;
+    _ndKernelFFTs = [_ndKernelFFT];
+  }
+
+  if (ndKernels.length === 0) {
+    ndKernels =
+      Array.isArray(_ndKernelFFTs) && _ndKernelFFTs.length > 0
+        ? _ndKernelFFTs
+        : [_ndKernelFFT];
   }
 
   stepFFTND(
     state.world,
     state.potential,
     state.growth,
+    state.growthOld,
     params,
-    _ndKernelFFT,
+    ndKernels,
     size,
     dimension,
   );
@@ -790,6 +825,69 @@ function _clamp(value, min, max) {
 const _toFiniteNumber = _workerSanitisers.toFiniteNumber;
 const _toInteger = _workerSanitisers.toInteger;
 
+function _sanitiseChannelPair(rawPair, channelCount) {
+  const maxChannel = Math.max(0, channelCount - 1);
+  const pair = Array.isArray(rawPair) ? rawPair : [0, 0];
+  const c0 = _toInteger(pair[0], 0, 0, maxChannel);
+  const c1 = _toInteger(pair[1], c0, 0, maxChannel);
+  return [c0, c1];
+}
+
+function _sanitiseKernelEntry(rawKernel, fallback, channelCount) {
+  const source = rawKernel && typeof rawKernel === "object" ? rawKernel : {};
+  const params = {
+    R: _toInteger(
+      source.R,
+      fallback.R,
+      1,
+      Math.max(1, Math.floor((fallback.size || 128) / 2)),
+    ),
+    T: Math.max(0.1, _toFiniteNumber(source.T, fallback.T)),
+    m: _clamp(_toFiniteNumber(source.m, fallback.m), 0, 1),
+    s: _clamp(_toFiniteNumber(source.s, fallback.s), 0.0001, 1),
+    r: Math.max(0.0001, _toFiniteNumber(source.r, fallback.r)),
+    kn: _toInteger(source.kn, fallback.kn, 1, 4),
+    gn: _toInteger(source.gn, fallback.gn, 1, 3),
+    h: Math.max(0.0001, _toFiniteNumber(source.h, fallback.h)),
+    addNoise: _clamp(
+      _toFiniteNumber(source.addNoise, fallback.addNoise),
+      0,
+      10,
+    ),
+    maskRate: _clamp(
+      _toFiniteNumber(source.maskRate, fallback.maskRate),
+      0,
+      10,
+    ),
+    paramP: _toInteger(source.paramP, fallback.paramP, 0, 64),
+    softClip:
+      typeof source.softClip === "boolean"
+        ? source.softClip
+        : Boolean(fallback.softClip),
+    multiStep:
+      typeof source.multiStep === "boolean"
+        ? source.multiStep
+        : Boolean(fallback.multiStep),
+    aritaMode:
+      typeof source.aritaMode === "boolean"
+        ? source.aritaMode
+        : Boolean(fallback.aritaMode),
+    c: _sanitiseChannelPair(source.c, channelCount),
+  };
+
+  if (Array.isArray(source.b)) {
+    const b = source.b
+      .slice(0, 8)
+      .map((v) => Math.max(0, _toFiniteNumber(v, 0)))
+      .filter((v) => Number.isFinite(v));
+    params.b = b.length > 0 ? b : fallback.b.slice();
+  } else {
+    params.b = fallback.b.slice();
+  }
+
+  return params;
+}
+
 function _sanitiseWorkerParams(rawParams) {
   const source = rawParams && typeof rawParams === "object" ? rawParams : {};
   const params = { ...source };
@@ -813,6 +911,32 @@ function _sanitiseWorkerParams(rawParams) {
   params.paramP = _toInteger(source.paramP, 0, 0, 64);
   params.softClip = Boolean(source.softClip);
   params.multiStep = Boolean(source.multiStep);
+  params.aritaMode = Boolean(source.aritaMode);
+  {
+    const backendTag = String(source.backendComputeDevice || "cpu")
+      .trim()
+      .toLowerCase();
+    params.backendComputeDevice =
+      backendTag === "glsl" ||
+      backendTag === "glsl compute" ||
+      backendTag === "webgl" ||
+      backendTag === "webgl2" ||
+      backendTag === "webgpu" ||
+      backendTag === "webgpu compute"
+        ? "glsl"
+        : "cpu";
+  }
+  params.channelCount = _toInteger(source.channelCount, 1, 1, 8);
+  params.selectedChannel = _toInteger(
+    source.selectedChannel,
+    0,
+    0,
+    Math.max(0, params.channelCount - 1),
+  );
+  params.selectedKernel = _toInteger(source.selectedKernel, 0, 0, 1024);
+  params.kernelCount = _toInteger(source.kernelCount, 1, 1, 4);
+  params.crossKernelCount = _toInteger(source.crossKernelCount, 0, 0, 4);
+  params.channelShift = _toInteger(source.channelShift, 0, 0, 17);
 
   if (Array.isArray(source.b)) {
     const b = source.b
@@ -823,6 +947,24 @@ function _sanitiseWorkerParams(rawParams) {
   } else {
     params.b = [1];
   }
+
+  const rawKernelParams = Array.isArray(source.kernelParams)
+    ? source.kernelParams
+    : [];
+  params.kernelParams = rawKernelParams
+    .slice(0, 512)
+    .map((entry) => _sanitiseKernelEntry(entry, params, params.channelCount));
+  if (params.kernelParams.length === 0) {
+    params.kernelParams = [
+      _sanitiseKernelEntry({ c: [0, 0] }, params, params.channelCount),
+    ];
+  }
+  params.selectedKernel = _toInteger(
+    source.selectedKernel,
+    0,
+    0,
+    Math.max(0, params.kernelParams.length - 1),
+  );
 
   return params;
 }

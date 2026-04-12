@@ -579,7 +579,9 @@ function analyseStep(cells, potential, field, change, params, state) {
   statistics.flusser10Log = invariants.flusser10Log;
 
   statistics.gyradius =
-    statistics.mass > state.epsilon ? Math.sqrt(invariants.inertia / statistics.mass) : 0;
+    statistics.mass > state.epsilon
+      ? Math.sqrt(invariants.inertia / statistics.mass)
+      : 0;
 
   if (asymNX !== 0 || asymNY !== 0) {
     statistics.massAsym = invariants.massRight - invariants.massLeft;
@@ -646,7 +648,9 @@ function analyseStep(cells, potential, field, change, params, state) {
 
 let _N = 0;
 let _kernelFFT = null;
+let _kernelFFTs = null;
 let _ndKernelFFT = null;
+let _ndKernelFFTs = null;
 let _ndKernelDim = 0;
 let _ndKernelSize = 0;
 const _analysisState = createAnalysisState();

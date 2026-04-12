@@ -52,592 +52,218 @@ class InputHandler {
     if (KeyboardUtils.shouldIgnoreKeyboard(event)) return false;
 
     const keyValue = KeyboardUtils.normaliseKey(k);
-    const keyLower = KeyboardUtils.toLower(keyValue);
     const shiftHeld = Boolean(event?.shiftKey) || KeyboardUtils.isShiftHeld();
-    const ctrlHeld = Boolean(event?.ctrlKey) || KeyboardUtils.isCtrlHeld();
-    const altHeld = Boolean(event?.altKey);
-    const { params } = this.appcore;
-    const dim = params.dimension || 2;
-    const leftArrow = KeyboardUtils.keyCode("LEFT_ARROW", 37);
-    const rightArrow = KeyboardUtils.keyCode("RIGHT_ARROW", 39);
-    const upArrow = KeyboardUtils.keyCode("UP_ARROW", 38);
-    const downArrow = KeyboardUtils.keyCode("DOWN_ARROW", 40);
-
-    if (keyValue === "#") {
-      params.renderKeymapRef = !params.renderKeymapRef;
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (params.renderKeymapRef) return false;
-
-    if (kCode === 13) {
-      this.appcore.stepOnce();
-      return false;
-    }
-    if (keyValue === " ") {
-      params.running = !params.running;
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (kCode === 9) {
-      this._cycleRenderMode(shiftHeld ? -1 : 1);
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyValue === ">" || keyValue === ".") {
-      this.appcore.cycleColourMap(1);
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyValue === "<" || keyValue === ",") {
-      this.appcore.cycleColourMap(-1);
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "q" && !ctrlHeld) {
-      params.m = Math.max(
-        0,
-        Math.min(1, params.m + (shiftHeld ? 0.01 : 0.001)),
+    const match = (hintId, optionIndex = null) =>
+      typeof KeybindCatalogue !== "undefined" &&
+      typeof KeybindCatalogue.matchHint === "function" &&
+      KeybindCatalogue.matchHint(
+        "lenia",
+        hintId,
+        keyValue,
+        kCode,
+        event,
+        optionIndex,
       );
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "a" && !ctrlHeld) {
-      params.m = Math.max(
-        0,
-        Math.min(1, params.m - (shiftHeld ? 0.01 : 0.001)),
-      );
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
+    const app = this.appcore;
+    const p = app.params;
+    const dim = p.dimension || 2;
+    const sh = shiftHeld;
 
-    if (keyLower === "w" && !ctrlHeld) {
-      params.s = Math.max(0.0001, params.s + (shiftHeld ? 0.001 : 0.0001));
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
+    if (match("keymapReference")) {
+      p.renderKeymapRef = !p.renderKeymapRef;
+      app.refreshGUI();
       return false;
     }
-    if (keyLower === "s" && !ctrlHeld) {
-      params.s = Math.max(0.0001, params.s - (shiftHeld ? 0.001 : 0.0001));
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
+    if (p.renderKeymapRef) return false;
 
-    if (keyLower === "r" && !ctrlHeld) {
-      if (this.appcore?.nudgeRadius) {
-        this.appcore.nudgeRadius(shiftHeld ? 1 : 10);
+    for (const [hint, opt, guard, action] of InputHandler._KEY_DISPATCH) {
+      if (guard && !guard(dim, p)) continue;
+      if (match(hint, opt)) {
+        action(this, app, p, sh, dim);
+        return false;
       }
-      this.appcore.refreshGUI();
-      return false;
     }
-    if (keyLower === "f" && !ctrlHeld) {
-      if (this.appcore?.nudgeRadius) {
-        this.appcore.nudgeRadius(shiftHeld ? -1 : -10);
-      }
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "t" && !ctrlHeld) {
-      const maxT = this.appcore?.getMaxTimeScale
-        ? this.appcore.getMaxTimeScale()
-        : 1500;
-      params.T = shiftHeld
-        ? Math.min(maxT, params.T + 1)
-        : Math.min(maxT, params.T * 2);
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "g" && !ctrlHeld) {
-      params.T = shiftHeld
-        ? Math.max(1, params.T - 1)
-        : Math.max(1, Math.round(params.T / 2));
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "e" && !ctrlHeld) {
-      params.paramP = Math.min(64, (params.paramP || 0) + (shiftHeld ? 1 : 10));
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "d" && !ctrlHeld) {
-      params.paramP = Math.max(0, (params.paramP || 0) - (shiftHeld ? 1 : 10));
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (ctrlHeld && keyLower === "t") {
-      params.h = Math.min(1, Math.round((params.h + 0.1) * 10) / 10);
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (ctrlHeld && keyLower === "g") {
-      params.h = Math.max(0.1, Math.round((params.h - 0.1) * 10) / 10);
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "y" && !ctrlHeld) {
-      this._adjustPeak(0, shiftHeld ? -1 / 12 : 1 / 12);
-      return false;
-    }
-    if (keyLower === "u" && !ctrlHeld) {
-      this._adjustPeak(1, shiftHeld ? -1 / 12 : 1 / 12);
-      return false;
-    }
-    if (keyLower === "i" && !ctrlHeld) {
-      this._adjustPeak(2, shiftHeld ? -1 / 12 : 1 / 12);
-      return false;
-    }
-    if (keyLower === "o" && !ctrlHeld) {
-      this._adjustPeak(3, shiftHeld ? -1 / 12 : 1 / 12);
-      return false;
-    }
-    if (keyLower === "p" && !ctrlHeld) {
-      this._adjustPeak(4, shiftHeld ? -1 / 12 : 1 / 12);
-      return false;
-    }
-    if ((keyValue === ";" || keyValue === ":") && !ctrlHeld) {
-      if (shiftHeld) {
-        if (params.b.length > 1) params.b.pop();
-      } else {
-        params.b.push(0);
-      }
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (ctrlHeld && keyLower === "y") {
-      params.kn = shiftHeld
-        ? ((params.kn - 2 + 4) % 4) + 1
-        : (params.kn % 4) + 1;
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (ctrlHeld && keyLower === "u") {
-      params.gn = shiftHeld
-        ? ((params.gn - 2 + 3) % 3) + 1
-        : (params.gn % 3) + 1;
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (ctrlHeld && keyLower === "i") {
-      if (shiftHeld) {
-        params.maskRate = ((params.maskRate || 0) + 1) % 10;
-      } else {
-        params.softClip = !params.softClip;
-      }
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (ctrlHeld && keyLower === "o") {
-      params.addNoise = ((params.addNoise || 0) + 1) % 11;
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (ctrlHeld && keyLower === "p") {
-      if (shiftHeld) {
-        params.maskRate = 0;
-        params.addNoise = 0;
-        this.appcore.updateAutomatonParams();
-        this.appcore.refreshGUI();
-      } else {
-        params.aritaMode = !params.aritaMode;
-        this.appcore.updateAutomatonParams();
-        this.appcore.refreshGUI();
-      }
-      return false;
-    }
-
-    if (ctrlHeld && keyLower === "m") {
-      params.multiStep = !params.multiStep;
-      this.appcore.updateAutomatonParams();
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (ctrlHeld && keyLower === "d") {
-      const dims = [2, 3, 4];
-      const idx = dims.indexOf(Number(params.dimension) || 2);
-      const next = dims[(idx + 1) % dims.length];
-      this.appcore.setDimension(next);
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (kCode === leftArrow && !ctrlHeld) {
-      this.appcore.shiftWorld(shiftHeld ? -1 : -10, 0);
-      return false;
-    }
-    if (kCode === rightArrow && !ctrlHeld) {
-      this.appcore.shiftWorld(shiftHeld ? 1 : 10, 0);
-      return false;
-    }
-    if (kCode === upArrow && !ctrlHeld) {
-      this.appcore.shiftWorld(0, shiftHeld ? -1 : -10);
-      return false;
-    }
-    if (kCode === downArrow && !ctrlHeld) {
-      this.appcore.shiftWorld(0, shiftHeld ? 1 : 10);
-      return false;
-    }
-    if (dim > 2 && ctrlHeld && shiftHeld && kCode === 36) {
-      this.appcore.cycleNDActiveAxis(1);
-      return false;
-    }
-    if (dim > 2 && ctrlHeld && kCode === 36) {
-      this.appcore.centreNDSlices({ allAxes: true });
-      return false;
-    }
-
-    if (kCode === 33 && !ctrlHeld && dim > 2) {
-      this.appcore.shiftNDDepth(shiftHeld ? 1 : 10);
-      return false;
-    }
-    if (kCode === 34 && !ctrlHeld && dim > 2) {
-      this.appcore.shiftNDDepth(shiftHeld ? -1 : -10);
-      return false;
-    }
-    if (kCode === 36 && !ctrlHeld && dim > 2) {
-      if (params.viewMode !== "slice") {
-        this.appcore.setViewMode("slice");
-      }
-      this.appcore.adjustNDSlice(null, shiftHeld ? 1 : 10);
-      return false;
-    }
-    if (kCode === 35 && !ctrlHeld && dim > 2) {
-      if (params.viewMode !== "slice") {
-        this.appcore.setViewMode("slice");
-      }
-      this.appcore.adjustNDSlice(null, shiftHeld ? -1 : -10);
-      return false;
-    }
-
-    if (ctrlHeld && kCode === leftArrow) {
-      this.appcore.rotateWorld(shiftHeld ? -15 : -90);
-      return false;
-    }
-    if (ctrlHeld && kCode === rightArrow) {
-      this.appcore.rotateWorld(shiftHeld ? 15 : 90);
-      return false;
-    }
-
-    if ((keyValue === "=" || keyValue === "+") && !ctrlHeld) {
-      this.appcore.flipWorld(shiftHeld ? 1 : 0);
-      return false;
-    }
-    if ((keyValue === "-" || keyValue === "_") && !ctrlHeld) {
-      this.appcore.flipWorld(2);
-      return false;
-    }
-
-    if (dim > 2 && ctrlHeld && kCode === 35) {
-      this.appcore.toggleNDSliceView();
-      return false;
-    }
-    const quoteKey = keyValue === "'" || keyValue === '"';
-
-    if (quoteKey && !ctrlHeld && !shiftHeld) {
-      params.autoCentre = !params.autoCentre;
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (quoteKey && shiftHeld && !ctrlHeld) {
-      if (this.appcore?.cycleAutoRotateMode) {
-        this.appcore.cycleAutoRotateMode(1, { refreshGUI: true });
-      } else {
-        params.autoRotateMode =
-          ((((Number(params.autoRotateMode) || 0) + 1) % 3) + 3) % 3;
-        this.appcore.refreshGUI();
-      }
-      return false;
-    }
-    if (quoteKey && ctrlHeld) {
-      this.appcore.cyclePolarMode(1, { refreshGUI: true });
-      return false;
-    }
-
-    if (keyLower === "z" && !ctrlHeld) {
-      this.appcore.loadSelectedSoliton();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "c" && !ctrlHeld) {
-      this._cycleSoliton(shiftHeld ? -10 : -1);
-      return false;
-    }
-    if (keyLower === "v" && !ctrlHeld) {
-      this._cycleSoliton(shiftHeld ? 10 : 1);
-      return false;
-    }
-    if (keyLower === "x" && !ctrlHeld) {
-      if (shiftHeld) {
-        params.placeMode = !params.placeMode;
-        this.appcore.refreshGUI();
-      } else {
-        const repeats = 1;
-        for (let i = 0; i < repeats; i++) this.appcore.placeSolitonRandom();
-        this.appcore.refreshGUI();
-      }
-      return false;
-    }
-
-    if (kCode === 46 || kCode === 8) {
-      this.appcore.clearWorld();
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "n" && !ctrlHeld) {
-      if (shiftHeld) {
-        this.appcore.randomWorldWithSeed(null, false);
-      } else {
-        this.appcore.randomiseWorld();
-      }
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "m" && !ctrlHeld) {
-      if (shiftHeld) {
-        this.appcore.randomiseParams(true);
-      } else {
-        this.appcore.randomiseParams(false);
-      }
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "h" && !ctrlHeld) {
-      if (this.appcore.gui && this.appcore.gui.pane) {
-        this.appcore.gui.pane.hidden = !this.appcore.gui.pane.hidden;
-      }
-      return false;
-    }
-
-    if (altHeld && !ctrlHeld && keyLower === "j") {
-      this.appcore.cycleStatisticsMode(shiftHeld ? -1 : 1);
-      return false;
-    }
-    if (altHeld && !ctrlHeld && keyLower === "k") {
-      this.appcore.cycleStatisticsAxis("x", shiftHeld ? -1 : 1);
-      return false;
-    }
-    if (altHeld && !ctrlHeld && keyLower === "l") {
-      this.appcore.cycleStatisticsAxis("y", shiftHeld ? -1 : 1);
-      return false;
-    }
-    if (altHeld && ctrlHeld && keyLower === "n") {
-      this.appcore.startStatisticsSegment();
-      return false;
-    }
-    if (altHeld && ctrlHeld && keyLower === "j") {
-      if (shiftHeld) {
-        this.appcore.clearAllStatisticsSegments();
-      } else {
-        this.appcore.clearCurrentStatisticsSegment();
-      }
-      return false;
-    }
-
-    if (ctrlHeld && keyLower === "h") {
-      params.renderStatistics = !params.renderStatistics;
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (ctrlHeld && keyLower === "j") {
-      params.renderSymmetryOverlay = !params.renderSymmetryOverlay;
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (ctrlHeld && keyLower === "k" && !shiftHeld && !altHeld) {
-      const currentMode = Math.max(
-        0,
-        Math.min(6, Math.floor(Number(params.statisticsMode) || 1)),
-      );
-      params.statisticsMode = currentMode === 5 ? 1 : 5;
-      this.appcore.analyser?.updatePeriodogram?.(params, 10, true);
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (ctrlHeld && keyLower === "l") {
-      if (shiftHeld) {
-        params.renderMassGrowthOverlay = !params.renderMassGrowthOverlay;
-      } else {
-        params.renderTrajectoryOverlay = !params.renderTrajectoryOverlay;
-      }
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "j" && !ctrlHeld) {
-      if (shiftHeld) {
-        params.renderSolitonName = !params.renderSolitonName;
-      } else {
-        params.renderMotionOverlay = !params.renderMotionOverlay;
-      }
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "k" && !ctrlHeld) {
-      params.renderCalcPanels = !params.renderCalcPanels;
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "l" && !ctrlHeld) {
-      params.renderLegend = !params.renderLegend;
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (keyLower === "b" && !ctrlHeld) {
-      params.renderScale = !params.renderScale;
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyValue === "`" && !ctrlHeld) {
-      this._cycleGridSize();
-      return false;
-    }
-
-    if (keyLower === "g" && shiftHeld && !ctrlHeld) {
-      params.renderGrid = !params.renderGrid;
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (ctrlHeld && keyLower === "r") {
-      try {
-        if (this.appcore.media.isRecording) {
-          this.appcore.media.stopRecording();
-        } else {
-          this.appcore.media.startRecording();
-        }
-      } catch (error) {
-        this._diagnosticsLogger.error("Recording toggle failed:", error);
-      }
-      this.appcore.gui?.syncMediaControls();
-      return false;
-    }
-
-    if (ctrlHeld && shiftHeld && keyLower === "z") {
-      this.appcore.applySelectedSolitonParams({ refreshGUI: true });
-      return false;
-    }
-
-    if (ctrlHeld && (keyValue === "[" || keyValue === "{" || kCode === 219)) {
-      const bounds = this.appcore?.getPlacementScaleBounds
-        ? this.appcore.getPlacementScaleBounds(
-            this.appcore.params?.selectedSoliton,
-          )
-        : { min: 0.25, max: 4 };
-      params.placeScale = constrain(
-        Math.round((params.placeScale - 0.05) * 20) / 20,
-        bounds.min,
-        bounds.max,
-      );
-      this.appcore.updatePlacementScale(params.placeScale);
-      this.appcore.refreshGUI();
-      return false;
-    }
-    if (ctrlHeld && (keyValue === "]" || keyValue === "}" || kCode === 221)) {
-      const bounds = this.appcore?.getPlacementScaleBounds
-        ? this.appcore.getPlacementScaleBounds(
-            this.appcore.params?.selectedSoliton,
-          )
-        : { min: 0.25, max: 4 };
-      params.placeScale = constrain(
-        Math.round((params.placeScale + 0.05) * 20) / 20,
-        bounds.min,
-        bounds.max,
-      );
-      this.appcore.updatePlacementScale(params.placeScale);
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (ctrlHeld && keyLower === "s") {
-      this.appcore.media.exportImage();
-      return false;
-    }
-
-    if (shiftHeld && ctrlHeld && keyLower === "e") {
-      this.appcore.media.exportWorldJSON();
-      return false;
-    }
-    if (shiftHeld && ctrlHeld && keyLower === "w") {
-      this.appcore.media.importWorldJSON();
-      return false;
-    }
-    if (shiftHeld && ctrlHeld && keyLower === "i") {
-      this.appcore.media.importParamsJSON();
-      return false;
-    }
-    if (shiftHeld && ctrlHeld && keyLower === "p") {
-      this.appcore.media.exportParamsJSON();
-      return false;
-    }
-    if (shiftHeld && ctrlHeld && keyLower === "j") {
-      this.appcore.media.exportStatisticsJSON();
-      return false;
-    }
-    if (shiftHeld && ctrlHeld && keyLower === "k") {
-      this.appcore.media.exportStatisticsCSV();
-      return false;
-    }
-
     return false;
   }
 
   handleKeyReleased(k, kCode, event = null) {
     return false;
   }
-
-  _cycleRenderMode(direction = 1) {
-    const modes = ["world", "potential", "growth", "kernel"];
-    const idx = modes.indexOf(this.appcore.params.renderMode);
-    const safeIdx = idx >= 0 ? idx : 0;
-    const next = (safeIdx + direction + modes.length) % modes.length;
-    this.appcore.params.renderMode = modes[next];
-  }
-
-  _cycleGridSize() {
-    const sizes = this.appcore?.getGridSizeOptions
-      ? Object.values(
-          this.appcore.getGridSizeOptions(this.appcore.params.dimension),
-        )
-      : [64, 128, 256];
-    const current = this.appcore.params.latticeExtent;
-    const idx = sizes.indexOf(current);
-    const safeIdx = idx >= 0 ? idx : 0;
-    this.appcore.params.latticeExtent = sizes[(safeIdx + 1) % sizes.length];
-    this.appcore.changeResolution();
-    this.appcore.refreshGUI();
-  }
-
-  _cycleSoliton(delta) {
-    this.appcore.cycleSoliton(delta);
-  }
-
-  _adjustPeak(index, delta) {
-    const { params } = this.appcore;
-    while (params.b.length <= index) params.b.push(0);
-    params.b[index] = Math.max(0, params.b[index] + delta);
-    this.appcore.updateAutomatonParams();
-    this.appcore.refreshGUI();
-  }
 }
+
+// ── Dispatch table ──────────────────────────────────────────────────────────
+// Each entry: [hintId, optionIndex | null, guard | null, handler]
+// handler signature: (inputHandler, appcore, params, shiftHeld, dim)
+// guard signature: (dim, params) → boolean
+
+const _upd = (app) => { app.updateAutomatonParams(); app.refreshGUI(); };
+const _gui = (app) => app.refreshGUI();
+
+InputHandler._KEY_DISPATCH = [
+  // ── Transport ─────────────────────────────────────────────────────────────
+  ["stepOnce",        null, null, (_ih, app) => app.stepOnce()],
+  ["running",         null, null, (_ih, app, p) => { p.running = !p.running; _gui(app); }],
+
+  // ── Render / visual ───────────────────────────────────────────────────────
+  ["renderMode",      null, null, (ih, app, _p, sh) => { ih._cycleRenderMode(sh ? -1 : 1); _gui(app); }],
+  ["channelShift",    0,    null, (_ih, app) => app.shiftChannelLegend(1, { refreshGUI: true })],
+  ["channelShift",    1,    null, (_ih, app) => app.shiftChannelLegend(-1, { refreshGUI: true })],
+  ["colourMap",       0,    null, (_ih, app) => { app.cycleColourMap(1); _gui(app); }],
+  ["colourMap",       1,    null, (_ih, app) => { app.cycleColourMap(-1); _gui(app); }],
+
+  // ── Growth centre & width ─────────────────────────────────────────────────
+  ["growthCentre",    0,    null, (_ih, app, p, sh) => { p.m = Math.max(0, Math.min(1, p.m + (sh ? 0.01 : 0.001))); _upd(app); }],
+  ["growthCentre",    1,    null, (_ih, app, p, sh) => { p.m = Math.max(0, Math.min(1, p.m - (sh ? 0.01 : 0.001))); _upd(app); }],
+  ["growthWidth",     0,    null, (_ih, app, p, sh) => { p.s = Math.max(0.0001, p.s + (sh ? 0.001 : 0.0001)); _upd(app); }],
+  ["growthWidth",     1,    null, (_ih, app, p, sh) => { p.s = Math.max(0.0001, p.s - (sh ? 0.001 : 0.0001)); _upd(app); }],
+
+  // ── Radius ────────────────────────────────────────────────────────────────
+  ["radius",          0,    null, (_ih, app, _p, sh) => { app.nudgeRadius?.(sh ? 1 : 5); _gui(app); }],
+  ["radius",          1,    null, (_ih, app, _p, sh) => { app.nudgeRadius?.(sh ? -1 : -5); _gui(app); }],
+
+  // ── Time step (T) ─────────────────────────────────────────────────────────
+  ["steps",           0,    null, (_ih, app, p, sh) => {
+    const maxT = app.getMaxTimeScale?.() ?? 1500;
+    p.T = sh ? Math.min(maxT, p.T + 1) : Math.min(maxT, p.T * 2);
+    _upd(app);
+  }],
+  ["steps",           1,    null, (_ih, app, p, sh) => {
+    p.T = sh ? Math.max(1, p.T - 1) : Math.max(1, Math.round(p.T / 2));
+    _upd(app);
+  }],
+
+  // ── Quantise / weight ─────────────────────────────────────────────────────
+  ["quantiseP",       0,    null, (_ih, app, p, sh) => { p.paramP = Math.min(64, (p.paramP || 0) + (sh ? 1 : 10)); _upd(app); }],
+  ["quantiseP",       1,    null, (_ih, app, p, sh) => { p.paramP = Math.max(0, (p.paramP || 0) - (sh ? 1 : 10)); _upd(app); }],
+  ["weight",          0,    null, (_ih, app, p) => { p.h = Math.min(1, Math.round((p.h + 0.1) * 10) / 10); _upd(app); }],
+  ["weight",          1,    null, (_ih, app, p) => { p.h = Math.max(0.1, Math.round((p.h - 0.1) * 10) / 10); _upd(app); }],
+
+  // ── Peaks (beta coefficients) ─────────────────────────────────────────────
+  ["peakY",           null, null, (ih, _app, _p, sh) => ih._adjustPeak(0, sh ? -1/12 : 1/12)],
+  ["peakU",           null, null, (ih, _app, _p, sh) => ih._adjustPeak(1, sh ? -1/12 : 1/12)],
+  ["peakI",           null, null, (ih, _app, _p, sh) => ih._adjustPeak(2, sh ? -1/12 : 1/12)],
+  ["peakO",           null, null, (ih, _app, _p, sh) => ih._adjustPeak(3, sh ? -1/12 : 1/12)],
+  ["peakP",           null, null, (ih, _app, _p, sh) => ih._adjustPeak(4, sh ? -1/12 : 1/12)],
+  ["peakCount",       null, null, (_ih, app, p, sh) => {
+    if (sh) { if (p.b.length > 1) p.b.pop(); } else { p.b.push(0); }
+    _upd(app);
+  }],
+
+  // ── Kernel / growth types ─────────────────────────────────────────────────
+  ["kernelType",      null, null, (_ih, app, p, sh) => { p.kn = sh ? ((p.kn - 2 + 4) % 4) + 1 : (p.kn % 4) + 1; _upd(app); }],
+  ["growthType",      null, null, (_ih, app, p, sh) => { p.gn = sh ? ((p.gn - 2 + 3) % 3) + 1 : (p.gn % 3) + 1; _upd(app); }],
+  ["softClip",        null, null, (_ih, app, p, sh) => {
+    if (sh) { p.maskRate = ((p.maskRate || 0) + 1) % 10; } else { p.softClip = !p.softClip; }
+    _upd(app);
+  }],
+  ["noise",           null, null, (_ih, app, p) => { p.addNoise = ((p.addNoise || 0) + 1) % 11; _upd(app); }],
+  ["aritaMode",       null, null, (_ih, app, p, sh) => {
+    if (sh) { p.maskRate = 0; p.addNoise = 0; } else { p.aritaMode = !p.aritaMode; }
+    _upd(app);
+  }],
+  ["multiStep",       null, null, (_ih, app, p) => { p.multiStep = !p.multiStep; _upd(app); }],
+
+  // ── Dimension / backend ───────────────────────────────────────────────────
+  ["dimension",       null, null, (_ih, app, p) => {
+    const dims = [2, 3, 4];
+    const idx = dims.indexOf(Number(p.dimension) || 2);
+    app.setDimension(dims[(idx + 1) % dims.length]); _gui(app);
+  }],
+  ["backendComputeDevice", null, null, (_ih, app, _p, sh) => app.cycleBackendComputeDevice(sh ? -1 : 1, { refreshGUI: true })],
+
+  // ── Channel / kernel selection ────────────────────────────────────────────
+  ["selectedChannel", 0,    null, (_ih, app) => app.cycleSelectedChannel(-1, { refreshGUI: true })],
+  ["selectedChannel", 1,    null, (_ih, app) => app.cycleSelectedChannel(1, { refreshGUI: true })],
+  ["selectedKernel",  0,    null, (_ih, app) => app.cycleSelectedKernel(-1, { refreshGUI: true })],
+  ["selectedKernel",  1,    null, (_ih, app) => app.cycleSelectedKernel(1, { refreshGUI: true })],
+
+  // ── Spatial transforms ────────────────────────────────────────────────────
+  ["shiftX",          0,    null, (_ih, app, _p, sh) => app.shiftWorld(sh ? -1 : -10, 0)],
+  ["shiftX",          1,    null, (_ih, app, _p, sh) => app.shiftWorld(sh ? 1 : 10, 0)],
+  ["shiftY",          0,    null, (_ih, app, _p, sh) => app.shiftWorld(0, sh ? -1 : -10)],
+  ["shiftY",          1,    null, (_ih, app, _p, sh) => app.shiftWorld(0, sh ? 1 : 10)],
+
+  // ── ND-only controls (dim > 2 guard) ──────────────────────────────────────
+  ["cycleSliceAxis",  null, (d) => d > 2, (_ih, app) => app.cycleNDActiveAxis(1)],
+  ["centreSlice",     null, (d) => d > 2, (_ih, app) => app.centreNDSlices({ allAxes: true })],
+  ["viewDepth",       0,    (d) => d > 2, (_ih, app, _p, sh) => app.shiftNDDepth(sh ? 1 : 10)],
+  ["viewDepth",       1,    (d) => d > 2, (_ih, app, _p, sh) => app.shiftNDDepth(sh ? -1 : -10)],
+  ["sliceOffset",     0,    (d) => d > 2, (_ih, app, p, sh) => {
+    if (p.viewMode !== "slice") app.setViewMode("slice");
+    app.adjustNDSlice(null, sh ? 1 : 10);
+  }],
+  ["sliceOffset",     1,    (d) => d > 2, (_ih, app, p, sh) => {
+    if (p.viewMode !== "slice") app.setViewMode("slice");
+    app.adjustNDSlice(null, sh ? -1 : -10);
+  }],
+  ["toggleSliceView", null, (d) => d > 2, (_ih, app) => app.toggleNDSliceView()],
+
+  // ── Rotation / flip ───────────────────────────────────────────────────────
+  ["rotate",          0,    null, (_ih, app, _p, sh) => app.rotateWorld(sh ? -15 : -90)],
+  ["rotate",          1,    null, (_ih, app, _p, sh) => app.rotateWorld(sh ? 15 : 90)],
+  ["flipX",           null, null, (_ih, app, _p, sh) => app.flipWorld(sh ? 1 : 0)],
+  ["flipY",           null, null, (_ih, app) => app.flipWorld(2)],
+
+  // ── Auto behaviours ───────────────────────────────────────────────────────
+  ["autoCentre",      null, null, (_ih, app, p) => { p.autoCentre = !p.autoCentre; _gui(app); }],
+  ["autoRotate",      null, null, (_ih, app, p) => {
+    if (app.cycleAutoRotateMode) { app.cycleAutoRotateMode(1, { refreshGUI: true }); }
+    else { p.autoRotateMode = ((((Number(p.autoRotateMode) || 0) + 1) % 3) + 3) % 3; _gui(app); }
+  }],
+  ["polarMode",       null, null, (_ih, app) => app.cyclePolarMode(1, { refreshGUI: true })],
+
+  // ── Soliton selection ─────────────────────────────────────────────────────
+  ["loadSoliton",     null, null, (_ih, app) => { app.loadSelectedSoliton(); _gui(app); }],
+  ["previousSoliton", null, null, (ih, _app, _p, sh) => ih._cycleSoliton(sh ? -10 : -1)],
+  ["nextSoliton",     null, null, (ih, _app, _p, sh) => ih._cycleSoliton(sh ? 10 : 1)],
+  ["placeMode",       null, null, (_ih, app, p) => { p.placeMode = !p.placeMode; _gui(app); }],
+  ["placeSolitonAtRandom", null, null, (_ih, app) => { app.placeSolitonRandom(); _gui(app); }],
+
+  // ── World generation ──────────────────────────────────────────────────────
+  ["clearWorld",      null, null, (_ih, app) => { app.clearWorld(); _gui(app); }],
+  ["randomSeed",      null, null, (_ih, app) => { app.randomWorldWithSeed(null, false); _gui(app); }],
+  ["randomiseWorld",  null, null, (_ih, app) => { app.randomiseWorld(); _gui(app); }],
+  ["randomiseRulesMutation", null, null, (_ih, app) => { app.randomiseParams(true); _gui(app); }],
+  ["randomiseRules",  null, null, (_ih, app) => { app.randomiseParams(false); _gui(app); }],
+
+  // ── GUI / overlays ────────────────────────────────────────────────────────
+  ["toggleGUI",       null, null, (_ih, app) => { if (app.gui?.pane) app.gui.pane.hidden = !app.gui.pane.hidden; }],
+  ["statisticsMode",  null, null, (_ih, app, _p, sh) => app.cycleStatisticsMode(sh ? -1 : 1)],
+  ["graphXAxis",      null, null, (_ih, app, _p, sh) => app.cycleStatisticsAxis("x", sh ? -1 : 1)],
+  ["graphYAxis",      null, null, (_ih, app, _p, sh) => app.cycleStatisticsAxis("y", sh ? -1 : 1)],
+  ["segmentAdd",      null, null, (_ih, app) => app.startStatisticsSegment()],
+  ["segmentClear",    null, null, (_ih, app, _p, sh) => { sh ? app.clearAllStatisticsSegments() : app.clearCurrentStatisticsSegment(); }],
+
+  // ── Render toggles ────────────────────────────────────────────────────────
+  ["renderStatistics", null, null, (_ih, app, p) => { p.renderStatistics = !p.renderStatistics; _gui(app); }],
+  ["renderSymmetry",   null, null, (_ih, app, p) => { p.renderSymmetryOverlay = !p.renderSymmetryOverlay; _gui(app); }],
+  ["periodogram",     null, null, (_ih, app, p) => {
+    const mode = Math.max(0, Math.min(6, Math.floor(Number(p.statisticsMode) || 1)));
+    p.statisticsMode = mode === 5 ? 1 : 5;
+    app.analyser?.updatePeriodogram?.(p, 10, true); _gui(app);
+  }],
+  ["massGrowthOverlay", null, null, (_ih, app, p) => { p.renderMassGrowthOverlay = !p.renderMassGrowthOverlay; _gui(app); }],
+  ["trajectory",      null, null, (_ih, app, p) => { p.renderTrajectoryOverlay = !p.renderTrajectoryOverlay; _gui(app); }],
+  ["solitonName",     null, null, (_ih, app, p) => { p.renderSolitonName = !p.renderSolitonName; _gui(app); }],
+  ["motionOverlay",   null, null, (_ih, app, p) => { p.renderMotionOverlay = !p.renderMotionOverlay; _gui(app); }],
+  ["calcPanels",      null, null, (_ih, app, p) => { p.renderCalcPanels = !p.renderCalcPanels; _gui(app); }],
+  ["legend",          null, null, (_ih, app, p) => { p.renderLegend = !p.renderLegend; _gui(app); }],
+  ["scale",           null, null, (_ih, app, p) => { p.renderScale = !p.renderScale; _gui(app); }],
+  ["gridSize",        null, null, (ih) => ih._cycleGridSize()],
+  ["renderGrid",      null, null, (_ih, app, p) => { p.renderGrid = !p.renderGrid; _gui(app); }],
+
+  // ── Recording / media ─────────────────────────────────────────────────────
+  ["record",          null, null, (ih, app) => {
+    try { app.media.isRecording ? app.media.stopRecording() : app.media.startRecording(); }
+    catch (e) { ih._diagnosticsLogger.error("Recording toggle failed:", e); }
+    app.gui?.syncMediaControls();
+  }],
+  ["applySolitonParams", null, null, (_ih, app) => app.applySelectedSolitonParams({ refreshGUI: true })],
+  ["exportImage",     null, null, (_ih, app) => app.media.exportImage()],
+  ["stateExport",     null, null, (_ih, app) => app.media.exportWorldJSON()],
+  ["stateImport",     null, null, (_ih, app) => app.media.importWorldJSON()],
+  ["paramsImport",    null, null, (_ih, app) => app.media.importParamsJSON()],
+  ["paramsExport",    null, null, (_ih, app) => app.media.exportParamsJSON()],
+  ["statisticsExportJson", null, null, (_ih, app) => app.media.exportStatisticsJSON()],
+  ["statisticsExportCsv",  null, null, (_ih, app) => app.media.exportStatisticsCSV()],
+];

@@ -1,7 +1,19 @@
 "use strict";
 
 if (typeof importScripts === "function") {
-  importScripts("../../../_shared/utils/WorkerSanitisers.js");
+  try {
+    importScripts("../../../_shared/utils/WorkerSanitisers.js");
+  } catch (_error) {
+    console.error(
+      "Failed to load WorkerSanitisers.js, using built-in fallback sanitisers. This may cause issues if the main thread is relying on custom sanitisation logic.",
+      _error,
+    );
+  }
+  try {
+    importScripts("../shared/Constants.js");
+  } catch (_error) {
+    console.error("Failed to load Constants.js in worker.", _error);
+  }
 }
 
 const _workerSanitisers =
@@ -872,4 +884,51 @@ function prepareFFTInput2D(cellBuf, cells, size, N) {
       cellBuf[di + 1] = 0;
     }
   }
+}
+
+function resolveKernelStepParams(globalParams, rawKernel, channelCount) {
+  const source = rawKernel && typeof rawKernel === "object" ? rawKernel : {};
+  const maxChannel = Math.max(0, channelCount - 1);
+  const c = Array.isArray(source.c) ? source.c : [0, 0];
+  const c0 = Math.max(0, Math.min(maxChannel, Math.floor(Number(c[0]) || 0)));
+  const c1 = Math.max(0, Math.min(maxChannel, Math.floor(Number(c[1]) || c0)));
+
+  return {
+    m: Number.isFinite(Number(source.m))
+      ? Number(source.m)
+      : Number(globalParams.m),
+    s: Math.max(
+      0.0001,
+      Number.isFinite(Number(source.s))
+        ? Number(source.s)
+        : Number(globalParams.s),
+    ),
+    gn: Math.max(
+      1,
+      Math.min(
+        3,
+        Math.round(
+          Number.isFinite(Number(source.gn))
+            ? Number(source.gn)
+            : Number(globalParams.gn),
+        ),
+      ),
+    ),
+    h: Math.max(
+      0.0001,
+      Number.isFinite(Number(source.h))
+        ? Number(source.h)
+        : Number(globalParams.h) || 1,
+    ),
+    multiStep:
+      typeof source.multiStep === "boolean"
+        ? source.multiStep
+        : Boolean(globalParams.multiStep),
+    aritaMode:
+      typeof source.aritaMode === "boolean"
+        ? source.aritaMode
+        : Boolean(globalParams.aritaMode),
+    c0,
+    c1,
+  };
 }

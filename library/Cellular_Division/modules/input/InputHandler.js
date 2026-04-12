@@ -138,55 +138,66 @@ class InputHandler {
 
   handleShortcutKey(event = null) {
     const keyValue = KeyboardUtils.normaliseKey(key || event?.key);
-    const keyLower = KeyboardUtils.toLower(keyValue);
     const shiftHeld = Boolean(event?.shiftKey) || KeyboardUtils.isShiftHeld();
     const ctrlHeld = Boolean(event?.ctrlKey) || KeyboardUtils.isCtrlHeld();
 
-    if (this.ui.renderKeymapRef && keyValue !== "#") {
+    const match = (hintId, optionIndex = null) =>
+      typeof KeybindCatalogue !== "undefined" &&
+      typeof KeybindCatalogue.matchHint === "function" &&
+      KeybindCatalogue.matchHint(
+        "cellular",
+        hintId,
+        keyValue,
+        keyCode,
+        event,
+        optionIndex,
+      );
+
+    if (this.ui.renderKeymapRef && !match("keymapReference")) {
       return;
     }
 
-    if (keyValue === "#") {
+    if (match("keymapReference")) {
       this.ui.toggleKeymapReference();
       return;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "i") {
+    if (match("paramsImport")) {
       this.ui.appcore.importParamsJSON();
       return;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "p") {
+    if (match("paramsExport")) {
       this.ui.appcore.exportParamsJSON();
       return;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "j") {
+    if (match("statisticsExportJson")) {
       this.ui.appcore.exportStatisticsJSON();
       return;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "k") {
+    if (match("statisticsExportCsv")) {
       this.ui.appcore.exportStatisticsCSV();
       return;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "s") {
+    if (match("stateExport")) {
       this.ui.appcore.exportStateJSON();
       return;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "o") {
+    if (match("stateImport")) {
       this.ui.appcore.importStateJSON();
       return;
     }
 
-    if (ctrlHeld && keyLower === "s" && !shiftHeld) {
+    if (match("exportImage")) {
       this.ui.appcore.exportImage();
       return;
     }
 
-    if (ctrlHeld && keyLower === "r" && !shiftHeld) {
+    if (match("record")) {
       try {
         if (this.ui.appcore.media.isRecording) {
           this.ui.appcore.media.stopRecording();
@@ -199,22 +210,17 @@ class InputHandler {
       return;
     }
 
-    if (keyLower === "h" && !ctrlHeld) {
+    if (match("toggleUI")) {
       this.ui.toggleVisibility();
       return;
     }
 
-    if (keyLower === "r" && !ctrlHeld) {
+    if (match("restart")) {
       this.ui.requestRestart();
       return;
     }
 
-    if (
-      !ctrlHeld &&
-      (keyLower === "p" ||
-        keyValue === " " ||
-        KeyboardUtils.isEnterOrReturn(keyCode))
-    ) {
+    if (match("pause")) {
       this.ui.toggleSimulationPause();
       return;
     }
@@ -224,59 +230,65 @@ class InputHandler {
     }
 
     const stepBoost = shiftHeld ? 10 : 1;
-    switch (keyValue) {
-      case "1":
-        this.adjustParam(0, -this.getStepSize(0) * stepBoost);
-        break;
-      case "2":
-        this.adjustParam(0, this.getStepSize(0) * stepBoost);
-        break;
-      case "3":
-        this.adjustParam(1, -this.getStepSize(1) * stepBoost);
-        break;
-      case "4":
-        this.adjustParam(1, this.getStepSize(1) * stepBoost);
-        break;
-      case "5":
-        this.adjustParam(2, -this.getStepSize(2) * stepBoost);
-        break;
-      case "6":
-        this.adjustParam(2, this.getStepSize(2) * stepBoost);
-        break;
-      case "7":
-        this.adjustParam(3, -this.getStepSize(3) * stepBoost);
-        break;
-      case "8":
-        this.adjustParam(3, this.getStepSize(3) * stepBoost);
-        break;
-      case "9":
-        this.adjustParam(4, -this.getStepSize(4) * stepBoost);
-        break;
-      case "0":
-        this.adjustParam(4, this.getStepSize(4) * stepBoost);
-        break;
-      case "-":
-      case "_":
-        this.adjustParam(5, -this.getStepSize(5) * stepBoost);
-        break;
-      case "=":
-      case "+":
-        this.adjustParam(5, this.getStepSize(5) * stepBoost);
-        break;
-      case "[":
-      case "{":
-        this.sim.setParticleCount(
-          int(this.sim.getParticleCount() - 100 * stepBoost),
-        );
-        break;
-      case "]":
-      case "}":
-        this.sim.setParticleCount(
-          int(this.sim.getParticleCount() + 100 * stepBoost),
-        );
-        break;
-      default:
-        break;
+    if (match("alpha", 0)) {
+      this.adjustParam(0, -this.getStepSize(0) * stepBoost);
+      return;
+    }
+    if (match("alpha", 1)) {
+      this.adjustParam(0, this.getStepSize(0) * stepBoost);
+      return;
+    }
+    if (match("beta", 0)) {
+      this.adjustParam(1, -this.getStepSize(1) * stepBoost);
+      return;
+    }
+    if (match("beta", 1)) {
+      this.adjustParam(1, this.getStepSize(1) * stepBoost);
+      return;
+    }
+    if (match("gamma", 0)) {
+      this.adjustParam(2, -this.getStepSize(2) * stepBoost);
+      return;
+    }
+    if (match("gamma", 1)) {
+      this.adjustParam(2, this.getStepSize(2) * stepBoost);
+      return;
+    }
+    if (match("radius", 0)) {
+      this.adjustParam(3, -this.getStepSize(3) * stepBoost);
+      return;
+    }
+    if (match("radius", 1)) {
+      this.adjustParam(3, this.getStepSize(3) * stepBoost);
+      return;
+    }
+    if (match("trailAlpha", 0)) {
+      this.adjustParam(4, -this.getStepSize(4) * stepBoost);
+      return;
+    }
+    if (match("trailAlpha", 1)) {
+      this.adjustParam(4, this.getStepSize(4) * stepBoost);
+      return;
+    }
+    if (match("density", 0)) {
+      this.adjustParam(5, -this.getStepSize(5) * stepBoost);
+      return;
+    }
+    if (match("density", 1)) {
+      this.adjustParam(5, this.getStepSize(5) * stepBoost);
+      return;
+    }
+    if (match("particleCount", 0)) {
+      this.sim.setParticleCount(
+        int(this.sim.getParticleCount() - 100 * stepBoost),
+      );
+      return;
+    }
+    if (match("particleCount", 1)) {
+      this.sim.setParticleCount(
+        int(this.sim.getParticleCount() + 100 * stepBoost),
+      );
+      return;
     }
   }
 

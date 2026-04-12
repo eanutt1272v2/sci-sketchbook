@@ -40,6 +40,24 @@ class Automaton {
     this.addNoise = params.addNoise || 0;
     this.maskRate = params.maskRate || 0;
     this.paramP = params.paramP || 0;
+    this.channelCount = Math.max(
+      1,
+      Math.floor(Number(params.channelCount) || 1),
+    );
+    this.selectedChannel = Math.max(
+      0,
+      Math.min(
+        this.channelCount - 1,
+        Math.floor(Number(params.selectedChannel) || 0),
+      ),
+    );
+    this.selectedKernel = Math.max(
+      0,
+      Math.floor(Number(params.selectedKernel) || 0),
+    );
+    this.kernelParams = Array.isArray(params.kernelParams)
+      ? params.kernelParams.map((entry) => ({ ...entry }))
+      : [];
     this.kernelReady = false;
   }
 

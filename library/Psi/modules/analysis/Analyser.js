@@ -467,7 +467,7 @@ class Analyser {
     }
   }
 
-  getStatRow() {
+  getStatisticsRow() {
     const keys = [
       "density",
       "peakDensity",

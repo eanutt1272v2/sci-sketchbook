@@ -69,8 +69,8 @@ class InputHandler {
       }
     }
 
-    const zoomInDown = this._isKeyHeld("i");
-    const zoomOutDown = this._isKeyHeld("k");
+    const zoomInDown = this._isHintHeld("viewRadius", 0);
+    const zoomOutDown = this._isHintHeld("viewRadius", 1);
     if (zoomInDown || zoomOutDown) {
       const delta = (zoomOutDown ? 0.75 : 0) - (zoomInDown ? 0.75 : 0);
       if (delta !== 0) {
@@ -80,8 +80,8 @@ class InputHandler {
       }
     }
 
-    const sliceDown = shiftHeld && this._isKeyHeld("j");
-    const sliceUp = shiftHeld && this._isKeyHeld("l");
+    const sliceDown = this._isHintHeld("sliceOffset", 0);
+    const sliceUp = this._isHintHeld("sliceOffset", 1);
     if (sliceDown || sliceUp) {
       const delta = (sliceUp ? 0.5 : 0) - (sliceDown ? 0.5 : 0);
       if (delta !== 0) {
@@ -97,11 +97,14 @@ class InputHandler {
     if (shiftHeld) {
       const panStep = max(0.25, params.viewRadius * 0.03);
       const panX =
-        (this._isKeyHeld("d") ? 1 : 0) - (this._isKeyHeld("a") ? 1 : 0);
+        (this._isHintHeld("panX", 1) ? 1 : 0) -
+        (this._isHintHeld("panX", 0) ? 1 : 0);
       const panY =
-        (this._isKeyHeld("w") ? 1 : 0) - (this._isKeyHeld("s") ? 1 : 0);
+        (this._isHintHeld("panY", 0) ? 1 : 0) -
+        (this._isHintHeld("panY", 1) ? 1 : 0);
       const panZ =
-        (this._isKeyHeld("e") ? 1 : 0) - (this._isKeyHeld("q") ? 1 : 0);
+        (this._isHintHeld("panZ", 1) ? 1 : 0) -
+        (this._isHintHeld("panZ", 0) ? 1 : 0);
 
       if (panX || panY || panZ) {
         params.viewCentre.x += panX * panStep;
@@ -111,8 +114,8 @@ class InputHandler {
       }
     }
 
-    const exposureDown = keyIsDown(219) || this._isKeyHeld("[", "{");
-    const exposureUp = keyIsDown(221) || this._isKeyHeld("]", "}");
+    const exposureDown = this._isHintHeld("exposure", 0);
+    const exposureUp = this._isHintHeld("exposure", 1);
 
     if (exposureDown || exposureUp) {
       params.exposure = constrain(
@@ -123,16 +126,8 @@ class InputHandler {
       needsRender = true;
     }
 
-    const isPlus =
-      keyIsDown(187) ||
-      keyIsDown(61) ||
-      keyIsDown(107) ||
-      this._isKeyHeld("=", "+");
-    const isMinus =
-      keyIsDown(189) ||
-      keyIsDown(173) ||
-      keyIsDown(109) ||
-      this._isKeyHeld("-", "_");
+    const isPlus = this._isHintHeld("resolution", 0);
+    const isMinus = this._isHintHeld("resolution", 1);
 
     if (isPlus || isMinus) {
       params.resolution = constrain(
@@ -147,6 +142,8 @@ class InputHandler {
       return;
     }
 
+    this.appcore.refreshGUI();
+
     if (syncViewConstraints) {
       this.appcore.syncViewConstraints();
     } else {
@@ -156,9 +153,21 @@ class InputHandler {
 
   handleKeyPressed(k, kCode, event = null) {
     const keyValue = KeyboardUtils.normaliseKey(k);
-    this._setHeldKey(keyValue, true);
+    this._setHeldKey(keyValue, true, event);
 
-    if (keyValue === "#") {
+    const match = (hintId, optionIndex = null) =>
+      typeof KeybindCatalogue !== "undefined" &&
+      typeof KeybindCatalogue.matchHint === "function" &&
+      KeybindCatalogue.matchHint(
+        "psi",
+        hintId,
+        keyValue,
+        kCode,
+        event,
+        optionIndex,
+      );
+
+    if (match("keymapReference")) {
       this.appcore.toggleKeymapRef();
       this.appcore.refreshGUI();
       this._diagnosticsLogger.info(
@@ -175,16 +184,12 @@ class InputHandler {
       return false;
     }
 
-    const keyLower = KeyboardUtils.toLower(keyValue);
-    const shiftHeld = Boolean(event?.shiftKey) || KeyboardUtils.isShiftHeld();
-    const ctrlHeld = Boolean(event?.ctrlKey) || KeyboardUtils.isCtrlHeld();
-
-    if (ctrlHeld && keyLower === "s" && !shiftHeld) {
+    if (match("exportImage")) {
       this.appcore.exportImage();
       return false;
     }
 
-    if (ctrlHeld && keyLower === "r" && !shiftHeld) {
+    if (match("record")) {
       try {
         if (this.appcore.media.isRecording) {
           this.appcore.media.stopRecording();
@@ -198,22 +203,22 @@ class InputHandler {
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "i") {
+    if (match("importParams")) {
       this.appcore.media.importParamsJSON();
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "p") {
+    if (match("exportParams")) {
       this.appcore.media.exportParamsJSON();
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "s") {
+    if (match("exportStatistics")) {
       this.appcore.media.exportStatisticsJSON();
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "c") {
+    if (match("exportStatisticsCsv")) {
       this.appcore.media.exportStatisticsCSV();
       return false;
     }
@@ -221,105 +226,91 @@ class InputHandler {
     let logMsg = "";
     let shouldRefreshGUI = true;
 
-    if (keyLower === "r" && !shiftHeld && !ctrlHeld) {
+    if (match("nuclearCharge", 0)) {
       this.appcore.params.nuclearCharge = Math.max(
         1,
         Math.min(20, Math.round(this.appcore.params.nuclearCharge + 1)),
       );
       this.appcore.requestRender();
       logMsg = `Z changed to ${this.appcore.params.nuclearCharge}`;
-    } else if (keyLower === "t" && !shiftHeld && !ctrlHeld) {
+    } else if (match("nuclearCharge", 1)) {
       this.appcore.params.nuclearCharge = Math.max(
         1,
         Math.min(20, Math.round(this.appcore.params.nuclearCharge - 1)),
       );
       this.appcore.requestRender();
       logMsg = `Z changed to ${this.appcore.params.nuclearCharge}`;
-    } else if (keyLower === "p" && !shiftHeld && !ctrlHeld) {
+    } else if (match("reducedMass")) {
       this.appcore.params.useReducedMass = !this.appcore.params.useReducedMass;
       this.appcore.requestRender();
       logMsg = `Reduced mass: ${this.appcore.params.useReducedMass}`;
-    } else if (keyLower === "g" && !shiftHeld && !ctrlHeld) {
+    } else if (match("nucleusMass", 0)) {
       const current = Math.log10(this.appcore.params.nucleusMassKg);
       const next = constrain(current + 0.01, -30, -24);
       this.appcore.params.nucleusMassKg = Math.pow(10, next);
       this.appcore.requestRender();
       logMsg = `Nucleus mass log10 = ${next.toFixed(2)}`;
-    } else if (keyLower === "b" && !shiftHeld && !ctrlHeld) {
+    } else if (match("nucleusMass", 1)) {
       const current = Math.log10(this.appcore.params.nucleusMassKg);
       const next = constrain(current - 0.01, -30, -24);
       this.appcore.params.nucleusMassKg = Math.pow(10, next);
       this.appcore.requestRender();
       logMsg = `Nucleus mass log10 = ${next.toFixed(2)}`;
-    } else if (
-      (keyLower === "w" || keyLower === "s") &&
-      !ctrlHeld &&
-      !shiftHeld
-    ) {
-      this.appcore.updateQuantumNumbers("n", keyLower === "w" ? 1 : -1);
+    } else if (match("quantumN", 0) || match("quantumN", 1)) {
+      this.appcore.updateQuantumNumbers("n", match("quantumN", 0) ? 1 : -1);
       logMsg = `n changed to ${this.appcore.params.n}`;
-    } else if (
-      (keyLower === "d" || keyLower === "a") &&
-      !ctrlHeld &&
-      !shiftHeld
-    ) {
-      this.appcore.updateQuantumNumbers("l", keyLower === "d" ? 1 : -1);
+    } else if (match("quantumL", 0) || match("quantumL", 1)) {
+      this.appcore.updateQuantumNumbers("l", match("quantumL", 0) ? 1 : -1);
       logMsg = `l changed to ${this.appcore.params.l}`;
-    } else if (
-      (keyLower === "e" || keyLower === "q") &&
-      !ctrlHeld &&
-      !shiftHeld
-    ) {
-      this.appcore.updateQuantumNumbers("m", keyLower === "e" ? 1 : -1);
+    } else if (match("quantumM", 0) || match("quantumM", 1)) {
+      this.appcore.updateQuantumNumbers("m", match("quantumM", 0) ? 1 : -1);
       logMsg = `m changed to ${this.appcore.params.m}`;
     }
 
-    const planes = { 1: "xy", 2: "xz", 3: "yz" };
-    if (planes[keyValue]) {
-      this.appcore.changePlane(planes[keyValue]);
+    const matchedPlane =
+      typeof KeybindCatalogue !== "undefined" &&
+      typeof KeybindCatalogue.matchHintIndex === "function"
+        ? KeybindCatalogue.matchHintIndex(
+            "psi",
+            "slicePlane",
+            keyValue,
+            kCode,
+            event,
+          )
+        : -1;
+    if (matchedPlane >= 0) {
+      const planes = ["xy", "xz", "yz"];
+      this.appcore.changePlane(planes[matchedPlane] || "xz");
       logMsg = `Plane switched to ${this.appcore.params.slicePlane.toUpperCase()}`;
     }
 
-    if (!ctrlHeld) {
-      switch (keyLower) {
-        case "c":
-          this.appcore.cycleColourMap();
-          logMsg = `Map switched to ${this.appcore.params.colourMap}`;
-          break;
-        case "o":
-          this.appcore.toggleOverlay();
-          logMsg = `Overlay: ${this.appcore.params.renderOverlay}`;
-          break;
-        case "n":
-          this.appcore.toggleNodeOverlay();
-          logMsg = `Node Overlay: ${this.appcore.params.renderNodeOverlay}`;
-          break;
-        case "l":
-          if (!shiftHeld) {
-            this.appcore.toggleLegend();
-            logMsg = `Legend: ${this.appcore.params.renderLegend}`;
-          }
-          break;
-        case "m":
-          this.appcore.toggleSmoothing();
-          logMsg = `Smoothing: ${this.appcore.params.pixelSmoothing}`;
-          break;
-        case "h":
-          this.appcore.toggleGUI();
-          shouldRefreshGUI = false;
-          break;
-        case "x":
-          this.appcore.resetViewCentre();
-          logMsg = "View centre reset";
-          break;
-        case "z":
-          this.appcore.resetViewRadius();
-          logMsg = "View radius reset";
-          break;
-      }
+    if (match("colourMap")) {
+      this.appcore.cycleColourMap();
+      logMsg = `Map switched to ${this.appcore.params.colourMap}`;
+    } else if (match("overlay")) {
+      this.appcore.toggleOverlay();
+      logMsg = `Overlay: ${this.appcore.params.renderOverlay}`;
+    } else if (match("nodeOverlay")) {
+      this.appcore.toggleNodeOverlay();
+      logMsg = `Node Overlay: ${this.appcore.params.renderNodeOverlay}`;
+    } else if (match("legend")) {
+      this.appcore.toggleLegend();
+      logMsg = `Legend: ${this.appcore.params.renderLegend}`;
+    } else if (match("smoothing")) {
+      this.appcore.toggleSmoothing();
+      logMsg = `Smoothing: ${this.appcore.params.pixelSmoothing}`;
+    } else if (match("toggleGUI")) {
+      this.appcore.toggleGUI();
+      shouldRefreshGUI = false;
+    } else if (match("resetViewCentre")) {
+      this.appcore.resetViewCentre();
+      logMsg = "View centre reset";
+    } else if (match("resetViewRadius")) {
+      this.appcore.resetViewRadius();
+      logMsg = "View radius reset";
     }
 
-    if (keyValue === " " && !ctrlHeld) {
+    if (match("resetSliceOffset")) {
       this.appcore.resetSliceOffset();
       logMsg = "Offset reset to 0";
     }
@@ -337,7 +328,7 @@ class InputHandler {
 
   handleKeyReleased(k, kCode, event = null) {
     const keyValue = KeyboardUtils.normaliseKey(k);
-    this._setHeldKey(keyValue, false);
+    this._setHeldKey(keyValue, false, event);
     return false;
   }
 
@@ -358,7 +349,7 @@ class InputHandler {
       return false;
     }
 
-    this.appcore.requestRender();
+    this.appcore.syncViewConstraints();
     return false;
   }
 
@@ -388,9 +379,11 @@ class InputHandler {
   }
 
   handlePointerEnd(event) {
+    const hadActiveGesture = Boolean(this.gesture.pan || this.gesture.pinch);
     const isCanvasInteraction = this.appcore.canvasInteraction(event);
     this.resetGesture();
-    if (isCanvasInteraction) {
+    if (isCanvasInteraction || hadActiveGesture) {
+      this.appcore.refreshGUI();
       return false;
     }
   }
@@ -438,7 +431,7 @@ class InputHandler {
     }
 
     this.gesture.pinch.distance = distance;
-    this.appcore.requestRender();
+    this.appcore.syncViewConstraints();
   }
 
   applyZoomAtNormalisedPoint(nx, ny, zoomScale) {
@@ -466,8 +459,9 @@ class InputHandler {
     this.appcore.params.viewCentre[axis2] += delta2;
   }
 
-  _setHeldKey(value, isHeld) {
+  _setHeldKey(value, isHeld, event = null) {
     const keyValue = KeyboardUtils.normaliseKey(value);
+    this._syncHeldModifiersFromEvent(event);
     if (!keyValue) return;
     const keyLower = KeyboardUtils.toLower(keyValue);
 
@@ -481,8 +475,42 @@ class InputHandler {
     this._heldKeys.delete(keyLower);
   }
 
+  _syncHeldModifiersFromEvent(event = null) {
+    if (!event || typeof event !== "object") return;
+
+    const modifiers = [
+      ["shift", Boolean(event.shiftKey), ["shift"]],
+      ["control", Boolean(event.ctrlKey), ["control", "ctrl"]],
+      ["alt", Boolean(event.altKey), ["alt", "option"]],
+      ["meta", Boolean(event.metaKey), ["meta", "command", "cmd"]],
+    ];
+
+    for (const [, isDown, aliases] of modifiers) {
+      for (const alias of aliases) {
+        if (isDown) {
+          this._heldKeys.add(alias);
+        } else {
+          this._heldKeys.delete(alias);
+        }
+      }
+    }
+  }
+
   _isKeyHeld(...values) {
     return values.some((value) => this._heldKeys.has(value));
+  }
+
+  _isHintHeld(hintId, optionIndex = null) {
+    return (
+      typeof KeybindCatalogue !== "undefined" &&
+      typeof KeybindCatalogue.matchHintFromHeldSet === "function" &&
+      KeybindCatalogue.matchHintFromHeldSet(
+        "psi",
+        hintId,
+        this._heldKeys,
+        optionIndex,
+      )
+    );
   }
 
   resetGesture() {

@@ -75,7 +75,7 @@ async function setup() {
         ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
         logger: diagnosticsLogger,
       }),
-      AssetLoader.loadJSONAsset("../../_shared/data/colour-maps.json", {
+      AssetLoader.loadJSONAsset("../../_shared/json/colour-maps.json", {
         logger: diagnosticsLogger,
         label: "Psi colour maps",
       }),

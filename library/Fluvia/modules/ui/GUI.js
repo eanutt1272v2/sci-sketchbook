@@ -44,7 +44,8 @@ class GUI {
       ],
     });
 
-    const [simPage, paramsPage, renderPage, statisticsPage, mediaPage] = tabs.pages;
+    const [simPage, paramsPage, renderPage, statisticsPage, mediaPage] =
+      tabs.pages;
     this.createSimulationTab(simPage);
     this.createParametersTab(paramsPage);
     this.createRenderTab(renderPage);
@@ -369,7 +370,11 @@ class GUI {
     });
 
     display.addBinding(params, "renderStatistics", {
-      label: this.withHint("Toggle Statistics Overlay", "overlayStatistics", "O"),
+      label: this.withHint(
+        "Toggle Statistics Overlay",
+        "overlayStatistics",
+        "O",
+      ),
     });
 
     this.addSeparator(page);
@@ -466,7 +471,7 @@ class GUI {
 
     hydroFolder.addBinding(statistics.dischargeBounds, "min", {
       readonly: true,
-      label: "Discharge Minimum [normalised]",
+      label: "Discharge Minimum [norm]",
       format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
@@ -474,7 +479,7 @@ class GUI {
 
     hydroFolder.addBinding(statistics.dischargeBounds, "max", {
       readonly: true,
-      label: "Discharge Maximum [normalised]",
+      label: "Discharge Maximum [norm]",
       format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
@@ -516,14 +521,14 @@ class GUI {
     });
 
     this.addGraphWithValue(geomorphFolder, statistics.sedimentBounds, "min", {
-      label: "Sediment Minimum [normalised]",
+      label: "Sediment Minimum [norm]",
       format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
     });
 
     this.addGraphWithValue(geomorphFolder, statistics.sedimentBounds, "max", {
-      label: "Sediment Maximum [normalised]",
+      label: "Sediment Maximum [norm]",
       format: (v) => fmt(v, 3),
       min: 0,
       max: 1,
@@ -635,7 +640,7 @@ class GUI {
     imp
       .addButton({
         title: this.withHint(
-          "Import Heightmap",
+          "Import Heightmap (PNG)",
           "importHeightmap",
           "Ctrl+Shift+U",
         ),
@@ -644,7 +649,7 @@ class GUI {
     imp
       .addButton({
         title: this.withHint(
-          "Import Parameters",
+          "Import Parameters (JSON)",
           "importParams",
           "Ctrl+Shift+I",
         ),
@@ -652,7 +657,7 @@ class GUI {
       .on("click", () => media.importParamsJSON());
     imp
       .addButton({
-        title: this.withHint("Import World", "importWorld", "Ctrl+Shift+Q"),
+        title: this.withHint("Import World (JSON)", "importWorld", "Ctrl+Shift+Q"),
       })
       .on("click", () => media.importWorldJSON());
 
@@ -662,7 +667,7 @@ class GUI {
     exp
       .addButton({
         title: this.withHint(
-          "Export Parameters",
+          "Export Parameters (JSON)",
           "exportParams",
           "Ctrl+Shift+P",
         ),
@@ -670,7 +675,11 @@ class GUI {
       .on("click", () => media.exportParamsJSON());
     exp
       .addButton({
-        title: this.withHint("Export Statistics (JSON)", "exportStatistics", "Ctrl+Shift+J"),
+        title: this.withHint(
+          "Export Statistics (JSON)",
+          "exportStatistics",
+          "Ctrl+Shift+J",
+        ),
       })
       .on("click", () => media.exportStatisticsJSON());
     exp
@@ -684,7 +693,7 @@ class GUI {
       .on("click", () => media.exportStatisticsCSV());
     exp
       .addButton({
-        title: this.withHint("Export World", "exportWorld", "Ctrl+Shift+W"),
+        title: this.withHint("Export World (JSON)", "exportWorld", "Ctrl+Shift+W"),
       })
       .on("click", () => media.exportWorldJSON());
     exp

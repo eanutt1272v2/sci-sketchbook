@@ -63,7 +63,7 @@ Lenia_ND_Studio/
 ├─ ui/
 │  ├─ GUI.js
 │  └─ components/
-│     └─ StatsGraphComponent.js
+│     └─ StatisticsGraph.js
 ├─ input/
 │  └─ InputHandler.js
 ├─ analysis/

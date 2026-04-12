@@ -161,12 +161,51 @@ class AppCoreMutationMethods {
   }
 
   zoomWorld(newR) {
+    const maxR = this.getMaxKernelRadius();
     const targetR = Math.round(
-      constrain(Number(newR) || this.params.R, 2, this.getMaxKernelRadius()),
+      constrain(Number(newR) || this.params.R, 2, maxR),
     );
     const appliedR = Number(this._prevR);
     const safeAppliedR =
       Number.isFinite(appliedR) && appliedR > 0 ? appliedR : targetR;
+    const factor = targetR / safeAppliedR;
+
+    if (Math.abs(factor - 1) > 1e-6) {
+      const kernels =
+        typeof this.getKernelParams === "function"
+          ? this.getKernelParams()
+          : Array.isArray(this.params.kernelParams)
+            ? this.params.kernelParams
+            : [];
+
+      if (Array.isArray(kernels) && kernels.length > 0) {
+        const selectedKernel = Math.max(
+          0,
+          Math.min(
+            kernels.length - 1,
+            Math.floor(Number(this.params.selectedKernel) || 0),
+          ),
+        );
+
+        for (let i = 0; i < kernels.length; i++) {
+          const kernel = kernels[i];
+          if (!kernel || typeof kernel !== "object") continue;
+          const sourceR = Number(kernel.R);
+          const safeR =
+            Number.isFinite(sourceR) && sourceR > 0 ? sourceR : safeAppliedR;
+          kernel.R = Math.round(constrain(safeR * factor, 2, maxR));
+        }
+
+        if (
+          kernels[selectedKernel] &&
+          typeof kernels[selectedKernel] === "object"
+        ) {
+          kernels[selectedKernel].R = targetR;
+        }
+
+        this.params.kernelParams = kernels;
+      }
+    }
 
     this.params.R = targetR;
     if (typeof this.syncPlacementScaleToRadius === "function") {
@@ -175,7 +214,6 @@ class AppCoreMutationMethods {
 
     this._queueAction("zoomWorld", () =>
       this._queueOrRunMutation(() => {
-        const factor = targetR / safeAppliedR;
         const hasBoard = !!this.board.world;
         if (hasBoard && Math.abs(factor - 1) > 1e-6) {
           this._ensureBuffers();
@@ -209,6 +247,8 @@ class AppCoreMutationMethods {
       growth: b.growth.buffer,
       transform,
     };
+    this._inflightViewExpectedLength =
+      b.world && typeof b.world.length === "number" ? b.world.length : null;
     b.world = null;
     b.potential = null;
     b.growth = null;
@@ -295,6 +335,8 @@ class AppCoreMutationMethods {
       growth: b.growth.buffer,
       mutation: mutationPayload,
     };
+    this._inflightViewExpectedLength =
+      b.world && typeof b.world.length === "number" ? b.world.length : null;
     if (mutationPayload.patternData) {
       const pattern = toFloat32Pattern(mutationPayload.patternData);
       msg.mutation = { ...mutationPayload, patternData: pattern.buffer };
@@ -382,6 +424,8 @@ class AppCoreMutationMethods {
     this._kernelPending = false;
     this._viewPending = false;
     this._changeRecycleBuffer = null;
+    this._inflightViewExpectedLength = null;
+    this._inflightStepExpectedLength = null;
     this._pendingMutations.length = 0;
     this._initWorker();
   }
@@ -400,15 +444,21 @@ class AppCoreMutationMethods {
   }
 
   loadInitialSoliton() {
-    if (!this.solitonLibrary.loaded || this.solitonLibrary.solitons.length === 0)
+    if (
+      !this.solitonLibrary.loaded ||
+      this.solitonLibrary.solitons.length === 0
+    )
       return;
 
-    const firstSoliton = this.solitonLibrary.getSoliton(0);
+    const firstSoliton = this._setSelectedSolitonForActiveDimension(0, {
+      fallbackIndex: 0,
+      skipNextParamsLoad: true,
+    });
     if (firstSoliton) {
-      this._skipNextSolitonParamsLoad = true;
-      this._lastSolitonParamsSelection = "0";
-      this.params.selectedSoliton = "0";
-      this.loadSoliton(firstSoliton);
+      this.loadSoliton(firstSoliton, {
+        preserveScaleFactor: true,
+        preservedScaleFactor: this._getHiddenSolitonScaleFactor(1),
+      });
       this.refreshGUI();
     }
   }

@@ -83,7 +83,136 @@ function _toNDMutationMode(modeOrType) {
   return -1;
 }
 
-self.onmessage = function (e) {
+function _inferChannelCountFromBuffer(buffer, cellCount) {
+  if (!(buffer instanceof ArrayBuffer)) return 0;
+  if (!Number.isFinite(cellCount) || cellCount <= 0) return 0;
+
+  const length = Math.floor(buffer.byteLength / Float32Array.BYTES_PER_ELEMENT);
+  if (length <= 0 || length % cellCount !== 0) return 0;
+
+  return Math.max(1, Math.floor(length / cellCount));
+}
+
+function _inferChannelCount(
+  cellCount,
+  buffers = [],
+  configCount = 0,
+  stateCount = 0,
+) {
+  const fromState = Math.floor(Number(stateCount) || 0);
+  if (fromState > 0) return fromState;
+
+  const fromConfig = Math.floor(Number(configCount) || 0);
+  let fromBuffers = 0;
+
+  for (const buffer of buffers) {
+    const inferred = _inferChannelCountFromBuffer(buffer, cellCount);
+    if (inferred > fromBuffers) fromBuffers = inferred;
+  }
+
+  return Math.max(1, fromConfig, fromBuffers);
+}
+
+function _setNDConfigChannelCount(channelCount) {
+  const safeChannelCount = Math.max(1, Math.floor(Number(channelCount) || 1));
+  const baseConfig =
+    _ndConfig && typeof _ndConfig === "object" ? _ndConfig : {};
+  _ndConfig = {
+    ...baseConfig,
+    channelCount: safeChannelCount,
+  };
+  return safeChannelCount;
+}
+
+function _getKernelSpecsFromParams(params) {
+  const kernelEntries = Array.isArray(params?.kernelParams)
+    ? params.kernelParams
+    : [];
+  return kernelEntries.length > 0
+    ? kernelEntries.map((entry) => ({ ...params, ...entry }))
+    : [params];
+}
+
+function _computeGLSLPreflight(params, ndConfig, channelCount = 1) {
+  const requested = normaliseComputeDevice(
+    params?.backendComputeDevice,
+  );
+  const dimension = Math.max(
+    2,
+    Math.floor(Number(ndConfig?.dimension) || Number(params?.dimension) || 2),
+  );
+  const kernelCount = _getKernelSpecsFromParams(params).length;
+  const channels = Math.max(1, Math.floor(Number(channelCount) || 1));
+
+  if (requested !== "glsl") {
+    return {
+      requested,
+      eligible: false,
+      reason: "cpu-requested",
+      dimension,
+      channelCount: channels,
+      kernelCount,
+    };
+  }
+
+  if (dimension > 2) {
+    return {
+      requested,
+      eligible: false,
+      reason: "nd-dimension",
+      dimension,
+      channelCount: channels,
+      kernelCount,
+    };
+  }
+
+  return {
+    requested,
+    eligible: true,
+    reason: "eligible",
+    dimension,
+    channelCount: channels,
+    kernelCount,
+  };
+}
+
+function _resolveAnalysisInterval(value, fallback) {
+  const interval = Math.floor(Number(value) || 0);
+  if (interval > 0) return interval;
+  return Math.max(1, Math.floor(Number(fallback) || 1));
+}
+
+function _computeGLSLAnalysisCadence(size) {
+  const side = Math.max(1, Math.floor(Number(size) || 1));
+  if (side >= 640) {
+    return { analysisInterval: 30, quickStatsStride: 8 };
+  }
+  if (side >= 512) {
+    return { analysisInterval: 24, quickStatsStride: 6 };
+  }
+  if (side >= 384) {
+    return { analysisInterval: 18, quickStatsStride: 5 };
+  }
+  if (side >= 256) {
+    return { analysisInterval: 14, quickStatsStride: 4 };
+  }
+  if (side >= 192) {
+    return { analysisInterval: 10, quickStatsStride: 3 };
+  }
+  if (side >= 128) {
+    return { analysisInterval: 8, quickStatsStride: 2 };
+  }
+  return { analysisInterval: 6, quickStatsStride: 2 };
+}
+
+function _shouldUseLeanReadback(renderMode) {
+  const mode = String(renderMode || "world")
+    .trim()
+    .toLowerCase();
+  return mode !== "potential";
+}
+
+self.onmessage = async function (e) {
   try {
     const msg = e && e.data && typeof e.data === "object" ? e.data : null;
     if (!msg || typeof msg.type !== "string") return;
@@ -101,19 +230,77 @@ self.onmessage = function (e) {
       }
       resetAnalysisState(_analysisState);
 
-      const info = buildKernel(params);
+      const kernelEntries = Array.isArray(params.kernelParams)
+        ? params.kernelParams
+        : [];
+      const kernelSpecs =
+        kernelEntries.length > 0
+          ? kernelEntries.map((entry) => ({ ...params, ...entry }))
+          : [params];
+      const infos = kernelSpecs.map((spec) => buildKernel(spec));
+      const selectedKernel = Math.max(
+        0,
+        Math.min(
+          infos.length - 1,
+          Math.floor(Number(params.selectedKernel) || 0),
+        ),
+      );
+      const info = infos[selectedKernel] || infos[0];
+      if (typeof glslSetKernelInfos === "function") {
+        glslSetKernelInfos(infos);
+      } else if (typeof glslSetKernelInfo === "function") {
+        glslSetKernelInfo(infos[0] || null);
+      }
+
+      const capability =
+        typeof glslGetCapability === "function"
+          ? glslGetCapability(params.backendComputeDevice)
+          : {
+              requested: normaliseComputeDevice(
+                params.backendComputeDevice,
+              ),
+              active: "cpu",
+              glslAvailable: false,
+            };
+
+      const preflight = _computeGLSLPreflight(
+        params,
+        _ndConfig,
+        _ndConfig?.channelCount || params.channelCount,
+      );
+      const glslAvailable = Boolean(
+        capability?.glslAvailable ?? capability?.webgpuAvailable,
+      );
+      const kernelBackendActive =
+        preflight.requested === "glsl" && glslAvailable && preflight.eligible
+          ? "glsl"
+          : "cpu";
+      const kernelFallbackReason =
+        kernelBackendActive === "cpu"
+          ? glslAvailable
+            ? preflight.reason
+            : "glsl-unavailable"
+          : "";
+
       const size = params.size || 128;
       _N = nextPow2(size);
-      _kernelFFT = buildKernelFFT(info.kernelConvolution, info.kernelSize, _N);
+      _kernelFFTs = infos.map((entry) =>
+        buildKernelFFT(entry.kernelConvolution, entry.kernelSize, _N),
+      );
+      _kernelFFT = _kernelFFTs[0] || null;
 
       const ndDim = Number(_ndConfig?.dimension) || 2;
       if (ndDim > 2) {
-        const ndKernel = buildKernelND(params, size, ndDim);
-        _ndKernelFFT = buildKernelFFTND(ndKernel, size, ndDim);
+        _ndKernelFFTs = kernelSpecs.map((spec) => {
+          const ndKernel = buildKernelND(spec, size, ndDim);
+          return buildKernelFFTND(ndKernel, size, ndDim);
+        });
+        _ndKernelFFT = _ndKernelFFTs[0] || null;
         _ndKernelDim = ndDim;
         _ndKernelSize = size;
       } else {
         _ndKernelFFT = null;
+        _ndKernelFFTs = null;
         _ndKernelDim = 0;
         _ndKernelSize = 0;
       }
@@ -127,6 +314,12 @@ self.onmessage = function (e) {
           kernelDX: info.kernelDX,
           kernelDY: info.kernelDY,
           kernelValues: info.kernelValues,
+          computeBackend: {
+            requested: preflight.requested,
+            active: kernelBackendActive,
+            glslAvailable,
+            fallbackReason: kernelFallbackReason,
+          },
           ndConfig: _ndConfig,
         },
         [
@@ -145,8 +338,14 @@ self.onmessage = function (e) {
       }
       const params = _sanitiseWorkerParams(msg.params);
       const mutation = msg.mutation || {};
-      const channelCount = 1;
       const cellCount = params.size * params.size;
+      let channelCount = _inferChannelCount(
+        cellCount,
+        [msg.world, msg.potential, msg.growth],
+        _ndConfig?.channelCount,
+        _ndState?.channelCount,
+      );
+      channelCount = _setNDConfigChannelCount(channelCount);
       const expectedLength = cellCount * channelCount;
 
       let world = _toFloat32Array(msg.world, expectedLength);
@@ -215,8 +414,10 @@ self.onmessage = function (e) {
                 for (let dx = 0; dx < blobDim; dx++) {
                   const x = (((shifts[0] + dx + mid) % size) + size) % size;
                   const y = (((shifts[1] + dy + mid) % size) + size) % size;
-                  _ndState.world[planeBase + y * size + x] =
-                    Math.random() * 0.9;
+                  for (let c = 0; c < channelCount; c++) {
+                    const chOff = planeBase + c * cellCount;
+                    _ndState.world[chOff + y * size + x] = Math.random() * 0.9;
+                  }
                 }
               }
             }
@@ -229,12 +430,30 @@ self.onmessage = function (e) {
         }
 
         if (mutationMode === ND_MUTATION_MODE.PLACE) {
-          const { patternData, patternWidth, patternHeight, cellX, cellY } =
-            mutation;
+          const {
+            patternData,
+            patternWidth,
+            patternHeight,
+            cellX,
+            cellY,
+            channel,
+          } = mutation;
           const pattern = new Float32Array(patternData);
           const { size, planeCount } = _ndState;
+          const targetChannel = Math.max(
+            0,
+            Math.min(
+              channelCount - 1,
+              Math.floor(
+                Number.isFinite(Number(channel))
+                  ? Number(channel)
+                  : Number(params.selectedChannel) || 0,
+              ),
+            ),
+          );
           for (let iz = 0; iz < planeCount; iz++) {
-            const planeBase = iz * cellCount * channelCount;
+            const planeBase =
+              iz * cellCount * channelCount + targetChannel * cellCount;
             for (let py = 0; py < patternHeight; py++) {
               for (let px = 0; px < patternWidth; px++) {
                 const val = pattern[py * patternWidth + px];
@@ -261,7 +480,20 @@ self.onmessage = function (e) {
             const pattern = new Float32Array(entry.patternData);
             const pw = entry.patternWidth;
             const ph = entry.patternHeight;
-            const planeBase = entry.plane * cellCount * channelCount;
+            const targetChannel = Math.max(
+              0,
+              Math.min(
+                channelCount - 1,
+                Math.floor(
+                  Number.isFinite(Number(entry.channel))
+                    ? Number(entry.channel)
+                    : Number(params.selectedChannel) || 0,
+                ),
+              ),
+            );
+            const planeBase =
+              entry.plane * cellCount * channelCount +
+              targetChannel * cellCount;
             for (let py = 0; py < ph; py++) {
               for (let px = 0; px < pw; px++) {
                 const val = pattern[py * pw + px];
@@ -310,8 +542,14 @@ self.onmessage = function (e) {
       }
       const params = _sanitiseWorkerParams(msg.params);
       const transform = msg.transform || {};
-      const channelCount = 1;
       const cellCount = params.size * params.size;
+      let channelCount = _inferChannelCount(
+        cellCount,
+        [msg.world, msg.potential, msg.growth],
+        _ndConfig?.channelCount,
+        _ndState?.channelCount,
+      );
+      channelCount = _setNDConfigChannelCount(channelCount);
       const expectedLength = cellCount * channelCount;
 
       let world = _toFloat32Array(msg.world, expectedLength);
@@ -434,8 +672,14 @@ self.onmessage = function (e) {
       }
 
       const params = _sanitiseWorkerParams(msg.params);
-      const channelCount = 1;
       const cellCount = params.size * params.size;
+      let channelCount = _inferChannelCount(
+        cellCount,
+        [msg.world, msg.potential, msg.growth, msg.growthOld],
+        _ndConfig?.channelCount,
+        _ndState?.channelCount,
+      );
+      channelCount = _setNDConfigChannelCount(channelCount);
       const expectedLength = cellCount * channelCount;
       const ensureLength = (arr) => {
         if (!arr || arr.length !== expectedLength) {
@@ -474,10 +718,43 @@ self.onmessage = function (e) {
         growthOld = null;
       }
 
+      let analysisWorld = world.subarray(0, cellCount);
+      let analysisPotential = potential.subarray(0, cellCount);
+      let analysisGrowth = growth.subarray(0, cellCount);
+
+      if (channelCount > 1) {
+        if (_mcAnalysisScratchLen !== cellCount) {
+          _mcAnalysisScratch = {
+            world: new Float32Array(cellCount),
+            potential: new Float32Array(cellCount),
+            growth: new Float32Array(cellCount),
+            change: new Float32Array(cellCount),
+          };
+          _mcAnalysisScratchLen = cellCount;
+        }
+
+        analysisWorld = _mcAnalysisScratch.world;
+        analysisPotential = _mcAnalysisScratch.potential;
+        analysisGrowth = _mcAnalysisScratch.growth;
+
+        analysisWorld.fill(0);
+        analysisPotential.fill(0);
+        analysisGrowth.fill(0);
+
+        for (let c = 0; c < channelCount; c++) {
+          const offset = c * cellCount;
+          for (let i = 0; i < cellCount; i++) {
+            analysisWorld[i] += world[offset + i];
+            analysisPotential[i] += potential[offset + i];
+            analysisGrowth[i] += growth[offset + i];
+          }
+        }
+      }
+
       const analysis = analyseStep(
-        world.subarray(0, cellCount),
-        potential.subarray(0, cellCount),
-        growth.subarray(0, cellCount),
+        analysisWorld,
+        analysisPotential,
+        analysisGrowth,
         null,
         {
           size: params.size,
@@ -512,8 +789,14 @@ self.onmessage = function (e) {
         _ndConfig = msg.ndConfig;
       }
       const params = _sanitiseWorkerParams(msg.params);
-      const channelCount = 1;
       const cellCount = params.size * params.size;
+      let channelCount = _inferChannelCount(
+        cellCount,
+        [msg.world, msg.potential, msg.growth, msg.growthOld, msg.changeBuffer],
+        _ndConfig?.channelCount,
+        _ndState?.channelCount,
+      );
+      channelCount = _setNDConfigChannelCount(channelCount);
       const expectedLength = cellCount * channelCount;
 
       const worldIn = _toFloat32Array(msg.world, expectedLength);
@@ -542,29 +825,132 @@ self.onmessage = function (e) {
       const growthOld = growthOldIn ? ensureLength(growthOldIn) : null;
       const changeOut = changeOutIn ? ensureLength(changeOutIn) : null;
 
-      if (!_kernelFFT || _N < nextPow2(params.size)) {
-        const info = buildKernel(params);
-        _N = nextPow2(params.size);
-        _kernelFFT = buildKernelFFT(
-          info.kernelConvolution,
-          info.kernelSize,
-          _N,
+      const kernelSpecs = _getKernelSpecsFromParams(params);
+      const targetKernelCount = kernelSpecs.length;
+      const targetN = nextPow2(params.size);
+      const ndDim = Math.max(2, Math.floor(Number(_ndConfig?.dimension) || 2));
+
+      const needsKernelFFTRebuild =
+        !_kernelFFTs ||
+        _kernelFFTs.length === 0 ||
+        _kernelFFTs.length !== targetKernelCount ||
+        _N !== targetN;
+
+      let kernelInfos = null;
+      if (needsKernelFFTRebuild) {
+        kernelInfos = kernelSpecs.map((spec) => buildKernel(spec));
+        _N = targetN;
+        _kernelFFTs = kernelInfos.map((entry) =>
+          buildKernelFFT(entry.kernelConvolution, entry.kernelSize, _N),
         );
+        _kernelFFT = _kernelFFTs[0] || null;
+        if (typeof glslSetKernelInfos === "function") {
+          glslSetKernelInfos(kernelInfos);
+        } else if (typeof glslSetKernelInfo === "function") {
+          glslSetKernelInfo(kernelInfos[0] || null);
+        }
+      }
+
+      const needsNDKernelRebuild =
+        ndDim > 2 &&
+        (!Array.isArray(_ndKernelFFTs) ||
+          _ndKernelFFTs.length !== targetKernelCount ||
+          _ndKernelDim !== ndDim ||
+          _ndKernelSize !== params.size);
+
+      if (needsNDKernelRebuild) {
+        _ndKernelFFTs = kernelSpecs.map((spec) => {
+          const ndKernel = buildKernelND(spec, params.size, ndDim);
+          return buildKernelFFTND(ndKernel, params.size, ndDim);
+        });
+        _ndKernelFFT = _ndKernelFFTs[0] || null;
+        _ndKernelDim = ndDim;
+        _ndKernelSize = params.size;
+      } else if (ndDim <= 2) {
+        _ndKernelFFTs = null;
+        _ndKernelFFT = null;
+        _ndKernelDim = 0;
+        _ndKernelSize = 0;
       }
 
       let change = null;
+      const preflight = _computeGLSLPreflight(params, _ndConfig, channelCount);
+      const requestedComputeDevice = preflight.requested;
+      let activeComputeDevice = "cpu";
+      let fallbackReason = "";
+      const stepRenderMode = String(params?.renderMode || "world")
+        .trim()
+        .toLowerCase();
+      const nextAnalysisFrame = _analysisState.frames + 1;
+      const ndQuickStatsStride =
+        params.size >= 256 ? 3 : params.size >= 160 ? 2 : 1;
       if ((Number(_ndConfig?.dimension) || 2) <= 2) {
         _ndState = null;
-        change = stepFFTSingle(
-          world,
-          potential,
-          growth,
-          growthOld,
-          params,
-          _kernelFFT,
-          _N,
-          changeOut,
-        );
+        const useMulti =
+          channelCount > 1 || (_kernelFFTs && _kernelFFTs.length > 1);
+        let usedGLSL = false;
+        let glslStepFallback = "";
+        const glslCadence =
+          requestedComputeDevice === "glsl" && preflight.eligible
+            ? _computeGLSLAnalysisCadence(params.size)
+            : null;
+        const preferLeanReadback =
+          Boolean(glslCadence) && _shouldUseLeanReadback(stepRenderMode);
+        if (
+          requestedComputeDevice === "glsl" &&
+          preflight.eligible &&
+          (typeof glslStep === "function" ||
+            typeof glslStepSingle === "function")
+        ) {
+          const glslRunner =
+            typeof glslStep === "function" ? glslStep : glslStepSingle;
+          const glslResult = await glslRunner({
+            world,
+            potential,
+            growth,
+            fieldOld: growthOld,
+            params,
+            channelCount,
+            kernelCount: Array.isArray(params.kernelParams)
+              ? params.kernelParams.length
+              : 1,
+            dimension:
+              Number(_ndConfig?.dimension) || Number(params?.dimension) || 2,
+            changeOut,
+            preferLeanReadback,
+          });
+
+          if (glslResult?.change instanceof Float32Array) {
+            change = glslResult.change;
+            activeComputeDevice = "glsl";
+            usedGLSL = true;
+            fallbackReason = "";
+          } else if (
+            glslResult &&
+            typeof glslResult.fallbackReason === "string"
+          ) {
+            glslStepFallback = glslResult.fallbackReason;
+          }
+        }
+
+        if (!usedGLSL) {
+          change = (useMulti ? stepFFTMulti : stepFFTSingle)(
+            world,
+            potential,
+            growth,
+            growthOld,
+            params,
+            useMulti ? _kernelFFTs : _kernelFFT,
+            _N,
+            changeOut,
+          );
+
+          if (requestedComputeDevice === "glsl") {
+            fallbackReason = preflight.eligible
+              ? glslStepFallback || "glsl-runtime-fallback"
+              : preflight.reason;
+          }
+        }
       } else {
         const ndSeed = msg.ndSeedWorld
           ? new Float32Array(msg.ndSeedWorld)
@@ -572,7 +958,7 @@ self.onmessage = function (e) {
         const state = ndStepState(
           params,
           _ndConfig,
-          _kernelFFT,
+          _ndKernelFFTs || _kernelFFTs || _kernelFFT,
           _N,
           world,
           ndSeed,
@@ -583,6 +969,16 @@ self.onmessage = function (e) {
           world,
           potential,
           growth,
+          {
+            includePotential: stepRenderMode === "potential",
+            includeGrowth:
+              stepRenderMode === "growth" ||
+              nextAnalysisFrame %
+                _resolveAnalysisInterval(_analysisIntervalND, 12) ===
+                0 ||
+              nextAnalysisFrame % ndQuickStatsStride === 0 ||
+              !_lastAnalysisResult,
+          },
         );
         world.set(display.world2D);
         potential.set(display.potential2D);
@@ -592,9 +988,18 @@ self.onmessage = function (e) {
           changeOut && changeOut.length === expectedLength
             ? changeOut
             : new Float32Array(expectedLength);
-        for (let i = 0; i < expectedLength; i++) {
-          change[i] = world[i] - worldIn[i];
+        change.fill(0);
+
+        if (requestedComputeDevice === "glsl") {
+          fallbackReason = "nd-dimension";
         }
+      }
+
+      if (_ndState?.channelCount) {
+        channelCount = Math.max(
+          1,
+          Math.floor(Number(_ndState.channelCount) || channelCount),
+        );
       }
 
       _analysisState.frames += 1;
@@ -736,11 +1141,32 @@ self.onmessage = function (e) {
       };
 
       let analysis;
-      const effectiveInterval =
+      const baseAnalysisInterval =
         _ndState && _ndState.planeCount > 1
-          ? _analysisIntervalND
-          : _analysisInterval;
-      if (_analysisState.frames % effectiveInterval === 0) {
+          ? _resolveAnalysisInterval(_analysisIntervalND, 12)
+          : _resolveAnalysisInterval(_analysisInterval, 6);
+      const activeGLSLCadence =
+        activeComputeDevice === "glsl" && !_ndState
+          ? _computeGLSLAnalysisCadence(params.size)
+          : null;
+      const effectiveInterval = activeGLSLCadence
+        ? Math.max(baseAnalysisInterval, activeGLSLCadence.analysisInterval)
+        : baseAnalysisInterval;
+      const quickStatsStride = activeGLSLCadence
+        ? activeGLSLCadence.quickStatsStride
+        : _ndState
+          ? ndQuickStatsStride
+          : 1;
+      const heavyAnalysisInterval = activeGLSLCadence
+        ? Math.max(effectiveInterval, effectiveInterval * 4)
+        : effectiveInterval;
+      const shouldRunAnalysis = _analysisState.frames % effectiveInterval === 0;
+      const shouldRunHeavyAnalysis =
+        _analysisState.frames % heavyAnalysisInterval === 0 ||
+        String(analysisParams.renderMode || "world").toLowerCase() ===
+          "potential";
+
+      if (shouldRunAnalysis && shouldRunHeavyAnalysis) {
         analysis = analyseStep(
           analysisWorld,
           analysisPotential,
@@ -751,21 +1177,34 @@ self.onmessage = function (e) {
         );
         _lastAnalysisResult = analysis;
       } else {
-        const quick = computeQuickStatistics(
-          analysisWorld,
-          analysisGrowth,
-          params.size,
-          analysisParams,
-          _analysisState,
-        );
-        analysis = _lastAnalysisResult
-          ? Object.assign({}, _lastAnalysisResult, quick)
-          : quick;
+        if (
+          _analysisState.frames % quickStatsStride === 0 ||
+          !_lastAnalysisResult
+        ) {
+          const quick = computeQuickStatistics(
+            analysisWorld,
+            analysisGrowth,
+            params.size,
+            analysisParams,
+            _analysisState,
+          );
+          analysis = _lastAnalysisResult
+            ? Object.assign({}, _lastAnalysisResult, quick)
+            : quick;
+        } else {
+          analysis = _lastAnalysisResult;
+        }
       }
 
       let newGrowthOld = null;
       if (params.multiStep) {
-        newGrowthOld = new Float32Array(growth);
+        if (growthOld && growthOld.length === growth.length) {
+          growthOld.set(growth);
+          newGrowthOld = growthOld;
+        } else {
+          newGrowthOld = new Float32Array(growth.length);
+          newGrowthOld.set(growth);
+        }
       }
 
       const transfers = [
@@ -785,6 +1224,15 @@ self.onmessage = function (e) {
           growthOld: newGrowthOld ? newGrowthOld.buffer : null,
           change: change.buffer,
           analysis,
+          computeBackend: {
+            requested: requestedComputeDevice,
+            active: activeComputeDevice,
+            glslAvailable:
+              typeof glslGetCapability === "function"
+                ? Boolean(glslGetCapability("glsl").glslAvailable)
+                : false,
+            fallbackReason,
+          },
           ndConfig: _ndConfig,
         },
         transfers,

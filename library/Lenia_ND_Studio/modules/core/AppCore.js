@@ -54,6 +54,32 @@ class AppCore {
       ndSliceZ: 0,
       ndSliceW: 0,
       ndActiveAxis: "z",
+      channelCount: 1,
+      selectedChannel: 0,
+      channelShift: 0,
+      selectedKernel: 0,
+      kernelCount: 1,
+      crossKernelCount: 0,
+      kernelParams: [
+        {
+          R: 20,
+          T: 10,
+          m: 0.1,
+          s: 0.01,
+          r: 1,
+          b: [1],
+          kn: 1,
+          gn: 1,
+          h: 1,
+          softClip: false,
+          multiStep: false,
+          aritaMode: false,
+          addNoise: 0,
+          maskRate: 0,
+          paramP: 0,
+          c: [0, 0],
+        },
+      ],
 
       R: 20,
       T: 10,
@@ -67,6 +93,10 @@ class AppCore {
       softClip: false,
       multiStep: false,
       aritaMode: false,
+      backendComputeDevice: "cpu",
+      multiKernel: false,
+      multiChannel: false,
+      asymptoticUpdate: false,
       addNoise: 0,
       maskRate: 0,
       paramP: 0,
@@ -100,7 +130,6 @@ class AppCore {
       autoRotateMode: 0,
       selectedSoliton: "",
       placeMode: true,
-      placeScale: 2,
       autoCentre: false,
 
       imageFormat: "png",
@@ -113,52 +142,18 @@ class AppCore {
       this.params.dimension,
     );
 
-    this.statistics = {
-      gen: 0,
-      time: 0,
-      mass: 0,
-      growth: 0,
-      massLog: 0,
-      growthLog: 0,
-      massVolumeLog: 0,
-      growthVolumeLog: 0,
-      massDensity: 0,
-      growthDensity: 0,
-      maxValue: 0,
-      gyradius: 0,
-      centreX: 0,
-      centreY: 0,
-      growthCentreX: 0,
-      growthCentreY: 0,
-      massGrowthDist: 0,
-      massAsym: 0,
-      speed: 0,
-      centroidSpeed: 0,
-      angle: 0,
-      centroidRotateSpeed: 0,
-      growthRotateSpeed: 0,
-      majorAxisRotateSpeed: 0,
-      symmSides: 0,
-      symmStrength: 0,
-      rotationSpeed: 0,
-      lyapunov: 0,
-      hu1Log: 0,
-      hu4Log: 0,
-      hu5Log: 0,
-      hu6Log: 0,
-      hu7Log: 0,
-      flusser7: 0,
-      flusser8Log: 0,
-      flusser9Log: 0,
-      flusser10Log: 0,
-      period: 0,
-      periodConfidence: 0,
-      fps: 0,
-    };
+    this.statistics = createEmptyStatistics();
 
     this.renderData = {
       frameCount: 0,
       lastTime: 0,
+    };
+
+    this.workerComputeBackend = {
+      requested: "cpu",
+      active: "cpu",
+      glslAvailable: false,
+      fallbackReason: "",
     };
 
     this.initialiseModules();
@@ -172,7 +167,7 @@ class AppCore {
     } else {
       this.solitonLibrary.loadFromData(this.solitonDatasetByDimension[2] || []);
     }
-    this.board = new Board(this.params.latticeExtent);
+    this.board = new Board(this.params.latticeExtent, this.params.channelCount);
     this.automaton = new Automaton(this.params);
     this.analyser = new Analyser(this.statistics, this.renderData);
     this.renderer = new Renderer(
@@ -201,12 +196,16 @@ class AppCore {
     this._pendingPlacement = null;
     this._pendingMutations = [];
     this._lastPlacement = { cellX: null, cellY: null, atMs: 0 };
-    this._lastPlacementScale = this.getEffectivePlacementScale(
-      this.params.placeScale,
-    );
+    this._hiddenSolitonScaleFactor = 1;
     this._skipNextSolitonParamsLoad = false;
     this._lastSolitonParamsSelection = null;
+    this._selectedSolitonByDimension = { 2: "", 3: "", 4: "" };
     this._changeRecycleBuffer = null;
+    this._cachedGLSLComputeSupport = null;
+    this._warnedGLSLComputeUnavailable = false;
+    this._warnedGLSLNDOnly = false;
+    this._inflightViewExpectedLength = null;
+    this._inflightStepExpectedLength = null;
     this._resolutionTransitionActive = false;
     this._initWorker();
   }

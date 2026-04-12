@@ -1,4 +1,18 @@
 class AppCoreWorkerPipelineMethods {
+  _getExpectedChannelCount() {
+    if (typeof this.getChannelCount === "function") {
+      return this.getChannelCount();
+    }
+    return Math.max(1, Math.floor(Number(this.params.channelCount) || 1));
+  }
+
+  _getExpectedPayloadLength(
+    size = this.board?.size || this.params.latticeExtent,
+  ) {
+    const side = Math.max(1, Math.floor(Number(size) || 1));
+    return side * side * this._getExpectedChannelCount();
+  }
+
   _ensureDiagnosticsLogger() {
     if (
       this._diagnosticsLogger &&
@@ -26,6 +40,10 @@ class AppCoreWorkerPipelineMethods {
 
   _logDebug(message, ...rest) {
     this._ensureDiagnosticsLogger().debug(message, ...rest);
+  }
+
+  _logInfo(message, ...rest) {
+    this._ensureDiagnosticsLogger().info(message, ...rest);
   }
 
   _postWorkerMessage(msg, transfers = [], context = "worker request") {
@@ -61,10 +79,15 @@ class AppCoreWorkerPipelineMethods {
     this._kernelPending = false;
     this._viewPending = false;
     this._changeRecycleBuffer = null;
+    this._inflightViewExpectedLength = null;
+    this._inflightStepExpectedLength = null;
 
     const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
     if (dim > 2) {
-      const safeSize = NDCompatibility.coerceGridSize(this.params.latticeExtent, dim);
+      const safeSize = NDCompatibility.coerceGridSize(
+        this.params.latticeExtent,
+        dim,
+      );
       if (safeSize < this.params.latticeExtent) {
         this._logWarn(
           `Recovering from worker failure by reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize}.`,
@@ -87,6 +110,9 @@ class AppCoreWorkerPipelineMethods {
       throw new Error("[Lenia] Worker is required but could not be created.");
     }
 
+    this._inflightViewExpectedLength = null;
+    this._inflightStepExpectedLength = null;
+
     this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
     this._worker.onerror = (e) => {
       this._handleWorkerFailure("runtime error", e);
@@ -99,9 +125,16 @@ class AppCoreWorkerPipelineMethods {
   }
 
   _workerSendKernel() {
+    if (typeof this._normaliseKernelTopology === "function") {
+      this._normaliseKernelTopology();
+    }
+
     const dim = Math.max(2, Math.floor(Number(this.params.dimension) || 2));
     if (dim > 2) {
-      const safeSize = NDCompatibility.coerceGridSize(this.params.latticeExtent, dim);
+      const safeSize = NDCompatibility.coerceGridSize(
+        this.params.latticeExtent,
+        dim,
+      );
       if (safeSize !== this.params.latticeExtent) {
         this._logWarn(
           `Reducing ${dim}D grid size from ${this.params.latticeExtent} to ${safeSize} to avoid excessive worker memory usage.`,
@@ -273,9 +306,6 @@ class AppCoreWorkerPipelineMethods {
       return ((mapped % targetSize) + targetSize) % targetSize;
     };
 
-    const rawScale = Number(request.scale);
-    const scale = Number.isFinite(rawScale) ? rawScale : 1;
-
     return {
       selection:
         request.selection === null || typeof request.selection === "undefined"
@@ -283,7 +313,10 @@ class AppCoreWorkerPipelineMethods {
           : String(request.selection),
       cellX: remap(rawCellX),
       cellY: remap(rawCellY),
-      scale,
+      scale:
+        Number.isFinite(Number(request.scale)) && Number(request.scale) > 0
+          ? Number(request.scale)
+          : 1,
     };
   }
 
@@ -302,6 +335,10 @@ class AppCoreWorkerPipelineMethods {
     );
     this._pendingPlacement = null;
     if (!pp) return;
+    if (typeof this._applyPlacementRequest === "function") {
+      this._applyPlacementRequest(pp);
+      return;
+    }
     this._executePlacementRequest(pp);
   }
 
@@ -310,6 +347,8 @@ class AppCoreWorkerPipelineMethods {
     clearChangeRecycleBuffer = false,
   } = {}) {
     this._workerBusy = false;
+    this._inflightViewExpectedLength = null;
+    this._inflightStepExpectedLength = null;
     if (clearChangeRecycleBuffer) {
       this._changeRecycleBuffer = null;
     }
@@ -333,6 +372,98 @@ class AppCoreWorkerPipelineMethods {
     this._logWarn(message);
   }
 
+  _normaliseComputeBackendTag(value, fallback = "cpu") {
+    const tag = String(value || fallback)
+      .trim()
+      .toLowerCase();
+    return tag === "glsl" ||
+      tag === "glsl compute" ||
+      tag === "webgl" ||
+      tag === "webgl2" ||
+      tag === "webgpu" ||
+      tag === "webgpu compute"
+      ? "glsl"
+      : "cpu";
+  }
+
+  _applyWorkerComputeBackendStatus(rawStatus) {
+    if (!rawStatus || typeof rawStatus !== "object") return;
+
+    const requested = this._normaliseComputeBackendTag(
+      rawStatus.requested,
+      this.params?.backendComputeDevice || "cpu",
+    );
+    const active = this._normaliseComputeBackendTag(
+      rawStatus.active,
+      requested,
+    );
+    const glslAvailable = Boolean(
+      rawStatus.glslAvailable ?? rawStatus.webgpuAvailable,
+    );
+    const fallbackReason = String(rawStatus.fallbackReason || "")
+      .trim()
+      .toLowerCase();
+
+    const previous = this.workerComputeBackend;
+    const changed =
+      !previous ||
+      previous.requested !== requested ||
+      previous.active !== active ||
+      previous.glslAvailable !== glslAvailable ||
+      String(previous.fallbackReason || "")
+        .trim()
+        .toLowerCase() !== fallbackReason;
+
+    this.workerComputeBackend = {
+      requested,
+      active,
+      glslAvailable,
+      fallbackReason,
+    };
+
+    if (!changed) return;
+
+    if (requested === "glsl" && active !== "glsl") {
+      const reasonLabel = fallbackReason || "cpu-fallback-eligible";
+      const reasonDetails = {
+        "nd-dimension": "ND tensor stepping currently runs on CPU",
+        "cross-channel-arita": "cross-channel Arita mode uses CPU fallback",
+        "kernel-unavailable":
+          "GPU kernels are unavailable and CPU fallback was used",
+        "glsl-pass-failed": "a GLSL pass failed and CPU fallback was used",
+        "invalid-world":
+          "GPU input world buffer was invalid and CPU fallback was used",
+        "invalid-potential":
+          "GPU input potential buffer was invalid and CPU fallback was used",
+        "invalid-growth":
+          "GPU input growth buffer was invalid and CPU fallback was used",
+        "glsl-runtime-fallback":
+          "GLSL runtime step failed and fell back to CPU",
+        "glsl-unavailable": "GLSL compute is unavailable in this environment",
+      };
+
+      const detail =
+        reasonDetails[reasonLabel] ||
+        (glslAvailable
+          ? "simulation path is currently CPU-fallback eligible only"
+          : "GLSL compute is unavailable in this environment");
+
+      if (
+        reasonLabel === "glsl-runtime-fallback" ||
+        reasonLabel === "glsl-unavailable"
+      ) {
+        this._logWarn(`GLSL requested but CPU active: ${detail}.`);
+      } else {
+        this._logInfo(`GLSL requested, CPU active: ${detail}.`);
+      }
+      return;
+    }
+
+    if (requested === "glsl" && active === "glsl") {
+      this._logInfo("GLSL backend active.");
+    }
+  }
+
   _onWorkerMessage(data) {
     if (data && typeof data === "object" && data.type === "workerError") {
       const stage =
@@ -352,11 +483,12 @@ class AppCoreWorkerPipelineMethods {
 
     if (!data || typeof data !== "object" || typeof data.type !== "string") {
       this._workerBusy = false;
+      this._inflightViewExpectedLength = null;
+      this._inflightStepExpectedLength = null;
       return;
     }
 
     const expectedSize = this.board?.size || this.params.latticeExtent;
-    const expectedLength = expectedSize * expectedSize;
 
     if (data.type === "kernelReady") {
       if (!this._isKernelPayloadValid(data)) {
@@ -364,6 +496,8 @@ class AppCoreWorkerPipelineMethods {
         this._resetWorkerAfterPayloadIssue();
         return;
       }
+
+      this._applyWorkerComputeBackendStatus(data.computeBackend);
 
       this.automaton.applyWorkerKernel(data);
       this._workerBusy = false;
@@ -398,6 +532,11 @@ class AppCoreWorkerPipelineMethods {
     }
 
     if (data.type === "view") {
+      const expectedLength =
+        Number.isInteger(this._inflightViewExpectedLength) &&
+        this._inflightViewExpectedLength > 0
+          ? this._inflightViewExpectedLength
+          : this._getExpectedPayloadLength(expectedSize);
       const payloadLength = this._getFloatPayloadLength(data.world);
       const potentialLength = this._getFloatPayloadLength(data.potential);
       const growthLength = this._getFloatPayloadLength(data.growth);
@@ -414,12 +553,14 @@ class AppCoreWorkerPipelineMethods {
         (growthOldLength !== null && growthOldLength !== payloadLength)
       ) {
         this._logError("Ignoring malformed view payload");
+        this._inflightViewExpectedLength = null;
         this._resetWorkerAfterPayloadIssue({ ensureBuffers: true });
         return;
       }
 
       if (payloadLength !== expectedLength) {
         this._logStaleWorkerPayload("view", payloadLength, expectedLength);
+        this._inflightViewExpectedLength = null;
         this._resetWorkerAfterPayloadIssue({ ensureBuffers: true });
         return;
       }
@@ -434,6 +575,7 @@ class AppCoreWorkerPipelineMethods {
 
       if (!world || !potential || !growth || (data.growthOld && !growthOld)) {
         this._logError("Ignoring malformed view payload");
+        this._inflightViewExpectedLength = null;
         this._resetWorkerAfterPayloadIssue({ ensureBuffers: true });
         return;
       }
@@ -448,6 +590,7 @@ class AppCoreWorkerPipelineMethods {
         this.analyser.applyWorkerStatistics(data.analysis, this.automaton);
       }
 
+      this._inflightViewExpectedLength = null;
       this._workerBusy = false;
       this._flushPendingMutations();
       if (this._kernelPending) {
@@ -460,6 +603,11 @@ class AppCoreWorkerPipelineMethods {
     }
 
     if (data.type === "result") {
+      const expectedLength =
+        Number.isInteger(this._inflightStepExpectedLength) &&
+        this._inflightStepExpectedLength > 0
+          ? this._inflightStepExpectedLength
+          : this._getExpectedPayloadLength(expectedSize);
       const payloadLength = this._getFloatPayloadLength(data.world);
       const potentialLength = this._getFloatPayloadLength(data.potential);
       const growthLength = this._getFloatPayloadLength(data.growth);
@@ -478,12 +626,14 @@ class AppCoreWorkerPipelineMethods {
         (growthOldLength !== null && growthOldLength !== payloadLength)
       ) {
         this._logError("Ignoring malformed step payload");
+        this._inflightStepExpectedLength = null;
         this._resetWorkerAfterPayloadIssue({ clearChangeRecycleBuffer: true });
         return;
       }
 
       if (payloadLength !== expectedLength) {
         this._logStaleWorkerPayload("step", payloadLength, expectedLength);
+        this._inflightStepExpectedLength = null;
         this._resetWorkerAfterPayloadIssue({ clearChangeRecycleBuffer: true });
         return;
       }
@@ -505,9 +655,12 @@ class AppCoreWorkerPipelineMethods {
         (data.growthOld && !growthOld)
       ) {
         this._logError("Ignoring malformed step payload");
+        this._inflightStepExpectedLength = null;
         this._resetWorkerAfterPayloadIssue({ clearChangeRecycleBuffer: true });
         return;
       }
+
+      this._applyWorkerComputeBackendStatus(data.computeBackend);
 
       const b = this.board;
 
@@ -522,6 +675,7 @@ class AppCoreWorkerPipelineMethods {
       this.automaton.time =
         Math.round((this.automaton.time + 1 / this.params.T) * 10000) / 10000;
 
+      this._inflightStepExpectedLength = null;
       this._workerBusy = false;
       this.analyser.countStep();
 
@@ -544,6 +698,8 @@ class AppCoreWorkerPipelineMethods {
     }
 
     this._workerBusy = false;
+    this._inflightViewExpectedLength = null;
+    this._inflightStepExpectedLength = null;
     this._logWarn(
       `Ignoring unexpected worker message type: ${String(data.type)}`,
     );
@@ -579,17 +735,23 @@ class AppCoreWorkerPipelineMethods {
     }
 
     const b = this.board;
+    if (!b.world || !b.potential || !b.growth) {
+      this._ensureBuffers();
+    }
+    if (typeof b.setChannelCount === "function") {
+      b.setChannelCount(this._getExpectedChannelCount(), { preserve: true });
+    }
     const ndConfig = this.buildNDConfig();
+    const expectedLength =
+      b.world && typeof b.world.length === "number" ? b.world.length : 0;
+    this._inflightStepExpectedLength =
+      expectedLength > 0 ? expectedLength : null;
 
-    const worldCopy = new Float32Array(b.world);
-    const potentialCopy = new Float32Array(b.potential);
-    const growthCopy = new Float32Array(b.growth);
+    const worldBuffer = b.world.buffer;
+    const potentialBuffer = b.potential.buffer;
+    const growthBuffer = b.growth.buffer;
 
-    const transfers = [
-      worldCopy.buffer,
-      potentialCopy.buffer,
-      growthCopy.buffer,
-    ];
+    const transfers = [worldBuffer, potentialBuffer, growthBuffer];
     const msg = {
       type: "step",
       params: {
@@ -599,9 +761,9 @@ class AppCoreWorkerPipelineMethods {
         kn: this.params.kn,
       },
       ndConfig,
-      world: worldCopy.buffer,
-      potential: potentialCopy.buffer,
-      growth: growthCopy.buffer,
+      world: worldBuffer,
+      potential: potentialBuffer,
+      growth: growthBuffer,
       growthOld: null,
       changeBuffer: this._changeRecycleBuffer,
     };
@@ -612,10 +774,11 @@ class AppCoreWorkerPipelineMethods {
     }
 
     const seedWorld = this._ndSeedWorld;
-    if (this.params.multiStep && b.growthOld) {
-      const growthOldCopy = new Float32Array(b.growthOld);
-      msg.growthOld = growthOldCopy.buffer;
-      transfers.push(growthOldCopy.buffer);
+    const growthOldBuffer =
+      this.params.multiStep && b.growthOld ? b.growthOld.buffer : null;
+    if (growthOldBuffer) {
+      msg.growthOld = growthOldBuffer;
+      transfers.push(growthOldBuffer);
     }
 
     if (seedWorld) {
@@ -627,10 +790,17 @@ class AppCoreWorkerPipelineMethods {
     if (!posted) {
       this._workerBusy = false;
       this._stepPending = true;
+      this._inflightStepExpectedLength = null;
       return false;
     }
 
     this._workerBusy = true;
+    b.world = null;
+    b.potential = null;
+    b.growth = null;
+    if (growthOldBuffer) {
+      b.growthOld = null;
+    }
     if (recycledChangeBuffer) {
       this._changeRecycleBuffer = null;
     }
@@ -648,10 +818,15 @@ class AppCoreWorkerPipelineMethods {
     }
 
     const b = this.board;
+    if (typeof b.setChannelCount === "function") {
+      b.setChannelCount(this._getExpectedChannelCount(), { preserve: true });
+    }
     if (!b.world || !b.potential || !b.growth) {
       this._ensureBuffers();
     }
     const ndConfig = this.buildNDConfig();
+    this._inflightViewExpectedLength =
+      b.world && typeof b.world.length === "number" ? b.world.length : null;
     const worldBuffer = b.world.buffer;
     const potentialBuffer = b.potential.buffer;
     const growthBuffer = b.growth.buffer;
@@ -684,6 +859,7 @@ class AppCoreWorkerPipelineMethods {
     if (!posted) {
       this._workerBusy = false;
       this._viewPending = true;
+      this._inflightViewExpectedLength = null;
       return false;
     }
 
@@ -703,7 +879,11 @@ class AppCoreWorkerPipelineMethods {
 
   _ensureBuffers() {
     const size = this.params.latticeExtent;
-    const count = size * size;
+    const channelCount = this._getExpectedChannelCount();
+    if (typeof this.board.setChannelCount === "function") {
+      this.board.setChannelCount(channelCount, { preserve: true });
+    }
+    const count = size * size * channelCount;
     if (!this.board.world || this.board.world.length !== count)
       this.board.world = new Float32Array(count);
     if (!this.board.potential || this.board.potential.length !== count)
@@ -717,9 +897,9 @@ class AppCoreWorkerPipelineMethods {
       this.analyser.applyWorkerStatistics(workerAnalysis, this.automaton);
     }
     if (this.automaton.gen % 10 === 0) {
-      const row = this.analyser.getStatRow();
-      if (typeof this.analyser.addStatRow === "function") {
-        this.analyser.addStatRow(row, this.params);
+      const row = this.analyser.getStatisticsRow();
+      if (typeof this.analyser.addStatisticRow === "function") {
+        this.analyser.addStatisticRow(row, this.params);
       } else {
         this.analyser.series.push(row);
       }

@@ -309,11 +309,7 @@ class GUI {
       this.appcore.params,
       "sliceOffset",
       {
-        label: this.withHint(
-          "Slice Offset [a₀]",
-          "sliceOffset",
-          "Shift+J/L",
-        ),
+        label: this.withHint("Slice Offset [a₀]", "sliceOffset", "Shift+J/L"),
         min: -1024,
         max: 1024,
       },
@@ -467,7 +463,7 @@ class GUI {
     imp
       .addButton({
         title: this.withHint(
-          "Import Parameters",
+          "Import Parameters (JSON)",
           "importParams",
           "Ctrl+Shift+I",
         ),
@@ -481,7 +477,7 @@ class GUI {
     exp
       .addButton({
         title: this.withHint(
-          "Export Parameters",
+          "Export Parameters (JSON)",
           "exportParams",
           "Ctrl+Shift+P",
         ),
@@ -489,7 +485,11 @@ class GUI {
       .on("click", () => media.exportParamsJSON());
     exp
       .addButton({
-        title: this.withHint("Export Statistics (JSON)", "exportStatistics", "Ctrl+Shift+S"),
+        title: this.withHint(
+          "Export Statistics (JSON)",
+          "exportStatistics",
+          "Ctrl+Shift+S",
+        ),
       })
       .on("click", () => media.exportStatisticsJSON());
     exp

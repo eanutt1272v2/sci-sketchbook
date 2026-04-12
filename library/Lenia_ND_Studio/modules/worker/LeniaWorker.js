@@ -6,6 +6,7 @@ if (typeof importScripts === "function") {
     "WorkerStep.js",
     "WorkerAnalysis.js",
     "WorkerND.js",
+    "WorkerGLSL.js",
     "WorkerMainHandler.js",
   );
 }

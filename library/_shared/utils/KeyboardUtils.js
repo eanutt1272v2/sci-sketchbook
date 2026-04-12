@@ -1,4 +1,13 @@
 class KeyboardUtils {
+  static _modifierState = {
+    shift: false,
+    ctrl: false,
+    alt: false,
+    meta: false,
+  };
+
+  static _modifierTrackingInstalled = false;
+
   static keyCode(name, fallback) {
     const maybe = globalThis[name];
     const numeric = Number(maybe);
@@ -34,6 +43,46 @@ class KeyboardUtils {
 
   static normaliseKey(value) {
     return typeof value === "string" ? value : "";
+  }
+
+  static _setModifierStateFromEvent(event) {
+    if (!event || typeof event !== "object") return;
+    KeyboardUtils._modifierState.shift = Boolean(event.shiftKey);
+    KeyboardUtils._modifierState.ctrl = Boolean(event.ctrlKey);
+    KeyboardUtils._modifierState.alt = Boolean(event.altKey);
+    KeyboardUtils._modifierState.meta = Boolean(event.metaKey);
+  }
+
+  static _resetModifierState() {
+    KeyboardUtils._modifierState.shift = false;
+    KeyboardUtils._modifierState.ctrl = false;
+    KeyboardUtils._modifierState.alt = false;
+    KeyboardUtils._modifierState.meta = false;
+  }
+
+  static _ensureModifierTracking() {
+    if (KeyboardUtils._modifierTrackingInstalled) return;
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return;
+    }
+
+    const sync = (event) => KeyboardUtils._setModifierStateFromEvent(event);
+    const reset = () => KeyboardUtils._resetModifierState();
+
+    window.addEventListener("keydown", sync, true);
+    window.addEventListener("keyup", sync, true);
+    window.addEventListener("blur", reset, true);
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.hidden) {
+          reset();
+        }
+      },
+      true,
+    );
+
+    KeyboardUtils._modifierTrackingInstalled = true;
   }
 
   static toLower(value) {
@@ -120,7 +169,10 @@ class KeyboardUtils {
 
     const onPointerUp = (event) => {
       const target = event?.target;
-      if (isCanvasTarget(target)) return;
+      if (isCanvasTarget(target)) {
+        requestAnimationFrame(refocusCanvas);
+        return;
+      }
       if (isTypingTargetOrAncestor(target)) return;
       if (isMenuControlTargetOrAncestor(target)) return;
       requestAnimationFrame(refocusCanvas);
@@ -153,11 +205,34 @@ class KeyboardUtils {
   }
 
   static isShiftHeld() {
-    return KeyboardUtils.isKeyDown("SHIFT", 16);
+    KeyboardUtils._ensureModifierTracking();
+    return (
+      KeyboardUtils._modifierState.shift || KeyboardUtils.isKeyDown("SHIFT", 16)
+    );
   }
 
   static isCtrlHeld() {
-    return KeyboardUtils.isKeyDown("CONTROL", 17);
+    KeyboardUtils._ensureModifierTracking();
+    return (
+      KeyboardUtils._modifierState.ctrl ||
+      KeyboardUtils.isKeyDown("CONTROL", 17)
+    );
+  }
+
+  static isAltHeld() {
+    KeyboardUtils._ensureModifierTracking();
+    return (
+      KeyboardUtils._modifierState.alt || KeyboardUtils.isKeyDown("ALT", 18)
+    );
+  }
+
+  static isMetaHeld() {
+    KeyboardUtils._ensureModifierTracking();
+    return (
+      KeyboardUtils._modifierState.meta ||
+      KeyboardUtils.isKeyDown("META", 91) ||
+      KeyboardUtils.isKeyDown("META", 93)
+    );
   }
 }
 

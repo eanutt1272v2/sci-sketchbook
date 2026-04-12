@@ -50,11 +50,31 @@ class InputHandler {
     }
 
     const keyValue = KeyboardUtils.normaliseKey(k);
-    const keyLower = KeyboardUtils.toLower(keyValue);
     const shiftHeld = Boolean(event?.shiftKey) || KeyboardUtils.isShiftHeld();
-    const ctrlHeld = Boolean(event?.ctrlKey) || KeyboardUtils.isCtrlHeld();
+    const match = (hintId, optionIndex = null) =>
+      typeof KeybindCatalogue !== "undefined" &&
+      typeof KeybindCatalogue.matchHint === "function" &&
+      KeybindCatalogue.matchHint(
+        "fluvia",
+        hintId,
+        keyValue,
+        kCode,
+        event,
+        optionIndex,
+      );
+    const matchedTerrainSize =
+      typeof KeybindCatalogue !== "undefined" &&
+      typeof KeybindCatalogue.matchHintIndex === "function"
+        ? KeybindCatalogue.matchHintIndex(
+            "fluvia",
+            "terrainSize",
+            keyValue,
+            kCode,
+            event,
+          )
+        : -1;
 
-    if (keyValue === "#") {
+    if (match("keymapReference")) {
       this.appcore.params.renderKeymapRef =
         !this.appcore.params.renderKeymapRef;
       this.appcore.refreshGUI();
@@ -65,27 +85,27 @@ class InputHandler {
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "i") {
+    if (match("importParams")) {
       this.appcore.media.importParamsJSON();
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "p") {
+    if (match("exportParams")) {
       this.appcore.media.exportParamsJSON();
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "j") {
+    if (match("exportStatistics")) {
       this.appcore.media.exportStatisticsJSON();
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "k") {
+    if (match("exportStatisticsCsv")) {
       this.appcore.media.exportStatisticsCSV();
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "u") {
+    if (match("importHeightmap")) {
       try {
         this.appcore.media.openImportDialog();
       } catch (error) {
@@ -94,26 +114,20 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "h" && !ctrlHeld) {
+    if (match("toggleGUI")) {
       if (this.appcore.gui && this.appcore.gui.pane) {
         this.appcore.gui.pane.hidden = !this.appcore.gui.pane.hidden;
       }
       return false;
     }
 
-    if (keyLower === " " || KeyboardUtils.isEnterOrReturn(kCode)) {
+    if (match("running")) {
       this.appcore.params.running = !this.appcore.params.running;
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "p" && !ctrlHeld) {
-      this.appcore.params.running = !this.appcore.params.running;
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (ctrlHeld && keyLower === "r" && !shiftHeld) {
+    if (match("record")) {
       try {
         if (this.appcore.media.isRecording) {
           this.appcore.media.stopRecording();
@@ -127,7 +141,7 @@ class InputHandler {
       return false;
     }
 
-    if (ctrlHeld && keyLower === "s" && !shiftHeld) {
+    if (match("exportImage")) {
       try {
         this.appcore.media.exportImage();
       } catch (error) {
@@ -136,9 +150,10 @@ class InputHandler {
       return false;
     }
 
-    if (ctrlHeld && keyLower === "u" && !shiftHeld) {
+    if (match("maxAge", 0) || match("maxAge", 1)) {
+      const delta = match("maxAge", 0) ? 16 : -16;
       this.appcore.params.maxAge = constrain(
-        this.appcore.params.maxAge + 16,
+        this.appcore.params.maxAge + delta,
         8,
         2048,
       );
@@ -146,19 +161,10 @@ class InputHandler {
       return false;
     }
 
-    if (ctrlHeld && keyLower === "j" && !shiftHeld) {
-      this.appcore.params.maxAge = constrain(
-        this.appcore.params.maxAge - 16,
-        8,
-        2048,
-      );
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (ctrlHeld && keyLower === "y" && !shiftHeld) {
+    if (match("minVolume", 0) || match("minVolume", 1)) {
+      const delta = match("minVolume", 0) ? 0.001 : -0.001;
       this.appcore.params.minVolume = constrain(
-        this.appcore.params.minVolume + 0.001,
+        this.appcore.params.minVolume + delta,
         1e-5,
         1,
       );
@@ -166,33 +172,17 @@ class InputHandler {
       return false;
     }
 
-    if (ctrlHeld && keyLower === "h" && !shiftHeld) {
-      this.appcore.params.minVolume = constrain(
-        this.appcore.params.minVolume - 0.001,
-        1e-5,
-        1,
-      );
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (ctrlHeld && !shiftHeld && ["1", "2", "3"].includes(keyLower)) {
-      const terrainSizeByKey = { 1: 128, 2: 256, 3: 512 };
-      this.appcore.params.terrainSize = terrainSizeByKey[keyLower];
+    if (matchedTerrainSize >= 0) {
+      const terrainSizes = [128, 256, 512];
+      this.appcore.params.terrainSize = terrainSizes[matchedTerrainSize] || 256;
       this.appcore.generate();
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (
-      ctrlHeld &&
-      (keyValue === "[" ||
-        keyValue === "{" ||
-        keyValue === "]" ||
-        keyValue === "}")
-    ) {
+    if (match("noiseScale", 0) || match("noiseScale", 1)) {
       const baseStep = shiftHeld ? 0.25 : 0.05;
-      const delta = keyValue === "[" || keyValue === "{" ? -baseStep : baseStep;
+      const delta = match("noiseScale", 0) ? -baseStep : baseStep;
       this.appcore.params.noiseScale = constrain(
         this.appcore.params.noiseScale + delta,
         0.01,
@@ -202,9 +192,10 @@ class InputHandler {
       return false;
     }
 
-    if (ctrlHeld && (keyValue === ";" || keyValue === ":")) {
+    if (match("noiseOctaves", 0) || match("noiseOctaves", 1)) {
+      const delta = match("noiseOctaves", 0) ? -1 : 1;
       this.appcore.params.noiseOctaves = constrain(
-        this.appcore.params.noiseOctaves - 1,
+        this.appcore.params.noiseOctaves + delta,
         1,
         12,
       );
@@ -212,19 +203,10 @@ class InputHandler {
       return false;
     }
 
-    if (ctrlHeld && (keyValue === "'" || keyValue === '"')) {
-      this.appcore.params.noiseOctaves = constrain(
-        this.appcore.params.noiseOctaves + 1,
-        1,
-        12,
-      );
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (ctrlHeld && (keyValue === "," || keyValue === "<")) {
+    if (match("specularIntensity", 0) || match("specularIntensity", 1)) {
+      const delta = match("specularIntensity", 0) ? -10 : 10;
       this.appcore.params.specularIntensity = constrain(
-        this.appcore.params.specularIntensity - 10,
+        this.appcore.params.specularIntensity + delta,
         0,
         4096,
       );
@@ -232,23 +214,13 @@ class InputHandler {
       return false;
     }
 
-    if (ctrlHeld && (keyValue === "." || keyValue === ">")) {
-      this.appcore.params.specularIntensity = constrain(
-        this.appcore.params.specularIntensity + 10,
-        0,
-        4096,
-      );
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "g" && !ctrlHeld) {
+    if (match("generate")) {
       this.appcore.generate();
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "r" && !ctrlHeld) {
+    if (match("reset")) {
       if (Boolean(event?.repeat)) {
         return false;
       }
@@ -257,44 +229,45 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "1" && !ctrlHeld) {
-      this.appcore.params.renderMethod = "2D";
+    if (match("renderMethod", 0) || match("renderMethod", 1)) {
+      this.appcore.params.renderMethod = match("renderMethod", 0) ? "2D" : "3D";
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "2" && !ctrlHeld) {
-      this.appcore.params.renderMethod = "3D";
+    if (match("overlayStatistics")) {
+      this.appcore.params.renderStatistics =
+        !this.appcore.params.renderStatistics;
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "o" && !ctrlHeld) {
-      this.appcore.params.renderStatistics = !this.appcore.params.renderStatistics;
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "l" && !ctrlHeld) {
+    if (match("overlayLegend")) {
       this.appcore.params.renderLegend = !this.appcore.params.renderLegend;
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "c" && !ctrlHeld) {
+    if (match("colourMap")) {
       this.appcore.cycleColourMap(shiftHeld ? -1 : 1);
       this.appcore.refreshGUI();
       return false;
     }
 
-    if (keyLower === "m" && !ctrlHeld) {
+    if (match("surfaceMap")) {
       this.appcore.cycleSurfaceMap(shiftHeld ? -1 : 1);
       this.appcore.refreshGUI();
       return false;
     }
 
-    if ((keyLower === "[" || keyLower === "{") && !ctrlHeld) {
-      const delta = keyLower === "{" ? -16 : -4;
+    if (match("heightScale", 0) || match("heightScale", 1)) {
+      const delta = match("heightScale", 0)
+        ? shiftHeld
+          ? -16
+          : -4
+        : shiftHeld
+          ? 16
+          : 4;
       this.appcore.params.heightScale = constrain(
         this.appcore.params.heightScale + delta,
         1,
@@ -304,20 +277,10 @@ class InputHandler {
       return false;
     }
 
-    if ((keyLower === "]" || keyLower === "}") && !ctrlHeld) {
-      const delta = keyLower === "}" ? 16 : 4;
-      this.appcore.params.heightScale = constrain(
-        this.appcore.params.heightScale + delta,
-        1,
-        256,
-      );
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (keyLower === "i" && !ctrlHeld) {
+    if (match("droplets", 0) || match("droplets", 1)) {
+      const delta = match("droplets", 0) ? 16 : -16;
       this.appcore.params.dropletsPerFrame = constrain(
-        this.appcore.params.dropletsPerFrame + 16,
+        this.appcore.params.dropletsPerFrame + delta,
         0,
         512,
       );
@@ -325,17 +288,7 @@ class InputHandler {
       return false;
     }
 
-    if (keyLower === "k" && !ctrlHeld) {
-      this.appcore.params.dropletsPerFrame = constrain(
-        this.appcore.params.dropletsPerFrame - 16,
-        0,
-        512,
-      );
-      this.appcore.refreshGUI();
-      return false;
-    }
-
-    if (shiftHeld && ctrlHeld && keyLower === "w") {
+    if (match("exportWorld")) {
       try {
         this.appcore.media.exportWorldJSON();
       } catch (error) {
@@ -344,7 +297,7 @@ class InputHandler {
       return false;
     }
 
-    if (shiftHeld && ctrlHeld && keyLower === "q") {
+    if (match("importWorld")) {
       try {
         this.appcore.media.importWorldJSON();
       } catch (error) {
@@ -352,82 +305,45 @@ class InputHandler {
       }
       return false;
     }
-    if (
-      (!ctrlHeld && keyLower === "e") ||
-      keyValue === "=" ||
-      keyValue === "+" ||
-      kCode === 187 ||
-      kCode === 61 ||
-      kCode === 107
-    ) {
+
+    if (match("zoomInCamera")) {
       this.keys.zoomIn = true;
       return false;
     }
 
-    if (
-      (!ctrlHeld && keyLower === "q") ||
-      keyValue === "-" ||
-      keyValue === "_" ||
-      kCode === 189 ||
-      kCode === 173 ||
-      kCode === 109
-    ) {
+    if (match("zoomOutCamera")) {
       this.keys.zoomOut = true;
       return false;
     }
 
-    const upArrow = KeyboardUtils.keyCode("UP_ARROW", 38);
-    const downArrow = KeyboardUtils.keyCode("DOWN_ARROW", 40);
-    const leftArrow = KeyboardUtils.keyCode("LEFT_ARROW", 37);
-    const rightArrow = KeyboardUtils.keyCode("RIGHT_ARROW", 39);
-
-    if (!ctrlHeld && (keyLower === "w" || kCode === upArrow))
-      this.keys.up = true;
-    if (!ctrlHeld && (keyLower === "s" || kCode === downArrow))
-      this.keys.down = true;
-    if (!ctrlHeld && (keyLower === "a" || kCode === leftArrow))
-      this.keys.left = true;
-    if (!ctrlHeld && (keyLower === "d" || kCode === rightArrow))
-      this.keys.right = true;
+    if (match("orbitUp")) this.keys.up = true;
+    if (match("orbitDown")) this.keys.down = true;
+    if (match("orbitLeft")) this.keys.left = true;
+    if (match("orbitRight")) this.keys.right = true;
 
     return false;
   }
 
   handleKeyReleased(k, kCode, event = null) {
     const keyValue = KeyboardUtils.normaliseKey(k);
-    const keyLower = KeyboardUtils.toLower(keyValue);
+    const match = (hintId, optionIndex = null) =>
+      typeof KeybindCatalogue !== "undefined" &&
+      typeof KeybindCatalogue.matchHint === "function" &&
+      KeybindCatalogue.matchHint(
+        "fluvia",
+        hintId,
+        keyValue,
+        kCode,
+        event,
+        optionIndex,
+      );
 
-    if (
-      keyLower === "e" ||
-      keyValue === "=" ||
-      keyValue === "+" ||
-      kCode === 187 ||
-      kCode === 61 ||
-      kCode === 107
-    ) {
-      this.keys.zoomIn = false;
-    }
-
-    if (
-      keyLower === "q" ||
-      keyValue === "-" ||
-      keyValue === "_" ||
-      kCode === 189 ||
-      kCode === 173 ||
-      kCode === 109
-    ) {
-      this.keys.zoomOut = false;
-    }
-
-    const upArrow = KeyboardUtils.keyCode("UP_ARROW", 38);
-    const downArrow = KeyboardUtils.keyCode("DOWN_ARROW", 40);
-    const leftArrow = KeyboardUtils.keyCode("LEFT_ARROW", 37);
-    const rightArrow = KeyboardUtils.keyCode("RIGHT_ARROW", 39);
-
-    if (keyLower === "w" || kCode === upArrow) this.keys.up = false;
-    if (keyLower === "s" || kCode === downArrow) this.keys.down = false;
-    if (keyLower === "a" || kCode === leftArrow) this.keys.left = false;
-    if (keyLower === "d" || kCode === rightArrow) this.keys.right = false;
+    if (match("zoomInCamera")) this.keys.zoomIn = false;
+    if (match("zoomOutCamera")) this.keys.zoomOut = false;
+    if (match("orbitUp")) this.keys.up = false;
+    if (match("orbitDown")) this.keys.down = false;
+    if (match("orbitLeft")) this.keys.left = false;
+    if (match("orbitRight")) this.keys.right = false;
 
     return false;
   }

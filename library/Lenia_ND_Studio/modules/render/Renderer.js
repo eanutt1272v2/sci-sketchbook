@@ -53,6 +53,35 @@ class Renderer {
     this._polarHalfBuffer = null;
     this._autoRotationAngle = 0;
     this._autoRotationTarget = 0;
+    this._channelMaps = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+      [0.75, 0.375, 0],
+      [0, 0.75, 0.375],
+      [0.375, 0, 0.75],
+      [0.5, 0.5, 0.5],
+      [0.375, 0.375, 0.375],
+      [0.25, 0.25, 0.25],
+      [1, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 1, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 1],
+    ];
+    this._channelBg = [
+      [0, 0, 0.25],
+      [0, 0.125, 0],
+      [0, 0, 0],
+      [0, 0, 0.25],
+      [0, 0, 0.25],
+      [0, 0, 0.25],
+    ];
+    this._channelLegendChars = "RGBOTVWEKR---G---B";
     this.setColourMap(initialColourMap);
   }
 
@@ -318,6 +347,80 @@ class Renderer {
     return maxVal;
   }
 
+  _getChannelCountFromData(data, size) {
+    const cellCount = size * size;
+    if (!data || typeof data.length !== "number" || cellCount <= 0) return 1;
+    return Math.max(1, Math.floor(data.length / cellCount));
+  }
+
+  _channelSliceView(data, size, channel = 0) {
+    if (!data || typeof data.length !== "number") return data;
+    const cellCount = size * size;
+    const channelCount = this._getChannelCountFromData(data, size);
+    if (channelCount <= 1) return data;
+    const index = Math.max(
+      0,
+      Math.min(channelCount - 1, Math.floor(Number(channel) || 0)),
+    );
+    const offset = index * cellCount;
+    return data.subarray(offset, offset + cellCount);
+  }
+
+  _resolveChannelPalette(channelCount, channelShift = 0) {
+    const shift = ((Math.floor(Number(channelShift) || 0) % 18) + 18) % 18;
+    const group = Math.floor(shift / 3);
+    const maps = new Array(channelCount);
+    for (let c = 0; c < channelCount; c++) {
+      const idx = ((c + shift) % 3) + group * 3;
+      maps[c] = this._channelMaps[idx] || [0, 0, 0];
+    }
+    return {
+      shift,
+      group,
+      maps,
+      bg: this._channelBg[group] || [0, 0, 0],
+    };
+  }
+
+  _channelLegendName(channelCount, channelShift = 0) {
+    const { group, shift } = this._resolveChannelPalette(
+      channelCount,
+      channelShift,
+    );
+    const items = [];
+    for (let c = 0; c < channelCount; c++) {
+      const idx = ((c + shift) % 3) + group * 3;
+      const ch = this._channelLegendChars[idx] || "-";
+      items.push(`${c}:${ch}`);
+    }
+    return items.join(", ");
+  }
+
+  _resolveKernelTintChannel(params, channelCount) {
+    const safeChannelCount = Math.max(1, Math.floor(Number(channelCount) || 1));
+    if (safeChannelCount <= 1) return 0;
+
+    const kernels = Array.isArray(params?.kernelParams)
+      ? params.kernelParams
+      : [];
+    const selectedKernel = Math.max(
+      0,
+      Math.min(
+        kernels.length - 1,
+        Math.floor(Number(params?.selectedKernel) || 0),
+      ),
+    );
+    const kernel = kernels[selectedKernel];
+
+    if (kernel && Array.isArray(kernel.c) && kernel.c.length > 1) {
+      const target = Math.floor(Number(kernel.c[1]) || 0);
+      return Math.max(0, Math.min(safeChannelCount - 1, target));
+    }
+
+    const selectedChannel = Math.floor(Number(params?.selectedChannel) || 0);
+    return Math.max(0, Math.min(safeChannelCount - 1, selectedChannel));
+  }
+
   _interpLinear(src, outLen) {
     const n =
       Array.isArray(src) || src instanceof Float32Array ? src.length : 0;
@@ -507,16 +610,34 @@ class Renderer {
     const size = board?.size || this.size;
     const isSoftClip = !!params?.softClip;
     const isAritaMode = !!params?.aritaMode;
+    const selectedChannel = Math.max(
+      0,
+      Math.floor(Number(params?.selectedChannel) || 0),
+    );
 
-    if (mode === "world") {
-      const data = board.world;
+    if (mode === "world" || mode === "world_channels") {
+      const channelCount = this._getChannelCountFromData(board.world, size);
+      if (channelCount > 1) {
+        return {
+          mode: "world",
+          label: "World (Channels)",
+          data: board.world,
+          srcSize: size,
+          vmin: 0,
+          vmax: 1,
+          channelComposite: true,
+          channelCount,
+        };
+      }
+
+      const data = this._channelSliceView(board.world, size, selectedChannel);
       let vmin = 0;
       if (isSoftClip && data) {
         const range = this._computeDataRange(data);
         if (range.min < 0) vmin = range.min;
       }
       return {
-        mode,
+        mode: "world",
         label: "World",
         data,
         srcSize: size,
@@ -526,7 +647,25 @@ class Renderer {
     }
 
     if (mode === "potential") {
-      const data = board.potential;
+      const channelCount = this._getChannelCountFromData(board.potential, size);
+      if (channelCount > 1) {
+        return {
+          mode,
+          label: "Potential (Channels)",
+          data: board.potential,
+          srcSize: size,
+          vmin: 0,
+          vmax: 2 * (automaton?.m || 0.15),
+          channelComposite: true,
+          channelCount,
+        };
+      }
+
+      const data = this._channelSliceView(
+        board.potential,
+        size,
+        selectedChannel,
+      );
       let vmin = 0;
       if (isSoftClip && data) {
         const range = this._computeDataRange(data);
@@ -543,10 +682,25 @@ class Renderer {
     }
 
     if (mode === "growth") {
+      const channelCount = this._getChannelCountFromData(board.growth, size);
+      if (channelCount > 1) {
+        return {
+          mode: "growth",
+          label: "Growth (Channels)",
+          data: board.growth,
+          srcSize: size,
+          vmin: isAritaMode ? 0 : -1,
+          vmax: 1,
+          channelComposite: true,
+          channelCount,
+        };
+      }
+
+      const data = this._channelSliceView(board.growth, size, selectedChannel);
       return {
         mode: "growth",
         label: "Growth",
-        data: board.growth,
+        data,
         srcSize: size,
         vmin: isAritaMode ? 0 : -1,
         vmax: 1,
@@ -568,13 +722,19 @@ class Renderer {
         this._kernelDisplayCacheSize = size;
         this._kernelDisplayCacheSource = kernel;
       }
+
+      const channelCount = this._getChannelCountFromData(board.world, size);
+      const tintChannel = this._resolveKernelTintChannel(params, channelCount);
       return {
         mode,
-        label: "Kernel",
+        label: channelCount > 1 ? `Kernel (C${tintChannel})` : "Kernel",
         data: this._kernelDisplayCache,
         srcSize: size,
         vmin: 0,
         vmax: 1,
+        channelTint: channelCount > 1,
+        channelCount,
+        tintChannel,
       };
     }
 
@@ -613,6 +773,167 @@ class Renderer {
 
     this._lastViewVmin = vmin;
     this._lastViewVmax = vmax;
+
+    if (view.channelComposite && Number(view.channelCount) > 1) {
+      if (this.img.width !== currentSize || this.img.height !== currentSize) {
+        this._releaseBuffer(this.img);
+        this.img = this._createReadbackBuffer(currentSize, currentSize);
+      }
+
+      this.img.loadPixels();
+      const pixels = this.img.pixels;
+      const cellCount = currentSize * currentSize;
+      const channelCount = Math.max(
+        2,
+        Math.floor(
+          Number(view.channelCount) ||
+            this._getChannelCountFromData(data, currentSize),
+        ),
+      );
+      const { maps, bg } = this._resolveChannelPalette(
+        channelCount,
+        params?.channelShift || 0,
+      );
+      const dimNorm = Math.max(1, channelCount);
+      const invRange = 1 / Math.max(vmax - vmin, 1e-9);
+      const shiftX =
+        this._viewOffsetActive && renderMode !== "kernel"
+          ? Math.round(this._viewShiftX)
+          : 0;
+      const shiftY =
+        this._viewOffsetActive && renderMode !== "kernel"
+          ? Math.round(this._viewShiftY)
+          : 0;
+
+      liveMin = Number.POSITIVE_INFINITY;
+      liveMax = Number.NEGATIVE_INFINITY;
+
+      for (let py = 0; py < currentSize; py++) {
+        const srcY =
+          (((py - shiftY) % currentSize) + currentSize) % currentSize;
+        const row = py * currentSize;
+        for (let px = 0; px < currentSize; px++) {
+          const srcX =
+            (((px - shiftX) % currentSize) + currentSize) % currentSize;
+          const srcIdx = srcY * currentSize + srcX;
+
+          let intensity = 0;
+          let r = bg[0] / dimNorm;
+          let g = bg[1] / dimNorm;
+          let b = bg[2] / dimNorm;
+
+          for (let c = 0; c < channelCount; c++) {
+            const raw = Number(data[c * cellCount + srcIdx]) || 0;
+            let v = (raw - vmin) * invRange;
+            if (v < 0) v = 0;
+            else if (v > 1) v = 1;
+            intensity += v;
+            const m = maps[c] || [0, 0, 0];
+            r += v * m[0];
+            g += v * m[1];
+            b += v * m[2];
+          }
+
+          if (intensity < liveMin) liveMin = intensity;
+          if (intensity > liveMax) liveMax = intensity;
+
+          const di = (row + px) * 4;
+          pixels[di] = Math.max(0, Math.min(255, Math.round(r * 255)));
+          pixels[di + 1] = Math.max(0, Math.min(255, Math.round(g * 255)));
+          pixels[di + 2] = Math.max(0, Math.min(255, Math.round(b * 255)));
+          pixels[di + 3] = 255;
+        }
+      }
+
+      if (!Number.isFinite(liveMin) || !Number.isFinite(liveMax)) {
+        liveMin = 0;
+        liveMax = 1;
+      }
+
+      this.lastLegendRange = {
+        mode: view.mode,
+        min: liveMin,
+        max: liveMax,
+        channelCount,
+        channelShift: params?.channelShift || 0,
+        channelComposite: true,
+        channelTint: false,
+      };
+
+      this.img.updatePixels();
+      image(this.img, 0, 0, width, height);
+      return;
+    }
+
+    if (view.channelTint && Number(view.channelCount) > 1) {
+      if (this.img.width !== currentSize || this.img.height !== currentSize) {
+        this._releaseBuffer(this.img);
+        this.img = this._createReadbackBuffer(currentSize, currentSize);
+      }
+
+      const palette = this._resolveChannelPalette(
+        Math.max(2, Math.floor(Number(view.channelCount) || 2)),
+        params?.channelShift || 0,
+      );
+      const tintChannel = Math.max(
+        0,
+        Math.min(
+          Math.max(1, Math.floor(Number(view.channelCount) || 1)) - 1,
+          Math.floor(Number(view.tintChannel) || 0),
+        ),
+      );
+      const tint = palette.maps[tintChannel] || [1, 1, 1];
+      const invRange = 1 / Math.max(vmax - vmin, 1e-9);
+
+      this.img.loadPixels();
+      const pixels = this.img.pixels;
+      const total = currentSize * currentSize;
+
+      for (let i = 0; i < total; i++) {
+        const raw = Number(data[i]) || 0;
+        if (raw < liveMin) liveMin = raw;
+        if (raw > liveMax) liveMax = raw;
+
+        let unit = (raw - vmin) * invRange;
+        if (unit < 0) unit = 0;
+        else if (unit > 1) unit = 1;
+
+        const di = i * 4;
+        pixels[di] = Math.max(
+          0,
+          Math.min(255, Math.round(tint[0] * unit * 255)),
+        );
+        pixels[di + 1] = Math.max(
+          0,
+          Math.min(255, Math.round(tint[1] * unit * 255)),
+        );
+        pixels[di + 2] = Math.max(
+          0,
+          Math.min(255, Math.round(tint[2] * unit * 255)),
+        );
+        pixels[di + 3] = 255;
+      }
+
+      if (!Number.isFinite(liveMin) || !Number.isFinite(liveMax)) {
+        liveMin = 0;
+        liveMax = 1;
+      }
+
+      this.lastLegendRange = {
+        mode: view.mode,
+        min: liveMin,
+        max: liveMax,
+        channelCount: view.channelCount,
+        channelShift: params?.channelShift || 0,
+        channelComposite: false,
+        channelTint: true,
+        tintChannel,
+      };
+
+      this.img.updatePixels();
+      image(this.img, 0, 0, width, height);
+      return;
+    }
 
     const polarMode = Math.max(
       0,
@@ -699,6 +1020,8 @@ class Renderer {
       mode: view.mode,
       min: liveMin,
       max: liveMax,
+      channelComposite: false,
+      channelTint: false,
     };
 
     this.img.updatePixels();
@@ -851,6 +1174,22 @@ class Renderer {
 
   renderLegend(vmin, vmax) {
     const mode = this.lastLegendRange?.mode || "world";
+    const channelComposite = Boolean(this.lastLegendRange?.channelComposite);
+    const channelTint = Boolean(this.lastLegendRange?.channelTint);
+    const channelCount = Math.max(
+      1,
+      Math.floor(Number(this.lastLegendRange?.channelCount) || 1),
+    );
+    const channelShift = Math.floor(
+      Number(this.lastLegendRange?.channelShift) || 0,
+    );
+    const tintChannel = Math.max(
+      0,
+      Math.min(
+        channelCount - 1,
+        Math.floor(Number(this.lastLegendRange?.tintChannel) || 0),
+      ),
+    );
     const legendMetaByMode = {
       world: {
         title: "Aᵗ (state field)",
@@ -880,9 +1219,147 @@ class Renderer {
           ? this._lastViewVmax
           : 1;
 
-    const cacheKey = `${mode}|${this.currentColourMap}|${effectiveVmin.toFixed(1)}|${effectiveVmax.toFixed(1)}|${width}|${height}`;
+    const cacheKey = `${mode}|${this.currentColourMap}|${effectiveVmin.toFixed(1)}|${effectiveVmax.toFixed(1)}|${channelCount}|${channelShift}|${channelComposite ? 1 : 0}|${channelTint ? 1 : 0}|${tintChannel}|${width}|${height}`;
     if (this._legendGfx && this._legendCacheKey === cacheKey) {
       image(this._legendGfx, 0, 0);
+      return;
+    }
+
+    if (channelComposite) {
+      if (
+        !this._legendGfx ||
+        this._legendGfx.width !== width ||
+        this._legendGfx.height !== height
+      ) {
+        if (this._legendGfx) this._legendGfx.remove();
+        this._legendGfx = createGraphics(width, height);
+      }
+      const pg = this._legendGfx;
+      pg.clear();
+
+      const barStripW = 3;
+      const barW = Math.max(5, channelCount * barStripW);
+      const x1 = width - 20 + barW;
+      const x0 = x1 - barW;
+      const y0 = height - 70;
+      const y1 = 20;
+      const dy = (y1 - y0) / 256;
+
+      const palette = this._resolveChannelPalette(channelCount, channelShift);
+      for (let c = 0; c < channelCount; c++) {
+        const m = palette.maps[c] || [0, 0, 0];
+        for (let val = 0; val < 256; val++) {
+          const r = Math.max(0, Math.min(255, Math.round(m[0] * val)));
+          const g = Math.max(0, Math.min(255, Math.round(m[1] * val)));
+          const b = Math.max(0, Math.min(255, Math.round(m[2] * val)));
+          pg.noStroke();
+          pg.fill(r, g, b, 255);
+          pg.rect(
+            x0 + c * barStripW,
+            y0 + dy * val,
+            barStripW,
+            Math.max(1, Math.abs(dy) + 0.5),
+          );
+        }
+      }
+
+      pg.noFill();
+      pg.stroke(200);
+      pg.strokeWeight(1);
+      pg.rect(x0 - 1, y1 - 1, barW + 2, y0 - y1 + 2);
+
+      pg.noStroke();
+      pg.fill(255);
+      this._applyTextFont(pg);
+      pg.textSize(10);
+      pg.textAlign(RIGHT, CENTER);
+      pg.text(effectiveVmin.toFixed(1), x0 - 5, y0);
+      pg.text(
+        ((effectiveVmin + effectiveVmax) / 2).toFixed(1),
+        x0 - 5,
+        (y1 + y0) / 2,
+      );
+      pg.text(effectiveVmax.toFixed(1), x0 - 5, y1);
+
+      pg.push();
+      pg.translate(x0 + barW * 0.5 + 10, y1 + (y0 - y1) * 0.5);
+      pg.rotate(-HALF_PI);
+      pg.textAlign(CENTER, CENTER);
+      pg.textSize(11);
+      pg.text(legendMeta.title, 0, 0);
+      pg.pop();
+
+      pg.textAlign(RIGHT, TOP);
+      pg.textSize(10);
+      pg.text(
+        this._channelLegendName(channelCount, channelShift),
+        x0 - 5,
+        y0 + 8,
+      );
+
+      this._legendCacheKey = cacheKey;
+      image(pg, 0, 0);
+      return;
+    }
+
+    if (channelTint && channelCount > 1) {
+      if (
+        !this._legendGfx ||
+        this._legendGfx.width !== width ||
+        this._legendGfx.height !== height
+      ) {
+        if (this._legendGfx) this._legendGfx.remove();
+        this._legendGfx = createGraphics(width, height);
+      }
+      const pg = this._legendGfx;
+      pg.clear();
+
+      const barW = 5;
+      const x0 = width - 20;
+      const y0 = height - 70;
+      const y1 = 20;
+      const barH = y0 - y1;
+
+      const palette = this._resolveChannelPalette(channelCount, channelShift);
+      const tint = palette.maps[tintChannel] || [1, 1, 1];
+      for (let val = 0; val < 256; val++) {
+        const y = y0 + ((y1 - y0) * val) / 255;
+        const rr = Math.max(0, Math.min(255, Math.round(tint[0] * val)));
+        const gg = Math.max(0, Math.min(255, Math.round(tint[1] * val)));
+        const bb = Math.max(0, Math.min(255, Math.round(tint[2] * val)));
+        pg.noStroke();
+        pg.fill(rr, gg, bb, 255);
+        pg.rect(x0, y, barW, Math.max(1, Math.abs((y1 - y0) / 255) + 0.5));
+      }
+
+      pg.noFill();
+      pg.stroke(200);
+      pg.strokeWeight(1);
+      pg.rect(x0 - 1, y1 - 1, barW + 2, barH + 2);
+
+      pg.noStroke();
+      pg.fill(255);
+      this._applyTextFont(pg);
+      pg.textSize(10);
+      pg.textAlign(RIGHT, CENTER);
+      pg.text(effectiveVmin.toFixed(1), x0 - 5, y0);
+      pg.text(
+        ((effectiveVmin + effectiveVmax) / 2).toFixed(1),
+        x0 - 5,
+        (y1 + y0) / 2,
+      );
+      pg.text(effectiveVmax.toFixed(1), x0 - 5, y1);
+
+      pg.push();
+      pg.translate(x0 + barW * 0.5 + 10, y1 + barH * 0.5);
+      pg.rotate(-HALF_PI);
+      pg.textAlign(CENTER, CENTER);
+      pg.textSize(11);
+      pg.text(`${legendMeta.title} C${tintChannel}`, 0, 0);
+      pg.pop();
+
+      this._legendCacheKey = cacheKey;
+      image(pg, 0, 0);
       return;
     }
 

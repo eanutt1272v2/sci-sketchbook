@@ -31,9 +31,15 @@ class Media extends MediaCore {
     this._worldExportDeferred = false;
 
     if (!board || !Number.isFinite(board.size) || board.size <= 0) return;
-    const expectedLength = board.size * board.size;
+    const channelCount = Math.max(
+      1,
+      Math.floor(
+        Number(board.channelCount || this.appcore?.params?.channelCount) || 1,
+      ),
+    );
+    const expectedLength = board.size * board.size * channelCount;
 
-    const worldPayload = { size: board.size };
+    const worldPayload = { size: board.size, channelCount };
     for (const [key, arr] of Object.entries(fields)) {
       worldPayload[key] = this._encodeFloatField(arr, expectedLength);
     }
@@ -72,7 +78,9 @@ class Media extends MediaCore {
 
         const payload = this._normaliseWorldPayload(data);
         this.appcore.importWorldPayload(payload);
-        this._logInfo("World JSON imported (params, statistics, and field states)");
+        this._logInfo(
+          "World JSON imported (params, statistics, and field states)",
+        );
       });
     });
   }
@@ -83,7 +91,17 @@ class Media extends MediaCore {
       throw new Error("[Lenia] Invalid world JSON: missing or invalid size");
     }
     const size = this.appcore._normaliseGridSize(rawSize);
-    const expectedLength = size * size;
+    const channelCount = Math.max(
+      1,
+      Math.floor(
+        Number(
+          data.world.channelCount ??
+            data.params?.channelCount ??
+            this.appcore?.params?.channelCount,
+        ) || 1,
+      ),
+    );
+    const expectedLength = size * size * channelCount;
 
     const fields = {};
     for (const [key, val] of Object.entries(data.world)) {
@@ -104,7 +122,10 @@ class Media extends MediaCore {
     return {
       size,
       fields,
-      params: data.params,
+      params: {
+        ...(data.params || {}),
+        channelCount,
+      },
       statistics: data.statistics,
       series: data.series,
     };

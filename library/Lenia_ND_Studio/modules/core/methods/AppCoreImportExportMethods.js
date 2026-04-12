@@ -4,33 +4,27 @@ class AppCoreImportExportMethods {
   }
 
   _syncSelectedSolitonForActiveDimension(preferredSelection = null) {
-    this._applySolitonSource();
+    if (typeof this._setSelectedSolitonForActiveDimension === "function") {
+      return this._setSelectedSolitonForActiveDimension(preferredSelection, {
+        skipNextParamsLoad: true,
+      });
+    }
 
+    this._applySolitonSource();
     const solitons = Array.isArray(this.solitonLibrary?.solitons)
       ? this.solitonLibrary.solitons
       : [];
-    const total = solitons.length;
-
-    if (total <= 0) {
+    if (solitons.length <= 0) {
       this.params.selectedSoliton = "";
       this._skipNextSolitonParamsLoad = true;
       this._lastSolitonParamsSelection = "";
       return null;
     }
 
-    const raw =
-      preferredSelection !== null && typeof preferredSelection !== "undefined"
-        ? preferredSelection
-        : this.params.selectedSoliton;
-    let idx = parseInt(String(raw), 10);
-    if (!Number.isFinite(idx) || idx < 0 || idx >= total) {
-      idx = 0;
-    }
-
-    this.params.selectedSoliton = String(idx);
+    this.params.selectedSoliton = "0";
     this._skipNextSolitonParamsLoad = true;
-    this._lastSolitonParamsSelection = this.params.selectedSoliton;
-    return this.solitonLibrary.getSoliton(idx);
+    this._lastSolitonParamsSelection = "0";
+    return this.solitonLibrary.getSoliton(0);
   }
 
   _applySolitonSource() {
@@ -60,6 +54,10 @@ class AppCoreImportExportMethods {
       delete sanitised.latticeExtent;
     }
 
+    if ("kernelParams" in sanitised && !Array.isArray(sanitised.kernelParams)) {
+      delete sanitised.kernelParams;
+    }
+
     return sanitised;
   }
 
@@ -78,7 +76,12 @@ class AppCoreImportExportMethods {
       addNoise: (v) => constrain(v, 0, 10),
       maskRate: (v) => constrain(v, 0, 10),
       paramP: (v) => Math.round(constrain(v, 0, 64)),
-      placeScale: (v) => this.getEffectivePlacementScale(v, p.selectedSoliton),
+      channelCount: (v) => Math.round(constrain(v, 1, 8)),
+      selectedChannel: (v) => Math.max(0, Math.round(v)),
+      channelShift: (v) => Math.round(constrain(v, 0, 17)),
+      selectedKernel: (v) => Math.max(0, Math.round(v)),
+      kernelCount: (v) => Math.round(constrain(v, 1, 4)),
+      crossKernelCount: (v) => Math.round(constrain(v, 0, 4)),
       recordingFPS: (v) => Math.round(constrain(v, 12, 120)),
       videoBitrateMbps: (v) => constrain(v, 1, 64),
     };
@@ -112,10 +115,26 @@ class AppCoreImportExportMethods {
       p.ndSliceW = NDCompatibility.coerceSliceIndex(p.ndSliceW, p.ndDepth);
     }
     if (!(allowGridSize && "latticeExtent" in rawParams)) {
-      p.latticeExtent = NDCompatibility.coerceGridSize(p.latticeExtent, p.dimension);
+      p.latticeExtent = NDCompatibility.coerceGridSize(
+        p.latticeExtent,
+        p.dimension,
+      );
     }
 
     p.ndActiveAxis = this._coerceNDActiveAxis(p.ndActiveAxis, p.dimension);
+
+    if (
+      typeof this._normaliseKernelTopology === "function" &&
+      ("channelCount" in rawParams ||
+        "kernelCount" in rawParams ||
+        "crossKernelCount" in rawParams ||
+        "selectedKernel" in rawParams ||
+        "selectedChannel" in rawParams ||
+        "kernelParams" in rawParams)
+    ) {
+      this._normaliseKernelTopology();
+      this._syncPrimaryParamsFromSelectedKernel();
+    }
 
     if (!Array.isArray(p.b) || p.b.length === 0) {
       p.b = [1];
@@ -128,15 +147,49 @@ class AppCoreImportExportMethods {
   ) {
     const p = this.params;
 
+    if ("backendComputeDevice" in rawParams) {
+      if (typeof this._normaliseBackendComputeDevice === "function") {
+        p.backendComputeDevice = this._normaliseBackendComputeDevice(
+          p.backendComputeDevice,
+        );
+        if (
+          p.backendComputeDevice === "glsl" &&
+          typeof this.isGLSLComputeSupported === "function" &&
+          !this.isGLSLComputeSupported()
+        ) {
+          p.backendComputeDevice = "cpu";
+        }
+      } else {
+        const backendTag = String(p.backendComputeDevice || "cpu")
+          .trim()
+          .toLowerCase();
+        p.backendComputeDevice =
+          backendTag === "glsl" ||
+          backendTag === "glsl compute" ||
+          backendTag === "webgl" ||
+          backendTag === "webgl2" ||
+          backendTag === "webgpu" ||
+          backendTag === "webgpu compute"
+            ? "glsl"
+            : "cpu";
+      }
+    }
+
     if ("colourMap" in rawParams && !this.colourMapKeys.includes(p.colourMap)) {
       p.colourMap = prevColourMap;
     }
 
-    if (
-      "renderMode" in rawParams &&
-      !["world", "potential", "growth", "kernel"].includes(p.renderMode)
-    ) {
-      p.renderMode = prevRenderMode;
+    if ("renderMode" in rawParams) {
+      const importedMode = String(p.renderMode || "world")
+        .trim()
+        .toLowerCase();
+      if (importedMode === "world_channels") {
+        p.renderMode = "world";
+      }
+      if (!["world", "potential", "growth", "kernel"].includes(p.renderMode)) {
+        p.renderMode =
+          prevRenderMode === "world_channels" ? "world" : prevRenderMode;
+      }
     }
 
     if ("imageFormat" in rawParams) {
@@ -206,10 +259,6 @@ class AppCoreImportExportMethods {
 
     this._skipNextSolitonParamsLoad = true;
     this._lastSolitonParamsSelection = p.selectedSoliton || "";
-    this._lastPlacementScale = this.getEffectivePlacementScale(
-      p.placeScale,
-      p.selectedSoliton,
-    );
 
     this._syncSelectedSolitonForActiveDimension(p.selectedSoliton);
 
@@ -293,7 +342,7 @@ class AppCoreImportExportMethods {
 
         const fieldKeys = Object.keys(payload.fields);
         this._diagnosticsLogger.info(
-          `Imported world: size=${this.params.latticeExtent}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, statistics=${payload.statistics ? "restored" : "reset"}, fields=[${fieldKeys.join(",")}], selectedSoliton=${this.params.selectedSoliton || "none"}, placeScale=${this.params.placeScale || 1}`,
+          `Imported world: size=${this.params.latticeExtent}${sizeChanged ? " (resized)" : ""}, params=${payload.params ? "restored" : "unchanged"}, statistics=${payload.statistics ? "restored" : "reset"}, fields=[${fieldKeys.join(",")}], selectedSoliton=${this.params.selectedSoliton || "none"}`,
         );
       }),
     );

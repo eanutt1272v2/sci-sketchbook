@@ -343,23 +343,7 @@ class RendererOverlayPanelMethods {
     const dt = 1 / params.T;
     const dim = Math.max(2, Math.floor(Number(params.dimension) || 2));
     const RN = Math.pow(params.R, dim);
-    const superscriptDigits = {
-      0: "⁰",
-      1: "¹",
-      2: "²",
-      3: "³",
-      4: "⁴",
-      5: "⁵",
-      6: "⁶",
-      7: "⁷",
-      8: "⁸",
-      9: "⁹",
-      "-": "⁻",
-    };
-    const dimPower = String(dim)
-      .split("")
-      .map((char) => superscriptDigits[char] || char)
-      .join("");
+    const dimPower = formatDimPower(dim);
     const microMeterPower = `μm${dimPower}`;
     const cellPower = `cell${dimPower}`;
     const radiusPower = `R${dimPower}`;
@@ -588,7 +572,7 @@ class RendererOverlayPanelMethods {
           render.rect(x, y + panelSize - 1, panelSize, 1);
           if (panelSize > 2) {
             render.rect(x, y + 1, 1, panelSize - 2);
-            renderer.rect(x + panelSize - 1, y + 1, 1, panelSize - 2);
+            render.rect(x + panelSize - 1, y + 1, 1, panelSize - 2);
           }
         } else {
           rect(x, y, panelSize, 1);

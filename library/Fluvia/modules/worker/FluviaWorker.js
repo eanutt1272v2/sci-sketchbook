@@ -1,26 +1,13 @@
 "use strict";
 
 if (typeof importScripts === "function") {
-  let sanitisersLoaded = false;
   try {
-    importScripts("../../_shared/utils/WorkerSanitisers.js");
-    sanitisersLoaded = true;
+    importScripts("../../../_shared/utils/WorkerSanitisers.js");
   } catch (_error) {
-    console.warn(
+    console.error(
       "Failed to load WorkerSanitisers.js, using built-in fallback sanitisers. This may cause issues if the main thread is relying on custom sanitisation logic.",
       _error,
     );
-  }
-
-  if (!sanitisersLoaded) {
-    try {
-      importScripts("/_shared/utils/WorkerSanitisers.js");
-    } catch (_error) {
-      console.warn(
-        "Failed to load WorkerSanitisers.js, using built-in fallback sanitisers. This may cause issues if the main thread is relying on custom sanitisation logic.",
-        _error,
-      );
-    }
   }
 }
 

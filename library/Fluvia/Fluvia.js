@@ -77,15 +77,15 @@ async function setup() {
           ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
           logger: diagnosticsLogger,
         }),
-        AssetLoader.loadJSONAsset("../../_shared/data/colour-maps.json", {
+        AssetLoader.loadJSONAsset("../../_shared/json/colour-maps.json", {
           logger: diagnosticsLogger,
           label: "Fluvia colour maps",
         }),
-        AssetLoader.loadShaderSource("../../_shared/shaders/vert.glsl", {
+        AssetLoader.loadShaderSource("./shaders/fluvia-3d-map.vert.glsl", {
           logger: diagnosticsLogger,
           label: "Fluvia vertex shader",
         }),
-        AssetLoader.loadShaderSource("../../_shared/shaders/frag.glsl", {
+        AssetLoader.loadShaderSource("./shaders/fluvia-3d-map.frag.glsl", {
           logger: diagnosticsLogger,
           label: "Fluvia fragment shader",
         }),

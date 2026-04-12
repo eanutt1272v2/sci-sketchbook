@@ -387,13 +387,25 @@ class SolitonLibrary {
       "softClip",
       "multiStep",
       "aritaMode",
+      "channelCount",
+      "selectedChannel",
+      "selectedKernel",
+      "channelShift",
+      "kernelCount",
+      "crossKernelCount",
+      "multiKernel",
+      "multiChannel",
+      "asymptoticUpdate",
     ]);
 
-    const sourceParams = Array.isArray(soliton.params)
-      ? soliton.params.find((entry) => entry && typeof entry === "object") ||
-        soliton.params[0] ||
-        {}
-      : soliton.params;
+    const sourceParamsArray = Array.isArray(soliton.params)
+      ? soliton.params.filter((entry) => entry && typeof entry === "object")
+      : soliton.params && typeof soliton.params === "object"
+        ? [soliton.params]
+        : [];
+    if (sourceParamsArray.length === 0) return;
+
+    const sourceParams = sourceParamsArray[0];
 
     if (!Object.prototype.hasOwnProperty.call(sourceParams, "h")) {
       params.h = 1;
@@ -420,6 +432,231 @@ class SolitonLibrary {
         params.b = parsedB.filter((val) => Number.isFinite(val));
         if (params.b.length === 0) params.b = [1];
       }
+    }
+
+    const inferredCellsChannels = Array.isArray(soliton.cells)
+      ? Math.max(1, soliton.cells.length)
+      : 1;
+
+    const coerceFlag = (value) => {
+      if (typeof value === "boolean") return value;
+      if (typeof value === "number")
+        return Number.isFinite(value) && value !== 0;
+      if (typeof value === "string") {
+        const normalised = value.trim().toLowerCase();
+        return ["1", "true", "yes", "y", "on"].includes(normalised);
+      }
+      return false;
+    };
+
+    const sourceFlags =
+      soliton && typeof soliton.flags === "object" && soliton.flags
+        ? soliton.flags
+        : {};
+
+    const hasAsymptoticFlag = (entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      return (
+        coerceFlag(entry.asymptoticUpdate) ||
+        coerceFlag(entry.asymptotic_update) ||
+        coerceFlag(entry.asymptotic) ||
+        coerceFlag(entry.asym)
+      );
+    };
+
+    const asymptoticUpdate =
+      coerceFlag(sourceFlags.asymptoticUpdate) ||
+      coerceFlag(sourceFlags.asymptotic_update) ||
+      coerceFlag(sourceFlags.asymptotic) ||
+      coerceFlag(sourceFlags.asym) ||
+      coerceFlag(soliton?.asymptoticUpdate) ||
+      coerceFlag(soliton?.asymptotic_update) ||
+      coerceFlag(soliton?.asymptotic) ||
+      coerceFlag(soliton?.asym) ||
+      sourceParamsArray.some((entry) => hasAsymptoticFlag(entry));
+
+    const defaultAritaMode =
+      coerceFlag(sourceFlags.aritaMode) ||
+      coerceFlag(soliton?.aritaMode) ||
+      coerceFlag(sourceParams.aritaMode) ||
+      asymptoticUpdate;
+
+    const normaliseKn = (value, fallback = 1) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(1, Math.min(4, Math.floor(n)));
+    };
+
+    const normaliseGn = (value, fallback = 1) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(1, Math.min(3, Math.floor(n)));
+    };
+
+    // Python reference defaults missing kn/gn to 1 on imported kernels.
+    const defaultKn = normaliseKn(
+      Number.isFinite(Number(sourceParams.kn))
+        ? Number(sourceParams.kn)
+        : Number.isFinite(Number(soliton?.kn))
+          ? Number(soliton.kn)
+          : 1,
+      1,
+    );
+    const defaultGn = normaliseGn(
+      Number.isFinite(Number(sourceParams.gn))
+        ? Number(sourceParams.gn)
+        : Number.isFinite(Number(soliton?.gn))
+          ? Number(soliton.gn)
+          : 1,
+      1,
+    );
+
+    let maxChannelIndex = 0;
+    const kernels = sourceParamsArray.map((entry) => {
+      const pair = Array.isArray(entry.c) ? entry.c : [0, 0];
+      const c0 = Math.max(0, Math.floor(Number(pair[0]) || 0));
+      const c1 = Math.max(0, Math.floor(Number(pair[1]) || c0));
+      if (c0 > maxChannelIndex) maxChannelIndex = c0;
+      if (c1 > maxChannelIndex) maxChannelIndex = c1;
+
+      const parsedB =
+        typeof entry.b === "string"
+          ? entry.b.split(",").map((val) => RLECodec.parseFraction(val))
+          : Array.isArray(entry.b)
+            ? entry.b.map((val) => RLECodec.parseFraction(val))
+            : params.b;
+
+      return {
+        R: Number.isFinite(Number(entry.R))
+          ? Number(entry.R)
+          : Number(params.R),
+        T: Number.isFinite(Number(entry.T))
+          ? Number(entry.T)
+          : Number(params.T),
+        m: Number.isFinite(Number(entry.m))
+          ? Number(entry.m)
+          : Number(params.m),
+        s: Number.isFinite(Number(entry.s))
+          ? Number(entry.s)
+          : Number(params.s),
+        r: Number.isFinite(Number(entry.r))
+          ? Number(entry.r)
+          : Number(params.r),
+        b: Array.isArray(parsedB)
+          ? parsedB.filter((val) => Number.isFinite(val) && val >= 0)
+          : [1],
+        kn: Number.isFinite(Number(entry.kn))
+          ? normaliseKn(entry.kn, defaultKn)
+          : defaultKn,
+        gn: Number.isFinite(Number(entry.gn))
+          ? normaliseGn(entry.gn, defaultGn)
+          : defaultGn,
+        h: Number.isFinite(Number(entry.h))
+          ? Number(entry.h)
+          : Number(params.h),
+        addNoise: Number.isFinite(Number(entry.addNoise))
+          ? Number(entry.addNoise)
+          : Number(params.addNoise),
+        maskRate: Number.isFinite(Number(entry.maskRate))
+          ? Number(entry.maskRate)
+          : Number(params.maskRate),
+        paramP: Number.isFinite(Number(entry.paramP))
+          ? Number(entry.paramP)
+          : Number(params.paramP),
+        softClip:
+          typeof entry.softClip === "boolean"
+            ? entry.softClip
+            : Boolean(params.softClip),
+        multiStep:
+          typeof entry.multiStep === "boolean"
+            ? entry.multiStep
+            : Boolean(params.multiStep),
+        aritaMode:
+          typeof entry.aritaMode === "boolean"
+            ? entry.aritaMode
+            : hasAsymptoticFlag(entry)
+              ? true
+              : defaultAritaMode,
+        c: [c0, c1],
+      };
+    });
+
+    const inferredChannelCount = Math.max(
+      inferredCellsChannels,
+      maxChannelIndex + 1,
+      1,
+    );
+
+    const multiKernel =
+      coerceFlag(sourceFlags.multiKernel) ||
+      coerceFlag(sourceFlags.multi_kernel) ||
+      coerceFlag(soliton?.multiKernel) ||
+      sourceParamsArray.length > 1;
+    const multiChannel =
+      coerceFlag(sourceFlags.multiChannel) ||
+      coerceFlag(sourceFlags.multi_channel) ||
+      coerceFlag(soliton?.multiChannel) ||
+      inferredChannelCount > 1;
+
+    params.multiKernel = multiKernel;
+    params.multiChannel = multiChannel;
+    params.asymptoticUpdate = asymptoticUpdate;
+
+    params.channelCount = Math.max(1, Math.min(8, inferredChannelCount));
+    params.selectedChannel = Math.max(
+      0,
+      Math.min(params.channelCount - 1, Number(params.selectedChannel) || 0),
+    );
+    params.channelShift = Math.max(
+      0,
+      Math.min(17, Number(params.channelShift) || 0),
+    );
+
+    const pairCounts = new Map();
+    for (const kernel of kernels) {
+      const key = `${kernel.c[0]}:${kernel.c[1]}`;
+      pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
+    }
+    let kernelCount = 1;
+    let crossKernelCount = 0;
+    for (const [key, count] of pairCounts.entries()) {
+      const [c0, c1] = key.split(":").map((v) => Number(v));
+      if (c0 === c1) {
+        if (count > kernelCount) kernelCount = count;
+      } else if (count > crossKernelCount) {
+        crossKernelCount = count;
+      }
+    }
+
+    params.kernelParams = kernels;
+    params.kernelCount = Math.max(1, Math.min(4, kernelCount));
+    params.crossKernelCount = Math.max(0, Math.min(4, crossKernelCount));
+    params.selectedKernel = 0;
+
+    const selected = kernels[0];
+    if (selected) {
+      for (const key of [
+        "R",
+        "T",
+        "m",
+        "s",
+        "r",
+        "kn",
+        "gn",
+        "h",
+        "addNoise",
+        "maskRate",
+        "paramP",
+      ]) {
+        params[key] = selected[key];
+      }
+      params.softClip = Boolean(selected.softClip);
+      params.multiStep = Boolean(selected.multiStep);
+      params.aritaMode = Boolean(selected.aritaMode);
+      params.b =
+        Array.isArray(selected.b) && selected.b.length > 0
+          ? selected.b.slice()
+          : [1];
     }
   }
 }

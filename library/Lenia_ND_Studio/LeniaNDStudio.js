@@ -82,19 +82,19 @@ async function setup() {
         ttfPath: "../../_shared/fonts/Iosevka-Regular.ttf",
         logger: diagnosticsLogger,
       }),
-      AssetLoader.loadJSONAsset("../../_shared/data/solitons.json", {
+      AssetLoader.loadJSONAsset("../../_shared/json/solitons.json", {
         logger: diagnosticsLogger,
         label: "Lenia 2D solitons",
       }),
-      AssetLoader.loadJSONAsset("../../_shared/data/solitons3D.json", {
+      AssetLoader.loadJSONAsset("../../_shared/json/solitons3D.json", {
         logger: diagnosticsLogger,
         label: "Lenia 3D solitons",
       }),
-      AssetLoader.loadJSONAsset("../../_shared/data/solitons4D.json", {
+      AssetLoader.loadJSONAsset("../../_shared/json/solitons4D.json", {
         logger: diagnosticsLogger,
         label: "Lenia 4D solitons",
       }),
-      AssetLoader.loadJSONAsset("../../_shared/data/colour-maps.json", {
+      AssetLoader.loadJSONAsset("../../_shared/json/colour-maps.json", {
         logger: diagnosticsLogger,
         label: "Lenia colour maps",
       }),

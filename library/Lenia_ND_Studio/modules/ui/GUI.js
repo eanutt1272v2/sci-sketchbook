@@ -14,11 +14,18 @@ class GUI {
     this.solitonLibrary = solitonLibrary;
     this.appcore = appcore;
     this.pane = null;
+    this._tabs = null;
+    this._activeTabIndex = 0;
     this.solitonBinding = null;
     this._solitonMenuState = null;
     this._lastSolitonSelection = String(this.params?.selectedSoliton || "");
     this.recordButton = null;
-    this.placeScaleBinding = null;
+    this.channelCountBinding = null;
+    this.selectedChannelBinding = null;
+    this.selectedKernelBinding = null;
+    this.kernelCountBinding = null;
+    this.crossKernelCountBinding = null;
+    this.backendComputeDeviceBinding = null;
     this.ndSliceZBinding = null;
     this.ndSliceWBinding = null;
     this._statisticsGraphWrapper = null;
@@ -35,6 +42,7 @@ class GUI {
     this._rebuildScheduled = true;
     Promise.resolve().then(() => {
       this._rebuildScheduled = false;
+      this._captureActiveTabIndex();
       if (typeof this._teardownStatisticsGraph === "function") {
         this._teardownStatisticsGraph();
       }
@@ -42,9 +50,15 @@ class GUI {
         this.pane.dispose();
       }
       this.pane = null;
+      this._tabs = null;
       this.solitonBinding = null;
       this.recordButton = null;
-      this.placeScaleBinding = null;
+      this.channelCountBinding = null;
+      this.selectedChannelBinding = null;
+      this.selectedKernelBinding = null;
+      this.kernelCountBinding = null;
+      this.crossKernelCountBinding = null;
+      this.backendComputeDeviceBinding = null;
       this.ndSliceZBinding = null;
       this.ndSliceWBinding = null;
       this.setupTabs();
@@ -67,6 +81,7 @@ class GUI {
         { title: "Media" },
       ],
     });
+    this._tabs = tabs;
 
     this.createSimulationTab(tabs.pages[0]);
     this.createParametersTab(tabs.pages[1]);
@@ -74,6 +89,8 @@ class GUI {
     this.createRenderTab(tabs.pages[2]);
     this.createStatisticsTab(tabs.pages[4]);
     this.createMediaTab(tabs.pages[5]);
+
+    this._restoreActiveTabIndex();
   }
 
   addSeparator(target) {
@@ -87,10 +104,62 @@ class GUI {
     return KeybindCatalogue.withHint(label, "lenia", id, fallback);
   }
 
+  addBackendComputeBinding(target) {
+    if (!target) return null;
+    this.backendComputeDeviceBinding = target
+      .addBinding(this.params, "backendComputeDevice", {
+        label: this.withHint(
+          "Backend Compute Device",
+          "backendComputeDevice",
+          "Ctrl+B",
+        ),
+        options: this.appcore?.getBackendComputeDeviceOptions
+          ? this.appcore.getBackendComputeDeviceOptions()
+          : {
+              CPU: "cpu",
+              "GLSL Compute": "glsl",
+            },
+      })
+      .on("change", (event) =>
+        this._runIfGUIIdle(() =>
+          this.appcore?.setBackendComputeDevice(event.value),
+        ),
+      );
+    return this.backendComputeDeviceBinding;
+  }
+
   _runIfGUIIdle(fn) {
     if (!this.appcore) return;
     if (this.appcore._isRefreshingGUI) return;
     fn();
+  }
+
+  _captureActiveTabIndex() {
+    const pages = this._tabs?.pages;
+    if (!Array.isArray(pages) || pages.length === 0) return;
+    const selectedIndex = pages.findIndex((page) => Boolean(page?.selected));
+    if (selectedIndex >= 0) this._activeTabIndex = selectedIndex;
+  }
+
+  _restoreActiveTabIndex() {
+    const pages = this._tabs?.pages;
+    if (!Array.isArray(pages) || pages.length === 0) {
+      this._activeTabIndex = 0;
+      return;
+    }
+    const safeIndex = Math.max(
+      0,
+      Math.min(pages.length - 1, Math.floor(Number(this._activeTabIndex) || 0)),
+    );
+    const page = pages[safeIndex];
+    if (page && "selected" in page) {
+      try {
+        page.selected = true;
+      } catch (_error) {
+        // Ignore if the tab implementation exposes a read-only selected state.
+      }
+    }
+    this._activeTabIndex = safeIndex;
   }
 
   createSimulationTab(page) {
@@ -143,6 +212,14 @@ class GUI {
       max: 100,
     });
     perf.addBinding(statistics, "time", { readonly: true, label: "Time [μs]" });
+
+    this.addSeparator(page);
+
+    const compute = page.addFolder({
+      title: "Compute",
+      expanded: true,
+    });
+    this.addBackendComputeBinding(compute);
 
     this.addSeparator(page);
 
@@ -263,12 +340,12 @@ class GUI {
       .addButton({
         title: this.withHint("Zoom In", "zoomInTransform", "R"),
       })
-      .on("click", () => this.appcore?.nudgeRadius(10));
+      .on("click", () => this.appcore?.nudgeRadius(5));
     xform
       .addButton({
         title: this.withHint("Zoom Out", "zoomOutTransform", "F"),
       })
-      .on("click", () => this.appcore?.nudgeRadius(-10));
+      .on("click", () => this.appcore?.nudgeRadius(-5));
 
     this.addSeparator(xform);
 
@@ -384,7 +461,7 @@ class GUI {
 
       xform
         .addButton({
-          title: this.withHint("Centre Slice", "centerSlice", "Ctrl+Home"),
+          title: this.withHint("Centre Slice", "centreSlice", "Ctrl+Home"),
         })
         .on("click", () => this.appcore?.centerNDSlices({ allAxes: true }));
 
@@ -429,6 +506,99 @@ class GUI {
         .addBinding(params, key, options)
         .on("change", () => this.appcore?.updateAutomatonParams());
     };
+
+    const topology = page.addFolder({
+      title: "Channels & Kernels",
+      expanded: true,
+    });
+
+    this.channelCountBinding = topology
+      .addBinding(params, "channelCount", {
+        options: {
+          1: 1,
+          2: 2,
+          3: 3,
+          4: 4,
+          5: 5,
+          6: 6,
+          7: 7,
+          8: 8,
+        },
+        label: this.withHint("Channel Count", "channelCount", "GUI"),
+      })
+      .on("change", (event) =>
+        this._runIfGUIIdle(() => this.appcore?.setChannelCount(event.value)),
+      );
+
+    this.selectedChannelBinding = topology
+      .addBinding(params, "selectedChannel", {
+        options: this.appcore?.getChannelSelectorOptions
+          ? this.appcore.getChannelSelectorOptions()
+          : { "Channel 0": 0 },
+        label: this.withHint("Active Channel", "selectedChannel", "Ctrl+9/0"),
+      })
+      .on("change", (event) =>
+        this._runIfGUIIdle(() => this.appcore?.setSelectedChannel(event.value)),
+      );
+
+    this.kernelCountBinding = topology
+      .addBinding(params, "kernelCount", {
+        options: {
+          1: 1,
+          2: 2,
+          3: 3,
+          4: 4,
+        },
+        label: this.withHint("Per-Channel Kernels", "kernelCount", "GUI"),
+      })
+      .on("change", () => {
+        this.params.kernelParams = [];
+        this.appcore?.updateAutomatonParams();
+        this.appcore?.gui?.rebuildPane?.();
+      });
+
+    this.crossKernelCountBinding = topology
+      .addBinding(params, "crossKernelCount", {
+        options: {
+          0: 0,
+          1: 1,
+          2: 2,
+          3: 3,
+          4: 4,
+        },
+        label: this.withHint(
+          "Cross-Channel Kernels",
+          "crossKernelCount",
+          "GUI",
+        ),
+      })
+      .on("change", () => {
+        this.params.kernelParams = [];
+        this.appcore?.updateAutomatonParams();
+        this.appcore?.gui?.rebuildPane?.();
+      });
+
+    this.selectedKernelBinding = topology
+      .addBinding(params, "selectedKernel", {
+        options: this.appcore?.getKernelSelectorOptions
+          ? this.appcore.getKernelSelectorOptions()
+          : { "Kernel 0": 0 },
+        label: this.withHint("Active Kernel", "selectedKernel", "Ctrl+-/="),
+      })
+      .on("change", (event) =>
+        this._runIfGUIIdle(() => this.appcore?.setSelectedKernel(event.value)),
+      );
+
+    topology
+      .addBinding(params, "channelShift", {
+        min: 0,
+        max: 17,
+        step: 1,
+        label: this.withHint("Channel Colour Shift", "channelShift", "Alt+./,"),
+      })
+      .on("change", () => this.appcore?.refreshGUI());
+
+    this.addSeparator(page);
 
     const growth = page.addFolder({ title: "Growth Function", expanded: true });
 
@@ -505,7 +675,7 @@ class GUI {
     });
 
     bindAutomaton(time, "aritaMode", {
-      label: this.withHint("Arita Mode", "aritaMode", "Ctrl+P"),
+      label: this.withHint("Asymptotic Update (Arita)", "aritaMode", "Ctrl+P"),
     });
 
     bindAutomaton(time, "h", {
@@ -651,7 +821,8 @@ class GUI {
   createSolitonsTab(page) {
     const { params } = this;
     const sourceDimension =
-      this.solitonLibrary && Number.isFinite(this.solitonLibrary.activeDimension)
+      this.solitonLibrary &&
+      Number.isFinite(this.solitonLibrary.activeDimension)
         ? this.solitonLibrary.activeDimension
         : params.dimension;
     const solitonCount = Array.isArray(this.solitonLibrary?.solitons)
@@ -710,12 +881,13 @@ class GUI {
           })
         : false;
 
-      if (selected) return;
-
-      if (params.selectedSoliton === nextSelection) return;
-      params.selectedSoliton = nextSelection;
-      this.appcore?.loadSelectedSolitonParams();
-      this.appcore?.loadSelectedSoliton();
+      if (!selected) {
+        const fallback = this.solitonLibrary
+          ? this.solitonLibrary.toSolitonMenuValue(params.selectedSoliton)
+          : String(params.selectedSoliton || "");
+        this._solitonMenuState.selectedSolitonMenu = fallback;
+        this.solitonBinding?.refresh?.();
+      }
     });
 
     page
@@ -735,7 +907,7 @@ class GUI {
       .on("click", () => this.appcore?.loadSelectedSoliton());
     page
       .addButton({
-        title: this.withHint("Place at Random", "placeRandom", "X"),
+        title: this.withHint("Place at Random", "placeSolitonAtRandom", "X"),
       })
       .on("click", () => this.appcore?.placeSolitonRandom());
 
@@ -749,22 +921,6 @@ class GUI {
     placementFolder.addBinding(params, "placeMode", {
       label: this.withHint("Click to Place", "placeMode", "Shift+X"),
     });
-
-    const placementScaleBounds = this.appcore?.getPlacementScaleBounds
-      ? this.appcore.getPlacementScaleBounds(params.selectedSoliton)
-      : { min: 0.25, max: 4 };
-
-    this.placeScaleBinding = placementFolder
-      .addBinding(params, "placeScale", {
-        label: this.withHint("Placement Scale", "placeScale", "Ctrl+[/]"),
-        min: placementScaleBounds.min,
-        max: placementScaleBounds.max,
-        step: 0.05,
-      })
-      .on("change", () => {
-        if (!this.appcore) return;
-        this.appcore.updatePlacementScale(params.placeScale);
-      });
 
     placementFolder
       .addButton({
@@ -780,22 +936,6 @@ class GUI {
       });
   }
 
-  syncPlacementScaleBounds() {
-    if (!this.appcore || !this.placeScaleBinding) return;
-    if (typeof this.appcore.getPlacementScaleBounds !== "function") return;
-
-    const bounds = this.appcore.getPlacementScaleBounds(
-      this.params.selectedSoliton,
-    );
-    this.placeScaleBinding.min = bounds.min;
-    this.placeScaleBinding.max = bounds.max;
-    this.params.placeScale = constrain(
-      Number(this.params.placeScale) || 1,
-      bounds.min,
-      bounds.max,
-    );
-  }
-
   syncSolitonSelectors() {
     if (this.solitonBinding && this._solitonMenuState && this.solitonLibrary) {
       const token = this.solitonLibrary.toSolitonMenuValue(
@@ -806,8 +946,6 @@ class GUI {
         this.solitonBinding.refresh?.();
       }
     }
-
-    this.syncPlacementScaleBounds();
   }
 
   syncNDSliceBounds() {
@@ -838,6 +976,29 @@ class GUI {
     );
   }
 
+  syncKernelControlBounds() {
+    const params = this.params;
+    const channelCount = Math.max(
+      1,
+      Math.floor(Number(params.channelCount) || 1),
+    );
+    const kernelTotal = Array.isArray(params.kernelParams)
+      ? params.kernelParams.length
+      : 1;
+
+    params.selectedChannel = Math.max(
+      0,
+      Math.min(
+        channelCount - 1,
+        Math.floor(Number(params.selectedChannel) || 0),
+      ),
+    );
+    params.selectedKernel = Math.max(
+      0,
+      Math.min(kernelTotal - 1, Math.floor(Number(params.selectedKernel) || 0)),
+    );
+  }
+
   dispose() {
     if (typeof this._teardownStatisticsGraph === "function") {
       this._teardownStatisticsGraph();
@@ -847,6 +1008,11 @@ class GUI {
       this.pane = null;
       this.solitonBinding = null;
       this.recordButton = null;
+      this.channelCountBinding = null;
+      this.selectedChannelBinding = null;
+      this.selectedKernelBinding = null;
+      this.kernelCountBinding = null;
+      this.crossKernelCountBinding = null;
       this.ndSliceZBinding = null;
       this.ndSliceWBinding = null;
     }
@@ -857,26 +1023,10 @@ class GUI {
     const formatSigned = FormatUtils.formatSigned;
     const formatPercent = FormatUtils.formatPercent;
     const formatInt = FormatUtils.formatInt;
-    const superscriptDigits = {
-      0: "⁰",
-      1: "¹",
-      2: "²",
-      3: "³",
-      4: "⁴",
-      5: "⁵",
-      6: "⁶",
-      7: "⁷",
-      8: "⁸",
-      9: "⁹",
-      "-": "⁻",
-    };
     const dimension = Math.max(2, Math.floor(Number(params?.dimension) || 2));
-    const dimPower = String(dimension)
-      .split("")
-      .map((char) => superscriptDigits[char] || char)
-      .join("");
+    const dimPower = formatDimPower(dimension);
     const microMeterPower = `μm${dimPower}`;
-    const addStat = (folder, key, label, format = formatSigned) =>
+    const addStatistic = (folder, key, label, format = formatSigned) =>
       folder.addBinding(statistics, key, {
         readonly: true,
         label,
@@ -989,31 +1139,35 @@ class GUI {
     this.addSeparator(page);
 
     const metrics = page.addFolder({ title: "Basic Metrics", expanded: true });
-    addStat(metrics, "gen", "Generation [gen]", formatInt);
-    addStat(metrics, "time", "Time [μs]");
-    addStat(metrics, "fps", "FPS [Hz]");
-    addStat(metrics, "mass", "Mass [μg]");
-    addStat(metrics, "growth", "Growth [μg/μs]");
-    addStat(metrics, "massLog", "Mass (log scale) [μg]");
-    addStat(metrics, "growthLog", "Growth (log scale) [μg/μs]");
-    addStat(
+    addStatistic(metrics, "gen", "Generation [gen]", formatInt);
+    addStatistic(metrics, "time", "Time [μs]");
+    addStatistic(metrics, "fps", "FPS [Hz]");
+    addStatistic(metrics, "mass", "Mass [μg]");
+    addStatistic(metrics, "growth", "Growth [μg/μs]");
+    addStatistic(metrics, "massLog", "Mass (log scale) [μg]");
+    addStatistic(metrics, "growthLog", "Growth (log scale) [μg/μs]");
+    addStatistic(
       metrics,
       "massVolumeLog",
       `Mass volume (log scale) [${microMeterPower}]`,
     );
-    addStat(
+    addStatistic(
       metrics,
       "growthVolumeLog",
       `Growth volume (log scale) [${microMeterPower}]`,
     );
-    addStat(metrics, "massDensity", `Mass density [μg/${microMeterPower}]`);
-    addStat(
+    addStatistic(
+      metrics,
+      "massDensity",
+      `Mass density [μg/${microMeterPower}]`,
+    );
+    addStatistic(
       metrics,
       "growthDensity",
       `Growth density [μg/(${microMeterPower}·μs)]`,
     );
-    addStat(metrics, "maxValue", "Peak value [cell-state]");
-    addStat(metrics, "gyradius", "Gyradius [μm]");
+    addStatistic(metrics, "maxValue", "Peak value [cell-state]");
+    addStatistic(metrics, "gyradius", "Gyradius [μm]");
 
     this.addSeparator(page);
 
@@ -1021,22 +1175,30 @@ class GUI {
       title: "Position and Motion",
       expanded: false,
     });
-    addStat(motion, "centreX", "Centroid X [μm]");
-    addStat(motion, "centreY", "Centroid Y [μm]");
-    addStat(motion, "growthCentreX", "Growth centroid X [μm]");
-    addStat(motion, "growthCentreY", "Growth centroid Y [μm]");
-    addStat(motion, "massGrowthDist", "Mass-growth distance [μm]");
-    addStat(motion, "speed", "Speed [μm/μs]");
-    addStat(motion, "centroidSpeed", "Centroid speed [μm/μs]");
-    addStat(motion, "angle", "Direction angle [rad]");
-    addStat(motion, "centroidRotateSpeed", "Centroid rotate speed [rad/μs]");
-    addStat(
+    addStatistic(motion, "centreX", "Centroid X [μm]");
+    addStatistic(motion, "centreY", "Centroid Y [μm]");
+    addStatistic(motion, "growthCentreX", "Growth centroid X [μm]");
+    addStatistic(motion, "growthCentreY", "Growth centroid Y [μm]");
+    addStatistic(motion, "massGrowthDist", "Mass-growth distance [μm]");
+    addStatistic(motion, "speed", "Speed [μm/μs]");
+    addStatistic(motion, "centroidSpeed", "Centroid speed [μm/μs]");
+    addStatistic(motion, "angle", "Direction angle [rad]");
+    addStatistic(
+      motion,
+      "centroidRotateSpeed",
+      "Centroid rotate speed [rad/μs]",
+    );
+    addStatistic(
       motion,
       "growthRotateSpeed",
       "Growth-centroid rotate speed [rad/μs]",
     );
-    addStat(motion, "majorAxisRotateSpeed", "Major axis rotate speed [rad/μs]");
-    addStat(motion, "rotationSpeed", "Rotation speed [rad/μs]");
+    addStatistic(
+      motion,
+      "majorAxisRotateSpeed",
+      "Major axis rotate speed [rad/μs]",
+    );
+    addStatistic(motion, "rotationSpeed", "Rotation speed [rad/μs]");
 
     this.addSeparator(page);
 
@@ -1044,12 +1206,17 @@ class GUI {
       title: "Symmetry",
       expanded: false,
     });
-    addStat(symmetry, "symmSides", "Symmetry order", formatInt);
-    addStat(symmetry, "symmStrength", "Symmetry strength [%]", formatPercent);
-    addStat(symmetry, "massAsym", "Mass asymmetry [μg]");
-    addStat(symmetry, "lyapunov", "Lyapunov exponent [gen⁻¹]");
-    addStat(symmetry, "period", "Period [μs]");
-    addStat(
+    addStatistic(symmetry, "symmSides", "Symmetry order", formatInt);
+    addStatistic(
+      symmetry,
+      "symmStrength",
+      "Symmetry strength [%]",
+      formatPercent,
+    );
+    addStatistic(symmetry, "massAsym", "Mass asymmetry [μg]");
+    addStatistic(symmetry, "lyapunov", "Lyapunov exponent [gen⁻¹]");
+    addStatistic(symmetry, "period", "Period [μs]");
+    addStatistic(
       symmetry,
       "periodConfidence",
       "Period confidence [%]",
@@ -1062,23 +1229,27 @@ class GUI {
       title: "Moment Invariants",
       expanded: false,
     });
-    addStat(
+    addStatistic(
       invariants,
       "hu1Log",
       "Moment of inertia - Hu's moment invariant 1 (log scale)",
     );
-    addStat(
+    addStatistic(
       invariants,
       "hu4Log",
       "Skewness - Hu's moment invariant 4 (log scale)",
     );
-    addStat(invariants, "hu5Log", "Hu's 5 (log scale)");
-    addStat(invariants, "hu6Log", "Hu's 6 (log scale)");
-    addStat(invariants, "hu7Log", "Hu's 7 (log scale)");
-    addStat(invariants, "flusser7", "Kurtosis - Flusser's moment invariant 7");
-    addStat(invariants, "flusser8Log", "Flusser's 8 (log scale)");
-    addStat(invariants, "flusser9Log", "Flusser's 9 (log scale)");
-    addStat(invariants, "flusser10Log", "Flusser's 10 (log scale)");
+    addStatistic(invariants, "hu5Log", "Hu's 5 (log scale)");
+    addStatistic(invariants, "hu6Log", "Hu's 6 (log scale)");
+    addStatistic(invariants, "hu7Log", "Hu's 7 (log scale)");
+    addStatistic(
+      invariants,
+      "flusser7",
+      "Kurtosis - Flusser's moment invariant 7",
+    );
+    addStatistic(invariants, "flusser8Log", "Flusser's 8 (log scale)");
+    addStatistic(invariants, "flusser9Log", "Flusser's 9 (log scale)");
+    addStatistic(invariants, "flusser10Log", "Flusser's 10 (log scale)");
   }
 
   createMediaTab(page) {
@@ -1089,7 +1260,7 @@ class GUI {
     imp
       .addButton({
         title: this.withHint(
-          "Import Parameters",
+          "Import Parameters (JSON)",
           "importParams",
           "Ctrl+Shift+I",
         ),
@@ -1097,7 +1268,7 @@ class GUI {
       .on("click", () => media?.importParamsJSON());
     imp
       .addButton({
-        title: this.withHint("Import World", "importWorld", "Ctrl+Shift+W"),
+        title: this.withHint("Import World (JSON)", "importWorld", "Ctrl+Shift+W"),
       })
       .on("click", () => media?.importWorldJSON());
 
@@ -1107,7 +1278,7 @@ class GUI {
     exp
       .addButton({
         title: this.withHint(
-          "Export Parameters",
+          "Export Parameters (JSON)",
           "exportParams",
           "Ctrl+Shift+P",
         ),
@@ -1133,7 +1304,7 @@ class GUI {
       .on("click", () => media?.exportStatisticsCSV());
     exp
       .addButton({
-        title: this.withHint("Export World", "exportWorld", "Ctrl+Shift+E"),
+        title: this.withHint("Export World (JSON)", "exportWorld", "Ctrl+Shift+E"),
       })
       .on("click", () => media?.exportWorldJSON());
 
@@ -1191,6 +1362,6 @@ class GUI {
   }
 }
 
-if (window.StatisticsGraphComponent?.install) {
-  window.StatisticsGraphComponent.install(GUI);
+if (window.StatisticsGraph?.install) {
+  window.StatisticsGraph.install(GUI);
 }

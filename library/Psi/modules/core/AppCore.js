@@ -396,15 +396,29 @@ class AppCore {
       0,
     );
 
-    const vc =
-      params.viewCentre && typeof params.viewCentre === "object"
-        ? params.viewCentre
-        : { x: 0, y: 0, z: 0 };
-    params.viewCentre = {
-      x: this._clampNumber(vc.x, -1024, 1024, 0),
-      y: this._clampNumber(vc.y, -1024, 1024, 0),
-      z: this._clampNumber(vc.z, -1024, 1024, 0),
-    };
+    if (!params.viewCentre || typeof params.viewCentre !== "object") {
+      params.viewCentre = { x: 0, y: 0, z: 0 };
+    }
+
+    // Keep the same object reference so GUI bindings remain valid.
+    params.viewCentre.x = this._clampNumber(
+      params.viewCentre.x,
+      -1024,
+      1024,
+      0,
+    );
+    params.viewCentre.y = this._clampNumber(
+      params.viewCentre.y,
+      -1024,
+      1024,
+      0,
+    );
+    params.viewCentre.z = this._clampNumber(
+      params.viewCentre.z,
+      -1024,
+      1024,
+      0,
+    );
   }
 
   _sanitiseExportParams(params) {

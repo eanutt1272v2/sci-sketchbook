@@ -14,7 +14,9 @@ class AppCoreControlMethods {
   }
 
   getViewModeOptions() {
-    const modes = NDCompatibility.getViewModesForDimension(this.params.dimension);
+    const modes = NDCompatibility.getViewModesForDimension(
+      this.params.dimension,
+    );
 
     return modes.reduce((options, mode) => {
       if (mode === "slice") options["Slice"] = mode;
@@ -27,23 +29,7 @@ class AppCoreControlMethods {
     const dim = NDCompatibility.coerceDimension(dimension);
     const sizes = NDCompatibility.getGridSizeOptions(dim);
     const canvasSize = min(windowWidth, windowHeight);
-    const superscriptDigits = {
-      0: "⁰",
-      1: "¹",
-      2: "²",
-      3: "³",
-      4: "⁴",
-      5: "⁵",
-      6: "⁶",
-      7: "⁷",
-      8: "⁸",
-      9: "⁹",
-      "-": "⁻",
-    };
-    const dimPower = String(dim)
-      .split("")
-      .map((char) => superscriptDigits[char] || char)
-      .join("");
+    const dimPower = formatDimPower(dim);
     const options = {};
     for (const size of sizes) {
       if (size <= canvasSize) {
@@ -63,6 +49,565 @@ class AppCoreControlMethods {
 
   getMaxTimeScale() {
     return 1500;
+  }
+
+  _coerceKernelWeights(rawWeights, fallback = [1]) {
+    let weights = rawWeights;
+    if (typeof weights === "string") {
+      weights = weights
+        .split(",")
+        .map((v) => RLECodec.parseFraction(v))
+        .filter((v) => Number.isFinite(v));
+    }
+
+    if (!Array.isArray(weights) || weights.length === 0) {
+      return Array.isArray(fallback) && fallback.length > 0
+        ? fallback.slice()
+        : [1];
+    }
+
+    const out = [];
+    for (let i = 0; i < weights.length; i++) {
+      const n = Number(weights[i]);
+      if (Number.isFinite(n)) out.push(Math.max(0, n));
+    }
+    return out.length > 0 ? out : [1];
+  }
+
+  getChannelCount() {
+    const channelCount = Math.max(
+      1,
+      Math.min(8, Math.floor(Number(this.params.channelCount) || 1)),
+    );
+    this.params.channelCount = channelCount;
+    return channelCount;
+  }
+
+  getChannelSelectorOptions() {
+    const count = this.getChannelCount();
+    const options = {};
+    for (let c = 0; c < count; c++) {
+      options[`Channel ${c}`] = c;
+    }
+    return options;
+  }
+
+  getKernelSelectorOptions() {
+    const channelCount = this.getChannelCount();
+    const kernels = this.getKernelParams();
+    const options = {};
+    for (let i = 0; i < kernels.length; i++) {
+      const channels = this._coerceKernelChannels(kernels[i]?.c, channelCount);
+      options[`Kernel ${i} (${channels[0]}->${channels[1]})`] = i;
+    }
+    return options;
+  }
+
+  _coerceKernelChannels(rawPair, channelCount = this.getChannelCount()) {
+    const maxChannel = Math.max(0, channelCount - 1);
+    const pair = Array.isArray(rawPair) ? rawPair : [0, 0];
+    const c0 = Math.max(
+      0,
+      Math.min(maxChannel, Math.floor(Number(pair[0]) || 0)),
+    );
+    const c1 = Math.max(
+      0,
+      Math.min(maxChannel, Math.floor(Number(pair[1]) || c0)),
+    );
+    return [c0, c1];
+  }
+
+  _createKernelParamTemplate(overrides = {}, c0 = 0, c1 = 0) {
+    const params = this.params;
+    const parsedB = this._coerceKernelWeights(overrides.b, params.b);
+
+    const out = {
+      R: Number.isFinite(Number(overrides.R))
+        ? Number(overrides.R)
+        : Number(params.R) || 20,
+      T: Number.isFinite(Number(overrides.T))
+        ? Number(overrides.T)
+        : Number(params.T) || 10,
+      m: Number.isFinite(Number(overrides.m))
+        ? Number(overrides.m)
+        : Number(params.m) || 0.1,
+      s: Number.isFinite(Number(overrides.s))
+        ? Number(overrides.s)
+        : Number(params.s) || 0.01,
+      r: Number.isFinite(Number(overrides.r))
+        ? Number(overrides.r)
+        : Number(params.r) || 1,
+      b: parsedB,
+      kn: Math.max(
+        1,
+        Math.min(4, Math.round(Number(overrides.kn) || Number(params.kn) || 1)),
+      ),
+      gn: Math.max(
+        1,
+        Math.min(3, Math.round(Number(overrides.gn) || Number(params.gn) || 1)),
+      ),
+      h: Number.isFinite(Number(overrides.h))
+        ? Number(overrides.h)
+        : Number(params.h) || 1,
+      softClip:
+        typeof overrides.softClip === "boolean"
+          ? overrides.softClip
+          : Boolean(params.softClip),
+      multiStep:
+        typeof overrides.multiStep === "boolean"
+          ? overrides.multiStep
+          : Boolean(params.multiStep),
+      aritaMode:
+        typeof overrides.aritaMode === "boolean"
+          ? overrides.aritaMode
+          : Boolean(params.aritaMode),
+      addNoise: Number.isFinite(Number(overrides.addNoise))
+        ? Number(overrides.addNoise)
+        : Number(params.addNoise) || 0,
+      maskRate: Number.isFinite(Number(overrides.maskRate))
+        ? Number(overrides.maskRate)
+        : Number(params.maskRate) || 0,
+      paramP: Number.isFinite(Number(overrides.paramP))
+        ? Number(overrides.paramP)
+        : Number(params.paramP) || 0,
+      c: this._coerceKernelChannels(overrides.c || [c0, c1]),
+    };
+
+    out.R = Math.max(2, Math.min(this.getMaxKernelRadius(), Math.round(out.R)));
+    out.T = Math.max(1, Math.min(this.getMaxTimeScale(), Math.round(out.T)));
+    out.m = constrain(out.m, 0, 1);
+    out.s = Math.max(0.0001, out.s);
+    out.addNoise = constrain(out.addNoise, 0, 10);
+    out.maskRate = constrain(out.maskRate, 0, 10);
+    out.paramP = Math.max(0, Math.min(64, Math.round(out.paramP)));
+
+    return out;
+  }
+
+  _normaliseKernelTopology() {
+    const channelCount = this.getChannelCount();
+    const params = this.params;
+
+    const kernelCount = Math.max(
+      1,
+      Math.min(4, Math.floor(Number(params.kernelCount) || 1)),
+    );
+    const crossKernelCount = Math.max(
+      0,
+      Math.min(4, Math.floor(Number(params.crossKernelCount) || 0)),
+    );
+
+    params.kernelCount = kernelCount;
+    params.crossKernelCount = crossKernelCount;
+
+    const existing = Array.isArray(params.kernelParams)
+      ? params.kernelParams.filter(
+          (entry) => entry && typeof entry === "object",
+        )
+      : [];
+
+    const expectedKernelTotal =
+      channelCount * kernelCount +
+      channelCount * (channelCount - 1) * crossKernelCount;
+    const preserveExplicitTopology =
+      existing.length > 0 && existing.length !== expectedKernelTotal;
+
+    const finalise = (
+      next,
+      inferredKernelCount = kernelCount,
+      inferredCrossKernelCount = crossKernelCount,
+    ) => {
+      const safeNext =
+        Array.isArray(next) && next.length > 0
+          ? next
+          : [this._createKernelParamTemplate({}, 0, 0)];
+
+      params.kernelParams = safeNext;
+      params.kernelCount = Math.max(
+        1,
+        Math.min(4, Math.floor(Number(inferredKernelCount) || 1)),
+      );
+      params.crossKernelCount = Math.max(
+        0,
+        Math.min(4, Math.floor(Number(inferredCrossKernelCount) || 0)),
+      );
+      params.selectedChannel = Math.max(
+        0,
+        Math.min(
+          channelCount - 1,
+          Math.floor(Number(params.selectedChannel) || 0),
+        ),
+      );
+      params.selectedKernel = Math.max(
+        0,
+        Math.min(
+          safeNext.length - 1,
+          Math.floor(Number(params.selectedKernel) || 0),
+        ),
+      );
+      params.channelShift = Math.max(
+        0,
+        Math.min(17, Math.floor(Number(params.channelShift) || 0)),
+      );
+      return safeNext;
+    };
+
+    if (preserveExplicitTopology) {
+      const next = [];
+      const pairCounts = new Map();
+
+      for (let i = 0; i < existing.length; i++) {
+        const entry = existing[i];
+        const pair = this._coerceKernelChannels(entry.c, channelCount);
+        const key = `${pair[0]}:${pair[1]}`;
+        pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
+        next.push(this._createKernelParamTemplate(entry, pair[0], pair[1]));
+      }
+
+      let inferredKernelCount = 0;
+      let inferredCrossKernelCount = 0;
+      for (const [key, count] of pairCounts.entries()) {
+        const [c0, c1] = key.split(":").map((value) => Number(value));
+        if (c0 === c1) {
+          if (count > inferredKernelCount) inferredKernelCount = count;
+        } else if (count > inferredCrossKernelCount) {
+          inferredCrossKernelCount = count;
+        }
+      }
+      if (inferredKernelCount <= 0) inferredKernelCount = 1;
+
+      return finalise(next, inferredKernelCount, inferredCrossKernelCount);
+    }
+
+    const buckets = new Map();
+    for (let i = 0; i < existing.length; i++) {
+      const entry = existing[i];
+      const pair = this._coerceKernelChannels(entry.c, channelCount);
+      const key = `${pair[0]}:${pair[1]}`;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets
+        .get(key)
+        .push(this._createKernelParamTemplate(entry, pair[0], pair[1]));
+    }
+
+    const next = [];
+
+    for (let c0 = 0; c0 < channelCount; c0++) {
+      const key = `${c0}:${c0}`;
+      const bucket = buckets.get(key) || [];
+      for (let rep = 0; rep < kernelCount; rep++) {
+        const existingKernel = bucket[rep] || null;
+        next.push(
+          this._createKernelParamTemplate(existingKernel || {}, c0, c0),
+        );
+      }
+    }
+
+    if (crossKernelCount > 0) {
+      for (let c0 = 0; c0 < channelCount; c0++) {
+        for (let c1 = 0; c1 < channelCount; c1++) {
+          if (c0 === c1) continue;
+          const key = `${c0}:${c1}`;
+          const bucket = buckets.get(key) || [];
+          for (let rep = 0; rep < crossKernelCount; rep++) {
+            const existingKernel = bucket[rep] || null;
+            next.push(
+              this._createKernelParamTemplate(existingKernel || {}, c0, c1),
+            );
+          }
+        }
+      }
+    }
+
+    return finalise(next, kernelCount, crossKernelCount);
+  }
+
+  getKernelParams() {
+    return this._normaliseKernelTopology();
+  }
+
+  _getSelectedKernelParam() {
+    const kernels = this.getKernelParams();
+    const idx = Math.max(
+      0,
+      Math.min(
+        kernels.length - 1,
+        Math.floor(Number(this.params.selectedKernel) || 0),
+      ),
+    );
+    this.params.selectedKernel = idx;
+    return kernels[idx] || kernels[0];
+  }
+
+  _syncPrimaryParamsFromSelectedKernel() {
+    const kernel = this._getSelectedKernelParam();
+    if (!kernel) return;
+
+    const channelCount = this.getChannelCount();
+    const kernelChannels = this._coerceKernelChannels(kernel.c, channelCount);
+    this.params.selectedChannel = kernelChannels[1];
+
+    this.params.R = kernel.R;
+    this.params.T = kernel.T;
+    this.params.m = kernel.m;
+    this.params.s = kernel.s;
+    this.params.r = kernel.r;
+    this.params.b = Array.isArray(kernel.b) ? kernel.b.slice() : [1];
+    this.params.kn = kernel.kn;
+    this.params.gn = kernel.gn;
+    this.params.h = kernel.h;
+    this.params.softClip = Boolean(kernel.softClip);
+    this.params.multiStep = Boolean(kernel.multiStep);
+    this.params.aritaMode = Boolean(kernel.aritaMode);
+    this.params.addNoise = Number(kernel.addNoise) || 0;
+    this.params.maskRate = Number(kernel.maskRate) || 0;
+    this.params.paramP = Number(kernel.paramP) || 0;
+  }
+
+  _syncSelectedKernelFromPrimaryParams() {
+    const kernels = this.getKernelParams();
+    const idx = Math.max(
+      0,
+      Math.min(
+        kernels.length - 1,
+        Math.floor(Number(this.params.selectedKernel) || 0),
+      ),
+    );
+    const existing = kernels[idx] || {};
+    const channels = this._coerceKernelChannels(
+      existing.c,
+      this.getChannelCount(),
+    );
+    kernels[idx] = this._createKernelParamTemplate(
+      {
+        ...existing,
+        R: this.params.R,
+        T: this.params.T,
+        m: this.params.m,
+        s: this.params.s,
+        r: this.params.r,
+        b: this.params.b,
+        kn: this.params.kn,
+        gn: this.params.gn,
+        h: this.params.h,
+        softClip: this.params.softClip,
+        multiStep: this.params.multiStep,
+        aritaMode: this.params.aritaMode,
+        addNoise: this.params.addNoise,
+        maskRate: this.params.maskRate,
+        paramP: this.params.paramP,
+        c: channels,
+      },
+      channels[0],
+      channels[1],
+    );
+
+    this.params.kernelParams = kernels;
+  }
+
+  setChannelCount(channelCount, { refreshGUI = true } = {}) {
+    const next = Math.max(
+      1,
+      Math.min(8, Math.floor(Number(channelCount) || 1)),
+    );
+    if (next === this.getChannelCount()) return next;
+
+    this.params.channelCount = next;
+    this.params.kernelParams = [];
+    this._normaliseKernelTopology();
+    this._syncPrimaryParamsFromSelectedKernel();
+
+    if (this.board && typeof this.board.setChannelCount === "function") {
+      this.board.setChannelCount(next, { preserve: true });
+    }
+    this._ensureBuffers();
+    this.updateAutomatonParams();
+
+    if (refreshGUI) {
+      if (this.gui && typeof this.gui.rebuildPane === "function") {
+        this.gui.rebuildPane();
+      } else {
+        this.refreshGUI();
+      }
+    }
+    return next;
+  }
+
+  setSelectedChannel(index, { refreshGUI = true } = {}) {
+    const count = this.getChannelCount();
+    const next = Math.max(
+      0,
+      Math.min(count - 1, Math.floor(Number(index) || 0)),
+    );
+    this.params.selectedChannel = next;
+    if (refreshGUI) this.refreshGUI();
+    return next;
+  }
+
+  cycleSelectedChannel(delta = 1, { refreshGUI = true } = {}) {
+    const count = this.getChannelCount();
+    if (count <= 1) return 0;
+    const step = Math.floor(Number(delta) || 0) || 1;
+    const current = Math.max(
+      0,
+      Math.min(count - 1, Math.floor(Number(this.params.selectedChannel) || 0)),
+    );
+    const next = (((current + step) % count) + count) % count;
+    this.params.selectedChannel = next;
+    if (refreshGUI) this.refreshGUI();
+    return next;
+  }
+
+  shiftChannelLegend(delta = 1, { refreshGUI = true } = {}) {
+    const step = Math.floor(Number(delta) || 0) || 1;
+    const current = Math.floor(Number(this.params.channelShift) || 0);
+    const next = (((current + step) % 18) + 18) % 18;
+    this.params.channelShift = next;
+    if (refreshGUI) this.refreshGUI();
+    return next;
+  }
+
+  setSelectedKernel(index, { refreshGUI = true } = {}) {
+    const kernels = this.getKernelParams();
+    const next = Math.max(
+      0,
+      Math.min(kernels.length - 1, Math.floor(Number(index) || 0)),
+    );
+    if (next === this.params.selectedKernel && kernels[next]) {
+      this._syncPrimaryParamsFromSelectedKernel();
+      if (refreshGUI) this.refreshGUI();
+      return next;
+    }
+
+    this.params.selectedKernel = next;
+    this._syncPrimaryParamsFromSelectedKernel();
+    this.updateAutomatonParams();
+
+    if (refreshGUI) this.refreshGUI();
+    return next;
+  }
+
+  cycleSelectedKernel(delta = 1, { refreshGUI = true } = {}) {
+    const kernels = this.getKernelParams();
+    if (!kernels.length) return 0;
+    const step = Math.floor(Number(delta) || 0) || 1;
+    const current = Math.max(
+      0,
+      Math.min(
+        kernels.length - 1,
+        Math.floor(Number(this.params.selectedKernel) || 0),
+      ),
+    );
+    const next =
+      (((current + step) % kernels.length) + kernels.length) % kernels.length;
+    return this.setSelectedKernel(next, { refreshGUI });
+  }
+
+  _normaliseBackendComputeDevice(value = this.params.backendComputeDevice) {
+    return normaliseComputeDevice(value);
+  }
+
+  isGLSLComputeSupported({ forceRefresh = false } = {}) {
+    if (!forceRefresh && typeof this._cachedGLSLComputeSupport === "boolean") {
+      return this._cachedGLSLComputeSupport;
+    }
+
+    if (typeof OffscreenCanvas === "undefined") {
+      this._cachedGLSLComputeSupport = false;
+      return false;
+    }
+
+    let supported = false;
+    try {
+      const canvas = new OffscreenCanvas(2, 2);
+      const gl = canvas.getContext("webgl2", {
+        antialias: false,
+        alpha: false,
+        depth: false,
+        stencil: false,
+        premultipliedAlpha: false,
+        preserveDrawingBuffer: false,
+      });
+      supported = Boolean(gl && gl.getExtension("EXT_color_buffer_float"));
+    } catch {
+      supported = false;
+    }
+
+    this._cachedGLSLComputeSupport = supported;
+    return supported;
+  }
+
+  getBackendComputeDeviceOptions() {
+    return {
+      CPU: "cpu",
+      "GLSL Compute (2D)": "glsl",
+    };
+  }
+
+  _warnGLSLUnavailableOnce() {
+    if (this._warnedGLSLComputeUnavailable) return;
+    this._warnedGLSLComputeUnavailable = true;
+    if (this._diagnosticsLogger?.warn) {
+      this._diagnosticsLogger.warn(
+        "GLSL compute backend requested but WebGL2 float render targets are unavailable. Falling back to CPU.",
+      );
+    }
+  }
+
+  setBackendComputeDevice(
+    device,
+    { refreshGUI = true, allowFallback = true } = {},
+  ) {
+    const requested = this._normaliseBackendComputeDevice(device);
+    let next = requested;
+
+    if (
+      allowFallback &&
+      requested === "glsl" &&
+      !this.isGLSLComputeSupported()
+    ) {
+      next = "cpu";
+      this._warnGLSLUnavailableOnce();
+    }
+
+    if (
+      requested === "glsl" &&
+      (Number(this.params.dimension) || 2) > 2 &&
+      !this._warnedGLSLNDOnly
+    ) {
+      this._warnedGLSLNDOnly = true;
+      if (this._diagnosticsLogger?.info) {
+        this._diagnosticsLogger.info(
+          "GLSL compute currently accelerates 2D only; ND dimensions continue on CPU stepping.",
+        );
+      }
+    }
+
+    if (next === this.params.backendComputeDevice) {
+      if (refreshGUI) this.refreshGUI();
+      return next;
+    }
+
+    this.params.backendComputeDevice = next;
+    this.updateAutomatonParams();
+    if (refreshGUI) this.refreshGUI();
+    return next;
+  }
+
+  cycleBackendComputeDevice(delta = 1, { refreshGUI = true } = {}) {
+    const devices = this.isGLSLComputeSupported() ? ["cpu", "glsl"] : ["cpu"];
+    const step = Math.floor(Number(delta) || 0) || 1;
+    const current = this._normaliseBackendComputeDevice(
+      this.params.backendComputeDevice,
+    );
+    const currentIndex = Math.max(0, devices.indexOf(current));
+    const nextIndex =
+      (((currentIndex + step) % devices.length) + devices.length) %
+      devices.length;
+    return this.setBackendComputeDevice(devices[nextIndex], {
+      refreshGUI,
+      allowFallback: false,
+    });
   }
 
   nudgeRadius(delta) {
@@ -85,24 +630,6 @@ class AppCoreControlMethods {
     const dim = NDCompatibility.coerceDimension(dimension);
     const raw = (size / 64) * dim * 5;
     return Math.round(constrain(raw, 2, this.getMaxKernelRadius(size)));
-  }
-
-  getPlacementScaleBounds(selection = this.params.selectedSoliton) {
-    const minScale = 0.25;
-    const hardMax = 16;
-    return {
-      min: minScale,
-      max: hardMax,
-    };
-  }
-
-  getEffectivePlacementScale(
-    scale = this.params.placeScale,
-    selection = this.params.selectedSoliton,
-  ) {
-    const { min, max } = this.getPlacementScaleBounds(selection);
-    const uiScale = constrain(Number(scale) || 1, min, max);
-    return uiScale;
   }
 
   _coerceAutoRotateModeValue(mode = this.params.autoRotateMode) {
@@ -186,13 +713,22 @@ class AppCoreControlMethods {
 
   buildNDConfig() {
     const dimension = NDCompatibility.coerceDimension(this.params.dimension);
-    const viewMode = NDCompatibility.coerceViewMode(dimension, this.params.viewMode);
+    const viewMode = NDCompatibility.coerceViewMode(
+      dimension,
+      this.params.viewMode,
+    );
     const ndDepth = NDCompatibility.getWorldDepthForDimension(
       this.params.latticeExtent,
       dimension,
     );
-    const ndSliceZ = NDCompatibility.coerceSliceIndex(this.params.ndSliceZ, ndDepth);
-    const ndSliceW = NDCompatibility.coerceSliceIndex(this.params.ndSliceW, ndDepth);
+    const ndSliceZ = NDCompatibility.coerceSliceIndex(
+      this.params.ndSliceZ,
+      ndDepth,
+    );
+    const ndSliceW = NDCompatibility.coerceSliceIndex(
+      this.params.ndSliceW,
+      ndDepth,
+    );
     this.params.dimension = dimension;
     this.params.viewMode = viewMode;
     this.params.ndDepth = ndDepth;
@@ -202,6 +738,8 @@ class AppCoreControlMethods {
       this.params.ndActiveAxis,
       dimension,
     );
+    const channelCount = this.getChannelCount();
+    const kernelParams = this.getKernelParams();
 
     return {
       dimension,
@@ -210,6 +748,11 @@ class AppCoreControlMethods {
       sliceZ: ndSliceZ,
       sliceW: ndSliceW,
       activeAxis: this.params.ndActiveAxis,
+      channelCount,
+      selectedChannel: this.params.selectedChannel,
+      selectedKernel: this.params.selectedKernel,
+      channelShift: this.params.channelShift,
+      kernelParams,
     };
   }
 
@@ -246,19 +789,23 @@ class AppCoreControlMethods {
         this.params.ndActiveAxis = "z";
       }
 
-      this.params.placeScale = 1;
-      this._lastPlacementScale = 1;
-
-      this._applySolitonSource();
-
-      const soliton = this._syncSelectedSolitonForActiveDimension(0);
+      const soliton = this._setSelectedSolitonForActiveDimension(
+        this._getRememberedSolitonSelectionForDimension(nextDimension),
+        {
+          fallbackIndex: 0,
+          skipNextParamsLoad: true,
+        },
+      );
 
       if (sizeChanged) {
         this.changeResolution();
       }
 
       if (soliton) {
-        this.loadSoliton(soliton);
+        this.loadSoliton(soliton, {
+          preserveScaleFactor: true,
+          preservedScaleFactor: this._getHiddenSolitonScaleFactor(1),
+        });
       } else {
         this.clearWorld();
       }
@@ -335,6 +882,10 @@ class AppCoreControlMethods {
 
     this._workerRequestView();
     this.refreshGUI();
+  }
+
+  centerNDSlices(options = {}) {
+    this.centreNDSlices(options);
   }
 
   toggleNDSliceView() {
@@ -446,6 +997,18 @@ class AppCoreControlMethods {
   }
 
   updateAutomatonParams() {
+    this.params.backendComputeDevice = this._normaliseBackendComputeDevice(
+      this.params.backendComputeDevice,
+    );
+    if (
+      this.params.backendComputeDevice === "glsl" &&
+      !this.isGLSLComputeSupported()
+    ) {
+      this.params.backendComputeDevice = "cpu";
+      this._warnGLSLUnavailableOnce();
+    }
+    this._normaliseKernelTopology();
+    this._syncSelectedKernelFromPrimaryParams();
     this.automaton.updateParameters(this.params);
     this._prevR = this.params.R;
     this._workerSendKernel();
@@ -561,12 +1124,12 @@ class AppCoreControlMethods {
         this.gui.syncNDSliceBounds();
       }
 
-      if (this.gui && typeof this.gui.syncPlacementScaleBounds === "function") {
-        this.gui.syncPlacementScaleBounds();
-      }
-
       if (this.gui && typeof this.gui.syncSolitonSelectors === "function") {
         this.gui.syncSolitonSelectors();
+      }
+
+      if (this.gui && typeof this.gui.syncKernelControlBounds === "function") {
+        this.gui.syncKernelControlBounds();
       }
 
       if (this.gui && this.gui.pane) this.gui.pane.refresh();
