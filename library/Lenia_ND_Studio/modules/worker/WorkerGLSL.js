@@ -164,6 +164,14 @@ function _glslCreateProgram(gl, vertexSource, fragmentSource) {
   return program;
 }
 
+async function _glslFetchShaderSource(relativePath) {
+  const response = await fetch(relativePath);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch shader "${relativePath}": ${response.status}`);
+  }
+  return response.text();
+}
+
 function _glslApplyKernelTapMacro(source) {
   return source.replace(
     "__MAX_KERNEL_TAPS__",
