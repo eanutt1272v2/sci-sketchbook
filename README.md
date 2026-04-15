@@ -38,7 +38,7 @@ Live instances: <https://sci-sketchbook.onrender.com/> (will wind down)
 
 ### 1. Sketch Index
 
-Every sketch is a self-contained browser-based application with its own solver(s), rendering pipeline, and GUI. All sketches share a unified architecture such that a main-thread controller orchestrates a Web Worker that performs the computationally intensive operations, which keeps the UI responsive at 60–75 FPS.
+Every sketch is a self-contained browser-based application with its own solver(s), rendering pipeline, and GUI. All sketches share a unified architecture such that a main-thread controller orchestrates a Web Worker that performs the computationally intensive operations, which keeps the UI responsive at 60-75 FPS.
 
 | Sketch | Domain | Method | Implementation |
 | :-- | :-- | :-- | :-- |
