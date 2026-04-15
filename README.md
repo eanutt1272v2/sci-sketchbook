@@ -7,7 +7,7 @@ A specialised and niche repository of interactive scientific simulations constru
 * Web Workers (parallel computation)
 * WebGL / GLSL (3D rendering pipeline)
 
-Live instances: <https://sci-sketchbook.onrender.com/> (will wind down) | <https://sci-sketchbook.up.railway.app> (always up).
+Live instances: <https://sci-sketchbook.onrender.com/> (will wind down)
 
 ---
 
